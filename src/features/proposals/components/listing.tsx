@@ -1,4 +1,5 @@
 "use client";
+import { RecordSkeleton } from "@/components/feedback/skeleton";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { parseQuery, serializeQuery, type ProposalQuery } from "../schemas";
@@ -32,7 +33,7 @@ export function Listing({
     [retry, setRetry] = useState(0),
     [open, setOpen] = useState(true),
     [formError, setFormError] = useState("");
-  const first = useRef(true),
+  const leftInitialQuery = useRef(false),
     latest = useRef(new LatestRequest()),
     initialKey = useRef(queryKey);
   let query = initialQuery;
@@ -43,11 +44,14 @@ export function Listing({
     invalid = true;
   }
   useEffect(() => {
-    if (first.current && initialKey.current === queryKey && retry === 0) {
-      first.current = false;
+    if (
+      !leftInitialQuery.current &&
+      initialKey.current === queryKey &&
+      retry === 0
+    ) {
       return;
     }
-    first.current = false;
+    leftInitialQuery.current = true;
     const manager = latest.current,
       request = manager.begin();
     let parsed: ProposalQuery;
@@ -437,7 +441,7 @@ export function Listing({
               code="BAD_REQUEST"
             />
           ) : loading || stale ? (
-            <State title="Loading proposals…" />
+            <RecordSkeleton variant="proposal" label="Loading proposals" />
           ) : !result.ok ? (
             <State
               title={
@@ -483,7 +487,9 @@ export function Listing({
                 {current.rows.map((row) => (
                   <RecordCard key={row.id} row={row} columns={columns} />
                 ))}
-                {loadingMore && <p role="status">Loading more proposals…</p>}
+                {loadingMore && (
+                  <RecordSkeleton label="Loading more proposals" rows={1} />
+                )}
                 {moreError && (
                   <div className="notice" role="alert">
                     {moreError}

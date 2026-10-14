@@ -1,4 +1,5 @@
 "use client";
+import { RecordSkeleton } from "@/components/feedback/skeleton";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -248,7 +249,7 @@ export function Finder({
         {invalid ? (
           <State title="Invalid opportunity filters" code="BAD_REQUEST" />
         ) : loading || stale ? (
-          <State title="Loading opportunities…" />
+          <RecordSkeleton variant="opportunity" label="Loading opportunities" />
         ) : !result.ok ? (
           <State
             title={

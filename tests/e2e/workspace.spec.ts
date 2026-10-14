@@ -47,10 +47,13 @@ test("Home queues, organization/year filters, independent failure/retry, navigat
   ).toBeVisible();
   await page.getByRole("tab", { name: "Insights", exact: true }).click();
   await page
-    .getByRole("combobox", { name: "Organization", exact: true })
+    .getByRole("combobox", { name: "Dashboard organization" })
     .selectOption("203");
-  await page.getByLabel("Year", { exact: true }).fill("2026");
-  await page.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(page).toHaveURL(/organization=203/);
+  await page.locator('summary[aria-label="Years filter"]').click();
+  await page.getByRole("checkbox", { name: "2026", exact: true }).check();
+  await expect(page).toHaveURL(/year=2026/);
+  await page.keyboard.press("Escape");
   await expect(page).toHaveURL(/organization=203/);
   await page.getByRole("tab", { name: "Need Attention", exact: true }).click();
   const widget = page.locator("article").filter({
@@ -411,4 +414,189 @@ test("preview-style desktop drawer, user menu and Opportunities routes", async (
     page.getByRole("heading", { name: "Top Funders", exact: true }),
   ).toBeVisible();
   await expect(page.locator(".funding-pie")).toBeVisible();
+});
+
+test("record skeletons remain visible during delayed refresh and honor reduced motion", async ({
+  page,
+}) => {
+  await login(page);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.route("**/api/home/*?*", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    await route.continue();
+  });
+  await page
+    .getByRole("button", { name: "Refresh Proposals Approaching Deadlines" })
+    .click();
+  const loading = page.getByRole("status", {
+    name: "Loading Proposals Approaching Deadlines",
+  });
+  await expect(loading).toBeVisible();
+  await expect(loading).toHaveAttribute("aria-busy", "true");
+  await expect(loading.locator(".skeleton").first()).toHaveCSS(
+    "animation-name",
+    "none",
+  );
+  await expect(loading).toBeHidden();
+  await page
+    .getByRole("button", { name: "Application Navigation Drawer" })
+    .click();
+  await expect(page.locator(".navigation-drawer")).toHaveCSS(
+    "background-color",
+    "rgb(49, 83, 87)",
+  );
+  await page.keyboard.press("Escape");
+  await navigateProposals(page);
+  await page.route("**/api/proposals?*", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    await route.continue();
+  });
+  await page.getByLabel("Search proposal titles").fill("research");
+  await page.getByLabel("Search proposal titles").press("Enter");
+  await expect(
+    page.getByRole("status", { name: "Loading proposals", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("status", { name: "Loading proposals", exact: true }),
+  ).toBeHidden();
+});
+
+test("all configured dashboard tabs load, page, recover and reject unapproved charts", async ({
+  page,
+  request,
+}) => {
+  await login(page);
+  await expect(
+    page.getByRole("tab", { name: "Opportunities", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("tab", { name: "Opportunities", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Featured Opportunities" }),
+  ).toBeVisible();
+  await expect(
+    page.locator(".featured-opportunities li").first(),
+  ).toBeVisible();
+  await page.getByRole("tab", { name: "Notifications", exact: true }).click();
+  await expect(
+    page.getByText("Synthetic notification 1", { exact: true }),
+  ).toBeVisible();
+  await page
+    .locator(".notification-panel")
+    .getByRole("button", { name: "Next", exact: true })
+    .click();
+  await expect(
+    page.getByText("Synthetic notification 26", { exact: true }),
+  ).toBeVisible();
+  await page
+    .locator(".notification-panel")
+    .getByRole("button", { name: "Previous", exact: true })
+    .click();
+  await expect(
+    page.getByText("Synthetic notification 1", { exact: true }),
+  ).toBeVisible();
+  await page.route("**/api/home/tabs/notifications?*", (route) =>
+    route.fulfill({
+      status: 502,
+      json: {
+        error: { code: "UPSTREAM", message: "Isolated notification failure" },
+      },
+    }),
+  );
+  await page.getByRole("button", { name: "Refresh notifications" }).click();
+  await expect(page.getByText("Isolated notification failure")).toBeVisible();
+  await page.unroute("**/api/home/tabs/notifications?*");
+  await page.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(
+    page.getByText("Synthetic notification 1", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("tab", { name: "Dynamic Charts", exact: true }).click();
+  await expect(
+    page.getByRole("img", { name: "Proposal by status: values listed below" }),
+  ).toBeVisible();
+  await page.getByText("View chart data", { exact: true }).click();
+  await expect(
+    page.getByRole("cell", { name: "12", exact: true }),
+  ).toBeVisible();
+  await page.getByText("Options", { exact: true }).click();
+  await page.getByRole("button", { name: "Dimensions", exact: true }).click();
+  const dimensionDialog = page.getByRole("dialog", {
+    name: "Dimensions",
+    exact: true,
+  });
+  await dimensionDialog.getByLabel("Cols").fill("12");
+  await dimensionDialog
+    .getByRole("button", { name: "Save", exact: true })
+    .click();
+  await expect(dimensionDialog).toBeHidden();
+  await expect(page.locator(".dynamic-chart-card")).toHaveCSS(
+    "grid-column",
+    "span 12",
+  );
+  expect(
+    (
+      await page.request.post("/api/home/tabs/charts", {
+        headers: { origin: "https://evil.example" },
+        data: { infolet_id: 201, colspan: 6, rowspan: 3 },
+      })
+    ).status(),
+  ).toBe(403);
+  expect(
+    (await page.request.get("/api/home/tabs/charts?id=999")).status(),
+  ).toBe(403);
+  expect((await request.get("/api/home/tabs/notifications")).status()).toBe(
+    401,
+  );
+});
+
+test("Insights follows source chart types, multi-select filters, expansion and independent failures", async ({
+  page,
+}) => {
+  await login(page);
+  await page.getByRole("tab", { name: "Insights", exact: true }).click();
+  const scatter = page.locator(".insight-widget").filter({
+    has: page.getByRole("heading", {
+      name: "Proposal Value By Cost Recovery %",
+      exact: true,
+    }),
+  });
+  await expect(scatter.locator(".insight-chart-host svg")).toBeVisible();
+  await expect(scatter).toHaveCSS("grid-column", "span 12");
+  await page
+    .getByRole("button", {
+      name: "Expand Proposal Value By Cost Recovery %",
+      exact: true,
+    })
+    .click();
+  const expanded = page.getByRole("dialog", {
+    name: "Expanded Proposal Value By Cost Recovery %",
+    exact: true,
+  });
+  await expect(expanded.locator(".insight-chart-host svg")).toBeVisible();
+  await expanded.getByRole("button", { name: "Close expanded chart" }).click();
+  await page.locator('summary[aria-label="Years filter"]').click();
+  await page.getByRole("checkbox", { name: "2025", exact: true }).check();
+  await expect(page).toHaveURL(/year=2025/);
+  await expect(
+    page.getByRole("checkbox", { name: "2025", exact: true }),
+  ).toBeFocused();
+  await page.getByRole("checkbox", { name: "2026", exact: true }).check();
+  await expect(page).toHaveURL(/year=2026%2C2025|year=2025%2C2026/);
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Clear insights filters" }).click();
+  await expect(page).not.toHaveURL(/year=/);
+  await page.route("**/api/home/pByStatusChart?*", (route) =>
+    route.fulfill({
+      status: 502,
+      json: {
+        error: { code: "UPSTREAM", message: "Isolated Insights failure" },
+      },
+    }),
+  );
+  await page.locator('summary[aria-label="Years filter"]').click();
+  await page.getByRole("checkbox", { name: "2026", exact: true }).check();
+  await expect(page.getByText("Isolated Insights failure")).toBeVisible();
+  await expect(scatter.locator(".insight-chart-host svg")).toBeVisible();
+  await page.unroute("**/api/home/pByStatusChart?*");
+  await page.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(page.getByText("Isolated Insights failure")).toBeHidden();
 });

@@ -24,6 +24,7 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 120000,
     env: {
+      GRANTSNOW_E2E: "true",
       APP_ORIGIN: "http://127.0.0.1:3100",
       APP_ENV: "development",
       FIXTURE_MODE: "true",

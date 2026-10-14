@@ -4,6 +4,8 @@ VBCS parity migration in progress: Home dashboard, card-based Proposal listing, 
 
 **Project location is this Superset workspace.** The user corrected the original prompt's proposed Developer-directory destination. No nested repository was initialized. The temporary duplicate destination created earlier was removed after moving its files here.
 
+Current dashboard work: all five configured tabs, source-type Insights charts/multi-date filters and geometric skeletons are documented in [dashboard parity](docs/dashboard-parity.md). Opportunity write workflows and exact/full VBCS sign-off remain outstanding.
+
 ## Run locally now
 
 Use Node **24 LTS** (the project has `.nvmrc`) and npm. The lockfile pins dependencies.
@@ -49,3 +51,7 @@ Playwright starts a separate dev server on port 3100 with isolated synthetic set
 Current parity implementation and remaining work: [VBCS progress](docs/vbcs-parity-progress.md). This is not yet exact/full VBCS parity or the complete Proposal module.
 
 Read [architecture](docs/architecture.md), [API mapping](docs/api-mapping.md), [Home coverage](docs/home-coverage.md), [Azure preparation](docs/azure-deployment.md), and [implementation status](docs/implementation-status.md). Full Proposal workflows are approved follow-on work in the parity plan; edit/create/copy/delete/restore and approval mutations are not yet implemented.
+
+## Non-disruptive checks
+
+`npm run test:e2e` runs source-only fixture copies under ignored `.validation/`; it never copies local credentials and leaves the live dev server alone. For a production build check without replacing dev output, use `GRANTSNOW_BUILD_CHECK=true DEV_BROWSER_SESSION=false FIXTURE_MODE=false npm run build`. The ordinary Azure build/start paths remain `.next`; the check artifact uses `.next-check`.

@@ -123,6 +123,7 @@ export function mapOpportunities(
 export async function listOpportunities(
   query: OpportunityQuery,
   signal?: AbortSignal,
+  dashboardFeatured = false,
 ) {
   const { session, user } = await authenticate();
   requireModule(user, "opportunities-finder");
@@ -134,7 +135,13 @@ export async function listOpportunities(
         p_order_by: query.sort,
         p_sort_order: query.direction,
       },
-      opportunityOracleQuery(query),
+      dashboardFeatured
+        ? new URLSearchParams({
+            p_where_clause: `"preference" = 'Y' AND "opportunity_status" != 'CLOSED'`,
+            p_offset: String((query.page - 1) * query.pageSize),
+            p_limit: String(query.pageSize),
+          })
+        : opportunityOracleQuery(query),
       signal,
     ),
     resources(),

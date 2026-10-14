@@ -15,6 +15,18 @@ export const dashboardConfiguration = cache(async () => {
       needAttention: visibility,
       insights: visibility,
       KPI_STATISTICS: visibility.optional(),
+      notifications: z.boolean().optional(),
+      opportunity: z.boolean().optional(),
+      dynamicCharts: z
+        .record(
+          z.string(),
+          z.object({
+            isVisible: z.boolean().optional(),
+            infolet_id: z.union([z.string(), z.number()]),
+            ModuleName: z.string().optional(),
+          }),
+        )
+        .optional(),
     })
     .parse(
       await oracle("getSharedDashboardPreferences", { token: session.token }),

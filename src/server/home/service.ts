@@ -1,3 +1,4 @@
+import { insightRows, fundingEfficiency } from "./insight-mapping";
 import { formattingConfiguration } from "@/server/configuration/formatting";
 import "server-only";
 import { z } from "zod";
@@ -19,6 +20,7 @@ const envelope = z.object({
   items: z.array(z.record(z.string(), z.unknown())),
   hasMore: z.union([z.boolean(), z.enum(["true", "false"])]).optional(),
   offset: z.number().optional(),
+  limit: z.number().int().positive().optional(),
 });
 function str(row: Record<string, unknown>, key: string) {
   const v = row[key];
@@ -29,6 +31,16 @@ export function mapWidget(
   w: WidgetDefinition,
   filters: HomeFilters,
 ): WidgetData {
+  if (w.renderType === "gauge") {
+    const gauge = fundingEfficiency(raw);
+    return {
+      attention: [],
+      statistics: [],
+      hasMore: false,
+      offset: filters.offset,
+      gauge,
+    };
+  }
   const parsed = envelope.safeParse(raw);
   if (!parsed.success)
     throw new AppError(
@@ -39,25 +51,7 @@ export function mapWidget(
   if (w.kind === "statistics") {
     return {
       attention: [],
-      statistics: b.items.map((r, i) => {
-        const value = Number(r.value);
-        if (
-          !Number.isFinite(value) ||
-          r.value == null ||
-          (r.label !== null &&
-            typeof r.label !== "string" &&
-            typeof r.label !== "number")
-        )
-          throw new AppError("CONTRACT", "Statistics returned invalid values.");
-        return {
-          id: `${str(r, "label")}:${str(r, "code") || i}`,
-          // ORDS returns null labels for uncategorized status groups. Preserve
-          // that empty category rather than failing the entire chart.
-          label: str(r, "label") || "",
-          series: str(r, "code"),
-          value,
-        };
-      }),
+      statistics: insightRows(b.items, w.mapping),
       hasMore: b.hasMore === true || b.hasMore === "true",
       offset: filters.offset,
     };
@@ -164,23 +158,67 @@ export async function loadWidget(
     filters.organization || user.organizationId,
     await organizations(),
   );
-  const headers: Record<string, string> = { token: session.token };
+  const headers: Record<string, string> = {
+    [w.tokenHeader || "token"]: session.token,
+  };
   if (org) headers[w.orgHeader] = org;
-  if (w.chartType) {
-    headers.chart_type = w.chartType;
+  if (w.kind === "statistics") {
+    if (w.chartType) headers.chart_type = w.chartType;
     for (const key of ["year", "quarter", "month"] as const)
       if (filters[key]) headers[key] = filters[key]!;
   }
   const query = new URLSearchParams({
     offset: String(filters.offset),
-    limit: "5",
+    limit: w.kind === "statistics" ? "100" : "5",
   });
-  const mapped = mapWidget(
-    await oracle(w.operation, headers, query, signal),
-    w,
-    filters,
-  );
+  let raw = await oracle(w.operation, headers, query, signal);
+  if (w.kind === "statistics" && w.renderType !== "gauge") {
+    const first = envelope.parse(raw),
+      all = [...first.items];
+    let page = first,
+      offset = 0;
+    const seen = new Set([JSON.stringify(first.items)]);
+    while (page.hasMore === true || page.hasMore === "true") {
+      if (!page.items.length || all.length >= 10000)
+        throw new AppError(
+          "CONTRACT",
+          "A complete chart result could not be loaded.",
+        );
+      offset += page.items.length;
+      page = envelope.parse(
+        await oracle(
+          w.operation,
+          headers,
+          new URLSearchParams({ offset: String(offset), limit: "100" }),
+          signal,
+        ),
+      );
+      if (page.offset !== undefined && page.offset !== offset)
+        throw new AppError(
+          "CONTRACT",
+          "Oracle returned an inconsistent chart page.",
+        );
+      const signature = JSON.stringify(page.items);
+      if (seen.has(signature) && page.items.length)
+        throw new AppError("CONTRACT", "Oracle repeated a chart page.");
+      seen.add(signature);
+      all.push(...page.items);
+    }
+    raw = { ...first, items: all, hasMore: false };
+  }
+  const mapped = mapWidget(raw, w, filters);
   const formatting = await formattingConfiguration();
+  if (w.renderType)
+    mapped.presentation = {
+      type: w.renderType,
+      columns:
+        Number.isInteger(Number(config[w.section][w.id]?.ColSpan)) &&
+        Number(config[w.section][w.id]?.ColSpan) >= 1 &&
+        Number(config[w.section][w.id]?.ColSpan) <= 12
+          ? Number(config[w.section][w.id]?.ColSpan)
+          : w.columns || 6,
+      currency: w.currency ? formatting.currency : undefined,
+    };
   let deadlineTypes: Record<string, string> = {};
   if (mapped.attention.some((row) => row.deadlineType)) {
     const raw = await oracle(

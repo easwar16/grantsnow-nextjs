@@ -1,3 +1,5 @@
+import { InsightWidget } from "@/features/home/components/insight-widget";
+import { dashboardTabs } from "@/server/home/extra-tabs";
 import { OrganizationHeading } from "@/features/home/components/organization-heading";
 import { Announcements } from "@/features/home/components/announcements";
 import { loadAnnouncements } from "@/server/home/announcements";
@@ -18,16 +20,24 @@ import { HomeFilterControls } from "@/features/home/components/filters";
 import { Widget } from "@/features/home/components/widget";
 import type { HomeFilters } from "@/features/home/types";
 import { AppError } from "@/lib/errors";
+import { RecordSkeleton, KpiSkeleton } from "@/components/feedback/skeleton";
 import { State } from "@/components/feedback/state";
 export const metadata = { title: "Home" };
+async function LoadedKpis({ organization }: { organization?: string }) {
+  return <KpiStrip {...await loadKpis(organization)} />;
+}
 async function LoadedWidget({
   id,
   title,
   filters,
+  insight,
+  columns,
 }: {
   id: string;
   title: string;
   filters: HomeFilters;
+  insight: boolean;
+  columns: number;
 }) {
   return (
     <Widget
@@ -35,6 +45,8 @@ async function LoadedWidget({
       title={title}
       initial={await widgetResult(id, filters)}
       filters={filters}
+      insight={insight}
+      columns={columns}
     />
   );
 }
@@ -76,6 +88,7 @@ export default async function Home({
   }
   const enabled = await enabledWidgets();
   const orgs = await organizations();
+  const additionalTabs = await dashboardTabs();
   const panels = (["needAttention", "insights"] as const).map((section) => (
     <div
       key={section}
@@ -85,19 +98,35 @@ export default async function Home({
     >
       {enabled
         .filter((w) => w.section === section)
-        .map((w) => (
-          <Suspense
-            key={`${w.id}:${params.toString()}`}
-            fallback={
-              <article className="widget">
-                <h3>{w.title}</h3>
-                <State title="Loading widget…" />
-              </article>
-            }
-          >
-            <LoadedWidget id={w.id} title={w.title} filters={filters} />
-          </Suspense>
-        ))}
+        .map((w) =>
+          section === "insights" ? (
+            <InsightWidget
+              key={`${w.id}:${params.toString()}`}
+              id={w.id}
+              title={w.title}
+              filters={filters}
+              columns={w.columns || 6}
+            />
+          ) : (
+            <Suspense
+              key={`${w.id}:${params.toString()}`}
+              fallback={
+                <article className="widget">
+                  <h3>{w.title}</h3>
+                  <RecordSkeleton label={`Loading ${w.title}`} />
+                </article>
+              }
+            >
+              <LoadedWidget
+                id={w.id}
+                title={w.title}
+                filters={filters}
+                insight={false}
+                columns={6}
+              />
+            </Suspense>
+          ),
+        )}
       {!enabled.some((w) => w.section === section) && (
         <State title="No widgets enabled" />
       )}
@@ -117,15 +146,16 @@ export default async function Home({
           View Proposals
         </Link>
       </div>
-      <KpiStrip {...await loadKpis(filters.organization)} />
+      <Suspense key={filters.organization} fallback={<KpiSkeleton />}>
+        <LoadedKpis organization={filters.organization} />
+      </Suspense>
       <DashboardTabs
+        additional={additionalTabs}
+        organization={filters.organization}
         attention={panels[0]}
         insights={
           <>
-            <HomeFilterControls
-              organizations={orgs}
-              defaultOrganization={user.organizationId}
-            />
+            <HomeFilterControls currentYear={new Date().getFullYear()} />
             {panels[1]}
           </>
         }

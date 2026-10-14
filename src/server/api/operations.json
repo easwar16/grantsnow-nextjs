@@ -201,5 +201,40 @@
     "service": "apps",
     "path": "/shared/delegations/",
     "headers": ["token", "object_id", "object_type"]
+  },
+  "getNotificationsNotifications": {
+    "service": "apps",
+    "path": "/notifications/notifications/",
+    "headers": ["token"]
+  },
+  "getSharedGetDynamicCharts": {
+    "service": "apps",
+    "path": "/shared/getDynamicCharts",
+    "headers": ["token", "p_org_id", "report_name"]
+  },
+  "getSharedGetOppCategoryStat": {
+    "service": "apps",
+    "path": "/shared/getOppCategoryStat",
+    "headers": ["token", "p_org_id", "quarter", "year", "month"]
+  },
+  "getSharedGetOppFunnelStat": {
+    "service": "apps",
+    "path": "/shared/getOppFunnelStat",
+    "headers": ["token", "p_org_id", "year", "quarter", "month"]
+  },
+  "getPost_awardsAwardVsCostStatistics": {
+    "service": "apps",
+    "path": "/post_awards/AwardVsCostStatistics",
+    "headers": ["token", "p_org_id", "year", "quarter", "month"]
+  },
+  "getSharedGetWidgetParameters": {
+    "service": "apps",
+    "path": "/shared/getWidgetParameters",
+    "headers": ["p_token", "p_org_id", "quarter", "month", "year"]
+  },
+  "getSharedGetTopOppCategoryStat": {
+    "service": "apps",
+    "path": "/shared/getTopOppCategoryStat",
+    "headers": ["token", "p_org_id", "month", "quarter", "year"]
   }
 }

@@ -9,3 +9,6 @@ coverage/
 
 .dev-session/
 .playwright-mcp/
+.next-e2e/
+.next-check/
+.validation/

@@ -71,6 +71,20 @@ export async function oracle(
   );
   if (query) url.search = query.toString();
   let response: Response;
+  // The verified DEV KPI aggregation takes ~42 seconds; ordinary reads retain
+  // the shorter timeout. Its independent Suspense boundary keeps Home usable.
+  const aggregates: Operation[] = [
+    "getSharedGetKpiStatistics",
+    "getProposalGetProposalStatistics",
+    "getPost_awardsAwardStatistics",
+    "getPost_awardsAwardVsCostStatistics",
+    "getDynamicFormsApplicationStatistics",
+    "getSharedGetOppCategoryStat",
+    "getSharedGetTopOppCategoryStat",
+    "getSharedGetWidgetParameters",
+    "getSharedGetDynamicCharts",
+  ];
+  const timeout = aggregates.includes(operation) ? 60000 : 15000;
   try {
     response = await fetch(url, {
       method: "GET",
@@ -84,8 +98,8 @@ export async function oracle(
       cache: "no-store",
       redirect: "error",
       signal: signal
-        ? AbortSignal.any([signal, AbortSignal.timeout(15000)])
-        : AbortSignal.timeout(15000),
+        ? AbortSignal.any([signal, AbortSignal.timeout(timeout)])
+        : AbortSignal.timeout(timeout),
     });
   } catch {
     throw new AppError("UPSTREAM", "Oracle is unavailable. Please retry.");

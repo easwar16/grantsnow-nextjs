@@ -13,10 +13,11 @@
     "typecheck": "next typegen && tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:e2e": "playwright test",
+    "test:e2e": "node scripts/run-e2e.mjs",
     "check": "npm run typecheck && npm run lint && npm test && npm run build"
   },
   "dependencies": {
+    "echarts": "6.1.0",
     "iron-session": "9.0.1",
     "next": "16.4.0",
     "openid-client": "6.8.8",

@@ -1,46 +1,33 @@
-# Home coverage
+# Current Home coverage
 
-2026-10-14 additions: protected configured KPI strip via getSharedGetKpiStatistics, basic sanitized announcements via getSharedAnnouncements, Need Attention/Insights tabs and VBCS visual row foundation. Exact/full dashboard parity remains incomplete; see vbcs-parity-progress.md.
+Updated 2026-10-14. The current implementation and remaining parity gaps are described in [dashboard-parity.md](dashboard-parity.md). No exact/full VBCS sign-off is claimed.
 
-All rows below have read-only server adapters, isolated fixture data and per-widget loading/error/empty/retry UI. Each is enabled only when the corresponding session module is explicitly accessible, DASHBOARD home read is granted, and dashboard preference `isVisible===true`. The real DEV configuration/response/scope has not been exercised.
+Nine attention widgets remain configured/module-gated: Proposal deadlines/approvals, Contract deadlines/approvals, Ethics deadlines/approvals, Award approvals/approved awards and EOI approvals. Home itself is an authenticated context page; each widget requires its actual module grant, explicit account visibility and token-bound backend scope. There is no invented DASHBOARD home-read exemption that grants other modules.
 
-| Preference key        | Operation / verified path                                              | Status                                                                 |
-| --------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| pApproachingDeadlines | getProposalProp_appr_deadline /Proposal/prop_appr_deadline/            | Implemented                                                            |
-| pPendingApprovals     | getProposalPendingApproval /Proposal/pendingApproval                   | Implemented                                                            |
-| cApproachingDeadlines | getContractsContract_appr_deadline /contracts/contract_appr_deadline   | Implemented                                                            |
-| cPendingApprovals     | getContractsContractPendingApproval /contracts/ContractPendingApproval | Implemented                                                            |
-| eApproachingDeadlines | getDynamicFormsApplApprDeadline2 /dynamicForms/applApprDeadline        | Implemented                                                            |
-| ePendingApprovals     | getDynamicFormsApplPendingApproval /dynamicForms/applPendingApproval   | Implemented                                                            |
-| aPendingApprovals     | getPost_awardsAwardPendingApproval /post_awards/awardPendingApproval   | Implemented; live shape needs verification (source page type is any[]) |
-| aApprovedAwards       | getPost_awardsApprovedAwards /post_awards/approvedAwards               | Implemented                                                            |
-| eoiPendingApprovals   | getEoiPendingApproval /dynamicForms/eoiPendingApproval                 | Implemented                                                            |
+## Source Insights panels
 
-The eight supported insight preferences use real statistics contracts:
+| Preference                  | Operation                            | Source mapping / render                                                                     |
+| --------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------- |
+| ProposalsValuByCostRecovery | getProposalGetProposalStatistics     | SCATTER_CHART: x/Y; individually coloured points, full width                                |
+| grantCategoriesChart        | getSharedGetTopOppCategoryStat       | SECTORS, NUM_PROP/AMOUNT; dual-axis combo, only when enabled                                |
+| pByYearChart                | getProposalGetProposalStatistics     | YEAR_STATUS: label/code/value; grouped bars                                                 |
+| totalPAValueByYearChart     | getPost_awardsAwardVsCostStatistics  | label/seriesid/value; lines                                                                 |
+| opportunityStatusChart      | getSharedGetOppFunnelStat            | label_txt/amount/display_order; funnel                                                      |
+| fundingByGrantChart         | getSharedGetOppCategoryStat          | SECTORS and APPLIED_AMT/AWARDED_AMT; paired bars                                            |
+| highestGapsChart            | getSharedGetOppCategoryStat          | Awarded Amount and Applied−Awarded; preserves negative gaps                                 |
+| fundingEfficiencyIndexChart | getSharedGetWidgetParameters         | p_token header; select DASHBOARD_FEI, then validate FEI_VALUE/LOW/MEDIUM/TARGET; half gauge |
+| pByStatusChart              | getProposalGetProposalStatistics     | PROP_STATUS; pie                                                                            |
+| eByStatusChart              | getDynamicFormsApplicationStatistics | ETHICS_STATUS; pie                                                                          |
+| eByOrgChart                 | getDynamicFormsApplicationStatistics | ETHICS_ORG; pie                                                                             |
+| eByRiskChart                | getDynamicFormsApplicationStatistics | ETHICS_RISK; bars                                                                           |
+| pByFacultyChart             | getProposalGetProposalStatistics     | PROP_FACULTY; pie                                                                           |
+| awardedProposalsChart       | getPost_awardsAwardStatistics        | AWARD_FACULTY; pie                                                                          |
+| aByStatusChart              | getPost_awardsAwardStatistics        | AWARD_STATUS; pie                                                                           |
 
-| Preference key  | Operation                            | chart_type    |
-| --------------- | ------------------------------------ | ------------- |
-| pByYearChart    | getProposalGetProposalStatistics     | YEAR_STATUS   |
-| pByStatusChart  | getProposalGetProposalStatistics     | PROP_STATUS   |
-| pByFacultyChart | getProposalGetProposalStatistics     | PROP_FACULTY  |
-| aByStatusChart  | getPost_awardsAwardStatistics        | AWARD_STATUS  |
-| aByFacultyChart | getPost_awardsAwardStatistics        | AWARD_FACULTY |
-| eByStatusChart  | getDynamicFormsApplicationStatistics | ETHICS_STATUS |
-| eByOrgChart     | getDynamicFormsApplicationStatistics | ETHICS_ORG    |
-| eByRiskChart    | getDynamicFormsApplicationStatistics | ETHICS_RISK   |
+The source configuration also contains aByFacultyChart, but current HTML uses awardedProposalsChart for that panel; no duplicate/orphan chart is invented. Fifteen preferences were enabled in the observed account including that orphan; fourteen corresponding source panels are represented. grantCategoriesChart is supported but disabled in that live account.
 
-Organization applies to attention and insights using p_org_id; Award attention uses org_id. Year/quarter/month apply to insights only, consistent with the chain contracts. Values come directly from the statistics API, without calculating totals or labelling raw numbers as invented currency/KPIs. Proposal drill-down links use returned proposal_number as verified reference filter. View Proposals works; other module rows are noninteractive because those destinations are unbuilt.
+Statistics load only when Insights is selected. Server services consume all finite API pages before rendering a chart; repeated/inconsistent pages or the bounded result limit produce an error rather than a misleading partial chart. Pie percentages follow the source largest-remainder rounding to 100 while keeping raw counts in accessible tables. Currency comes from verified resource/global configuration; counts are not relabelled as currency.
 
-Explicit initial deferrals:
+Year/quarter/month accept the source's comma-separated multi-selection and apply only to Insights operations. Year options are current year down to 1995; quarter/month options match the checked-in source. Organization comes from the existing authorized heading selector. These filters live in the URL, survive reload/history and preserve keyboard focus. No browser username/person header is forwarded.
 
-- Calendar mode: legacy accumulates paged events and sometimes clears/duplicates state during filtering. This increment renders independent paged lists; complete event consistency across filters/paging requires a tested event-loading policy. No misleading incomplete calendar is shown.
-- Chart→listing drill-down: legacy 9143 uses creation_date and status-specific semantics; available charts have label/code rather than guaranteed status_code. Until actual statistics/list reconciliation is verified, no guessed status/date drill-down link is exposed.
-- Dynamic configured charts/reports, scatter cost recovery, Proposal/Award cost comparison, opportunity insights and specialized KPI formulas: need their metadata/units/permissions and live contracts reconciled before reproducing them. Only the eight typed statistic views above are implemented. No invented counters substitute for them.
-- Theme catalogue/custom themes and legacy user preference mutation dialogs: default/dark rendering only; no writes to preferences/resources.
-- Home creation/convert/inline approval dialogs, notifications/actions, opportunities, details, attachments, record calendar links: outside this read-only increment. No inactive/dead action buttons.
-
-Externally blocked: actual customer preference visibility, authorized org list completeness, queue response/paging/ordering, statistics meaning/date range, backend row scope, and real IDCS/ORDS connectivity. Fixture tests cannot approve production parity.
-
-### Visual iteration update (2026-10-14)
-
-Initial calendar deferral is superseded by a working month grid with List/Calendar controls using the same authorized queue rows, keyboard month buttons and explicit partial-result indication. Source calendar styling/event drill-down parity remains open. Organization selection is in the Home heading; year/quarter/month controls are under Insights. Deadline types use actual lookup labels; source creation/deadline dates control overdue styling. Current measured evidence/remaining gaps are recorded in vbcs-parity-progress.md.
+Need Attention retains the basic calendar/list implementation over the same authorized rows; a hasMore notice identifies partial events. This is not full legacy calendar parity. Chart→listing drills are deferred until actual status/year/faculty reconciliation can be demonstrated. Detail/create/convert/inline approval and other record-module mutations remain outside the read-only dashboard views. Other dashboard tabs and their write/read limits are listed in dashboard-parity.md.

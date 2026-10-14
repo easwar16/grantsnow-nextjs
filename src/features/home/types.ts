@@ -29,6 +29,20 @@ export interface StatisticRow {
   value: number;
 }
 export interface WidgetData {
+  presentation?: {
+    type:
+      | "bar"
+      | "pie"
+      | "line"
+      | "scatter"
+      | "funnel"
+      | "gauge"
+      | "combo"
+      | "area";
+    columns: number;
+    currency?: string;
+  };
+  gauge?: { value: number; low: number; medium: number; target: number };
   attention: AttentionRow[];
   statistics: StatisticRow[];
   hasMore: boolean;
