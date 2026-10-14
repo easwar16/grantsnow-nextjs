@@ -37,4 +37,6 @@ export async function proxy(request: NextRequest) {
   // Navigation convenience only. Every data service still validates Oracle + permissions.
   return response;
 }
-export const config = { matcher: ["/home", "/proposals/:path*", "/opportunities/:path*"] };
+export const config = {
+  matcher: ["/home", "/proposals/:path*", "/opportunities/:path*"],
+};

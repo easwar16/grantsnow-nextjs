@@ -2,33 +2,32 @@
 
 2026-10-14 additions: protected configured KPI strip via getSharedGetKpiStatistics, basic sanitized announcements via getSharedAnnouncements, Need Attention/Insights tabs and VBCS visual row foundation. Exact/full dashboard parity remains incomplete; see vbcs-parity-progress.md.
 
-
 All rows below have read-only server adapters, isolated fixture data and per-widget loading/error/empty/retry UI. Each is enabled only when the corresponding session module is explicitly accessible, DASHBOARD home read is granted, and dashboard preference `isVisible===true`. The real DEV configuration/response/scope has not been exercised.
 
-| Preference key | Operation / verified path | Status |
-| --- | --- | --- |
-| pApproachingDeadlines | getProposalProp_appr_deadline /Proposal/prop_appr_deadline/ | Implemented |
-| pPendingApprovals | getProposalPendingApproval /Proposal/pendingApproval | Implemented |
-| cApproachingDeadlines | getContractsContract_appr_deadline /contracts/contract_appr_deadline | Implemented |
-| cPendingApprovals | getContractsContractPendingApproval /contracts/ContractPendingApproval | Implemented |
-| eApproachingDeadlines | getDynamicFormsApplApprDeadline2 /dynamicForms/applApprDeadline | Implemented |
-| ePendingApprovals | getDynamicFormsApplPendingApproval /dynamicForms/applPendingApproval | Implemented |
-| aPendingApprovals | getPost_awardsAwardPendingApproval /post_awards/awardPendingApproval | Implemented; live shape needs verification (source page type is any[]) |
-| aApprovedAwards | getPost_awardsApprovedAwards /post_awards/approvedAwards | Implemented |
-| eoiPendingApprovals | getEoiPendingApproval /dynamicForms/eoiPendingApproval | Implemented |
+| Preference key        | Operation / verified path                                              | Status                                                                 |
+| --------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| pApproachingDeadlines | getProposalProp_appr_deadline /Proposal/prop_appr_deadline/            | Implemented                                                            |
+| pPendingApprovals     | getProposalPendingApproval /Proposal/pendingApproval                   | Implemented                                                            |
+| cApproachingDeadlines | getContractsContract_appr_deadline /contracts/contract_appr_deadline   | Implemented                                                            |
+| cPendingApprovals     | getContractsContractPendingApproval /contracts/ContractPendingApproval | Implemented                                                            |
+| eApproachingDeadlines | getDynamicFormsApplApprDeadline2 /dynamicForms/applApprDeadline        | Implemented                                                            |
+| ePendingApprovals     | getDynamicFormsApplPendingApproval /dynamicForms/applPendingApproval   | Implemented                                                            |
+| aPendingApprovals     | getPost_awardsAwardPendingApproval /post_awards/awardPendingApproval   | Implemented; live shape needs verification (source page type is any[]) |
+| aApprovedAwards       | getPost_awardsApprovedAwards /post_awards/approvedAwards               | Implemented                                                            |
+| eoiPendingApprovals   | getEoiPendingApproval /dynamicForms/eoiPendingApproval                 | Implemented                                                            |
 
 The eight supported insight preferences use real statistics contracts:
 
-| Preference key | Operation | chart_type |
-| --- | --- | --- |
-| pByYearChart | getProposalGetProposalStatistics | YEAR_STATUS |
-| pByStatusChart | getProposalGetProposalStatistics | PROP_STATUS |
-| pByFacultyChart | getProposalGetProposalStatistics | PROP_FACULTY |
-| aByStatusChart | getPost_awardsAwardStatistics | AWARD_STATUS |
-| aByFacultyChart | getPost_awardsAwardStatistics | AWARD_FACULTY |
-| eByStatusChart | getDynamicFormsApplicationStatistics | ETHICS_STATUS |
-| eByOrgChart | getDynamicFormsApplicationStatistics | ETHICS_ORG |
-| eByRiskChart | getDynamicFormsApplicationStatistics | ETHICS_RISK |
+| Preference key  | Operation                            | chart_type    |
+| --------------- | ------------------------------------ | ------------- |
+| pByYearChart    | getProposalGetProposalStatistics     | YEAR_STATUS   |
+| pByStatusChart  | getProposalGetProposalStatistics     | PROP_STATUS   |
+| pByFacultyChart | getProposalGetProposalStatistics     | PROP_FACULTY  |
+| aByStatusChart  | getPost_awardsAwardStatistics        | AWARD_STATUS  |
+| aByFacultyChart | getPost_awardsAwardStatistics        | AWARD_FACULTY |
+| eByStatusChart  | getDynamicFormsApplicationStatistics | ETHICS_STATUS |
+| eByOrgChart     | getDynamicFormsApplicationStatistics | ETHICS_ORG    |
+| eByRiskChart    | getDynamicFormsApplicationStatistics | ETHICS_RISK   |
 
 Organization applies to attention and insights using p_org_id; Award attention uses org_id. Year/quarter/month apply to insights only, consistent with the chain contracts. Values come directly from the statistics API, without calculating totals or labelling raw numbers as invented currency/KPIs. Proposal drill-down links use returned proposal_number as verified reference filter. View Proposals works; other module rows are noninteractive because those destinations are unbuilt.
 

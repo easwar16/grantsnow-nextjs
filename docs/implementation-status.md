@@ -2,7 +2,6 @@
 
 **Current state:** see [VBCS parity progress](vbcs-parity-progress.md), updated 2026-10-14. The original table-first UI and read-only scope below are historical; the user approved the broader parity migration.
 
-
 Date: 2026-10-13. Repository: `/Users/easwar/.superset/worktrees/gratsnow nextjs/faceted-rook-b1710e7e`. The user's explicit current-folder instruction supersedes the prompt's proposed Developer directory. All application files are directly in this worktree; no nested repository, commit, push, deployment or cloud provisioning.
 
 ## Implemented

@@ -18,14 +18,14 @@ Logout destroys local authority first, attempts Oracle logout independently, sav
 
 ## Exact missing inputs/actions
 
-| Owner | Input/action |
-| --- | --- |
-| Identity owner | Actual issuer and discovery document; client ID/secret securely supplied; permitted scopes and client authentication method; approve exact `IDCS_USERNAME_CLAIM` to existing GrantsNow username and case rules |
-| Identity owner | Register local `http://127.0.0.1:3000/api/auth/callback` and `/login`; later chosen HTTPS Azure origin equivalents; confirm S256/nonce/JWKS signing and token-free end-session behavior |
-| Backend owner | DEV base/apps roots with ORDS schema prefixes, network access, independent basic/bearer service account or approved adapter; confirm credentials cannot allow untrusted username impersonation |
-| Backend owner | Successful login/validate/extend/logout response examples without real tokens; expiry timezone, renewal rotation/idempotency, business error contract and token revocation |
-| Security/product owner | Verify module grants, DASHBOARD home read grant, row-scoped listing, person-scoped org lookup, field visibility/masking for authorized/denied users |
-| Hosting owner | Confirm Azure Linux service/runtime/origin, shared key storage/rotation and multi-instance token behavior; no provisioning in this task |
+| Owner                  | Input/action                                                                                                                                                                                                   |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Identity owner         | Actual issuer and discovery document; client ID/secret securely supplied; permitted scopes and client authentication method; approve exact `IDCS_USERNAME_CLAIM` to existing GrantsNow username and case rules |
+| Identity owner         | Register local `http://127.0.0.1:3000/api/auth/callback` and `/login`; later chosen HTTPS Azure origin equivalents; confirm S256/nonce/JWKS signing and token-free end-session behavior                        |
+| Backend owner          | DEV base/apps roots with ORDS schema prefixes, network access, independent basic/bearer service account or approved adapter; confirm credentials cannot allow untrusted username impersonation                 |
+| Backend owner          | Successful login/validate/extend/logout response examples without real tokens; expiry timezone, renewal rotation/idempotency, business error contract and token revocation                                     |
+| Security/product owner | Verify module grants, DASHBOARD home read grant, row-scoped listing, person-scoped org lookup, field visibility/masking for authorized/denied users                                                            |
+| Hosting owner          | Confirm Azure Linux service/runtime/origin, shared key storage/rotation and multi-instance token behavior; no provisioning in this task                                                                        |
 
 Supply secrets through ignored local env or Azure secret references, never committed files or chat. Set production APP_ENV appropriately and FIXTURE_MODE=false.
 
