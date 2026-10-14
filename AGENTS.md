@@ -26,3 +26,6 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+- The user also authorized Opportunities pages and all dashboard tabs/Insights parity. Current source/chart coverage and outstanding write workflows are in docs/dashboard-parity.md and docs/home-coverage.md; do not claim complete VBCS/module parity. Chart dimensions are a strict, authorized personal preference POST; no live mutation check has been run.
+- Use `npm run test:e2e` (source-only `.validation` scratch copy) so fixture Next processes do not compete with the user's dev next-env.d.ts. Never copy ignored environment/session credentials into the scratch project. Use GRANTSNOW_BUILD_CHECK=true with fixture/browser modes disabled for an isolated production build check.

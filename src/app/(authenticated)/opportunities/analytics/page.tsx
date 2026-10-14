@@ -1,3 +1,4 @@
+import { ChartSkeleton } from "@/components/feedback/skeleton";
 import { Suspense } from "react";
 import { pageIdentity } from "@/server/auth/page";
 import { requireModule } from "@/server/permissions/policy";
@@ -127,7 +128,10 @@ export default async function Analytics() {
             ["FUNDING_TYPE", "Opportunities by Funding Type"],
           ] as const
         ).map(([type, title]) => (
-          <Suspense key={type} fallback={<State title={`Loading ${title}…`} />}>
+          <Suspense
+            key={type}
+            fallback={<ChartSkeleton label={`Loading ${title}`} />}
+          >
             <Chart type={type} title={title} />
           </Suspense>
         ))}

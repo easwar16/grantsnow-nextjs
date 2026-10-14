@@ -2,9 +2,14 @@ import type { Kpi } from "@/server/home/kpis";
 export function KpiStrip({ items, error }: { items: Kpi[]; error?: string }) {
   if (error)
     return (
-      <p className="notice" role="status">
-        {error}
-      </p>
+      <section
+        className="kpi-error"
+        role="status"
+        aria-label="Key performance indicators unavailable"
+      >
+        <p>{error}</p>
+        <a href="/home">Retry dashboard</a>
+      </section>
     );
   if (!items.length) return null;
   return (
@@ -56,7 +61,7 @@ export function KpiStrip({ items, error }: { items: Kpi[]; error?: string }) {
                   }
                 >
                   {k.periodChangeIndicator.value < 0 ? "↓" : "↑"}{" "}
-                  {k.periodChangeIndicator.value}%{" "}
+                  {Math.abs(k.periodChangeIndicator.value)}%{" "}
                   {k.periodChangeIndicator.comparisonPeriod}
                 </span>
               )}

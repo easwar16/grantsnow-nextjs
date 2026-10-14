@@ -95,6 +95,15 @@ export async function mockOracle(
   if (op === "getSharedDashboardPreferences")
     return {
       theme: "theme-default",
+      notifications: true,
+      opportunity: true,
+      dynamicCharts: {
+        "Proposal by status": {
+          infolet_id: 201,
+          isVisible: true,
+          ModuleName: "PROPOSAL",
+        },
+      },
       KPI_STATISTICS: Object.fromEntries(
         [
           "variance_cost_award",
@@ -131,6 +140,35 @@ export async function mockOracle(
         { msg: "<p>Explore the Home dashboard and Proposal listing.</p>" },
       ],
     };
+  if (op === "getNotificationsNotifications") {
+    const offset = Number(query?.get("offset") || 0);
+    return {
+      items: Array.from({ length: 30 }, (_, i) => ({
+        id: i + 1,
+        notific_content: `<p>Synthetic notification ${i + 1}</p>`,
+        is_read: i % 2 ? "Y" : "N",
+        datetime: "2026-10-14T10:00:00",
+      })).slice(offset, offset + 25),
+      offset,
+      limit: 25,
+      hasMore: offset + 25 < 30,
+    };
+  }
+  if (op === "getSharedGetDynamicCharts")
+    return [
+      {
+        infolet_id: 201,
+        chart: "BAR",
+        name: "Proposal by status",
+        ModuleName: "PROPOSAL",
+        colspan: 6,
+        rowspan: 3,
+        dataProvider: [
+          { series: "Draft", group: "2026", value: 12 },
+          { series: "Submitted", group: "2026", value: 8 },
+        ],
+      },
+    ];
   if (op === "getSharedGetKpiStatistics")
     return [
       {
@@ -425,6 +463,54 @@ export async function mockOracle(
       items: [
         { label: "Grant", value: 12, code: "GRANT" },
         { label: "Fellowship", value: 8, code: "FELLOW" },
+      ],
+    };
+  if (op === "getSharedGetWidgetParameters")
+    return [
+      {
+        widget_name: "DASHBOARD_FEI",
+        widget_value: 30000,
+        parameters: [
+          { param: "FEI_LOW", param_value: 5000000 },
+          { param: "FEI_MEDIUM", param_value: 8000000 },
+          { param: "FEI_TARGET", param_value: 12000000 },
+        ],
+      },
+    ];
+  if (op === "getSharedGetOppCategoryStat")
+    return {
+      items: [
+        { SECTORS: "Health", APPLIED_AMT: 200000, AWARDED_AMT: 140000 },
+        { SECTORS: "Education", APPLIED_AMT: 120000, AWARDED_AMT: 80000 },
+      ],
+    };
+  if (op === "getSharedGetTopOppCategoryStat")
+    return { items: [{ SECTORS: "Health", NUM_PROP: 12, AMOUNT: 140000 }] };
+  if (op === "getSharedGetOppFunnelStat")
+    return {
+      items: [
+        { display_order: 1, label_txt: "Total fund available", amount: 500000 },
+        { display_order: 2, label_txt: "Applied amount", amount: 200000 },
+        { display_order: 3, label_txt: "Awarded amount", amount: 140000 },
+      ],
+    };
+  if (op === "getPost_awardsAwardVsCostStatistics")
+    return {
+      items: [
+        { label: "2025", seriesid: "Total Amount", value: 200000 },
+        { label: "2026", seriesid: "Total Amount", value: 350000 },
+        { label: "2025", seriesid: "Award Amount", value: 140000 },
+        { label: "2026", seriesid: "Award Amount", value: 220000 },
+      ],
+    };
+  if (
+    op === "getProposalGetProposalStatistics" &&
+    headers.chart_type === "SCATTER_CHART"
+  )
+    return {
+      items: [
+        { RN: 1, x: "P_0001", Y: 120000 },
+        { RN: 2, x: "P_0002", Y: 80000 },
       ],
     };
   const w = widgets.find(

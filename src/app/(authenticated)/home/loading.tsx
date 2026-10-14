@@ -1,4 +1,4 @@
-import { State } from "@/components/feedback/state";
+import { HomeSkeleton } from "@/components/feedback/skeleton";
 export default function Loading() {
-  return <State title="Loading workspace…" />;
+  return <HomeSkeleton />;
 }

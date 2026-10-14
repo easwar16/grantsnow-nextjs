@@ -1,4 +1,6 @@
 "use client";
+import { InsightChart } from "./insight-chart";
+import { RecordSkeleton, ChartSkeleton } from "@/components/feedback/skeleton";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import type { HomeFilters, WidgetResult } from "../types";
@@ -12,11 +14,15 @@ export function Widget({
   title,
   initial,
   filters,
+  insight = false,
+  columns = 6,
 }: {
   id: string;
   title: string;
   initial: WidgetResult;
   filters: HomeFilters;
+  insight?: boolean;
+  columns?: number;
 }) {
   const [result, setResult] = useState(initial),
     [loading, setLoading] = useState(false),
@@ -54,12 +60,16 @@ export function Widget({
     }
   }
   const data = result.ok ? result.data : undefined;
-  const max = Math.max(
-    1,
-    ...(data?.statistics.map((r) => Math.abs(r.value)) || []),
-  );
+  const expandedChart = useRef<HTMLDialogElement>(null);
   return (
-    <article className="widget">
+    <article
+      className={insight ? "widget insight-widget" : "widget"}
+      style={
+        insight
+          ? { gridColumn: `span ${data?.presentation?.columns || columns}` }
+          : undefined
+      }
+    >
       <div className="widget-heading">
         <h3>{title}</h3>
         <div className="widget-tools">
@@ -85,6 +95,15 @@ export function Widget({
               </button>
             </div>
           )}
+          {insight && data && (
+            <button
+              className="chart-expand"
+              aria-label={`Expand ${title}`}
+              onClick={() => expandedChart.current?.showModal()}
+            >
+              ↗
+            </button>
+          )}
           <button
             className="icon-button"
             aria-label={`Refresh ${title}`}
@@ -96,7 +115,11 @@ export function Widget({
         </div>
       </div>
       {loading ? (
-        <State title="Loading…" />
+        insight ? (
+          <ChartSkeleton label={`Loading ${title}`} />
+        ) : (
+          <RecordSkeleton label={`Loading ${title}`} />
+        )
       ) : !result.ok ? (
         <State
           title="Widget unavailable"
@@ -106,37 +129,14 @@ export function Widget({
         />
       ) : data &&
         data.attention.length === 0 &&
-        data.statistics.length === 0 ? (
+        data.statistics.length === 0 &&
+        !data.gauge ? (
         <State
           title="Nothing to show"
           message="No records match your current scope and filters."
         />
-      ) : data?.statistics.length ? (
-        <div
-          className="chart"
-          role="img"
-          aria-label={`${title}: ${data.statistics.map((r) => `${r.label} ${r.series || ""}: ${r.value}`).join("; ")}`}
-        >
-          <ul>
-            {data.statistics.map((r) => (
-              <li key={r.id}>
-                <span>
-                  {r.label}
-                  {r.series && <small>{r.series}</small>}
-                </span>
-                <div className="bar-track">
-                  <div
-                    className="bar"
-                    style={{ width: `${(Math.abs(r.value) / max) * 100}%` }}
-                  />
-                </div>
-                <strong>
-                  {new Intl.NumberFormat("en-GB").format(r.value)}
-                </strong>
-              </li>
-            ))}
-          </ul>
-        </div>
+      ) : data?.statistics.length || data?.gauge ? (
+        <InsightChart title={title} data={data!} />
       ) : view === "calendar" && data ? (
         <DeadlineCalendar rows={data.attention} hasMore={data.hasMore} />
       ) : (
@@ -205,6 +205,24 @@ export function Widget({
             </div>
           )}
         </div>
+      )}
+      {insight && data && (
+        <dialog
+          ref={expandedChart}
+          className="expanded-chart-dialog"
+          aria-label={`Expanded ${title}`}
+        >
+          <div className="widget-heading">
+            <h2>{title}</h2>
+            <button
+              onClick={() => expandedChart.current?.close()}
+              aria-label="Close expanded chart"
+            >
+              ×
+            </button>
+          </div>
+          <InsightChart title={title} data={data} expanded />
+        </dialog>
       )}
     </article>
   );

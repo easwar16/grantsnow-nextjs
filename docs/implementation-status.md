@@ -33,3 +33,18 @@ Calendar event parity, chart-to-list reconciliation, dynamic insights/KPIs, cust
 ## Run here
 
 `nvm use 24`, `npm ci`, `npm run dev`; open `http://127.0.0.1:3000` and select **Enter fixture workspace**. The ignored local environment is already prepared with a random session key and explicitly labelled synthetic data. For production-like compilation use `FIXTURE_MODE=false npm run build`; running the production server additionally requires complete verified live settings, HTTPS origin and `FIXTURE_MODE=false`.
+
+## Current dashboard/loader increment — 2026-10-14
+
+This section supersedes the historical first-increment coverage and live-data statements above. See dashboard-parity.md for exact limits; full VBCS/application parity is not signed off.
+
+- Implemented VBCS sidebar artwork/reflow, source-colour/icons/tab strip, independent page/record/KPI/chart/table/detail skeletons and reduced-motion/accessibility status.
+- All five configured dashboard tabs have working read views. Insights supports fifteen source preferences (fourteen visible source panels in the observed live account), source panel order, chart types/palette, multi-select date filters, complete chart result paging, expansion/data tables and independent failures. Dynamic Charts shares its engine and has protected dimension saving/report links.
+- `npm test`: **152 passed** across sixteen unit/integration files.
+- `npm run test:e2e`: **11 Chromium fixture journeys passed**, including all tabs, keyboard focus after filter navigation, chart rendering/expansion, multi-date filtering/reset, notification paging/recovery, chart dimension saving/CSRF and delayed skeletons. No real IDCS or live write is implied by these fixture checks.
+- `npx tsc --noEmit`: passed. `npm run lint`: passed. `GRANTSNOW_BUILD_CHECK=true DEV_BROWSER_SESSION=false FIXTURE_MODE=false npm run build`: passed with standalone/static/public assets in .next-check. Personalized pages/APIs remain dynamic.
+- Production artifact scan found **zero matches for the captured DEV token**; capture remains ignored with mode 0600. Test scratch copies exclude credentials/captures. Runtime npm audit has no new chart-library finding; the existing five high dev-only Next ESLint transitive findings remain documented in security-review.md, and no major framework downgrade was applied.
+- Live DEV KPI, Proposal/financial Insights and notifications were observed through the explicit captured browser session. Oracle Funding Opportunity Status returns **HTTP 555**, independently surfaced with retry. Award statistics completed after about **31 seconds**, so aggregations receive 60 seconds; no repeated automatic retry loop is introduced. The enabled Dynamic Chart returns an empty dataProvider; nonempty rendering and writes were verified only with fixtures. Funding Efficiency filters DASHBOARD_FEI before validating values/targets and does not invent a gauge from unrelated settings.
+- Existing read-only legacy checkout remained at `b5bdcc31538ea292f2ca4ae4b09125914c2f90a5`. No legacy edits, commits/pushes, deployment or provisioning were performed.
+
+Outstanding: exact OJET/pixel sign-off, chart/list drill reconciliation, full calendar parity, Home opportunity bookmark/share/notes/apply/convert workflows, full profile/preferences persistence and unbuilt Proposal/Opportunity mutation modules. Registration remains blocked on the VBCS Employee business-object contract/authorized server access. Cloud IDCS compatibility and release-grade row/access/concurrent-session verification remain administrator tasks.

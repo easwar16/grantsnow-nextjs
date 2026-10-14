@@ -1,11 +1,11 @@
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
-const list = (pattern: RegExp) => z.string().regex(pattern).optional();
+const list = (pattern: RegExp) => z.string().max(160).regex(pattern).optional();
 export const homeFiltersSchema = z.object({
   organization: z.string().max(50).optional(),
-  year: list(/^\d{4}$/),
-  quarter: list(/^[1-4]$/),
-  month: list(/^([1-9]|1[0-2])$/),
+  year: list(/^\d{4}(,\d{4})*$/),
+  quarter: list(/^[1-4](,[1-4])*$/),
+  month: list(/^([1-9]|1[0-2])(,([1-9]|1[0-2]))*$/),
   offset: z.coerce.number().int().nonnegative().max(100000).default(0),
 });
 export function homeFilters(params: URLSearchParams) {
