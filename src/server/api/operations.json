@@ -236,5 +236,30 @@
     "service": "apps",
     "path": "/shared/getTopOppCategoryStat",
     "headers": ["token", "p_org_id", "month", "quarter", "year"]
+  },
+  "getSharedGetOppFunders": {
+    "service": "apps",
+    "path": "/shared/getOppFunders",
+    "headers": ["token"]
+  },
+  "getSharedUserPreferenceLOV": {
+    "service": "apps",
+    "path": "/shared/UserPreferenceLOV",
+    "headers": ["token", "lov_type"]
+  },
+  "getSharedUserPreference": {
+    "service": "apps",
+    "path": "/shared/UserPreference",
+    "headers": ["token"]
+  },
+  "getSharedDigitalPresence2": {
+    "service": "apps",
+    "path": "/shared/digitalPresence",
+    "headers": ["token", "pid"]
+  },
+  "getSharedPersonStatus": {
+    "service": "apps",
+    "path": "/shared/PersonStatus",
+    "headers": ["token"]
   }
 }

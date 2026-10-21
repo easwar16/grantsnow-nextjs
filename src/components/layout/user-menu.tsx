@@ -1,25 +1,32 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { SessionControls } from "./session-controls";
+import { accessibilityKeys } from "@/features/account/contracts";
+import { AccountPanel } from "@/features/account/account-panel";
 type Panel = "profile" | "preferences" | "accessibility";
 export function UserMenu({
   name,
-  organization,
+  accessibility,
 }: {
   name: string;
-  organization: string;
+  organization?: string;
+  accessibility: Record<string, number>;
 }) {
   const menu = useRef<HTMLDetailsElement>(null),
     trigger = useRef<HTMLElement>(null),
     dialog = useRef<HTMLDialogElement>(null);
-  const [panel, setPanel] = useState<Panel>("profile"),
-    [theme, setTheme] = useState("default"),
-    [contrast, setContrast] = useState(false),
-    [textSize, setTextSize] = useState("default");
-  const organisationDark = useRef(false);
+  const [opened, setOpened] = useState(false);
+  const [panel, setPanel] = useState<Panel>("profile");
   useEffect(() => {
-    organisationDark.current =
-      document.querySelector(".app")?.classList.contains("dark") === true;
+    for (const key of accessibilityKeys) {
+      for (const cls of [...document.documentElement.classList])
+        if (cls.startsWith(`${key}-`))
+          document.documentElement.classList.remove(cls);
+      document.documentElement.classList.add(
+        `${key}-${accessibility[key] || 0}`,
+      );
+    }
+  }, [accessibility]);
+  useEffect(() => {
     const close = (event: PointerEvent) => {
       if (menu.current && !menu.current.contains(event.target as Node))
         menu.current.open = false;
@@ -28,23 +35,10 @@ export function UserMenu({
     return () => document.removeEventListener("pointerdown", close);
   }, []);
   function open(next: Panel) {
+    setOpened(true);
     setPanel(next);
     if (menu.current) menu.current.open = false;
     dialog.current?.showModal();
-  }
-  function save(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const root = document.querySelector(".app");
-    if (panel === "preferences") {
-      root?.classList.toggle(
-        "dark",
-        theme === "default" ? organisationDark.current : theme === "theme-dark",
-      );
-    } else {
-      root?.classList.toggle("accessibility-contrast", contrast);
-      root?.classList.toggle("accessibility-large", textSize === "large");
-    }
-    dialog.current?.close();
   }
   function menuKeys(event: React.KeyboardEvent<HTMLDivElement>) {
     const items = [
@@ -133,7 +127,10 @@ export function UserMenu({
               ? "User Preferences"
               : "Accessibility"
         }
-        onClose={() => trigger.current?.focus()}
+        onClose={() => {
+          setOpened(false);
+          trigger.current?.focus();
+        }}
       >
         <header>
           <h2>
@@ -151,74 +148,8 @@ export function UserMenu({
             ×
           </button>
         </header>
-        {panel === "profile" ? (
-          <>
-            <dl>
-              <dt>Name</dt>
-              <dd>{name}</dd>
-              <dt>Organization</dt>
-              <dd>{organization}</dd>
-            </dl>
-            <p className="muted">
-              Identity is supplied by GrantsNow. Profile editing is not yet
-              connected.
-            </p>
-            <SessionControls />
-          </>
-        ) : (
-          <form onSubmit={save}>
-            {panel === "preferences" ? (
-              <fieldset>
-                <legend>Theme</legend>
-                {[
-                  ["default", "Organisation default"],
-                  ["theme-light", "Light"],
-                  ["theme-dark", "Dark"],
-                ].map(([value, label]) => (
-                  <label key={value}>
-                    <input
-                      type="radio"
-                      name="theme"
-                      value={value}
-                      checked={theme === value}
-                      onChange={() => setTheme(value)}
-                    />
-                    {label}
-                  </label>
-                ))}
-              </fieldset>
-            ) : (
-              <>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={contrast}
-                    onChange={(e) => setContrast(e.target.checked)}
-                  />
-                  High contrast
-                </label>
-                <label>
-                  Text size
-                  <select
-                    value={textSize}
-                    onChange={(e) => setTextSize(e.target.value)}
-                  >
-                    <option value="default">Default</option>
-                    <option value="large">Large</option>
-                  </select>
-                </label>
-              </>
-            )}
-            <p className="muted">
-              Applies to the current browser session. Server preference
-              persistence is not yet connected.
-            </p>
-            <footer>
-              <button type="submit" className="primary">
-                Save
-              </button>
-            </footer>
-          </form>
+        {opened && (
+          <AccountPanel panel={panel} close={() => dialog.current?.close()} />
         )}
       </dialog>
     </>

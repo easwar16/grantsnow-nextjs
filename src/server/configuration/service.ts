@@ -12,6 +12,14 @@ export const dashboardConfiguration = cache(async () => {
   return z
     .object({
       theme: z.string().optional(),
+      accessibility: z
+        .record(
+          z.string(),
+          z
+            .object({ value: z.union([z.number(), z.string()]).optional() })
+            .passthrough(),
+        )
+        .optional(),
       needAttention: visibility,
       insights: visibility,
       KPI_STATISTICS: visibility.optional(),

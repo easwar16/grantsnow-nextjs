@@ -235,10 +235,14 @@ test("narrow layout keyboard, private cache and no tokens in client payload; log
   ).toBe(true);
   expect(await page.evaluate(() => localStorage.length)).toBe(0);
   await page.locator(".user-menu summary").click();
-  await page.getByRole("menuitem", { name: "Manage profile" }).click();
-  await page.getByRole("button", { name: "Extend session" }).click();
-  await expect(page.getByText("Session extended.")).toBeVisible();
-  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  expect(
+    (
+      await page.request.post("/api/auth/renew", {
+        headers: { origin: new URL(page.url()).origin },
+      })
+    ).status(),
+  ).toBe(200);
+  await page.getByRole("menuitem", { name: "Sign Out", exact: true }).click();
   await expect(page).toHaveURL(/SIGNED_OUT/);
   expect((await page.request.get("/api/proposals")).status()).toBe(401);
   expect(errors).toEqual([]);
@@ -359,12 +363,12 @@ test("preview-style desktop drawer, user menu and Opportunities routes", async (
   await expect(
     page.getByRole("dialog", { name: "User Preferences" }),
   ).toBeVisible();
-  await page.getByRole("radio", { name: "Dark", exact: true }).check();
+  await page.getByRole("button", { name: "dark", exact: true }).click();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.locator(".app")).toHaveClass(/dark/);
   await page.locator(".user-menu summary").click();
   await page.getByRole("menuitem", { name: "Preferences" }).click();
-  await page.getByRole("radio", { name: "Organisation default" }).check();
+  await page.getByRole("button", { name: "Reset", exact: true }).click();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.locator(".app")).not.toHaveClass(/dark/);
   await page.goto("/opportunities");
@@ -599,4 +603,43 @@ test("Insights follows source chart types, multi-select filters, expansion and i
   await page.unroute("**/api/home/pByStatusChart?*");
   await page.getByRole("button", { name: "Retry", exact: true }).click();
   await expect(page.getByText("Isolated Insights failure")).toBeHidden();
+});
+
+test("account dialogs, research save, preferences and accessible preview cancellation", async ({
+  page,
+}) => {
+  await login(page);
+  await page.locator(".user-menu > summary").click();
+  await page.getByRole("menuitem", { name: "Manage profile" }).click();
+  const profile = page.getByRole("dialog", { name: "Manage profile" });
+  await expect(
+    profile.getByRole("tab", { name: "Profile", exact: true }),
+  ).toBeVisible();
+  await profile.getByRole("tab", { name: "Preference", exact: true }).click();
+  await profile.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(profile).not.toBeVisible();
+  await page.locator(".user-menu > summary").click();
+  await page
+    .getByRole("menuitem", { name: "Preferences", exact: true })
+    .click();
+  const preferences = page.getByRole("dialog", { name: "User Preferences" });
+  await expect(
+    preferences.getByRole("heading", { name: "Infolets" }),
+  ).toBeVisible();
+  await preferences.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(preferences).not.toBeVisible();
+  await page.locator(".user-menu > summary").click();
+  await page
+    .getByRole("menuitem", { name: "Accessibility", exact: true })
+    .click();
+  const accessibility = page.getByRole("dialog", {
+    name: "Accessibility",
+    exact: true,
+  });
+  await accessibility.getByRole("button", { name: "Bigger text: 0%" }).click();
+  await expect(page.locator("html")).toHaveClass(/accFontSize-25/);
+  await accessibility
+    .getByRole("button", { name: "Cancel", exact: true })
+    .click();
+  await expect(page.locator("html")).toHaveClass(/accFontSize-0/);
 });

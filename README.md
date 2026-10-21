@@ -2,7 +2,7 @@
 
 VBCS parity migration in progress: Home dashboard, card-based Proposal listing, an object-scoped read-only Summary, and initial Opportunity finder and EOI read views, with Oracle IDCS OIDC integration and a separate protected GrantsNow session adapter. Azure is the hosting target; nothing has been provisioned or deployed.
 
-**Project location is this Superset workspace.** The user corrected the original prompt's proposed Developer-directory destination. No nested repository was initialized. The temporary duplicate destination created earlier was removed after moving its files here.
+This is the standalone Next.js project for the GrantsNow UI rebuild. It uses the existing Oracle services and IDCS integration; it does not modify the legacy VBCS application.
 
 Current dashboard work: all five configured tabs, source-type Insights charts/multi-date filters and geometric skeletons are documented in [dashboard parity](docs/dashboard-parity.md). Opportunity write workflows and exact/full VBCS sign-off remain outstanding.
 

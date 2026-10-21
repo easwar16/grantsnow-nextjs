@@ -27,6 +27,12 @@ export default async function AuthLayout({
       )}
       <AppShell
         name={user.name}
+        accessibility={Object.fromEntries(
+          Object.entries(config.accessibility || {}).map(([k, v]) => [
+            k,
+            Number(v.value) || 0,
+          ]),
+        )}
         organization={user.organization}
         proposals={user.modules.PROPOSALS === true}
         opportunities={user.modules["opportunities-finder"] === true}

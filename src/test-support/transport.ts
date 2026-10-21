@@ -92,8 +92,36 @@ export async function mockOracle(
       token: "fixture-backend-token",
       expiry_datetime: new Date(Date.now() + 3600000).toISOString(),
     };
-  if (op === "getSharedDashboardPreferences")
+  if (op === "getSharedPersonStatus") {
+    const { fixtureSettings } = await import("./account-store");
+    return (
+      fixtureSettings("shared/PersonStatus") || {
+        status_code: "ACTIVE",
+        proxy_users: [],
+      }
+    );
+  }
+  if (op === "getSharedUserPreference") {
+    const { fixtureSettings } = await import("./account-store");
+    const saved = fixtureSettings("shared/UserPreference");
     return {
+      items: [
+        {
+          research_areas: "Medicine",
+          favourite_funder: "UKRI",
+          research_keywords: "Research",
+          ...saved,
+        },
+      ],
+    };
+  }
+  if (op === "getSharedUserPreferenceLOV")
+    return { items: [{ label: "Medicine" }, { label: "Research" }] };
+  if (op === "getSharedGetOppFunders") return { items: [{ value: "UKRI" }] };
+  if (op === "getSharedDashboardPreferences") {
+    const { fixtureSettings } = await import("./account-store");
+    const saved = fixtureSettings("shared/dashboardPreferences");
+    const defaults = {
       theme: "theme-default",
       notifications: true,
       opportunity: true,
@@ -123,6 +151,32 @@ export async function mockOracle(
           .map((w) => [w.id, { isVisible: true }]),
       ),
     };
+    return {
+      ...defaults,
+      ...saved,
+      needAttention: saved?.needAttention
+        ? Object.fromEntries(
+            Object.entries(saved.needAttention as Record<string, boolean>).map(
+              ([k, v]) => [k, { isVisible: v }],
+            ),
+          )
+        : defaults.needAttention,
+      insights: saved?.insights
+        ? Object.fromEntries(
+            Object.entries(saved.insights as Record<string, boolean>).map(
+              ([k, v]) => [k, { isVisible: v }],
+            ),
+          )
+        : defaults.insights,
+      accessibility: saved?.accessibility
+        ? Object.fromEntries(
+            Object.entries(saved.accessibility as Record<string, string>).map(
+              ([k, v]) => [k, { value: Number(v) }],
+            ),
+          )
+        : {},
+    };
+  }
   if (op === "getPre_award_costingGetGlobalVar")
     return {
       items: [

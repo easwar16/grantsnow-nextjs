@@ -48,3 +48,13 @@ This section supersedes the historical first-increment coverage and live-data st
 - Existing read-only legacy checkout remained at `b5bdcc31538ea292f2ca4ae4b09125914c2f90a5`. No legacy edits, commits/pushes, deployment or provisioning were performed.
 
 Outstanding: exact OJET/pixel sign-off, chart/list drill reconciliation, full calendar parity, Home opportunity bookmark/share/notes/apply/convert workflows, full profile/preferences persistence and unbuilt Proposal/Opportunity mutation modules. Registration remains blocked on the VBCS Employee business-object contract/authorized server access. Cloud IDCS compatibility and release-grade row/access/concurrent-session verification remain administrator tasks.
+
+### Navigation placeholders — 2026-10-14
+
+Added Ethics, Due Diligence, Awards, Contracts, CGA, Reports, Announcements, Administration, Customer Support and API Documentation to the existing sidebar at the user's request. Each links to a known, authenticated `/modules/[module]` placeholder with “Module not available for now” and Back to Home. No unavailable-module Oracle operations or external administration links are invoked. Existing implemented navigation retains its access gates. These entries are placeholders, not completed modules.
+
+Navigation validation: Node 24 typecheck, targeted ESLint, git diff whitespace check and isolated production build passed. Existing authenticated Playwright session verified Ethics direct load, all ten drawer entries, and Awards link navigation to the expected placeholder. No unavailable backend module was called.
+
+### Account controls — 2026-10-15
+
+Implemented protected read-only Profile, research interests/funders/keyword saves, Active/Out of Office/proxy management, dashboard preference switches/default-dark themes and seven source-derived Accessibility tiles with preview/cancel/persistence. See `docs/account-settings.md` for contracts and explicit parity limits. Account reviewer found no remaining critical/high issues after correcting Active cleanup. 161 unit/integration checks and twelve fixture Chromium journeys passed; typecheck/lint and isolated production build passed. Live DEV Profile/Manage reads were inspected separately. No live preference/status/proxy save was performed, no IDCS integration proof inferred, no deployment/commit/push.

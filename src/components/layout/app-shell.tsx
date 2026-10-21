@@ -7,6 +7,7 @@ import { Navigation } from "./navigation";
 import { UserMenu } from "./user-menu";
 export function AppShell({
   children,
+  accessibility,
   name,
   organization,
   proposals,
@@ -17,6 +18,7 @@ export function AppShell({
   proposalsLabel,
 }: {
   children: React.ReactNode;
+  accessibility: Record<string, number>;
   name: string;
   organization: string;
   proposals: boolean;
@@ -71,7 +73,11 @@ export function AppShell({
             priority
           />
         </Link>
-        <UserMenu name={name} organization={organization} />
+        <UserMenu
+          name={name}
+          organization={organization}
+          accessibility={accessibility}
+        />
       </header>
       <dialog
         ref={drawer}

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { LatestRequest } from "./latest-request";
-export function useRemote<T>(url: string) {
+export function useRemote<T>(url: string | undefined) {
   const [result, setResult] = useState<{
     url: string;
     data?: T;
@@ -10,6 +10,7 @@ export function useRemote<T>(url: string) {
   const [attempt, setAttempt] = useState(0),
     requests = useRef(new LatestRequest());
   useEffect(() => {
+    if (!url) return;
     const coordinator = requests.current;
     const request = coordinator.begin();
     fetch(url, { signal: request.signal, cache: "no-store" })
@@ -41,8 +42,8 @@ export function useRemote<T>(url: string) {
     return () => coordinator.cancel();
   }, [url, attempt]);
   return {
-    data: result?.url === url ? result.data : undefined,
-    error: result?.url === url ? result.error : undefined,
+    data: result && result.url === url ? result.data : undefined,
+    error: result && result.url === url ? result.error : undefined,
     retry: () => {
       setResult(undefined);
       setAttempt((a) => a + 1);

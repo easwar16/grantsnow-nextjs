@@ -2661,3 +2661,290 @@ a.sr-only:focus {
   margin: -18px -36px 17px;
   height: 135px;
 }
+
+.navigation-drawer nav a.navigation-utility-start {
+  border-top: 1px solid #ffffff30;
+  margin-top: 6px;
+  padding-top: 16px;
+}
+.navigation-drawer nav a > svg {
+  flex-shrink: 0;
+}
+.unavailable-module {
+  padding: 28px 36px;
+}
+.unavailable-module-message {
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+}
+.unavailable-module-message h2,
+.unavailable-module-message p {
+  margin: 0;
+}
+
+.account-dialog-preferences,
+.account-dialog-accessibility {
+  margin: 0 0 0 auto;
+  width: 440px;
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  border-radius: 0;
+  background: #315357;
+  color: #fff;
+}
+.account-dialog-preferences h3,
+.account-dialog-accessibility h3 {
+  color: inherit;
+}
+.account-dialog fieldset {
+  border: 0;
+  padding: 8px 0;
+}
+.account-dialog fieldset label {
+  display: flex;
+  gap: 10px;
+  margin: 12px 0;
+  align-items: center;
+}
+.account-dialog footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding-top: 20px;
+}
+.account-dialog-profile {
+  width: 960px;
+  max-width: calc(100vw - 32px);
+}
+.account-tabs {
+  display: flex;
+  gap: 20px;
+  border-bottom: 1px solid #ddd;
+}
+.account-tabs button {
+  border: 0;
+  border-radius: 0;
+  padding: 12px;
+  background: transparent;
+}
+.account-tabs button[aria-selected="true"] {
+  border-bottom: 3px solid var(--accent);
+}
+.profile-grid {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  padding: 32px 12px;
+  gap: 30px;
+}
+.profile-avatar {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #e0e6e6;
+  width: 130px;
+  height: 130px;
+  font-size: 56px;
+}
+.profile-grid dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 0;
+}
+.profile-grid dt {
+  font-size: 12px;
+  color: #666;
+}
+.profile-grid dd {
+  margin: 6px 0 0;
+}
+.research-fields {
+  display: grid;
+  gap: 20px;
+  padding: 24px 0;
+}
+.research-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.research-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.theme-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.theme-swatch {
+  display: block;
+  width: 60px;
+  height: 45px;
+  border: 1px solid #fff;
+}
+.theme-swatch.theme-default {
+  background: linear-gradient(90deg, #315357 50%, #fbf9f8 50%);
+}
+.theme-swatch.theme-light {
+  background: #fff;
+}
+.theme-swatch.theme-dark {
+  background: #202020;
+}
+.theme-tiles button[aria-pressed="true"] {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+.accessibility-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.accessibility-tiles button {
+  padding: 0 8px 12px;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 150px;
+}
+.accessibility-tiles progress {
+  width: calc(100% + 16px);
+  height: 5px;
+  accent-color: #52a986;
+}
+.accessibility-tiles img {
+  object-fit: contain;
+}
+.accessibility-tiles .selected {
+  outline: 2px solid #85cbb3;
+}
+html[class*="accLetterSpacing-"] .app {
+  letter-spacing: var(--account-spacing, 0);
+}
+html.accLetterSpacing-25 {
+  --account-spacing: 2px;
+}
+html.accLetterSpacing-50 {
+  --account-spacing: 3px;
+}
+html.accLetterSpacing-75 {
+  --account-spacing: 4px;
+}
+html.accLetterSpacing-100 {
+  --account-spacing: 5px;
+}
+html.accHighlightLinks-100 .app a {
+  text-decoration: underline !important;
+  outline: 2px solid #e3b72e;
+}
+html.accContrastTheme-100 .app {
+  background: #fff;
+  color: #000;
+}
+html.accContrastTheme-100 .app * {
+  border-color: #000 !important;
+  outline-color: #000 !important;
+  box-shadow: none !important;
+}
+html.accContrastTheme-100 .app a {
+  color: #0000ff !important;
+  font-weight: bold;
+  text-decoration: underline;
+}
+html.accContrastTheme-100 .app.dark {
+  background: #000;
+  color: #fff;
+}
+html.accContrastTheme-100 .app.dark * {
+  border-color: #fff !important;
+  outline-color: #fff !important;
+}
+html.accContrastTheme-100 .app.dark a {
+  color: #ffff00 !important;
+}
+
+html.accLineHeight-25 .app {
+  line-height: 1.7;
+}
+html.accLineHeight-50 .app {
+  line-height: 1.9;
+}
+html.accLineHeight-75 .app {
+  line-height: 2.1;
+}
+html.accLineHeight-100 .app {
+  line-height: 2.3;
+}
+@media (max-width: 600px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+  .profile-grid dl {
+    grid-template-columns: 1fr;
+  }
+}
+
+@font-face {
+  font-family: open-dyslexic;
+  src: url(/accessibility/open-dyslexic.woff) format("woff");
+  font-display: swap;
+}
+html.accDyslexicFont-100 .app,
+html.accDyslexicFont-100 .app :is(button, input, select, textarea) {
+  font-family: open-dyslexic, sans-serif !important;
+}
+html.accEnlargedCursor-100 .app,
+html.accEnlargedCursor-100 .app * {
+  cursor:
+    url(data:image/png;base64,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),
+    auto;
+  --oj-core-cursor-clickable:
+    url(data:image/png;base64,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),
+    auto;
+}
+
+html.accFontSize-25
+  .app
+  :is(p, a, label, input, select, textarea, button, dd, dt, td, th) {
+  font-size: 1rem;
+}
+html.accFontSize-25 .app :is(h1, h2) {
+  font-size: 2.5rem;
+}
+
+html.accFontSize-50
+  .app
+  :is(p, a, label, input, select, textarea, button, dd, dt, td, th) {
+  font-size: 1.5rem;
+}
+html.accFontSize-50 .app :is(h1, h2) {
+  font-size: 3.75rem;
+}
+
+html.accFontSize-75
+  .app
+  :is(p, a, label, input, select, textarea, button, dd, dt, td, th) {
+  font-size: 1.75rem;
+}
+html.accFontSize-75 .app :is(h1, h2) {
+  font-size: 4.375rem;
+}
+
+html.accFontSize-100
+  .app
+  :is(p, a, label, input, select, textarea, button, dd, dt, td, th) {
+  font-size: 2rem;
+}
+html.accFontSize-100 .app :is(h1, h2) {
+  font-size: 5rem;
+}
