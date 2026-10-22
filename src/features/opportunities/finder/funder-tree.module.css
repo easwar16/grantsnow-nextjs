@@ -1,0 +1,70 @@
+/* GN-Angular funder-tree: 30px rows, children indented under a 21px twisty. */
+.tree {
+  max-height: 220px;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  list-style: none;
+}
+.tree ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.row {
+  display: flex;
+  align-items: center;
+  min-height: 30px;
+  padding-left: 6px;
+}
+.child {
+  padding-left: 32px;
+}
+.twisty {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 21px;
+  height: 21px;
+  /* A bare 21px button in Angular: undo the base button's 28px min-height. */
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.twisty:hover {
+  background: none;
+}
+.twisty :global(.gn-icon) {
+  transition: transform var(--dur-fast) var(--ease);
+}
+.twisty[data-open="true"] :global(.gn-icon) {
+  transform: rotate(90deg);
+}
+.row label {
+  display: flex;
+  flex: 1;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  /* Angular labels keep the text colour; the global label rule would grey them. */
+  color: var(--text);
+  font-weight: 400;
+  cursor: pointer;
+}
+.row input {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+.text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

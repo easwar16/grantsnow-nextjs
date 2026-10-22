@@ -15,6 +15,7 @@ vi.mock("@/server/configuration/resources", async (importOriginal) => ({
 }));
 vi.mock("@/server/configuration/service", () => ({
   organizations: async () => [{ id: "5", name: "Own organization" }],
+  forgetDashboardConfiguration: () => {},
 }));
 vi.mock("@/server/api/transport", async (importOriginal) => ({
   ...(await importOriginal<object>()),

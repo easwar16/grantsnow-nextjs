@@ -1,6 +1,7 @@
 import "server-only";
 import operations from "./operations.json";
 import {
+  assertWritesEnabled,
   fixtureMode,
   oracleSettings,
   browserSessionMode,
@@ -96,12 +97,40 @@ function devTrace(operation: Operation, detail: string) {
   if (process.env.APP_ENV === "development")
     console.warn(`[oracle] ${operation}: ${detail}`);
 }
+const writes = (operation: Operation) =>
+  (operations[operation] as { write?: boolean }).write === true;
+/** Reads only: an operation that writes (even a GET such as insertRequest) must go through `oracleWrite`. */
 export async function oracle(
   operation: Operation,
   headers: Record<string, string> = {},
   query?: URLSearchParams,
   signal?: AbortSignal,
   pathParams?: Record<string, string>,
+): Promise<unknown> {
+  if (writes(operation))
+    throw new AppError("BAD_REQUEST", "Unapproved Oracle read.", 400);
+  return send(operation, headers, query, signal, pathParams);
+}
+/** Every backend write (D27): allowlisted as a write, off unless WRITES_ENABLED; fixtures simulate success. */
+export async function oracleWrite(
+  operation: Operation,
+  headers: Record<string, string> = {},
+  body?: unknown,
+  signal?: AbortSignal,
+): Promise<unknown> {
+  if (!writes(operation))
+    throw new AppError("BAD_REQUEST", "Unapproved Oracle write.", 400);
+  if (fixtureMode()) return {};
+  assertWritesEnabled();
+  return send(operation, headers, undefined, signal, undefined, body);
+}
+async function send(
+  operation: Operation,
+  headers: Record<string, string>,
+  query?: URLSearchParams,
+  signal?: AbortSignal,
+  pathParams?: Record<string, string>,
+  body?: unknown,
 ): Promise<unknown> {
   if (browserSessionMode() && operation === "getSessionLogin")
     throw new AppError(
@@ -110,7 +139,9 @@ export async function oracle(
       403,
     );
   const path = resolveOperationPath(operation, pathParams),
-    op = operations[operation];
+    op = operations[operation] as (typeof operations)[Operation] & {
+      method?: string;
+    };
   for (const key of Object.keys(headers))
     if (!(op.headers as readonly string[]).includes(key))
       throw new AppError("BAD_REQUEST", "Unapproved Oracle header.", 400);
@@ -141,11 +172,14 @@ export async function oracle(
     "getSharedGetDynamicCharts",
   ];
   const timeout = aggregates.includes(operation) ? 90000 : 60000;
+  const started = performance.now();
   try {
     response = await fetch(url, {
-      method: "GET",
+      method: op.method ?? "GET",
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       headers: {
         ...headers,
+        ...(body === undefined ? {} : { "Content-Type": "application/json" }),
         ...(config.authorization
           ? { Authorization: config.authorization }
           : {}),
@@ -166,22 +200,27 @@ export async function oracle(
     );
     throw new AppError("UPSTREAM", "Oracle is unavailable. Please retry.");
   }
+  // Slow calls name themselves in development, so latency is traced to Oracle or to our own waits.
+  const took = Math.round(performance.now() - started);
+  if (took > 1000) devTrace(operation, `${took} ms`);
   if (!response.ok) devTrace(operation, `HTTP ${response.status}`);
   if (response.status === 401) throw expired();
   if (response.status === 403)
     throw new AppError("FORBIDDEN", "Oracle denied access to this data.", 403);
-  let body: unknown;
+  let reply: unknown;
   try {
-    body = parseBody(await response.text());
+    const text = await response.text();
+    // Writes may answer an empty body on success (saveDynamicCharts declares none).
+    reply = text.trim() === "" && writes(operation) ? {} : parseBody(text);
   } catch {
     throw new AppError("UPSTREAM", "Oracle is unavailable. Please retry.");
   }
   if (!response.ok)
     throw (
-      businessError(body) ??
+      businessError(reply) ??
       new AppError("UPSTREAM", "Oracle is unavailable. Please retry.")
     );
-  const failure = businessError(body);
+  const failure = businessError(reply);
   if (failure) devTrace(operation, `${failure.code} ${failure.message}`);
-  return assertBusiness(body);
+  return assertBusiness(reply);
 }

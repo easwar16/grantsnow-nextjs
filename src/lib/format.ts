@@ -52,6 +52,47 @@ export function calendarDate(value?: string): DateParts | undefined {
     ? { year, month, day }
     : undefined;
 }
+/** The configured date pattern as typed by a user, e.g. "DD-MMM-YYYY": a date field's placeholder. */
+export function datePattern(settings?: FormatSettings) {
+  const pattern = (settings?.dateFormat || DEFAULT_DATE_FORMAT).toUpperCase();
+  return renderPattern(pattern, { year: 2000, month: 1, day: 1 })
+    ? pattern
+    : DEFAULT_DATE_FORMAT;
+}
+const PARSERS: Record<string, [string, (v: string, d: DateParts) => void]> = {
+  YYYY: ["(\\d{4})", (v, d) => (d.year = Number(v))],
+  YY: ["(\\d{2})", (v, d) => (d.year = 2000 + Number(v))],
+  MMMM: ["([a-z]+)", (v, d) => (d.month = monthOf(v, 0))],
+  MMM: ["([a-z]{3})", (v, d) => (d.month = monthOf(v, 3))],
+  MM: ["(\\d{1,2})", (v, d) => (d.month = Number(v))],
+  M: ["(\\d{1,2})", (v, d) => (d.month = Number(v))],
+  DD: ["(\\d{1,2})", (v, d) => (d.day = Number(v))],
+  D: ["(\\d{1,2})", (v, d) => (d.day = Number(v))],
+};
+// A month name, whole or as its first `length` letters (0: whole); 0 when unknown.
+const monthOf = (name: string, length: number) =>
+  MONTHS.findIndex(
+    (m) =>
+      (length ? m.slice(0, length) : m).toLowerCase() === name.toLowerCase(),
+  ) + 1;
+/** Reads a date typed in the configured pattern; the ISO yyyy-mm-dd it names, or undefined when it names none. */
+export function parseDisplayDate(text: string, settings?: FormatSettings) {
+  const setters: ((v: string, d: DateParts) => void)[] = [];
+  let source = "";
+  for (const part of datePattern(settings).match(/([A-Z])\1*|[^A-Z]+/g) ?? []) {
+    const parser = PARSERS[part];
+    if (parser) {
+      source += parser[0];
+      setters.push(parser[1]);
+    } else source += part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+  const match = text.trim().match(new RegExp(`^${source}$`, "i"));
+  if (!match) return undefined;
+  const parts: DateParts = { year: 0, month: 0, day: 0 };
+  setters.forEach((set, i) => set(match[i + 1], parts));
+  const iso = `${String(parts.year).padStart(4, "0")}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
+  return calendarDate(iso) ? iso : undefined;
+}
 export function dateDisplay(value?: string, settings?: FormatSettings) {
   if (!value) return "—";
   const parts = calendarDate(value);

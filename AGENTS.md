@@ -30,6 +30,8 @@ The legacy VBCS checkout (`~/Documents/Projects/GrantsNow` or `/Users/easwar/Dev
 - Resource visibility fails closed (`is_visible === 'Y'`). A new field gets a seeded default with `'N'`, a literal fallback, visible and required gates, and More Info for editable fields. Anything promoted to `uat` or higher arrives with `'N'`.
 - Every user-triggered write disables its control until the request settles. Never throttle or debounce a save.
 - Match the live DEV VBCS app by measurement, not by eye. Add no new dependency until the owner agrees to it.
+- Every section and element carries a unique, stable, kebab-case `id` (`<area>-<element>`, record key for repeats; shared components take theirs from the page). Ids, variables and functions get sensible, short names. Details in the foundations doc.
+- Performance: independent awaits run in parallel; dependent steps and writes stay ordered; slow reference data goes through `memo` (session-keyed, TTL, shared in-flight); client fetches keep latest-wins guards. Details in the foundations doc.
 - Minimal diffs at the true cause. Add state or helpers only when needed. Invent nothing: no new checks, toasts or payload changes without an identified defect. Comments are one line of _why_. Test emptiness explicitly (`0`/`false` are values). Bound every wait. Use try/catch only where something can throw and the catch does something useful.
 - Diagnose before editing: get the full stack or a decisive diff before changing code; say what a failed fix rules out.
 

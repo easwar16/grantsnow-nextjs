@@ -27,11 +27,11 @@ export default async function Login({
     reason = p.reason || (await storage()).logoutStatus;
   return (
     <main id="main" className="login-page">
-      <div className="login-brand">
+      <div id="login-brand" className="login-brand">
         <span className="brand-mark">G</span>
         <strong>GrantsNow</strong>
       </div>
-      <section className="login-card">
+      <section id="login-card" className="login-card">
         <div className="eyebrow">RESEARCH ADMINISTRATION</div>
         <h1>
           Your research.
@@ -42,32 +42,38 @@ export default async function Login({
           attention.
         </p>
         {fixture && (
-          <div className="fixture-banner">
+          <div id="login-fixture-banner" className="fixture-banner">
             Development fixtures · synthetic data only
           </div>
         )}
         {reason && (
-          <p role="status" className="notice">
+          <p id="login-notice" role="status" className="notice">
             {messages[reason] || "Please sign in to continue."}
           </p>
         )}
         {p.idcs === "unavailable" && (
-          <p className="notice">
+          <p id="login-idcs-notice" className="notice">
             IDCS sign-out was unavailable. Your identity-provider session may
             still be active.
           </p>
         )}
         {browserSession && (
-          <div className="fixture-banner">
+          <div id="login-browser-session-banner" className="fixture-banner">
             LOCAL DEV — connects with your GrantsNow DEV session token
           </div>
         )}
-        <form action="/api/auth/login" method="post">
-          <input type="hidden" name="returnTo" value={safeReturn(p.returnTo)} />
+        <form id="login-form" action="/api/auth/login" method="post">
+          <input
+            id="login-return-to"
+            type="hidden"
+            name="returnTo"
+            value={safeReturn(p.returnTo)}
+          />
           {browserSession && (
             <label className="token-field">
               GrantsNow session token
               <textarea
+                id="login-token"
                 name="token"
                 rows={3}
                 autoComplete="off"
@@ -81,7 +87,7 @@ export default async function Login({
               </small>
             </label>
           )}
-          <button className="primary" type="submit">
+          <button id="login-submit" className="primary" type="submit">
             {fixture
               ? "Enter fixture workspace"
               : browserSession

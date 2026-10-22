@@ -1,7 +1,7 @@
 import { ChartSkeleton } from "@/components/feedback/skeleton";
 export default function Loading() {
   return (
-    <section className="analytics-workspace">
+    <section id="opportunity-analytics-loading" className="analytics-workspace">
       <div className="skeleton skeleton-title" aria-hidden="true" />
       <div className="opportunity-analytics-grid">
         <ChartSkeleton label="Loading Top Funders" />

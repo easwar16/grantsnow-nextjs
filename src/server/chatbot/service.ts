@@ -4,7 +4,8 @@ import { JSDOM } from "jsdom";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { authenticate } from "@/server/session/service";
-import { businessError, oracle } from "@/server/api/transport";
+import { businessError } from "@/server/api/transport";
+import { globalVariables } from "@/server/configuration/formatting";
 import { sanitizeHtml } from "@/server/html/sanitize";
 
 /** Answers from the model take seconds; a hung server must not hold the request. */
@@ -52,21 +53,9 @@ export function chatbotUrl(
   return url;
 }
 
-const globalVars = z.object({
-  items: z.array(
-    z.object({
-      var_key: z.string(),
-      var_value: z.union([z.string(), z.number()]).nullish(),
-    }),
-  ),
-});
-
 /** Legacy shell shows the launcher only when global variable CHATBOT_ENABLED is 'Y'; anything else hides it. */
 async function enabledFor(token: string) {
-  const { items } = globalVars.parse(
-    await oracle("getPre_award_costingGetGlobalVar", { token }),
-  );
-  return items.some(
+  return (await globalVariables(token)).some(
     (r) => r.var_key === "CHATBOT_ENABLED" && r.var_value === "Y",
   );
 }

@@ -75,6 +75,7 @@ const icons = {
   mic: { ux: "mic-on", material: "mic" },
   employee: { ux: "employee", material: "badge" },
   save: { ux: "save", material: "save" },
+  calendar: { ux: "calendar", material: "calendar_today" },
   contact: { ux: "contact", material: "account_circle" },
   chat: { ux: "chat-on", material: "chat" },
   search: { ux: "search", material: "search" },

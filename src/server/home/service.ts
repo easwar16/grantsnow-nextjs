@@ -10,7 +10,7 @@ import {
 import { requireModule, scopeOrganization } from "@/server/permissions/policy";
 import { oracle } from "@/server/api/transport";
 import { widgets, type WidgetDefinition } from "./widgets";
-import { pageQuery, QUEUE_CAP, QUEUE_PAGE } from "./paging";
+import { pageQuery, pagedRows, QUEUE_CAP, QUEUE_PAGE } from "./paging";
 import type {
   HomeFilters,
   WidgetData,
@@ -19,12 +19,16 @@ import type {
 import { calendarDaysUntil } from "@/features/home/deadline";
 import { recordIdentity } from "@/features/proposals/record";
 import { AppError, publicError } from "@/lib/errors";
+import { early } from "@/server/async";
+import { memo, memoKey, TTL } from "@/server/cache/memo";
 const CHART_PAGE = 100;
 const envelope = z.object({
   items: z.array(z.record(z.string(), z.unknown())),
   hasMore: z.union([z.boolean(), z.enum(["true", "false"])]).optional(),
   offset: z.number().optional(),
   limit: z.number().int().positive().optional(),
+  // Only a usable count speeds paging up; anything else falls back to reading until a short page.
+  total_count: z.number().int().nonnegative().optional().catch(undefined),
 });
 function str(row: Record<string, unknown>, key: string) {
   const v = row[key];
@@ -62,7 +66,6 @@ export function rowHref(
       mode: "view",
     });
   if (kind === "ethics")
-    // ponytail: legacy also checks getDynamicFormsCheckApplApprAccess before opening; enforce it when the Ethics record route is built.
     return link("/modules/ethics", {
       access_type: str(r, "access_type"),
       setup_flow_id: str(r, "setup_flow_id"),
@@ -160,6 +163,7 @@ export function mapWidget(
         overdue: due !== null && due <= 0,
         stage: str(r, "stage_name"),
         href: rowHref(w.kind, r, reference),
+        ...(w.kind === "ethics" ? { ethics: true } : {}),
       };
     }),
     // hasMore is unreliable on these endpoints: a full page means there may be more.
@@ -175,8 +179,10 @@ export async function homeAccess() {
   return authenticate();
 }
 export async function enabledWidgets() {
-  const { user } = await homeAccess(),
-    config = await dashboardConfiguration();
+  const [{ user }, config] = await Promise.all([
+    homeAccess(),
+    dashboardConfiguration(),
+  ]);
   return widgets.filter(
     (w) =>
       user.modules[w.module] === true &&
@@ -189,25 +195,55 @@ async function chartRows(
   headers: Record<string, string>,
   signal?: AbortSignal,
 ) {
-  const all: Record<string, unknown>[] = [],
-    seen = new Set<string>();
-  for (let offset = 0; ;) {
-    const page = envelope.parse(
-      await oracle(w.operation, headers, pageQuery(offset, CHART_PAGE), signal),
-    );
-    const signature = JSON.stringify(page.items);
-    if (page.items.length && seen.has(signature))
-      throw new AppError("CONTRACT", "Oracle repeated a chart page.");
-    seen.add(signature);
-    all.push(...page.items);
-    if (page.items.length !== CHART_PAGE) return { items: all };
-    if (all.length >= 10000)
-      throw new AppError(
-        "CONTRACT",
-        "A complete chart result could not be loaded.",
-      );
-    offset += CHART_PAGE;
-  }
+  const seen = new Set<string>();
+  const items = await pagedRows(
+    async (offset) =>
+      envelope.parse(
+        await oracle(
+          w.operation,
+          headers,
+          pageQuery(offset, CHART_PAGE),
+          signal,
+        ),
+      ),
+    CHART_PAGE,
+    (page) => {
+      const signature = JSON.stringify(page);
+      if (page.length && seen.has(signature))
+        throw new AppError("CONTRACT", "Oracle repeated a chart page.");
+      seen.add(signature);
+    },
+    10000,
+    () =>
+      new AppError("CONTRACT", "A complete chart result could not be loaded."),
+  );
+  return { items };
+}
+const lookupRows = z.object({
+  items: z.array(
+    z.object({
+      lookup_code: z.string(),
+      lookup_code_value: z.string(),
+      lookup_type_code: z.string(),
+    }),
+  ),
+});
+/** Deadline type names (admin lookups), shared by every queue widget of the session. */
+function deadlineTypeLookup(token: string) {
+  return memo(
+    memoKey("lookup-deadline-types", token),
+    TTL.config,
+    async () =>
+      lookupRows.parse(
+        await oracle(
+          "getPre_awardGetLookupTypesCodes",
+          { token },
+          new URLSearchParams({
+            lookupTypeCode: "DEADLINE_TYPE,CTR_DEADLINE_TYPE",
+          }),
+        ),
+      ).items,
+  );
 }
 export async function loadWidget(
   id: string,
@@ -223,12 +259,15 @@ export async function loadWidget(
     (filters.offset % QUEUE_PAGE !== 0 || filters.offset >= QUEUE_CAP)
   )
     throw new AppError("BAD_REQUEST", "Invalid queue page.", 400);
+  // Reference reads start together; each check below still passes before the widget's own read.
+  const orgs = early(organizations()),
+    format = early(formattingConfiguration());
   const config = await dashboardConfiguration();
   if (config[w.section][w.id]?.isVisible !== true)
     throw new AppError("FORBIDDEN", "This widget is disabled.", 403);
   const org = scopeOrganization(
     filters.organization || user.organizationId,
-    await organizations(),
+    await orgs,
   );
   const headers: Record<string, string> = {
     [w.tokenHeader || "token"]: session.token,
@@ -251,7 +290,7 @@ export async function loadWidget(
             signal,
           );
   const mapped = mapWidget(raw, w, filters);
-  const formatting = await formattingConfiguration();
+  const formatting = await format;
   if (w.renderType)
     mapped.presentation = {
       type: w.renderType,
@@ -265,26 +304,9 @@ export async function loadWidget(
     };
   let deadlineTypes: Record<string, string> = {};
   if (mapped.attention.some((row) => row.deadlineType)) {
-    const raw = await oracle(
-      "getPre_awardGetLookupTypesCodes",
-      { token: session.token },
-      new URLSearchParams({
-        lookupTypeCode: "DEADLINE_TYPE,CTR_DEADLINE_TYPE",
-      }),
-    );
-    const lookup = z
-      .object({
-        items: z.array(
-          z.object({
-            lookup_code: z.string(),
-            lookup_code_value: z.string(),
-            lookup_type_code: z.string(),
-          }),
-        ),
-      })
-      .parse(raw);
+    const lookup = await deadlineTypeLookup(session.token);
     deadlineTypes = Object.fromEntries(
-      lookup.items
+      lookup
         .filter(
           (row) =>
             row.lookup_type_code ===

@@ -3,7 +3,9 @@ export default function NotFound() {
   return (
     <main id="main" className="state">
       <h1>Page not found</h1>
-      <Link href="/home">Go to Home</Link>
+      <Link id="not-found-home" href="/home">
+        Go to Home
+      </Link>
     </main>
   );
 }

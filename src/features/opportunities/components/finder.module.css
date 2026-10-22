@@ -1,33 +1,185 @@
-.filters > button {
-  margin: 0 0 18px;
+/* GN-Angular finder.css, measured from live (KB D8): 36px tabs with a 3px brand underline, a 14px underlined count
+   strip and a 39px funder search. The drawer is FilterPanel; its sections are the shared FilterSection. */
+.searchFunders {
+  width: 100%;
+  margin: 6px 0 4px;
 }
-.filters form {
+input.searchFunders {
+  height: 39px;
+}
+/* Angular .match label: a 6px gap and no row height (the drawer's 27px rows are FilterSection's). */
+.match label {
   display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-.filters fieldset {
-  border: 0;
-  padding: 0;
-  margin: 0;
-}
-.filters legend {
-  font-weight: 600;
-  margin-bottom: 12px;
-}
-.filters fieldset label {
   flex-direction: row;
   align-items: center;
-  margin-bottom: 12px;
+  gap: 6px;
+  color: var(--text);
   font-weight: 400;
+  cursor: pointer;
+}
+.match input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+.main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 12px 12px 0;
+}
+.announcements {
+  margin-bottom: 12px;
+}
+.actions {
+  display: flex;
+  align-items: center;
+  padding-bottom: 12px;
+}
+/* GN-Angular: the panel toggle and the search box read as one control, joined at a shared edge. */
+.panelToggle {
+  flex: none;
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+.search {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  height: var(--control-height);
+  background: var(--surface);
+  border: 1px solid var(--control-border);
+  border-left: 0;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  transition:
+    box-shadow var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
+}
+.search:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.searchIcon {
+  margin: 0 8px 0 10px;
+  color: var(--muted);
+}
+/* Outranks the global field focus ring, which would draw a second ring inside the joined box. */
+.search > input,
+.search > input:focus-visible {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  outline: none;
+  box-shadow: none;
+}
+/* A bare button in Angular: no base min-height, so it is 4px around the icon. */
+.advanced {
+  display: flex;
+  min-height: 0;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+}
+.advanced:hover {
+  background: var(--hover-tint);
+}
+.match {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 12px;
+}
+/* oj-tab-bar edge=top: equal tabs; the selected one on the surface with a 3px brand underline. */
+.tabs {
+  display: flex;
+  flex: none;
+  margin-top: 5px;
+  border-bottom: 1px solid var(--border);
+}
+.tabs button {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  height: 36px;
+  /* Angular's bare tab buttons: no base padding, regular weight until selected. */
+  padding: 0;
+  font-weight: 400;
+  color: var(--muted);
+  background: var(--opp-tab-bg);
+  border: 0;
+  border-top: 3px solid rgb(22 21 19 / 12%);
+  border-bottom: 3px solid transparent;
+  border-radius: 6px 6px 0 0;
+}
+.tabs button + button {
+  margin-left: 2px;
+}
+.tabs button:hover {
   color: var(--text);
 }
-@media (max-width: 600px) {
-  .filters form {
-    flex-direction: row;
-    flex-wrap: wrap;
+.tabs button[aria-selected="true"] {
+  font-weight: 700;
+  color: var(--text);
+  background: var(--opp-tab-active-bg);
+  border-top-color: transparent;
+  border-bottom-color: var(--accent);
+}
+.newDot {
+  width: 7px;
+  height: 7px;
+  background: var(--danger);
+  border-radius: 50%;
+}
+.notice {
+  margin: 8px 12px 0;
+}
+/* Positioned: the cards' .sr-only texts scroll with the list instead of stretching the page. */
+.list {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  margin: 0;
+  padding: 10px 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+}
+.empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+}
+.total {
+  flex: none;
+  min-height: 1lh;
+  margin: 0;
+  padding: 5px 15px;
+  font-size: 14px;
+  text-decoration: underline;
+}
+.totalTitle {
+  font-weight: 600;
+}
+@media (max-width: 768px) {
+  .match {
+    display: none;
   }
-  .filters form > * {
-    flex: 0 0 calc(50% - 10px);
+  .tabs button {
+    padding: 5px;
+    font-size: 11px;
   }
 }

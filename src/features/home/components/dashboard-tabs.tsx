@@ -1,4 +1,5 @@
 "use client";
+import { idPart } from "@/lib/ids";
 import { useState } from "react";
 import type { FormatSettings } from "@/lib/format";
 import { Icon, type IconName } from "@/components/ui/icon";
@@ -13,9 +14,11 @@ export function DashboardTabs({
   additional,
   organization,
   format,
+  labels,
 }: {
-  attention: React.ReactNode;
-  insights: React.ReactNode;
+  /** Null hides the tab: legacy shows a section only when one of its panels is on. */
+  attention: React.ReactNode | null;
+  insights: React.ReactNode | null;
   additional: {
     opportunities: boolean;
     notifications: boolean;
@@ -23,16 +26,53 @@ export function DashboardTabs({
   };
   organization?: string;
   format?: FormatSettings;
+  /** RB `button-labels.*` tab names. */
+  labels: Record<
+    | "needAttention"
+    | "insights"
+    | "opportunities"
+    | "notifications"
+    | "dynamicCharts",
+    string
+  >;
 }) {
   const [selected, setSelected] = useState(0);
-  const tabs: { label: string; icon: IconName; content: React.ReactNode }[] = [
-    { label: "Need Attention", icon: "flag", content: attention },
-    { label: "Insights", icon: "chart", content: insights },
+  const tabs: {
+    key: string;
+    label: string;
+    icon: IconName;
+    tone: string;
+    content: React.ReactNode;
+  }[] = [
+    ...(attention === null
+      ? []
+      : [
+          {
+            key: "need-attention",
+            label: labels.needAttention,
+            icon: "flag" as const,
+            tone: "danger",
+            content: attention,
+          },
+        ]),
+    ...(insights === null
+      ? []
+      : [
+          {
+            key: "insights",
+            label: labels.insights,
+            icon: "chart" as const,
+            tone: "warning",
+            content: insights,
+          },
+        ]),
     ...(additional.opportunities
       ? [
           {
-            label: "Opportunities",
+            key: "opportunities",
+            label: labels.opportunities,
             icon: "money" as const,
+            tone: "success",
             content: <FeaturedPanel format={format} />,
           },
         ]
@@ -40,8 +80,10 @@ export function DashboardTabs({
     ...(additional.notifications
       ? [
           {
-            label: "Notifications",
+            key: "notifications",
+            label: labels.notifications,
             icon: "bell" as const,
+            tone: "success",
             content: <NotificationsPanel format={format} />,
           },
         ]
@@ -49,8 +91,10 @@ export function DashboardTabs({
     ...(additional.charts.length
       ? [
           {
-            label: "Dynamic Charts",
+            key: "dynamic-charts",
+            label: labels.dynamicCharts,
             icon: "dynamic" as const,
+            tone: "success",
             content: (
               <DynamicChartsPanel
                 charts={additional.charts}
@@ -61,21 +105,23 @@ export function DashboardTabs({
         ]
       : []),
   ];
+  if (!tabs.length) return null;
   const active = Math.min(selected, tabs.length - 1);
   return (
     <>
       <div
+        id="home-tabs"
         className="dashboard-tabs"
         role="tablist"
         aria-label="Dashboard sections"
       >
         {tabs.map((tab, i) => (
           <button
-            key={tab.label}
+            key={tab.icon}
             role="tab"
-            id={`dashboard-tab-${i}`}
+            id={`home-tab-${idPart(tab.key)}`}
             aria-selected={active === i}
-            aria-controls={`dashboard-panel-${i}`}
+            aria-controls={`home-panel-${idPart(tab.key)}`}
             tabIndex={active === i ? 0 : -1}
             onKeyDown={(event) => {
               let next: number | undefined;
@@ -87,33 +133,27 @@ export function DashboardTabs({
               if (next !== undefined) {
                 event.preventDefault();
                 setSelected(next);
-                document.getElementById(`dashboard-tab-${next}`)?.focus();
+                document
+                  .getElementById(`home-tab-${idPart(tabs[next].key)}`)
+                  ?.focus();
               }
             }}
             onClick={() => setSelected(i)}
           >
-            <Icon
-              name={tab.icon}
-              className={
-                i === 0
-                  ? "attention-icon"
-                  : i === 1
-                    ? "insights-icon"
-                    : "success-text"
-              }
-            />
-            {tab.label}
+            <Icon name={tab.icon} className={`tab-${tab.tone}`} />
+            <span>{tab.label}</span>
           </button>
         ))}
       </div>
       {tabs.map((tab, i) => (
         <section
-          key={tab.label}
+          key={tab.icon}
           role="tabpanel"
-          id={`dashboard-panel-${i}`}
-          aria-labelledby={`dashboard-tab-${i}`}
+          id={`home-panel-${idPart(tab.key)}`}
+          aria-labelledby={`home-tab-${idPart(tab.key)}`}
           hidden={active !== i}
         >
+          {/* The first tab stays mounted so its queues keep their loaded pages. */}
           {i === 0 || active === i ? tab.content : null}
         </section>
       ))}

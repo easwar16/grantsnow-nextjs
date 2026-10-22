@@ -22,6 +22,8 @@ export interface NavEntry {
   icon: NavIcon;
   href: string;
   external: boolean;
+  /** getOpportunitiesNewFlags: an unseen opportunity (the drawer's "new" dot). */
+  isNew?: boolean;
   children?: NavEntry[];
 }
 export const navigationDefinitions: NavDefinition[] = [
@@ -93,7 +95,15 @@ export const navigationDefinitions: NavDefinition[] = [
 ];
 /** The first deep link (getDeepLinkItems); the drawer draws a divider above it. */
 export const firstDeepLink = "administration";
+/** Pages reached from the header, not the drawer: Help (legacy tutorials flow) and the bell's View all. */
+export const headerPlaceholders: NavDefinition[] = [
+  { id: "tutorials", name: "Tutorials", icon: "help" },
+  { id: "announcements-notifications", name: "Notifications", icon: "bell" },
+];
 /** Not-yet-rebuilt modules: in-app placeholders at /modules/<id>. */
-export const placeholderModules: NavDefinition[] = navigationDefinitions
-  .flatMap((item) => item.children ?? [item])
-  .filter((item) => !item.href && !item.external);
+export const placeholderModules: NavDefinition[] = [
+  ...navigationDefinitions
+    .flatMap((item) => item.children ?? [item])
+    .filter((item) => !item.href && !item.external),
+  ...headerPlaceholders,
+];

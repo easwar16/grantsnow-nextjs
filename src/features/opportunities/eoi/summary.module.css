@@ -1,0 +1,128 @@
+/* GN-Angular eoi-summary.css. */
+.summary {
+  display: block;
+}
+
+.actionBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+}
+
+.closed {
+  flex: 1;
+  font-size: 11px;
+  color: var(--gn-warning);
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* A quarter-width source column on the info tint (oj-bg-info-30), the details beside it. */
+.columns {
+  display: flex;
+  gap: 16px;
+  padding: 40px 0;
+}
+
+.side {
+  display: flex;
+  flex: 0 0 25%;
+  flex-direction: column;
+  min-width: 0;
+  padding: 16px;
+  background: var(--gn-tone-info-bg);
+}
+
+.logo {
+  width: auto;
+  max-width: 150px;
+  height: auto;
+  margin-bottom: 8px;
+  object-fit: contain;
+}
+
+.details {
+  flex: 1;
+  min-width: 0;
+}
+
+.heading {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.heading a {
+  color: var(--gn-link);
+}
+
+/* Read-only label-over-value fields; `.two` lays them in two columns, `.wide` spans both. */
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+}
+
+.fields.two {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+
+.fields.two > div {
+  flex: 1 1 calc(50% - 24px);
+  min-width: 200px;
+}
+
+.fields.two > .wide {
+  flex-basis: 100%;
+}
+
+.fields dt {
+  font-weight: 600;
+  color: var(--gn-text-secondary);
+}
+
+.fields dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.text {
+  text-align: justify;
+}
+
+.counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: 16px;
+}
+
+.countLabel {
+  color: var(--gn-text-secondary);
+}
+
+.empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--gn-text-secondary);
+}
+
+@media (max-width: 768px) {
+  .columns {
+    flex-direction: column;
+    padding: 16px 0;
+  }
+
+  .side {
+    flex-basis: auto;
+  }
+}

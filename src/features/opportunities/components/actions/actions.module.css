@@ -1,0 +1,248 @@
+/* The card dialogs (GN-Angular share/notes/convert/comments dialogs: 18px 20px 20px, a 15px/700 title). */
+/* Angular .gn-dialog: at most 90vh tall. */
+.dialog {
+  max-height: 90vh;
+  padding: 18px 20px 20px;
+  overflow-y: auto;
+}
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* Angular's per-dialog gaps: share 14px, notes and convert 10px (comments and confirm keep 12px). */
+.dialog[open]:has(> .form) {
+  gap: 14px;
+}
+.dialog[open]:has(> .label, > .convert) {
+  gap: 10px;
+}
+/* Angular confirm-dialog: 20px 24px padding. */
+.dialog:has(> .message) {
+  padding: 20px 24px;
+}
+/* Angular labels keep the text colour; the global label rule would grey them. */
+.dialog label {
+  color: var(--gn-text);
+}
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+.close {
+  display: flex;
+  min-height: 0;
+  padding: 4px;
+  border: 0;
+}
+/* A bare button in Angular: no hover fill. */
+.close:hover {
+  background: none;
+}
+.subtitle,
+.message {
+  margin: 0;
+  color: var(--gn-text-secondary);
+}
+.message {
+  color: var(--gn-text);
+}
+/* Angular share-comments-dialog .subtitle: 13px. */
+.dialog:has(> .comment, > .state) > .subtitle {
+  font-size: 13px;
+}
+/* Angular confirm-dialog .detail: 600 in the text colour. */
+.detail {
+  margin: 0;
+  font-weight: 600;
+}
+.label {
+  font-weight: 600;
+}
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.foot {
+  display: flex;
+  flex-basis: 100%;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+}
+/* Angular: the share and notes feet take only the dialog gap; the confirm foot adds 6px. */
+.form > .foot,
+.label ~ .foot {
+  padding-top: 0;
+}
+.message ~ .foot {
+  padding-top: 6px;
+}
+/* Angular confirm-dialog buttons: 0 14px. */
+.message ~ .foot > button {
+  padding: 0 14px;
+}
+.danger {
+  background: var(--gn-danger);
+  border-color: var(--gn-danger);
+}
+.danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--gn-danger) 85%, #000);
+}
+.meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--gn-text-secondary);
+}
+.counter {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+.counter.limit {
+  font-weight: 600;
+  color: var(--gn-danger);
+}
+.people {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.people legend {
+  margin-bottom: 4px;
+  padding: 0;
+}
+.choices {
+  max-height: 200px;
+  margin: 4px 0 0;
+  padding: 4px 0;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--gn-divider);
+  border-radius: var(--gn-radius);
+}
+/* Rows, not the global label's column; regular weight. */
+.choices label {
+  display: flex;
+  flex-direction: row;
+  font-weight: 400;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+}
+.choices label:hover {
+  background: var(--gn-hover-tint);
+}
+.empty,
+.state {
+  margin: 0;
+  padding: 12px 0;
+  color: var(--gn-text-secondary);
+}
+.state {
+  padding: 16px 0;
+  font-style: italic;
+  text-align: center;
+}
+/* Share comments: one entry with an avatar, author and time. */
+.comment {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--gn-divider);
+  border-radius: 6px;
+}
+.commentHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--gn-on-brand);
+  background: var(--gn-brand);
+  border-radius: 50%;
+}
+.author {
+  font-weight: 600;
+}
+.time {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--gn-text-secondary);
+}
+.commentBody {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* oj-form-layout columns=4: four equal cells to a row (D36). */
+.convert {
+  --cols: 4;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.cell {
+  flex: 0 0 calc((100% - (var(--cols) - 1) * 16px) / var(--cols));
+  min-width: 0;
+}
+fieldset.cell {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+fieldset.cell legend {
+  margin-bottom: 4px;
+  padding: 0;
+}
+.convert [aria-invalid="true"] {
+  border-color: var(--gn-danger);
+}
+.radios {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 28px;
+}
+/* Angular .radio: a row in regular weight, not the global label's column. */
+.radio {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-weight: 400;
+}
+@media (max-width: 900px) {
+  .convert {
+    --cols: 2;
+  }
+}
+@media (max-width: 520px) {
+  .convert {
+    --cols: 1;
+  }
+}
+/* Share comment: the inside-label textarea, then its help and counter line. */
+.commentField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

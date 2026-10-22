@@ -1,31 +1,61 @@
 import "server-only";
 import { cache } from "react";
-import { z } from "zod";
+import { z, ZodError } from "zod";
 import { authenticate } from "@/server/session/service";
-import { requireModule, requireRead } from "@/server/permissions/policy";
-import { oracle } from "@/server/api/transport";
+import {
+  finalizedOf,
+  objectAccessOf,
+  requireModule,
+} from "@/server/permissions/policy";
+import { oracle, oracleWrite } from "@/server/api/transport";
+import { dashboardRoles } from "@/server/configuration/service";
+import { canCreate } from "@/features/opportunities/display";
 import { AppError } from "@/lib/errors";
-import { sanitizeHtml } from "@/server/html/sanitize";
-export const eoiTabs = [
-  "summary",
-  "application",
-  "attachments",
-  "approvals",
-  "delegation",
-  "history",
-  "dynamic-form-1",
-  "dynamic-form-2",
-  "dynamic-form-3",
-  "dynamic-form-4",
-  "dynamic-form-5",
-] as const;
+import { label, resources } from "@/server/configuration/resources";
+import { displayFormat } from "@/server/configuration/formatting";
+import { dateDisplay } from "@/lib/format";
+import type { SummaryActionContext } from "@/features/opportunities/eoi/types";
+import { afterCheck, opportunityGlobals, pageAccess } from "./gates";
+import { referenceRead } from "./reference";
+import {
+  EDITABLE_STATUSES,
+  EOI_MODULE,
+  eoiTabs,
+  headerConverts,
+  pageOf,
+  visibleTabs,
+  type EoiTab,
+  type PageLock,
+} from "./eoi-record/model";
+import {
+  allows,
+  readOpportunityRecord,
+  summaryRoles,
+  summaryView,
+} from "./eoi-record/opportunity";
+import { cachedRead } from "@/server/cache/reads";
+import { TTL } from "@/server/cache/memo";
+export { eoiTabs, type EoiTab };
+const recordId = z.string().regex(/^[1-9]\d{0,14}$/);
 export const eoiRecordIdentity = z.object({
-  id: z.string().regex(/^[1-9]\d{0,14}$/),
+  id: recordId,
   tab: z.enum(eoiTabs),
 });
-export type EoiTab = (typeof eoiTabs)[number];
+const text = z.string().nullish();
+const pageId = z
+  .union([z.number(), z.string().regex(/^\d+$/)])
+  .nullish()
+  .transform((v) => (v === null || v === undefined ? null : Number(v)));
 const roleSchema = z.object({
-  items: z.array(z.object({ page_name: z.string(), read_access: z.string() })),
+  items: z.array(
+    z.object({
+      page_id: pageId,
+      page_name: z.string(),
+      read_access: text.transform((v) => v ?? null),
+      edit_access: text,
+      delete_access: text,
+    }),
+  ),
 });
 const detailsSchema = z.object({
   items: z.array(
@@ -33,56 +63,340 @@ const detailsSchema = z.object({
       request_id: z.number().int().positive(),
       request_number: z.string(),
       request_type: z.literal("OPPORTUNITIES-EOI"),
-      status: z.string().nullish(),
-      status_code: z.string().nullish(),
-      creation_date: z.string().nullish(),
-      last_update_date: z.string().nullish(),
-      ref_object_type: z.string().nullish(),
+      status: text,
+      status_code: text,
+      created_by: z.union([z.string(), z.number()]).nullish(),
+      creation_date: text,
+      last_update_date: text,
+      ref_object_type: text,
       ref_object_id: z.number().int().positive().nullish(),
-      org_id: z.union([z.string(), z.number()]).nullish(),
     }),
   ),
 });
-export const eoiRecordContext = cache(async (id: string) => {
-  if (!/^[1-9]\d{0,14}$/.test(id))
-    throw new AppError("BAD_REQUEST", "Invalid application identity.", 400);
-  const { session, user } = await authenticate();
-  // "opportunities-eoi" is an RB bundle, not a module_access id: VBCS findModuleAccess derives it from the group.
-  requireModule(user, "opportunities-group");
-  const roles = roleSchema.parse(
-    await oracle("getSecurityUser_roles", {
-      token: session.token,
-      p_obj_id: id,
-      p_obj_type: "OPPORTUNITIES-EOI",
-    }),
-  ).items;
-  const tabs = eoiTabs.filter((tab) =>
-    roles.some(
-      (r) =>
-        r.page_name === `opportunities-eoi-${tab}` && r.read_access === "Y",
-    ),
-  );
-  if (!tabs.length)
-    throw new AppError(
-      "FORBIDDEN",
-      "Application read access has not been granted.",
-      403,
-    );
-  return { session, roles, tabs };
-});
-export async function eoiRecordRead(id: string, tab: EoiTab) {
-  const context = await eoiRecordContext(id);
-  requireRead(context.roles, `opportunities-eoi-${tab}`);
+/** A secondary read that degrades the page instead of failing it; a dead session still signs out. */
+async function orNull<T>(read: Promise<T>): Promise<T | null> {
+  try {
+    return await read;
+  } catch (e) {
+    if (e instanceof AppError && e.status === 401) throw e;
+    if (e instanceof AppError || e instanceof ZodError) return null;
+    throw e;
+  }
+}
+async function requestDetails(token: string, id: string) {
   const b = detailsSchema.parse(
     await oracle("getDynamicFormsGetRequestDetails", {
-      token: context.session.token,
+      token,
       request_id: id,
     }),
   );
   const record = b.items[0];
   if (b.items.length !== 1 || String(record.request_id) !== id)
     throw new AppError("CONTRACT", "Oracle returned a different application.");
-  return { ...context, record };
+  return record;
+}
+const pageNames = z.object({
+  items: z.array(z.object({ page_name: z.string() })),
+});
+const lockRows = z.object({
+  items: z.array(z.object({ id: z.number(), page_id: z.number() })),
+});
+const people = z.object({
+  items: z.array(
+    z.object({ person_id: z.coerce.number(), full_name: z.string() }),
+  ),
+});
+/**
+ * One AOI / EOI record (GN-Angular EoiRecordState), read once per request and shared by the layout and the tab:
+ * the request, the user's rights on it (no readable page denies it), the finalize state, the opportunity (found
+ * from the request's `ref_object_id`, so a link without it works) and the creator's name.
+ */
+export const eoiRecordContext = cache(async (id: string) => {
+  if (!recordId.safeParse(id).success)
+    throw new AppError("BAD_REQUEST", "Invalid application identity.", 400);
+  const { session, user } = await authenticate();
+  // "opportunities-eoi" is an RB bundle, not a module_access id: VBCS findModuleAccess derives it from the group.
+  requireModule(user, "opportunities-group");
+  const token = session.token;
+  // The person list is reference data, so it loads alongside the access check; no record data is read before it.
+  const staffRead = orNull(
+    referenceRead("getPre_awardGetPersonListAll", { token }).then(
+      (raw) => people.parse(raw).items,
+    ),
+  );
+  staffRead.catch(() => undefined);
+  const access = objectAccessOf(
+    roleSchema.parse(
+      // Every tab of the record reads these; held as briefly as the dashboard roles (VBCS reads them once per record).
+      await cachedRead(
+        "getSecurityUser_roles",
+        { token, p_obj_id: id, p_obj_type: EOI_MODULE },
+        TTL.access,
+      ),
+    ).items,
+  );
+  if (![...access.roles.values()].some((a) => a.read))
+    throw new AppError("FORBIDDEN", "You don't have access to this AOI", 403);
+  // Only the opportunity needs the request (its ref_object_id); the finalize and lock reads start with it.
+  const requestRead = requestDetails(token, id);
+  const [request, opportunity, finalizable, locks, staff] = await Promise.all([
+    requestRead,
+    requestRead.then((request) => {
+      const opportunityId =
+        (request.ref_object_type ?? "OPPORTUNITIES") === "OPPORTUNITIES"
+          ? (request.ref_object_id ?? null)
+          : null;
+      return opportunityId === null
+        ? null
+        : orNull(readOpportunityRecord(token, opportunityId));
+    }),
+    // request_type is always OPPORTUNITIES-EOI (the details schema's literal).
+    orNull(
+      oracle("getSharedFinalizablePages", {
+        token,
+        p_obj_type: EOI_MODULE,
+        p_obj_id: id,
+      }).then((raw) =>
+        pageNames.parse(raw).items.map((p) => p.page_name.toLowerCase()),
+      ),
+    ),
+    orNull(
+      oracle(
+        "getProposalGetLockedModules",
+        { token, module_name: EOI_MODULE },
+        new URLSearchParams({ prop_id: id }),
+      ).then((raw) => lockRows.parse(raw).items),
+    ),
+    staffRead,
+  ]);
+  const finalized = finalizedOf(access.pages, locks ?? []);
+  return {
+    session,
+    user,
+    id,
+    access,
+    request,
+    opportunity,
+    createdBy:
+      staff?.find((p) => String(p.person_id) === String(request.created_by))
+        ?.full_name ?? null,
+    finalizable,
+    finalized,
+    tabs: visibleTabs(access, finalizable, new Set(finalized.keys())),
+  };
+});
+export type EoiRecordContext = Awaited<ReturnType<typeof eoiRecordContext>>;
+/** A tab the record does not show (no read, no request, Workflow not yet reachable) is denied, as getTabs hides it. */
+export async function eoiRecordRead(id: string, tab: EoiTab) {
+  const context = await eoiRecordContext(id);
+  if (!context.tabs.includes(tab))
+    throw new AppError(
+      "FORBIDDEN",
+      "You do not have access to this page.",
+      403,
+    );
+  return context;
+}
+const lockSchema = z.object({
+  status: text,
+  lock_module_id: z.number().nullish(),
+});
+async function lockStatus(token: string, id: string, page: number) {
+  const b = lockSchema.parse(
+    await oracle("getProposalGetLockStatus", {
+      token,
+      prop_id: id,
+      lock_level: String(page),
+      module_name: EOI_MODULE,
+    }),
+  );
+  return { locked: b.status !== "UNLOCK", lockId: b.lock_module_id ?? null };
+}
+/**
+ * The tab's lock (getLockStatus, `lock_level` = the page id). A tab that is not one of the record's pages has none;
+ * a lock that could not be read is unknown and treated as locked (read-only), never as open.
+ */
+export async function eoiPageLock(
+  context: EoiRecordContext,
+  tab: EoiTab,
+): Promise<PageLock> {
+  const page = context.access.pages.find((p) => p.name === pageOf(tab));
+  if (!page) return { known: false, locked: false };
+  const lock = await orNull(
+    lockStatus(context.session.token, context.id, page.id),
+  );
+  return lock
+    ? { known: true, locked: lock.locked }
+    : { known: false, locked: true };
+}
+export const finalizeInput = z
+  .object({ tab: z.enum(eoiTabs), finalize: z.boolean() })
+  .strict();
+/**
+ * WRITES: finalizes or unlocks the tab's page (insertModuleLock). Only a draft's readable, finalizable page; the
+ * page and lock ids come from Oracle, never the browser; `created_by` carries the session token as the contract has it.
+ */
+export async function eoiSetFinalized(id: string, raw: unknown) {
+  const input = finalizeInput.parse(raw);
+  const context = await eoiRecordRead(id, input.tab);
+  const page = context.access.pages.find((p) => p.name === pageOf(input.tab));
+  if (
+    !page ||
+    !EDITABLE_STATUSES.includes(context.request.status_code ?? "") ||
+    !context.finalizable?.includes(page.name)
+  )
+    throw new AppError("FORBIDDEN", "This page cannot be finalized.", 403);
+  const token = context.session.token;
+  const { lockId } = await lockStatus(token, id, page.id);
+  await oracleWrite(
+    "postProposalInsertModuleLock",
+    {
+      token,
+      legal_id: context.user.legalId ?? "",
+      org_id: context.user.organizationId,
+    },
+    {
+      proposal_id: Number(id),
+      created_by: token,
+      status: input.finalize ? "FINALIZE" : "UNLOCK",
+      page_id: page.id,
+      id: lockId,
+      module_name: EOI_MODULE,
+    },
+  );
+  return { finalized: input.finalize };
+}
+/** The header's converts: an approved application and the record role for the kind; its opportunity id. */
+export async function eoiConvertSource(
+  id: string,
+  kind: "OUTLINE_PROPOSAL" | "PROPOSAL",
+) {
+  const context = await eoiRecordContext(id);
+  const converts = headerConverts(context.request.status_code, context.access);
+  const opportunityId = context.request.ref_object_id;
+  if (
+    !(kind === "PROPOSAL" ? converts.full : converts.outline) ||
+    !opportunityId
+  )
+    throw new AppError(
+      "FORBIDDEN",
+      "This application cannot be converted.",
+      403,
+    );
+  return { session: context.session, user: context.user, opportunityId };
+}
+/**
+ * A new application (no request yet). The original read every tab as open; here it fails closed: the finder's
+ * module, `apply-opportunities` read, the opportunity's `create_application_of_interest` flag and an open status.
+ */
+export const newApplicationContext = cache(async (opportunityId: string) => {
+  if (!recordId.safeParse(opportunityId).success)
+    throw new AppError("BAD_REQUEST", "Invalid opportunity identity.", 400);
+  const { session, user } = await authenticate();
+  requireModule(user, "opportunities-finder");
+  const rolesRead = dashboardRoles();
+  const check = rolesRead.then((roles) => {
+    if (!pageAccess(roles, "apply-opportunities").read)
+      throw new AppError(
+        "FORBIDDEN",
+        "This action is not enabled for your account.",
+        403,
+      );
+  });
+  const opportunity = await afterCheck(
+    check,
+    readOpportunityRecord(session.token, Number(opportunityId)),
+  );
+  const roles = await rolesRead;
+  if (!opportunity)
+    throw new AppError("BAD_REQUEST", "The opportunity was not found.", 404);
+  if (
+    !allows(opportunity).apply ||
+    !canCreate(opportunity.opportunity_status ?? "")
+  )
+    throw new AppError(
+      "FORBIDDEN",
+      "Applications are not open for this opportunity.",
+      403,
+    );
+  return { session, user, roles, opportunity };
+});
+/**
+ * More Info (the original's `isDetailPage`): the opportunity's summary with its actions bar. The finder's module is
+ * enough to read it; each action carries its own gate, and the server checks it again when it runs.
+ */
+export async function opportunityDetail(opportunityId: string) {
+  if (!recordId.safeParse(opportunityId).success)
+    throw new AppError("BAD_REQUEST", "Invalid opportunity identity.", 400);
+  const { session, user } = await authenticate();
+  requireModule(user, "opportunities-finder");
+  const [opportunity, rows, format, roles, deadlineWarningDays] =
+    await Promise.all([
+      readOpportunityRecord(session.token, Number(opportunityId)),
+      resources(),
+      displayFormat(),
+      summaryRoles(),
+      opportunityGlobals(),
+    ]);
+  if (!opportunity)
+    throw new AppError("BAD_REQUEST", "The opportunity was not found.", 404);
+  const t = (group: string, key: string, fallback: string) =>
+    label(rows, "opportunities-eoi", group, key, fallback);
+  const closing = opportunity.closing_date ?? undefined;
+  const actionContext: SummaryActionContext = {
+    opportunityId,
+    closingAt: closing,
+    closingDisplay: closing ? dateDisplay(closing, format) : undefined,
+    deadlineWarningDays,
+    texts: {
+      deadlineTitle: t(
+        "dialog-titles",
+        "deadline-warning",
+        "Application deadline approaching",
+      ),
+      deadlineMessage: t(
+        "warning-messages",
+        "deadline-warning",
+        "You are applying close to the application deadline. Please ensure you have enough time to complete your submission.",
+      ),
+      closingDate: t("labels", "closing-date", "Closing Date"),
+      continue: t("button-labels", "continue", "Continue"),
+      cancel: t("button-labels", "cancel", "Cancel"),
+    },
+  };
+  return {
+    view: summaryView(opportunity, rows, roles, format, true),
+    actionContext,
+  };
+}
+export const createInput = z
+  .object({
+    opportunityId: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  })
+  .strict();
+/**
+ * WRITES: creates the application (insertRequest, a GET that inserts) once its form has validated, and reads its
+ * number for the answers' file folder. A number that cannot be read comes back null, so the caller never saves
+ * files under an unknown folder (legacy wrote `/undefined/`).
+ */
+export async function createEoiApplication(raw: unknown) {
+  const { opportunityId } = createInput.parse(raw);
+  const { session } = await newApplicationContext(String(opportunityId));
+  const created = z
+    .object({ request_id: z.coerce.number().int().positive().optional() })
+    .parse(
+      await oracleWrite("getDynamicFormsInsertRequest", {
+        token: session.token,
+        P_REF_OBJECT_ID: String(opportunityId),
+        P_REF_OBJECT_TYPE: "OPPORTUNITIES",
+        P_REQUEST_TYPE: EOI_MODULE,
+      }),
+    );
+  if (created.request_id === undefined)
+    throw new AppError("CONTRACT", "The application was not created.");
+  const requestId = String(created.request_id);
+  const details = await orNull(requestDetails(session.token, requestId));
+  return { requestId, number: details?.request_number ?? null };
 }
 const rowsSchema = z.object({
   items: z.array(z.record(z.string(), z.unknown())),
@@ -112,18 +426,16 @@ function table(
     })),
   };
 }
-export async function eoiRecordTable(
-  id: string,
-  tab: "attachments" | "approvals" | "delegation" | "history",
-) {
-  const { session, record } = await eoiRecordRead(id, tab);
+export type TableTab = "attachments" | "approvals" | "delegation" | "history";
+export async function eoiRecordTable(id: string, tab: TableTab) {
+  const { session, request } = await eoiRecordRead(id, tab);
   const headers = { token: session.token };
   if (tab === "attachments")
     return table(
       await oracle(
         "getPre_awardAttachmentsProposal_id",
         headers,
-        new URLSearchParams({ p_obj_id: id, p_obj_type: "OPPORTUNITIES-EOI" }),
+        new URLSearchParams({ p_obj_id: id, p_obj_type: EOI_MODULE }),
       ),
       [
         { key: "file_name", label: "File Name" },
@@ -141,8 +453,8 @@ export async function eoiRecordTable(
         "getApproval_setupApproval_stages",
         headers,
         new URLSearchParams({
-          doc_num: record.request_number,
-          doc_type: "OPPORTUNITIES-EOI",
+          doc_num: request.request_number,
+          doc_type: EOI_MODULE,
         }),
       ),
       [
@@ -160,7 +472,7 @@ export async function eoiRecordTable(
       await oracle("getProposalDelegationsProposal_id", {
         ...headers,
         object_id: id,
-        object_type: "OPPORTUNITIES-EOI",
+        object_type: EOI_MODULE,
       }),
       [
         { key: "pid", label: "Person ID" },
@@ -176,7 +488,7 @@ export async function eoiRecordTable(
     await oracle("getSharedObjectStatus", {
       ...headers,
       p_obj_id: id,
-      p_obj_type: "OPPORTUNITIES-EOI",
+      p_obj_type: EOI_MODULE,
     }),
     [
       { key: "object_status", label: "Status" },
@@ -187,145 +499,4 @@ export async function eoiRecordTable(
     ],
     "creation_date",
   );
-}
-const formSchema = z.array(
-  z.object({
-    formId: z.number(),
-    formName: z.string(),
-    sections: z.array(
-      z.object({
-        sectionId: z.number(),
-        sectionName: z.string(),
-        isVisible: z.string(),
-        sectionType: z.string(),
-        fields: z
-          .array(
-            z.object({
-              fieldId: z.number(),
-              description: z.string(),
-              isVisible: z.string(),
-              fieldType: z.string(),
-              options: z
-                .array(
-                  z.object({
-                    optionId: z.union([z.string(), z.number()]),
-                    optionValue: z.string(),
-                  }),
-                )
-                .nullish(),
-            }),
-          )
-          .optional(),
-      }),
-    ),
-  }),
-);
-const valuesSchema = z.array(
-  z.object({
-    form_id: z.number(),
-    sections: z.array(
-      z.object({
-        section_id: z.number(),
-        fields: z.array(z.object({ field_id: z.number(), value: z.unknown() })),
-      }),
-    ),
-  }),
-);
-export async function eoiRecordForms(
-  id: string,
-  tab: "application" | `dynamic-form-${1 | 2 | 3 | 4 | 5}`,
-) {
-  const { session } = await eoiRecordRead(id, tab);
-  const formModule = `OPPORTUNITIES-EOI-${tab.toUpperCase()}`;
-  const [definitions, responses] = await Promise.all([
-    oracle("getProposalEthical_dynFormsP_ref_module", {
-      token: session.token,
-      p_id: id,
-      p_obj_id: id,
-      p_obj_type: "OPPORTUNITIES",
-      p_ref_module: formModule,
-    }),
-    oracle("getProposalEthicaldynFormResponse", {
-      P_TOKEN: session.token,
-      P_REF_OBJ_ID: id,
-      P_REF_MODULE: formModule,
-    }),
-  ]);
-  const forms = formSchema.parse(definitions),
-    values = valuesSchema.parse(responses);
-  return forms.map((form) => ({
-    id: String(form.formId),
-    name: form.formName,
-    sections: form.sections
-      .filter((s) => s.isVisible === "Y")
-      .map((section) => ({
-        id: String(section.sectionId),
-        name: section.sectionName,
-        type: section.sectionType,
-        fields: (section.fields || [])
-          .filter((f) => f.isVisible === "Y")
-          .map((field) => {
-            const raw = values
-              .find((v) => v.form_id === form.formId)
-              ?.sections.find((s) => s.section_id === section.sectionId)
-              ?.fields.find((f) => f.field_id === field.fieldId)?.value;
-            const text =
-              typeof raw === "string" || typeof raw === "number"
-                ? String(raw)
-                : Array.isArray(raw) &&
-                    raw.every(
-                      (v) => typeof v === "string" || typeof v === "number",
-                    )
-                  ? raw.join(", ")
-                  : "—";
-            return {
-              id: String(field.fieldId),
-              label: field.description,
-              type: field.fieldType,
-              value:
-                field.options?.find((o) => String(o.optionId) === text)
-                  ?.optionValue || text,
-            };
-          }),
-      })),
-  }));
-}
-export async function eoiSummary(id: string) {
-  const { record, session } = await eoiRecordRead(id, "summary");
-  let opportunity: { title: string; summary?: string } | undefined;
-  if (record.ref_object_type === "OPPORTUNITIES" && record.ref_object_id) {
-    const b = rowsSchema.parse(
-      await oracle(
-        "getSharedGetOpportunities",
-        {
-          token: session.token,
-          p_order_by: "publication_date",
-          p_sort_order: "DESC",
-        },
-        new URLSearchParams({
-          p_where_clause: `("opportunities_id"='${record.ref_object_id}')`,
-          p_offset: "0",
-          p_limit: "1",
-        }),
-      ),
-    );
-    const r = b.items[0];
-    if (
-      r &&
-      String(r.opportunities_id) === String(record.ref_object_id) &&
-      typeof r.opp_heading === "string"
-    )
-      opportunity = {
-        title: r.opp_heading,
-        summary:
-          typeof r.summary === "string" ? sanitizeHtml(r.summary) : undefined,
-      };
-  }
-  return {
-    reference: record.request_number,
-    status: record.status || undefined,
-    created: record.creation_date || undefined,
-    updated: record.last_update_date || undefined,
-    opportunity,
-  };
 }

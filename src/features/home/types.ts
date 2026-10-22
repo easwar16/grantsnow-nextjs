@@ -21,6 +21,8 @@ export interface AttentionRow {
   overdue?: boolean;
   stage?: string;
   href: string;
+  /** Ethics rows open only after the legacy checkApplApprAccess allows it. */
+  ethics?: boolean;
 }
 export interface StatisticRow {
   id: string;

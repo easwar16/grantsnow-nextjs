@@ -8,6 +8,7 @@ import {
 import { scopeOrganization } from "@/server/permissions/policy";
 import { oracle } from "@/server/api/transport";
 import { publicError } from "@/lib/errors";
+import { early } from "@/server/async";
 const schema = z.array(
   z.object({
     id: z.string(),
@@ -25,13 +26,16 @@ const schema = z.array(
 );
 export type Kpi = z.infer<typeof schema>[number];
 export async function loadKpis(organization?: string) {
-  const { session } = await homeAccess();
-  const config = await dashboardConfiguration();
+  const orgs = early(organizations());
+  const [{ session }, config] = await Promise.all([
+    homeAccess(),
+    dashboardConfiguration(),
+  ]);
   const enabled = Object.entries(config.KPI_STATISTICS || {})
     .filter(([, v]) => v.isVisible === true)
     .map(([key]) => key);
   if (!enabled.length) return { items: [] as Kpi[] };
-  const org = scopeOrganization(organization, await organizations());
+  const org = scopeOrganization(organization, await orgs);
   try {
     const raw = await oracle("getSharedGetKpiStatistics", {
       token: session.token,

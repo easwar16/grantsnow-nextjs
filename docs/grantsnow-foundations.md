@@ -88,7 +88,10 @@ These rules belong in `src/server/api/*` and nowhere else.
   the gaps (`_.merge(strings, backendRows)` in legacy `shell-page.js`). Keys are lower-cased per module.
   Here, the seeds are `src/server/configuration/resource-defaults.json`.
 - **Fail closed:** a control shows only when its entry has `is_visible === 'Y'`. A missing bundle, key or
-  flag hides it. The helpers never throw on a missing module, group or key.
+  flag hides it. The helpers never throw on a missing module, group or key. Re-confirmed by the user on
+  2026-10-22 for everything RB-driven: gate it with `resourceVisible`, and never use a code default of visible or
+  "shown unless `'N'`", even where GN-Angular did. Opportunities/EOI follow this rule: card buttons, Home meta
+  cells, summary fields, site, counts and More Info actions.
 - **Bundle fallback:** a per-type proposal bundle (`outline_proposal`, `sub_proposal`, …) that is not
   provisioned falls back to `proposal`. A key missing inside an existing bundle does **not** fall back,
   because the gap may be intentional.
@@ -178,6 +181,59 @@ These rules belong in `src/server/api/*` and nowhere else.
   helpers or params only when strictly needed. No single-use wrappers.
 - **Invent nothing.** Add no checks, toasts, payload changes or defaults without an identified defect.
   When reverting, return to HEAD exactly.
+- **Every section and element is uniquely identifiable by `id`** (owner, 2026-10-22, for later use):
+  - Applies to page sections, landmarks, panels, dialogs, popups, tabs, lists, forms, filter groups, and
+    every control and action.
+  - Ids are kebab-case `<area>-<element>`, short and readable: `finder-search`, `finder-status`,
+    `advanced-filter-keyword`, `eoi-record-tabs`.
+  - Repeated items append their record key, made readable with `idPart` (`src/lib/ids.ts`: camelCase and
+    spaces become dashes): `opportunity-7400442`, `eoi-3934`, `widget-p-pending-approvals`.
+  - A shared component takes its id (or an id prefix) from the page that uses it, so two instances never
+    clash. `useId` is only for internal ARIA wiring, never for these ids.
+  - Ids are stable: never derived from labels, RB text or array index, and never renamed without a reason.
+- **Every interaction and update animates** (owner, 2026-10-22):
+  - A zero-specificity baseline in `globals.css` covers colour and border transitions, checkbox pops, dimming
+    while busy, and list rows rising in.
+  - Collapsibles use `.gn-collapsible` / `.gn-collapse`. A `<details>` must stay `display: block`, or it jumps
+    instead of animating.
+  - Popups leave through `usePresence` (`src/lib/use-presence.ts`).
+- **Listing filters share one look:**
+  - `FilterPanel` holds the column. `FilterStack`, `FilterClear`, `FilterSection`, `FilterChoices` and
+    `SortControl` (`src/components/ui/filter-section.tsx`) build its contents.
+  - Clear comes first, then one collapsible section per filter, titled by its RB label.
+- **Date fields use `DateInput`:**
+  - The placeholder and the typed text follow `getGlobalVar` `DEFAULT_DATE_FORMAT`, as legacy's
+    `global_metadata` does.
+  - The value stays ISO `yyyy-mm-dd`, and the calendar button opens the native picker.
+- **Scrolling areas are positioned.** `.page-fill` and scrolling lists set `position: relative`. Without it,
+  absolutely placed `.sr-only` text escapes to `main` and adds a second scroll bar.
+- **Performance: parallel by default, without races** (owner, 2026-10-22):
+  - Independent work, whether Oracle calls or our own async functions, starts together (`Promise.all`, or
+    start the promise early and await it late). Only a step that needs an earlier result waits for it.
+  - Paged reads fetch the first page, then the remaining pages together once the total is known.
+  - Reference data Oracle answers slowly and the app never writes (labels, global variables, lookups, roles,
+    org and person lists) goes through `memo` (`src/server/cache/memo.ts`). It is keyed by session, shares one
+    request between concurrent callers, never reuses a failure, and expires after a TTL. A write that changes
+    memoised data calls `forget` for it.
+  - **Cache by habit** (owner, 2026-10-22). Hold everything the VBCS app holds app-wide:
+    - session and roles, labels, global variables, dashboard and user preferences, themes;
+    - people and org lists, lookups, object dates, funders and preference options;
+    - person status, the opportunity "new" flags, notifications.
+      Also hold anything this app reads in more than one place (announcements, record roles, dialog setups,
+      recipient lists, org units per PI). Server side this uses `memo` / `cachedRead` (`src/server/cache/`);
+      client side, the app store (`src/lib/app-store.tsx`, `useReducer` + Context, behind `useRemote` and the
+      dialogs' reads). Every write that changes held data clears it (`forgetRead` / `forget`, in `finally`).
+  - No races: writes stay ordered, a request's own steps that depend on each other stay sequential, and
+    client fetches keep their latest-wins guards (`LatestRequest` / aborts), so a slow earlier response never
+    replaces a newer one.
+  - Interactions must not block the main thread. Measured on the finder (2026-10-22): each click cost
+    120–160 ms of re-rendering every card and the funder tree, which made animations stutter. Heavy list items
+    (cards, rows, trees) are `memo`ised, and the callbacks passed to them are stable (`useCallback` with
+    functional state updates), so a click re-renders only what changed.
+  - Rise-in animates only record rows tagged `.enter-rise`, as GN-Angular did, never every list item.
+  - Development logs every Oracle call over 1 s (`[oracle] op: N ms`), so latency is traced before it is fixed.
+- **Names are sensible and short.** Variables, functions, CSS classes and ids say what the thing is in one to
+  three words. No abbreviations a reader has to decode, and no long compound names.
 - **Mark a deliberate shortcut** with a `// ponytail:` comment that names its ceiling and the upgrade
   path.
 - **Diagnose before editing.** A one-line error is not a diagnosis. Get the full stack, or a decisive diff
@@ -245,18 +301,29 @@ origin is `http://localhost:3000` (as GN-Angular's `localhost:4200`), still loop
 check and the host-only cookie. Development servers resolve the ORDS hosts over IPv4 first (`src/server/configuration/dev-dns.ts`),
 because this machine's router stalls on AAAA lookups (Node waited ~6 s per lookup; DEV round trip now ~1 s).
 
+## Dashboard and chatbot parity with GN-Angular (2026-10-23)
+
+Built from a code-level gap list against GN-Angular and checked in the browser against live DEV and the live VBCS app:
+header Help and notification bell (unread count, day-grouped popup, mark-read on close), 30-minute idle dialog, drawer
+geometry and "new" dot, profile dialog with Digital Presence, Preferences/Accessibility as a push drawer with DEV custom
+themes and GN-Angular's accessibility effects, toasts, More Info help buttons (`label_description`), auto-advancing
+announcements, org picker with depth indent, KPI/tab/widget geometry, Ethics access check, Insights multi-select filters
+(quarter → month), opportunity card actions (bookmark, share, comments, notes, apply, convert), infinite scroll in
+Featured and Notifications, Dynamic Charts menu and tiles, and the chatbot launcher, Send, mic and typing indicator.
+All writes go through `oracleWrite` and stay off (`WRITES_ENABLED=false`). Live findings: approval queues are due from
+their creation date (owner's GN-Angular decision, matches live); announcement text is white on brand (only CKEditor
+markers are black); DEV has no featured opportunities.
+
 ## Open for the owner
 
 Framework and improvement choices only:
 
 - Width of the listing filter panel is remembered per browser, not per account (server preferences would be needed).
 - Chatbot: the session token still travels over plain HTTP to a raw IP, as in legacy; voice input is not ported.
-- Dark mode keeps the teal brand (the VBCS dark preset's near-black brand needs a separate foreground token first).
 - Two grids kept for backend-driven 12-column chart spans (`.insight-panels`, `.dynamic-chart-grid`).
 - Floating-label 39 px filter fields on the Proposal listing (D36 keeps them only for profile and Insights).
 - LIKE wildcards `%` / `_` stay unescaped, as in legacy; escaping needs an `ESCAPE` clause the backend must accept.
 - Overdue uses the server's calendar day, not the user's time zone.
-- Not yet built: funder tree and deep links, "new" opportunity flags, Notifications load-on-scroll, the Ethics
-  `checkApplApprAccess` gate, per-filter `list-*` visibility gates on the listing.
+- Not yet built: funder tree and deep links, per-filter `list-*` visibility gates on the listing.
 - To confirm on DEV: whether `pendingApproval` / `approvedAwards` return `appr_deadline_date`; whether
   `total_count` is filtered or global.

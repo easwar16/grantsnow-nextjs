@@ -1,32 +1,22 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { accessibilityKeys } from "@/features/account/contracts";
-import { AccountPanel } from "@/features/account/account-panel";
+import { ProfileDialog } from "@/features/account/profile-dialog";
 import { Icon } from "@/components/ui/icon";
-type Panel = "profile" | "preferences" | "accessibility";
+import type { ConfigureMode } from "./configure-drawer";
+import { useShell } from "./shell-context";
+/** The header's user name and menu (GN-Angular header user menu); Preferences/Accessibility open the end drawer. */
 export function UserMenu({
   name,
-  accessibility,
+  onConfigure,
 }: {
   name: string;
-  organization?: string;
-  accessibility: Record<string, number>;
+  onConfigure: (mode: ConfigureMode) => void;
 }) {
+  const { labels } = useShell();
   const menu = useRef<HTMLDetailsElement>(null),
     trigger = useRef<HTMLElement>(null),
     dialog = useRef<HTMLDialogElement>(null);
-  const [opened, setOpened] = useState(false);
-  const [panel, setPanel] = useState<Panel>("profile");
-  useEffect(() => {
-    for (const key of accessibilityKeys) {
-      for (const cls of [...document.documentElement.classList])
-        if (cls.startsWith(`${key}-`))
-          document.documentElement.classList.remove(cls);
-      document.documentElement.classList.add(
-        `${key}-${accessibility[key] || 0}`,
-      );
-    }
-  }, [accessibility]);
+  const [profileOpen, setProfileOpen] = useState(false);
   useEffect(() => {
     const close = (event: PointerEvent) => {
       if (menu.current && !menu.current.contains(event.target as Node))
@@ -35,11 +25,8 @@ export function UserMenu({
     document.addEventListener("pointerdown", close);
     return () => document.removeEventListener("pointerdown", close);
   }, []);
-  function open(next: Panel) {
-    setOpened(true);
-    setPanel(next);
+  function closeMenu() {
     if (menu.current) menu.current.open = false;
-    dialog.current?.showModal();
   }
   function menuKeys(event: React.KeyboardEvent<HTMLDivElement>) {
     const items = [
@@ -61,88 +48,94 @@ export function UserMenu({
     }
     if (event.key === "Escape") {
       event.preventDefault();
-      if (menu.current) menu.current.open = false;
+      closeMenu();
       trigger.current?.focus();
     }
   }
   return (
     <>
-      <details className="user-menu" ref={menu}>
+      <details id="user-menu" className="user-menu" ref={menu}>
         <summary
           ref={trigger}
+          id="user-menu-button"
           aria-haspopup="menu"
           onKeyDown={(event) => {
-            if (event.key === "ArrowDown") {
-              event.preventDefault();
-              if (menu.current) menu.current.open = true;
-              menu.current
-                ?.querySelector<HTMLButtonElement>('[role="menuitem"]')
-                ?.focus();
-            }
+            if (event.key !== "ArrowDown") return;
+            event.preventDefault();
+            if (menu.current) menu.current.open = true;
+            menu.current
+              ?.querySelector<HTMLButtonElement>('[role="menuitem"]')
+              ?.focus();
           }}
         >
           {name}
           <Icon name="caret-down" />
         </summary>
         <div
+          id="user-menu-list"
           className="user-menu-content"
           role="menu"
           aria-label={name}
           onKeyDown={menuKeys}
         >
-          <button role="menuitem" onClick={() => open("profile")}>
+          <button
+            id="user-menu-profile"
+            role="menuitem"
+            onClick={() => {
+              closeMenu();
+              setProfileOpen(true);
+              dialog.current?.showModal();
+            }}
+          >
             <Icon name="user-configuration" />
-            Manage profile
+            {labels.manageProfile}
           </button>
-          <button role="menuitem" onClick={() => open("preferences")}>
+          <button
+            id="user-menu-preferences"
+            role="menuitem"
+            onClick={() => {
+              closeMenu();
+              onConfigure("preferences");
+            }}
+          >
             <Icon name="settings" />
-            Preferences
+            {labels.preferences}
           </button>
-          <button role="menuitem" onClick={() => open("accessibility")}>
+          <button
+            id="user-menu-accessibility"
+            role="menuitem"
+            onClick={() => {
+              closeMenu();
+              onConfigure("accessibility");
+            }}
+          >
             <Icon name="accessibility" />
-            Accessibility
+            {labels.accessibility}
           </button>
-          <form action="/api/auth/logout" method="post">
-            <button role="menuitem" type="submit">
+          <form
+            id="user-menu-sign-out-form"
+            action="/api/auth/logout"
+            method="post"
+          >
+            <button id="user-menu-sign-out" role="menuitem" type="submit">
               <Icon name="logout" />
-              Sign Out
+              {labels.signOut}
             </button>
           </form>
         </div>
       </details>
       <dialog
         ref={dialog}
-        className={`account-dialog account-dialog-${panel}`}
-        aria-label={
-          panel === "profile"
-            ? "Manage profile"
-            : panel === "preferences"
-              ? "User Preferences"
-              : "Accessibility"
-        }
+        id="profile-dialog"
+        className="profile-dialog"
+        aria-labelledby="profile-title"
         onClose={() => {
-          setOpened(false);
+          setProfileOpen(false);
           trigger.current?.focus();
         }}
       >
-        <header>
-          <h2>
-            {panel === "profile"
-              ? "Manage profile"
-              : panel === "preferences"
-                ? "User Preferences"
-                : "Accessibility"}
-          </h2>
-          <button
-            className="dialog-close"
-            aria-label="Close account settings"
-            onClick={() => dialog.current?.close()}
-          >
-            <Icon name="close" />
-          </button>
-        </header>
-        {opened && (
-          <AccountPanel panel={panel} close={() => dialog.current?.close()} />
+        {profileOpen && (
+          <ProfileDialog onClose={() => dialog.current?.close()} />
         )}
       </dialog>
     </>

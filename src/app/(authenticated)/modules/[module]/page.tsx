@@ -24,12 +24,20 @@ export default async function UnavailableModule({
     entry.name,
   );
   return (
-    <section className="unavailable-module" aria-labelledby="module-heading">
+    <section
+      id="unavailable-module"
+      className="unavailable-module"
+      aria-labelledby="module-heading"
+    >
       <h1 id="module-heading">{name}</h1>
-      <div className="unavailable-module-message" role="status">
+      <div
+        id="unavailable-module-message"
+        className="unavailable-module-message"
+        role="status"
+      >
         <h2>Module not available for now</h2>
         <p>{name} has not been implemented in this application yet.</p>
-        <Link className="button" href="/home">
+        <Link id="unavailable-module-home" className="button" href="/home">
           Back to Home
         </Link>
       </div>

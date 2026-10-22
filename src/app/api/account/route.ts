@@ -3,6 +3,7 @@ import {
   accountData,
   saveAccount,
   proxyPeople,
+  digitalPresence,
 } from "@/server/account/service";
 import { json, failure } from "@/server/api/http";
 import { sameOrigin } from "@/lib/security";
@@ -13,9 +14,14 @@ export async function GET(request: Request) {
     const query = new URL(request.url).searchParams;
     const org = query.get("organization");
     const panel = query.get("panel") || "profile";
-    if (!["profile", "preferences", "accessibility"].includes(panel))
+    if (
+      !["profile", "preferences", "accessibility", "presence"].includes(panel)
+    )
       throw new AppError("BAD_REQUEST", "Unknown settings panel.", 400);
-    return json(org ? await proxyPeople(org) : await accountData(panel));
+    if (org) return json(await proxyPeople(org));
+    return json(
+      panel === "presence" ? await digitalPresence() : await accountData(panel),
+    );
   } catch (e) {
     return failure(
       e instanceof ZodError

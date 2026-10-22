@@ -1,9 +1,13 @@
-import Link from "next/link";
 import { pageIdentity } from "@/server/auth/page";
 import { eoiRecordContext } from "@/server/opportunities/record";
+import { recordShell } from "@/server/opportunities/eoi-record/shell";
+import { resources } from "@/server/configuration/resources";
+import { displayFormat } from "@/server/configuration/formatting";
 import { State } from "@/components/feedback/state";
-import { Icon } from "@/components/ui/icon";
+import { DeniedRedirect } from "@/features/opportunities/eoi/denied-redirect";
+import { RecordShell } from "@/features/opportunities/eoi/record-shell";
 import { publicError } from "@/lib/errors";
+/** The AOI / EOI record container: the request, the user's rights on it and its finalize state, shared by every tab. */
 export default async function EoiLayout({
   children,
   params,
@@ -12,47 +16,45 @@ export default async function EoiLayout({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  await pageIdentity(`/opportunities/eoi/${id}/summary`);
-  let access;
-  try {
-    access = await eoiRecordContext(id);
-  } catch (error) {
-    const e = publicError(error);
+  const { user } = await pageIdentity(`/opportunities/eoi/${id}/summary`);
+  if (user.modules["opportunities-group"] !== true)
     return (
       <State
-        title={
-          e.code === "FORBIDDEN" ? "Access denied" : "Application unavailable"
-        }
+        title="Access denied"
+        message="You do not have access to this module."
+        code="FORBIDDEN"
+      />
+    );
+  // The labels and formats need only the session; they load with the record and are used once it is readable.
+  const shellRead = Promise.all([resources(), displayFormat()]);
+  shellRead.catch(() => undefined);
+  let context;
+  try {
+    context = await eoiRecordContext(id);
+  } catch (error) {
+    const e = publicError(error);
+    // No rights on the record: the original's toast and back to the list.
+    if (e.code === "FORBIDDEN")
+      return (
+        <DeniedRedirect
+          title="Access Denied"
+          message={e.message}
+          href="/opportunities/eoi"
+        />
+      );
+    return (
+      <State
+        title="Application unavailable"
         message={e.message}
         action={e.action}
         code={e.code}
       />
     );
   }
+  const [rows, format] = await shellRead;
   return (
-    <section className="record-workspace">
-      <header className="record-header">
-        <Link href="/opportunities/eoi" prefetch={false}>
-          <Icon name="arrow-left" /> Applications of Interest
-        </Link>
-        <h1>Application of Interest</h1>
-      </header>
-      <div className="record-body">
-        <nav aria-label="Application sections">
-          {access.tabs.map((tab) => (
-            <Link
-              key={tab}
-              href={`/opportunities/eoi/${id}/${tab}`}
-              prefetch={false}
-            >
-              {tab.startsWith("dynamic-form-")
-                ? `Dynamic Form ${tab.slice(-1)}`
-                : tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </Link>
-          ))}
-        </nav>
-        <div className="summary-panel">{children}</div>
-      </div>
-    </section>
+    <RecordShell model={recordShell(context, rows, format)}>
+      {children}
+    </RecordShell>
   );
 }

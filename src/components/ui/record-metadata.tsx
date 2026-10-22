@@ -1,10 +1,12 @@
 export function RecordMetadata({
+  id,
   fields,
 }: {
+  id?: string;
   fields: { label: string; value?: React.ReactNode }[];
 }) {
   return (
-    <dl className="record-metadata">
+    <dl id={id} className="record-metadata">
       {fields
         .filter((f) => f.value != null && f.value !== "")
         .map((f) => (

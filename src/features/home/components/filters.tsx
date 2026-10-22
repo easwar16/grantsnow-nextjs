@@ -1,150 +1,94 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
-export function HomeFilterControls({ currentYear }: { currentYear: number }) {
-  const formRef = useRef<HTMLFormElement>(null),
-    focusAfterNavigation = useRef<string | undefined>(undefined);
+import { MultiSelect } from "@/components/ui/multi-select";
+import {
+  QUARTERS,
+  monthOptions,
+  pruneMonths,
+  yearOptions,
+} from "../insight-filters";
+type FilterKey = "year" | "quarter" | "month";
+/** Insights Years / Quarter / Months filters; each change goes straight into the URL, as legacy applied it at once. */
+export function HomeFilterControls({
+  currentYear,
+  labels,
+}: {
+  currentYear: number;
+  /** RB `labels.years`, `labels.quarter`, `labels.months`. */
+  labels: Record<FilterKey, string>;
+}) {
   const router = useRouter(),
     params = useSearchParams();
-  const queryKey = params.toString();
-  useEffect(() => {
-    if (focusAfterNavigation.current)
-      document
-        .getElementById(focusAfterNavigation.current)
-        ?.focus({ preventScroll: true });
-  }, [queryKey]);
-  useEffect(() => {
-    const close = (event: PointerEvent | KeyboardEvent) => {
-      if (event instanceof KeyboardEvent && event.key !== "Escape") return;
-      formRef.current
-        ?.querySelectorAll<HTMLDetailsElement>("details[open]")
-        .forEach((details) => {
-          if (
-            event instanceof PointerEvent &&
-            details.contains(event.target as Node)
-          )
-            return;
-          const focused = details.contains(document.activeElement);
-          details.open = false;
-          if (focused && event instanceof KeyboardEvent)
-            details.querySelector<HTMLElement>("summary")?.focus();
-        });
-    };
-    document.addEventListener("pointerdown", close);
-    document.addEventListener("keydown", close);
-    return () => {
-      document.removeEventListener("pointerdown", close);
-      document.removeEventListener("keydown", close);
-    };
-  }, []);
-  const groups = [
-    {
-      key: "year",
-      label: "Years",
-      options: Array.from({ length: currentYear - 1994 }, (_, i) => ({
-        value: String(currentYear - i),
-        label: String(currentYear - i),
-      })),
-    },
-    {
-      key: "quarter",
-      label: "Quarter",
-      options: [
-        "Q1 (Jan - Mar)",
-        "Q2 (Apr - Jun)",
-        "Q3 (Jul - Sep)",
-        "Q4 (Oct - Dec)",
-      ].map((label, i) => ({ value: String(i + 1), label })),
-    },
-    {
-      key: "month",
-      label: "Months",
-      options: Array.from({ length: 12 }, (_, i) => ({
-        value: String(i + 1),
-        label: new Intl.DateTimeFormat("en", {
-          month: "long",
-          timeZone: "UTC",
-        }).format(new Date(Date.UTC(2026, i, 1))),
-      })),
-    },
-  ];
-  function apply(form: HTMLFormElement) {
-    const values = new FormData(form),
-      next = new URLSearchParams(params.toString());
+  // The URL only changes once Home re-renders on the server (slow on DEV), so ticks show from local state at once.
+  const fromUrl = () =>
+    new URLSearchParams(
+      ["year", "quarter", "month"].flatMap((k) =>
+        params.has(k) ? [[k, params.get(k) ?? ""]] : [],
+      ),
+    );
+  const [draft, setDraft] = useState(fromUrl);
+  const [syncedUrl, setSyncedUrl] = useState(params.toString());
+  if (syncedUrl !== params.toString()) {
+    setSyncedUrl(params.toString());
+    setDraft(fromUrl());
+  }
+  const selected = (key: FilterKey) =>
+    (draft.get(key) || "").split(",").filter(Boolean);
+  function apply(changes: Partial<Record<FilterKey, string[]>>) {
+    const local = new URLSearchParams(draft.toString());
+    for (const [k, values] of Object.entries(changes))
+      if (values.length) local.set(k, values.join(","));
+      else local.delete(k);
+    setDraft(local);
+    const next = new URLSearchParams(params.toString());
     next.delete("offset");
-    for (const { key } of groups) {
-      const selected = values.getAll(key).map(String);
-      if (selected.length) next.set(key, selected.join(","));
+    for (const [key, values] of Object.entries(changes))
+      if (values.length) next.set(key, values.join(","));
       else next.delete(key);
-    }
     router.push(`/home?${next}`, { scroll: false });
   }
+  const quarters = selected("quarter");
   return (
-    <form
-      ref={formRef}
-      className="insight-filters"
-      onChange={(e) => {
-        if (e.target instanceof HTMLInputElement)
-          focusAfterNavigation.current = e.target.id;
-        apply(e.currentTarget);
-      }}
-      onSubmit={(e) => {
-        e.preventDefault();
-        apply(e.currentTarget);
-      }}
-    >
-      {groups.map((group) => {
-        const selected = (params.get(group.key) || "")
-          .split(",")
-          .filter(Boolean);
-        return (
-          <details className="insight-filter" key={group.key}>
-            <summary aria-label={`${group.label} filter`}>
-              <span className={selected.length ? "filter-caption" : ""}>
-                {group.label}
-              </span>
-              {selected.length > 0 && (
-                <span className="filter-values">
-                  {group.options
-                    .filter((o) => selected.includes(o.value))
-                    .map((o) => o.label)
-                    .join(", ")}
-                </span>
-              )}
-            </summary>
-            <fieldset>
-              <legend className="sr-only">{group.label}</legend>
-              {group.options.map((option) => (
-                <label key={`${option.value}:${params.toString()}`}>
-                  <input
-                    id={`insight-${group.key}-${option.value}`}
-                    type="checkbox"
-                    name={group.key}
-                    value={option.value}
-                    defaultChecked={selected.includes(option.value)}
-                  />
-                  {option.label}
-                </label>
-              ))}
-            </fieldset>
-          </details>
-        );
-      })}
-      {groups.some((g) => params.has(g.key)) && (
+    <div id="insights-filters" className="insight-filters">
+      <MultiSelect
+        id="insights-filter-year"
+        className="insight-filter"
+        label={labels.year}
+        options={yearOptions(currentYear)}
+        value={selected("year")}
+        onChange={(year) => apply({ year })}
+      />
+      <MultiSelect
+        id="insights-filter-quarter"
+        className="insight-filter"
+        label={labels.quarter}
+        options={QUARTERS}
+        value={quarters}
+        onChange={(quarter) =>
+          apply({ quarter, month: pruneMonths(selected("month"), quarter) })
+        }
+      />
+      <MultiSelect
+        id="insights-filter-month"
+        className="insight-filter"
+        label={labels.month}
+        options={monthOptions(quarters)}
+        value={selected("month")}
+        onChange={(month) => apply({ month })}
+      />
+      {(["year", "quarter", "month"] as const).some((k) => draft.has(k)) && (
         <button
+          id="insights-filter-clear"
           type="button"
           className="insight-clear"
           aria-label="Clear insights filters"
-          onClick={() => {
-            const next = new URLSearchParams(params.toString());
-            for (const { key } of groups) next.delete(key);
-            router.push(`/home?${next}`, { scroll: false });
-          }}
+          onClick={() => apply({ year: [], quarter: [], month: [] })}
         >
           <Icon name="close" />
         </button>
       )}
-    </form>
+    </div>
   );
 }

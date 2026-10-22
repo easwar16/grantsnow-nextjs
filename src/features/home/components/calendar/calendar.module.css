@@ -38,7 +38,7 @@
   text-transform: capitalize;
   color: var(--on-accent);
   background-color: var(--accent);
-  border-color: var(--accent);
+  border-color: var(--accent-fg);
   border-radius: 4px;
   box-shadow: none;
 }
@@ -155,7 +155,7 @@
   width: 220px;
   overflow: hidden;
   background: var(--surface);
-  border-right: 2px solid var(--accent);
+  border-right: 2px solid var(--accent-fg);
   box-shadow: 3px 0 14px var(--shadow);
 }
 .sidebarHeader,
@@ -241,7 +241,7 @@
   width: 280px;
   overflow: hidden;
   background: var(--surface);
-  border-left: 2px solid var(--accent);
+  border-left: 2px solid var(--accent-fg);
   box-shadow: -3px 0 14px var(--shadow);
 }
 .panelHeaderInner {
@@ -300,9 +300,10 @@
 .warn {
   display: block;
   margin-top: 3px;
-  font-size: 0.9em;
+  /* GN-Angular .cal-warn. */
+  font-size: 0.78em;
   font-weight: 500;
-  color: var(--danger-text);
+  color: var(--danger);
 }
 .panelFooter {
   flex-shrink: 0;
@@ -334,7 +335,7 @@
   .panel {
     width: auto;
     border: 0;
-    border-top: 2px solid var(--accent);
+    border-top: 2px solid var(--accent-fg);
     box-shadow: none;
   }
 }

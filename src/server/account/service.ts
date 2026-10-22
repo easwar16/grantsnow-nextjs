@@ -1,11 +1,22 @@
 import "server-only";
 import type { z } from "zod";
-import { organizations } from "@/server/configuration/service";
+import {
+  forgetDashboardConfiguration,
+  organizations,
+} from "@/server/configuration/service";
 import { dateDisplay } from "@/lib/format";
 import { displayFormat } from "@/server/configuration/formatting";
 import { widgets } from "@/server/home/widgets";
-import { authenticate } from "@/server/session/service";
-import { oracle, assertBusiness, businessError } from "@/server/api/transport";
+import { authenticate, validatedIdentity } from "@/server/session/service";
+import { early } from "@/server/async";
+import { memo, memoKey, TTL } from "@/server/cache/memo";
+import {
+  oracle,
+  oracleWrite,
+  assertBusiness,
+  businessError,
+} from "@/server/api/transport";
+import { availableThemes } from "./themes";
 import {
   resources,
   resourceVisible,
@@ -23,16 +34,43 @@ import {
   dashboardChange,
   researchSchema,
   personStatusSchema,
+  presenceKeys,
+  presenceSchema,
   type AccountData,
+  type DigitalPresence,
 } from "@/features/account/contracts";
+import { cachedRead, forgetRead } from "@/server/cache/reads";
 const visible = (rows: Resources, key: string) =>
   resourceVisible(rows, "dashboard", "labels", key);
+/** A research-preference option list (admin lookups), shared by the session for a few minutes. */
+function preferenceOptions(token: string, lov: string) {
+  return memo(memoKey("preference-options", token, lov), TTL.config, async () =>
+    (
+      (assertBusiness(
+        await oracle("getSharedUserPreferenceLOV", { token, lov_type: lov }),
+      ).items || []) as Record<string, unknown>[]
+    ).flatMap((i) => (typeof i.label === "string" ? [i.label] : [])),
+  );
+}
+function funderOptions(token: string) {
+  return memo(memoKey("funder-options", token), TTL.config, async () =>
+    (
+      (assertBusiness(await oracle("getSharedGetOppFunders", { token }))
+        .items || []) as Record<string, unknown>[]
+    ).flatMap((i) => (typeof i.value === "string" ? [i.value] : [])),
+  );
+}
 export async function accountData(panel = "profile"): Promise<AccountData> {
   const { session, user } = await authenticate();
+  const themes = early(
+    panel === "preferences" ? availableThemes() : Promise.resolve([]),
+  );
+  // Preferences are read fresh here: this panel edits them.
   const [raw, identity, rows, format] = await Promise.all([
     oracle("getSharedDashboardPreferences", { token: session.token }),
+    // The validation authenticate() already shares for this token.
     panel === "profile"
-      ? oracle("getSessionValidate", { token: session.token })
+      ? validatedIdentity(session.token)
       : Promise.resolve({}),
     resources(),
     displayFormat(),
@@ -91,10 +129,33 @@ export async function accountData(panel = "profile"): Promise<AccountData> {
     research_keywords: [] as string[],
   };
   const options: Record<string, string[]> = {};
+  const manageAllowed = visible(rows, "manage");
+  // The research and status reads are independent; both start before either is used.
+  const statusRead =
+    manageAllowed && panel === "profile"
+      ? early(
+          Promise.all([
+            cachedRead(
+              "getSharedPersonStatus",
+              { token: session.token },
+              TTL.config,
+            ),
+            organizations(),
+          ]),
+        )
+      : undefined;
   if (researchAllowed && panel === "profile") {
-    const body = assertBusiness(
-      await oracle("getSharedUserPreference", { token: session.token }),
-    );
+    const [preference, areas, keywords, funders] = await Promise.all([
+      cachedRead(
+        "getSharedUserPreference",
+        { token: session.token },
+        TTL.config,
+      ),
+      preferenceOptions(session.token, "AREAS_OF_INTEREST"),
+      preferenceOptions(session.token, "RESEARCH_KEYWORDS"),
+      funderOptions(session.token),
+    ]);
+    const body = assertBusiness(preference);
     const item =
       (body.items as Record<string, unknown>[] | undefined)?.[0] || {};
     research = Object.fromEntries(
@@ -105,28 +166,10 @@ export async function accountData(panel = "profile"): Promise<AccountData> {
           : [],
       ]),
     ) as typeof research;
-    for (const [key, lov] of [
-      ["research_areas", "AREAS_OF_INTEREST"],
-      ["research_keywords", "RESEARCH_KEYWORDS"],
-    ]) {
-      const b = assertBusiness(
-        await oracle("getSharedUserPreferenceLOV", {
-          token: session.token,
-          lov_type: lov,
-        }),
-      );
-      options[key] = ((b.items || []) as Record<string, unknown>[]).flatMap(
-        (i) => (typeof i.label === "string" ? [i.label] : []),
-      );
-    }
-    const funders = assertBusiness(
-      await oracle("getSharedGetOppFunders", { token: session.token }),
-    );
-    options.favourite_funder = (
-      (funders.items || []) as Record<string, unknown>[]
-    ).flatMap((i) => (typeof i.value === "string" ? [i.value] : []));
+    options.research_areas = areas;
+    options.research_keywords = keywords;
+    options.favourite_funder = funders;
   }
-  const manageAllowed = visible(rows, "manage");
   let status: AccountData["status"] = {
     status_code: "ACTIVE",
     effective_start_date: "",
@@ -135,10 +178,9 @@ export async function accountData(panel = "profile"): Promise<AccountData> {
     proxy_users: [],
   };
   let orgs: AccountData["organizations"] = [];
-  if (manageAllowed && panel === "profile") {
-    const raw = assertBusiness(
-      await oracle("getSharedPersonStatus", { token: session.token }),
-    );
+  if (statusRead) {
+    const [own, allowed] = await statusRead;
+    const raw = assertBusiness(own);
     status = {
       status_code: raw.status_code === "OOO" ? "OOO" : "ACTIVE",
       effective_start_date:
@@ -157,7 +199,7 @@ export async function accountData(panel = "profile"): Promise<AccountData> {
           }))
         : [],
     };
-    orgs = await organizations();
+    orgs = allowed;
   }
   return {
     fields,
@@ -168,6 +210,8 @@ export async function accountData(panel = "profile"): Promise<AccountData> {
     researchAllowed,
     options,
     labels: Object.fromEntries(widgets.map((w) => [w.id, w.title])),
+    themes: await themes,
+    presenceAllowed: visible(rows, "digital-presence"),
     settings: {
       theme: typeof config.theme === "string" ? config.theme : "theme-default",
       accessibility,
@@ -239,25 +283,60 @@ async function write(path: string, token: string, body: unknown) {
       throw new AppError("BUSINESS", "Oracle could not save these settings.");
   }
 }
+/** The five profile links (legacy getSharedDigitalPresence2, `pid` from the session); RB-gated, fail closed. */
+export async function digitalPresence(): Promise<DigitalPresence> {
+  const { session, user } = await authenticate();
+  if (!visible(await resources(), "digital-presence"))
+    throw new AppError("FORBIDDEN", "Digital presence is unavailable.", 403);
+  const body = assertBusiness(
+    await oracle("getSharedDigitalPresence", {
+      token: session.token,
+      pid: user.personId,
+    }),
+  );
+  const item = (
+    Array.isArray(body.items) ? (body.items[0] ?? {}) : {}
+  ) as Record<string, unknown>;
+  return Object.fromEntries(
+    presenceKeys.map((k) => [k, typeof item[k] === "string" ? item[k] : ""]),
+  ) as DigitalPresence;
+}
 export async function saveAccount(kind: string, body: unknown) {
   const { session, user } = await authenticate();
+  if (kind === "presence") {
+    if (!visible(await resources(), "digital-presence"))
+      throw new AppError("FORBIDDEN", "Digital presence is unavailable.", 403);
+    // The legacy contract carries the token in the query string; it goes as a header here (no tokens in URLs).
+    await oracleWrite(
+      "postSharedDigitalPresence",
+      { token: session.token },
+      presenceSchema.parse(body),
+    );
+    return;
+  }
   if (kind === "status") {
     const rows = await resources();
     if (!visible(rows, "manage"))
       throw new AppError("FORBIDDEN", "Status management is unavailable.", 403);
     const input = personStatusSchema.parse(body);
-    const own = assertBusiness(
-      await oracle("getSharedPersonStatus", { token: session.token }),
+    const chosen = input.status_code === "OOO" ? input.proxy_users : [];
+    const [rawOwn, allowed] = await Promise.all([
+      oracle("getSharedPersonStatus", { token: session.token }),
+      input.status_code === "OOO" ? organizations() : [],
+    ]);
+    const own = assertBusiness(rawOwn);
+    // Each allowed org's directory is read at once; every proxy is still checked in order before the write.
+    const directories = chosen.map((proxy) =>
+      allowed.some((o) => o.id === proxy.org_id)
+        ? early(proxyPeople(proxy.org_id))
+        : undefined,
     );
-    const allowed = input.status_code === "OOO" ? await organizations() : [];
     const proxies: Record<string, unknown>[] = [];
-    for (const proxy of input.status_code === "OOO" ? input.proxy_users : []) {
-      if (
-        !allowed.some((o) => o.id === proxy.org_id) ||
-        proxy.proxy_pid === user.personId
-      )
+    for (const [i, proxy] of chosen.entries()) {
+      const directory = directories[i];
+      if (!directory || proxy.proxy_pid === user.personId)
         throw new AppError("FORBIDDEN", "Invalid proxy selection.", 403);
-      const people = await proxyPeople(proxy.org_id);
+      const people = await directory;
       if (!people.some((p) => p.id === proxy.proxy_pid))
         throw new AppError(
           "FORBIDDEN",
@@ -273,17 +352,22 @@ export async function saveAccount(kind: string, body: unknown) {
         : undefined;
       proxies.push({ ...proxy, ...(existing?.id ? { id: existing.id } : {}) });
     }
-    await write("shared/PersonStatus", session.token, {
-      ...(own.id ? { id: own.id } : {}),
-      pid: user.personId,
-      status_code: input.status_code,
-      effective_start_date:
-        input.status_code === "OOO" ? input.effective_start_date : "",
-      effective_end_date:
-        input.status_code === "OOO" ? input.effective_end_date : "",
-      status_msg: input.status_code === "OOO" ? input.status_msg : "",
-      proxy_users: input.status_code === "OOO" ? proxies : [],
-    });
+    // A failed save may still have landed, so the held status is dropped either way.
+    try {
+      await write("shared/PersonStatus", session.token, {
+        ...(own.id ? { id: own.id } : {}),
+        pid: user.personId,
+        status_code: input.status_code,
+        effective_start_date:
+          input.status_code === "OOO" ? input.effective_start_date : "",
+        effective_end_date:
+          input.status_code === "OOO" ? input.effective_end_date : "",
+        status_msg: input.status_code === "OOO" ? input.status_msg : "",
+        proxy_users: input.status_code === "OOO" ? proxies : [],
+      });
+    } finally {
+      forgetRead("getSharedPersonStatus", session.token);
+    }
     return;
   }
   if (kind === "research") {
@@ -298,21 +382,33 @@ export async function saveAccount(kind: string, body: unknown) {
         403,
       );
     const input = researchSchema.parse(body);
-    await write(
-      "shared/UserPreference",
-      session.token,
-      Object.fromEntries(
-        Object.entries(input).map(([k, v]) => [k, [...new Set(v)].join(",")]),
-      ),
-    );
+    // The profile and the finder's preference tab both read it; dropped even if the save fails part-way.
+    try {
+      await write(
+        "shared/UserPreference",
+        session.token,
+        Object.fromEntries(
+          Object.entries(input).map(([k, v]) => [k, [...new Set(v)].join(",")]),
+        ),
+      );
+    } finally {
+      forgetRead("getSharedUserPreference", session.token);
+    }
     return;
   }
   if (kind !== "dashboard")
     throw new AppError("BAD_REQUEST", "Unknown settings change.", 400);
   const input = dashboardChange.parse(body);
-  const current = assertBusiness(
-    await oracle("getSharedDashboardPreferences", { token: session.token }),
+  // Read fresh (never the memo): the write merges over exactly what Oracle holds now.
+  const stored = early(
+    oracle("getSharedDashboardPreferences", { token: session.token }),
   );
+  if (
+    input.theme !== undefined &&
+    !(await availableThemes()).some((t) => t.id === input.theme)
+  )
+    throw new AppError("FORBIDDEN", "Unknown theme.", 403);
+  const current = assertBusiness(await stored);
   for (const group of ["needAttention", "insights"] as const)
     if (input[group])
       for (const key of Object.keys(input[group]!))
@@ -321,11 +417,16 @@ export async function saveAccount(kind: string, body: unknown) {
   for (const key of ["opportunity", "notifications"] as const)
     if (input[key] !== undefined && !Object.hasOwn(current, key))
       throw new AppError("FORBIDDEN", "Unknown dashboard preference.", 403);
-  await write(
-    "shared/dashboardPreferences",
-    session.token,
-    dashboardPayload(current, input),
-  );
+  try {
+    await write(
+      "shared/dashboardPreferences",
+      session.token,
+      dashboardPayload(current, input),
+    );
+  } finally {
+    // Even a failed save may have landed; the shell and Home read Oracle again.
+    forgetDashboardConfiguration(session.token);
+  }
 }
 /**
  * H1: the contracted keys only (VBCS type getSharedDashboardPreferences). Unedited settings, including the
@@ -369,28 +470,35 @@ export function dashboardPayload(
 }
 
 export async function proxyPeople(orgId: string) {
-  const { session, user } = await authenticate();
-  const rows = await resources();
-  if (
-    !visible(rows, "manage") ||
-    !(await organizations()).some((o) => o.id === orgId)
-  )
+  const [{ session, user }, rows, orgs] = await Promise.all([
+    authenticate(),
+    resources(),
+    organizations(),
+  ]);
+  if (!visible(rows, "manage") || !orgs.some((o) => o.id === orgId))
     throw new AppError("FORBIDDEN", "Organization unavailable.", 403);
-  const raw = assertBusiness(
-    await oracle("getPre_awardGetPersonList", {
-      token: session.token,
-      p_org_id: orgId,
-    }),
-  );
-  return (Array.isArray(raw.items) ? raw.items : []).flatMap(
-    (p: Record<string, unknown>) => {
-      const id = p.person_id ?? p.PERSON_ID,
-        name = p.full_name ?? p.FULL_NAME;
-      return typeof name === "string" &&
-        id != null &&
-        String(id) !== user.personId
-        ? [{ id: String(id), name }]
-        : [];
+  // An org's directory is reference data; the proxy picker and the status save share it.
+  return memo(
+    memoKey("person-list", session.token, orgId),
+    TTL.config,
+    async () => {
+      const raw = assertBusiness(
+        await oracle("getPre_awardGetPersonList", {
+          token: session.token,
+          p_org_id: orgId,
+        }),
+      );
+      return (Array.isArray(raw.items) ? raw.items : []).flatMap(
+        (p: Record<string, unknown>) => {
+          const id = p.person_id ?? p.PERSON_ID,
+            name = p.full_name ?? p.FULL_NAME;
+          return typeof name === "string" &&
+            id != null &&
+            String(id) !== user.personId
+            ? [{ id: String(id), name }]
+            : [];
+        },
+      );
     },
   );
 }

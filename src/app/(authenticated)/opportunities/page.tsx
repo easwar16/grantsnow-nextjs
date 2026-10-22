@@ -1,11 +1,28 @@
 import { displayFormat } from "@/server/configuration/formatting";
 import { pageIdentity } from "@/server/auth/page";
 import { requireDrawerAccess } from "@/server/permissions/policy";
-import { parseOpportunityQuery } from "@/features/opportunities/schemas";
-import { listOpportunities } from "@/server/opportunities/service";
-import { Finder } from "@/features/opportunities/components/finder";
+import {
+  finderRequest,
+  finderRequestSchema,
+} from "@/features/opportunities/schemas";
+import {
+  DEFAULT_FILTERS,
+  fromQuery,
+  resolveTab,
+  URL_KEYS,
+  type FinderQuery,
+} from "@/features/opportunities/finder/state";
+import {
+  finderContext,
+  finderPreferences,
+  listOpportunities,
+} from "@/server/opportunities/service";
+import {
+  Finder,
+  type FinderResult,
+} from "@/features/opportunities/components/finder";
 import { State } from "@/components/feedback/state";
-import { publicError } from "@/lib/errors";
+import { AppError, publicError } from "@/lib/errors";
 export const metadata = { title: "Funding opportunities" };
 export default async function Opportunities({
   searchParams,
@@ -24,30 +41,75 @@ export default async function Opportunities({
       />
     );
   }
-  const params = new URLSearchParams();
-  for (const [k, v] of Object.entries(await searchParams))
-    if (typeof v === "string") params.set(k, v);
-  let query;
-  try {
-    query = parseOpportunityQuery(params);
-  } catch {
-    return <State title="Invalid opportunity filters" code="BAD_REQUEST" />;
+  // Only the six manageFilterURL keys are read; fromQuery drops unknown sorts and directions.
+  const params = await searchParams,
+    urlQuery: Partial<FinderQuery> = {};
+  for (const key of URL_KEYS) {
+    const value = params[key];
+    if (typeof value === "string") urlQuery[key] = value.slice(0, 4000);
   }
-  let initial;
+  // The first page needs only the preferences (its tab), so it loads alongside the context, not after it.
+  const contextRead = finderContext();
+  const requestRead = finderPreferences().then((prefs) => {
+    const request = finderRequest({
+      tab: resolveTab(null, prefs),
+      filters: fromQuery(urlQuery, DEFAULT_FILTERS),
+    });
+    return { request, valid: finderRequestSchema.safeParse(request).success };
+  });
+  // A hand-edited link is held to the API's limits before anything is read.
+  const pageRead = requestRead.then(({ request, valid }) => {
+    if (!valid)
+      throw new AppError("BAD_REQUEST", "Invalid opportunity filters.", 400);
+    return listOpportunities(request);
+  });
+  const formatRead = displayFormat();
+  // Settled below only once the context is known; never left unhandled.
+  pageRead.catch(() => undefined);
+  let context;
   try {
-    initial = { ok: true as const, data: await listOpportunities(query) };
+    context = await contextRead;
+  } catch (error) {
+    const e = publicError(error);
+    return (
+      <State
+        title="Opportunities unavailable"
+        message={e.message}
+        action={e.action}
+        code={e.code}
+      />
+    );
+  }
+  // The first page as a first visit sees it; the client refetches when it remembers other filters.
+  const { request, valid } = await requestRead;
+  if (!valid)
+    return <State title="Invalid opportunity filters" code="BAD_REQUEST" />;
+  let initial: FinderResult;
+  try {
+    const page = await pageRead;
+    initial = {
+      ok: true,
+      data: {
+        rows: page.rows,
+        total: page.total,
+        card: page.card,
+        ...(page.countsUnavailable ? { countsUnavailable: true } : {}),
+      },
+    };
   } catch (error) {
     const e = publicError(error);
     initial = {
-      ok: false as const,
+      ok: false,
       error: { code: e.code, message: e.message, action: e.action },
     };
   }
   return (
     <Finder
       initial={initial}
-      initialQuery={query}
-      format={await displayFormat()}
+      initialRequest={{ tab: request.tab, filters: request.filters }}
+      urlQuery={urlQuery}
+      context={context}
+      format={await formatRead}
     />
   );
 }

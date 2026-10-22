@@ -1,11 +1,72 @@
-/* The deep links (Administration onwards) sit below a divider, as the VBCS drawer. */
-:global(.navigation-drawer) nav a.deepLinks {
-  border-top: 1px solid #ffffff30;
-  margin-top: 6px;
-  padding-top: 16px;
+/* GN-Angular drawer.css: 36px rows, a 4px bar on the current page, children indented 40px. */
+.nav {
+  display: flex;
+  flex-direction: column;
 }
-.externalMark {
-  flex-shrink: 0;
-  margin-left: auto;
-  opacity: 0.8;
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+  width: 100%;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 14px 0 20px;
+  border: 0;
+  border-radius: 0;
+  color: var(--gn-on-brand);
+  background: none;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  text-decoration: none;
+}
+/* The original marks the current page with a bar on the left edge. */
+.item[aria-current]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 4px;
+  border-radius: 0 2px 2px 0;
+  background: var(--gn-on-brand);
+}
+.children .item {
+  padding-left: 40px;
+  font-weight: 400;
+}
+.name {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.end {
+  opacity: 0.85;
+}
+.newDot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gn-badge-warning);
+}
+.divider {
+  width: 100%;
+  margin: 10px 0;
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
 }

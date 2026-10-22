@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import { memo, memoKey, TTL } from "@/server/cache/memo";
 import { z } from "zod";
 import { authenticate } from "@/server/session/service";
 import { oracle } from "@/server/api/transport";
@@ -36,16 +37,22 @@ export function formattingSettings(items: z.infer<typeof schema>["items"]) {
   };
 }
 export type FormattingConfiguration = ReturnType<typeof formattingSettings>;
-export const formattingConfiguration = cache(async () => {
-  const { session } = await authenticate();
-  return formattingSettings(
-    schema.parse(
-      await oracle("getPre_award_costingGetGlobalVar", {
-        token: session.token,
-      }),
-    ).items,
-  );
-});
+export type GlobalVariable = z.infer<typeof schema>["items"][number];
+/** The global variables (admin configuration): formats, form and file limits, the chatbot flag share one read. */
+export const globalVariables = cache(async (token: string) =>
+  memo(
+    memoKey("global-variables", token),
+    TTL.config,
+    async () =>
+      schema.parse(await oracle("getPre_award_costingGetGlobalVar", { token }))
+        .items,
+  ),
+);
+export const formattingConfiguration = cache(async () =>
+  formattingSettings(
+    await globalVariables((await authenticate()).session.token),
+  ),
+);
 /** Configured display formats; legacy falls back to its defaults when global variables are unavailable. */
 export async function displayFormat(): Promise<
   FormattingConfiguration | undefined

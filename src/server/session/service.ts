@@ -65,6 +65,8 @@ function validateOnce(token: string) {
   body.catch(() => validations.delete(key));
   return body;
 }
+/** The validate body this token shares (profile fields read it too); the same one-minute window as authenticate(). */
+export const validatedIdentity = (token: string) => validateOnce(token);
 export const authenticate = cache(async () => {
   const store = await storage(),
     session = assertActive(store.app);

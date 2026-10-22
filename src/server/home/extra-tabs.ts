@@ -10,18 +10,24 @@ import { homeAccess } from "./service";
 import { pageQuery } from "./paging";
 import {
   dashboardConfiguration,
+  forgetDashboardConfiguration,
   organizations,
 } from "@/server/configuration/service";
-import { resources, resourceVisible } from "@/server/configuration/resources";
+import { early } from "@/server/async";
+import {
+  label,
+  resources,
+  resourceVisible,
+} from "@/server/configuration/resources";
 import { scopeOrganization } from "@/server/permissions/policy";
 import { oracle } from "@/server/api/transport";
 import { sanitizeHtml } from "@/server/html/sanitize";
 import { AppError } from "@/lib/errors";
 import { listOpportunities } from "@/server/opportunities/service";
-import { parseOpportunityQuery } from "@/features/opportunities/schemas";
+import { finderRequest } from "@/features/opportunities/schemas";
 export async function dashboardTabs() {
-  const { user } = await homeAccess();
-  const [config, labels] = await Promise.all([
+  const [{ user }, config, labels] = await Promise.all([
+    homeAccess(),
     dashboardConfiguration(),
     resources(),
   ]);
@@ -62,6 +68,9 @@ export async function dashboardTabs() {
   };
 }
 const NOTIFICATION_PAGE = 25;
+/** The dashboard's empty-state text (helper-texts.no-data). */
+const emptyText = (labels: Awaited<ReturnType<typeof resources>>) =>
+  label(labels, "dashboard", "helper-texts", "no-data", "No data to display.");
 export function notificationPage(raw: unknown, offset: number) {
   // The envelope's hasMore/offset do not track p_offset paging (KB GrantsNow-Dashboard), so they are not trusted.
   const body = z
@@ -96,8 +105,11 @@ export function notificationPage(raw: unknown, offset: number) {
   };
 }
 export async function notifications(offset: number, signal?: AbortSignal) {
-  const { session } = await homeAccess();
-  if (!(await dashboardTabs()).notifications)
+  const [{ session }, tabs] = await Promise.all([
+    homeAccess(),
+    dashboardTabs(),
+  ]);
+  if (!tabs.notifications)
     throw new AppError("FORBIDDEN", "Notifications are not enabled.", 403);
   if (
     !Number.isSafeInteger(offset) ||
@@ -106,15 +118,16 @@ export async function notifications(offset: number, signal?: AbortSignal) {
     offset % NOTIFICATION_PAGE !== 0
   )
     throw new AppError("BAD_REQUEST", "Invalid notification page.", 400);
-  return notificationPage(
-    await oracle(
+  const [raw, labels] = await Promise.all([
+    oracle(
       "getNotificationsNotifications",
       { token: session.token },
       pageQuery(offset, NOTIFICATION_PAGE),
       signal,
     ),
-    offset,
-  );
+    resources(),
+  ]);
+  return { ...notificationPage(raw, offset), empty: emptyText(labels) };
 }
 export const chartSchema = z.array(
   z.object({
@@ -154,17 +167,21 @@ export async function dynamicChart(
   organization: string | undefined,
   signal?: AbortSignal,
 ) {
-  const { session } = await homeAccess();
-  const descriptor = (await dashboardTabs()).charts.find((c) => c.id === id);
+  const orgs = early(organizations());
+  const [{ session }, tabs] = await Promise.all([
+    homeAccess(),
+    dashboardTabs(),
+  ]);
+  const descriptor = tabs.charts.find((c) => c.id === id);
   if (!descriptor)
     throw new AppError(
       "FORBIDDEN",
       "This chart is not enabled for your account.",
       403,
     );
-  const org = scopeOrganization(organization, await organizations());
-  const charts = chartSchema.parse(
-    await oracle(
+  const org = scopeOrganization(organization, await orgs);
+  const [raw, labels] = await Promise.all([
+    oracle(
       "getSharedGetDynamicCharts",
       {
         token: session.token,
@@ -174,7 +191,19 @@ export async function dynamicChart(
       undefined,
       signal,
     ),
-  );
+    resources(),
+  ]);
+  const charts = chartSchema.parse(raw);
+  const text = (group: string, key: string, fallback: string) =>
+    label(labels, "dashboard", group, key, fallback);
+  const texts = {
+    options: text("labels", "dyn-chart-options", "Options"),
+    dimension: text("labels", "dyn-chart-dimensions", "Dimension"),
+    link: text("labels", "dyn-chart-link", "Link"),
+    title: text("dialog-titles", "dimension", "Dimension"),
+    save: text("button-labels", "save", "Save"),
+    empty: emptyText(labels),
+  };
   if (
     charts.some(
       (c) => String(c.infolet_id) !== id || c.ModuleName !== descriptor.module,
@@ -190,9 +219,11 @@ export async function dynamicChart(
         ? safeChartReport(c["report-url"], oracleSettings().apps.origin)
         : undefined,
     type: c.chart,
+    texts,
+    // GN-Angular: a chart without a size spans 4 of 12 columns and one 150px row.
     columns:
-      c.colspan ?? Number(c.grid_dimension?.match(/^(\d+)x\d+$/)?.[1] || 6),
-    rows: c.rowspan ?? Number(c.grid_dimension?.match(/^\d+x(\d+)$/)?.[1] || 3),
+      c.colspan ?? Number(c.grid_dimension?.match(/^(\d+)x\d+$/)?.[1] || 4),
+    rows: c.rowspan ?? Number(c.grid_dimension?.match(/^\d+x(\d+)$/)?.[1] || 1),
     points: c.dataProvider.map((p) => ({
       series: String(p.series ?? p.group),
       group: String(p.group),
@@ -210,10 +241,14 @@ export async function featuredOpportunities(
       "Featured opportunities are not enabled.",
       403,
     );
-  const query = parseOpportunityQuery(
-    new URLSearchParams({ tab: "featured", page: String(page) }),
-  );
-  return listOpportunities(query, signal, true);
+  if (!Number.isInteger(page) || page < 1 || page > 10000)
+    throw new AppError("BAD_REQUEST", "Invalid opportunity page.", 400);
+  const query = finderRequest({ tab: "featured", offset: (page - 1) * 25 });
+  const [result, labels] = await Promise.all([
+    listOpportunities(query, signal, true),
+    resources(),
+  ]);
+  return { ...result, empty: emptyText(labels) };
 }
 
 export async function saveDimensions(raw: unknown, signal?: AbortSignal) {
@@ -224,8 +259,11 @@ export async function saveDimensions(raw: unknown, signal?: AbortSignal) {
       "Chart dimensions must be whole numbers from 1 to 12.",
       400,
     );
-  const { session } = await homeAccess();
-  const descriptor = (await dashboardTabs()).charts.find(
+  const [{ session }, tabs] = await Promise.all([
+    homeAccess(),
+    dashboardTabs(),
+  ]);
+  const descriptor = tabs.charts.find(
     (c) => c.id === String(parsed.data.infolet_id),
   );
   if (!descriptor?.dimensions)
@@ -234,6 +272,11 @@ export async function saveDimensions(raw: unknown, signal?: AbortSignal) {
       "Chart dimensions are not editable for this report.",
       403,
     );
-  await saveChartPreference(session.token, parsed.data, signal);
+  try {
+    await saveChartPreference(session.token, parsed.data, signal);
+  } finally {
+    // Even a failed save may have landed; the next read asks Oracle again.
+    forgetDashboardConfiguration(session.token);
+  }
   return { columns: parsed.data.colspan, rows: parsed.data.rowspan };
 }

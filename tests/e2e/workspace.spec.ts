@@ -53,15 +53,15 @@ test("Home queues, organization/year filters, independent failure/retry, navigat
     page.getByRole("heading", { name: "Proposals Approaching Deadlines" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Contract deadlines" }),
+    page.getByRole("heading", { name: "Contracts Approaching Deadlines" }),
   ).toBeVisible();
   await page.getByRole("tab", { name: "Insights", exact: true }).click();
   await page
     .getByRole("combobox", { name: "Dashboard organization" })
     .selectOption("203");
   await expect(page).toHaveURL(/organization=203/);
-  await page.locator('summary[aria-label="Years filter"]').click();
-  await page.getByRole("checkbox", { name: "2026", exact: true }).check();
+  await page.getByRole("combobox", { name: "Years", exact: true }).click();
+  await page.getByRole("option", { name: "2026", exact: true }).click();
   await expect(page).toHaveURL(/year=2026/);
   await page.keyboard.press("Escape");
   await expect(page).toHaveURL(/organization=203/);
@@ -91,7 +91,7 @@ test("Home queues, organization/year filters, independent failure/retry, navigat
     widget.getByText("Isolated test failure"),
   );
   await expect(
-    page.getByRole("heading", { name: "Contracts awaiting approval" }),
+    page.getByRole("heading", { name: "Contract Awaiting Your Approval" }),
   ).toBeVisible();
   fail = false;
   await widget.getByRole("button", { name: "Retry", exact: true }).click();
@@ -368,7 +368,7 @@ test("preview-style desktop drawer, user menu and Opportunities routes", async (
   const after = await page
     .locator("main")
     .evaluate((e) => e.getBoundingClientRect().x);
-  expect(after - before).toBe(241);
+  expect(after - before).toBe(240);
   await page.keyboard.press("Escape");
   await expect(
     page.getByRole("dialog", { name: "Application navigation" }),
@@ -381,7 +381,7 @@ test("preview-style desktop drawer, user menu and Opportunities routes", async (
   await expect(
     page.getByRole("dialog", { name: "User Preferences" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "dark", exact: true }).click();
+  await page.getByRole("radio", { name: "Dark", exact: true }).click();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.locator(".app")).toHaveClass(/dark/);
   await page.locator(".user-menu summary").click();
@@ -394,43 +394,90 @@ test("preview-style desktop drawer, user menu and Opportunities routes", async (
     page.getByRole("heading", { name: "Funding opportunities", exact: true }),
   ).toHaveCount(1);
   await expect(page.locator(".opportunity-card")).toHaveCount(25);
-  await expect(page.locator(".listing-count")).toHaveText("1–25 of 58");
+  await expect(page.locator(".listing-count")).toHaveText("25 of 58");
+  // Panel filters apply at once and are written to the address (manageFilterURL).
+  await page.getByText("Funding Type", { exact: true }).first().click();
+  await page.getByRole("checkbox", { name: "Fellowship", exact: true }).check();
+  await expect(page.locator(".listing-count")).toHaveText("25 of 29");
+  await expect(page).toHaveURL(/fundingType=Fellowship/);
+  await page.getByRole("button", { name: "Clear", exact: true }).click();
+  await expect(page.locator(".listing-count")).toHaveText("25 of 58");
   await page.getByRole("tab", { name: "Bookmarked", exact: true }).click();
-  await expect(page.locator(".listing-count")).toHaveText("1–25 of 29");
-  await page.getByRole("button", { name: "Next", exact: true }).click();
-  await expect(page.locator(".opportunity-card")).toHaveCount(4);
+  await expect(page.locator(".listing-count")).toHaveText("25 of 29");
+  // Infinite scroll: the next page loads near the bottom; the strip then shows the total.
   await page
-    .getByRole("button", { name: /More Info:/ })
+    .getByRole("list", { name: "Opportunities List", exact: true })
+    .evaluate((list) => list.scrollTo(0, list.scrollHeight));
+  await expect(page.locator(".opportunity-card")).toHaveCount(29);
+  await expect(page.locator(".listing-count")).toHaveText("Total: 29");
+  // More Info opens the opportunity's summary as a detail page, with its actions and no tabs.
+  await page
+    .getByRole("link", { name: /More Info:/ })
     .first()
     .click();
+  await expect(page).toHaveURL(/\/opportunities\/\d+$/);
+  await expect(page.getByText("Synthetic opportunity summary.")).toBeVisible();
   await expect(
-    page.getByRole("dialog", { name: "Opportunity information" }),
+    page.getByRole("button", { name: "Apply", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Application pages" }),
+  ).toHaveCount(0);
+  // Apply opens a new application (Summary + Application) without creating anything.
+  await page.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(page).toHaveURL(/\/opportunities\/eoi\/new\/\d+\/application$/);
+  await expect(
+    page
+      .getByRole("navigation", { name: "Application pages" })
+      .getByRole("link"),
+  ).toHaveCount(2);
+  await expect(
+    page.getByRole("button", { name: "Create", exact: true }),
+  ).toBeVisible();
+  await page.goto("/opportunities/eoi");
+  const eoiRows = page.locator("[data-eoi-row]");
+  await expect(eoiRows.first()).toBeVisible();
+  // Page-scoped status list: "Rejected" narrows the list; Clear keeps the chosen status.
+  await page
+    .getByRole("navigation", { name: "Choose a navigation item" })
+    .getByRole("button", { name: "Rejected", exact: true })
+    .click();
+  await expect(eoiRows.first().locator(".gn-status")).toHaveText("Rejected");
+  await page.getByRole("button", { name: "Clear", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Rejected", exact: true }),
+  ).toHaveAttribute("aria-current", "true");
+  await page.getByRole("button", { name: "All", exact: true }).click();
+  await page.getByRole("button", { name: "View EOI_1", exact: true }).click();
+  await expect(page.getByText("Synthetic opportunity summary.")).toBeVisible();
+  await expect(
+    page.getByText("Application Number", { exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Close opportunity information" })
+    .getByRole("link", { name: "Application Details", exact: true })
     .click();
-  await page.goto("/opportunities/eoi");
-  await expect(page.locator(".proposal-card")).toHaveCount(25);
-  await page.getByRole("link", { name: "EOI_1", exact: true }).click();
-  await expect(page.getByText("Synthetic opportunity summary.")).toBeVisible();
-  await page.getByRole("link", { name: "Application", exact: true }).click();
-  await expect(page.getByText("Synthetic research project")).toBeVisible();
-  for (const tab of [
-    "Attachments",
-    "Approvals",
-    "Delegation",
-    "History",
-    "Dynamic Form 1",
-    "Dynamic Form 2",
-    "Dynamic Form 3",
-    "Dynamic Form 4",
-    "Dynamic Form 5",
-  ]) {
+  await expect(
+    page.getByRole("textbox", { name: "Project title" }),
+  ).toHaveValue("Synthetic research project");
+  await expect(
+    page.getByRole("button", { name: "Edit Application", exact: true }),
+  ).toBeVisible();
+  for (const tab of ["Attachments", "Workflow", "Delegation", "History"]) {
     await page.getByRole("link", { name: tab, exact: true }).click();
     await expect(
       page.getByRole("heading", { name: tab, exact: true }),
     ).toBeVisible();
   }
+  for (const tab of [1, 2, 3, 4, 5].map((n) => `Dynamic Form ${n}`)) {
+    const link = page.getByRole("link", { name: tab, exact: true });
+    await link.click();
+    await expect(link).toHaveAttribute("aria-current", "page");
+  }
+  // Comments and the audit trail open the end drawer (placeholders until the shared versions land).
+  await page.getByRole("button", { name: "Comments", exact: true }).click();
+  await expect(
+    page.getByRole("complementary", { name: "Dynamic Form 5" }),
+  ).toBeVisible();
   await page.goto("/opportunities/analytics");
   await expect(
     page.getByRole("heading", { name: "Top Funders", exact: true }),
@@ -510,20 +557,7 @@ test("all configured dashboard tabs load, page, recover and reject unapproved ch
   await expect(
     page.getByText("Synthetic notification 1", { exact: true }),
   ).toBeVisible();
-  await page
-    .locator(".notification-panel")
-    .getByRole("button", { name: "Next", exact: true })
-    .click();
-  await expect(
-    page.getByText("Synthetic notification 26", { exact: true }),
-  ).toBeVisible();
-  await page
-    .locator(".notification-panel")
-    .getByRole("button", { name: "Previous", exact: true })
-    .click();
-  await expect(
-    page.getByText("Synthetic notification 1", { exact: true }),
-  ).toBeVisible();
+  // The list loads its next page on scroll; a failed page keeps the loaded rows and offers Retry.
   await page.route("**/api/home/tabs/notifications?*", (route) =>
     route.fulfill({
       status: 502,
@@ -533,10 +567,12 @@ test("all configured dashboard tabs load, page, recover and reject unapproved ch
     }),
   );
   await page
-    .locator(".notification-panel")
-    .getByRole("button", { name: "Next", exact: true })
-    .click();
+    .locator(".notification-list")
+    .evaluate((list) => list.scrollTo(0, list.scrollHeight));
   await expect(page.getByText("Isolated notification failure")).toBeVisible();
+  await expect(
+    page.getByText("Synthetic notification 1", { exact: true }),
+  ).toBeVisible();
   await page.unroute("**/api/home/tabs/notifications?*");
   await page.getByRole("button", { name: "Retry", exact: true }).click();
   await expect(
@@ -550,10 +586,11 @@ test("all configured dashboard tabs load, page, recover and reject unapproved ch
   await expect(
     page.getByRole("cell", { name: "12", exact: true }),
   ).toBeVisible();
-  await page.getByText("Options", { exact: true }).click();
-  await page.getByRole("button", { name: "Dimensions", exact: true }).click();
+  await page.getByRole("button", { name: "Options", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Dimensions", exact: true }).click();
+  // The dialog title is the RB `dialog-titles` value ("Set Dimension").
   const dimensionDialog = page.getByRole("dialog", {
-    name: "Dimensions",
+    name: "Set Dimension",
     exact: true,
   });
   await dimensionDialog.getByLabel("Cols").fill("12");
@@ -561,9 +598,9 @@ test("all configured dashboard tabs load, page, recover and reject unapproved ch
     .getByRole("button", { name: "Save", exact: true })
     .click();
   await expect(dimensionDialog).toBeHidden();
-  await expect(page.locator(".dynamic-chart-card")).toHaveCSS(
-    "grid-column",
-    "span 12",
+  await expect(page.locator(".dynamic-chart-tile")).toHaveCSS(
+    "flex-basis",
+    "100%",
   );
   expect(
     (
@@ -606,13 +643,17 @@ test("Insights follows source chart types, multi-select filters, expansion and i
   });
   await expect(expanded.locator(".insight-chart-host svg")).toBeVisible();
   await expanded.getByRole("button", { name: "Close expanded chart" }).click();
-  await page.locator('summary[aria-label="Years filter"]').click();
-  await page.getByRole("checkbox", { name: "2025", exact: true }).check();
+  await page.getByRole("combobox", { name: "Years", exact: true }).click();
+  await page.getByRole("option", { name: "2025", exact: true }).click();
   await expect(page).toHaveURL(/year=2025/);
+  // Picking keeps focus in the field (one combobox) and the list open for more picks.
   await expect(
-    page.getByRole("checkbox", { name: "2025", exact: true }),
+    page.getByRole("combobox", { name: "Years", exact: true }),
   ).toBeFocused();
-  await page.getByRole("checkbox", { name: "2026", exact: true }).check();
+  await expect(
+    page.getByRole("option", { name: "2025", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("option", { name: "2026", exact: true }).click();
   await expect(page).toHaveURL(/year=2026%2C2025|year=2025%2C2026/);
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Clear insights filters" }).click();
@@ -625,8 +666,8 @@ test("Insights follows source chart types, multi-select filters, expansion and i
       },
     }),
   );
-  await page.locator('summary[aria-label="Years filter"]').click();
-  await page.getByRole("checkbox", { name: "2026", exact: true }).check();
+  await page.getByRole("combobox", { name: "Years", exact: true }).click();
+  await page.getByRole("option", { name: "2026", exact: true }).click();
   await expect(page.getByText("Isolated Insights failure")).toBeVisible();
   await expect(scatter.locator(".insight-chart-host svg")).toBeVisible();
   await page.unroute("**/api/home/pByStatusChart?*");
@@ -665,10 +706,10 @@ test("account dialogs, research save, preferences and accessible preview cancell
     name: "Accessibility",
     exact: true,
   });
-  await accessibility.getByRole("button", { name: "Bigger text: 0%" }).click();
+  await accessibility.getByRole("button", { name: "Bigger Text: 0%" }).click();
   await expect(page.locator("html")).toHaveClass(/accFontSize-25/);
   await accessibility
-    .getByRole("button", { name: "Cancel", exact: true })
+    .getByRole("button", { name: "Close", exact: true })
     .click();
   await expect(page.locator("html")).toHaveClass(/accFontSize-0/);
 });

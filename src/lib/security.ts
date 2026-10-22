@@ -14,12 +14,16 @@ export function safeReturn(value: unknown) {
           "/opportunities",
           "/opportunities/eoi",
           "/opportunities/analytics",
-          "/opportunities/register",
         ].includes(url.pathname) ||
         placeholderModules.some((m) => url.pathname === `/modules/${m.id}`) ||
         /^\/opportunities\/eoi\/[1-9]\d{0,14}\/(summary|application|attachments|approvals|delegation|history|dynamic-form-[1-5])$/.test(
           url.pathname,
         ) ||
+        // A new application (Apply) and More Info's detail page.
+        /^\/opportunities\/eoi\/new\/[1-9]\d{0,14}\/(summary|application)$/.test(
+          url.pathname,
+        ) ||
+        /^\/opportunities\/[1-9]\d{0,14}$/.test(url.pathname) ||
         /^\/proposals\/(PROPOSAL|OUTLINE_PROPOSAL|SUB_PROPOSAL|EXTENSION_PROPOSAL)\/[1-9]\d{0,14}$/.test(
           url.pathname,
         )
