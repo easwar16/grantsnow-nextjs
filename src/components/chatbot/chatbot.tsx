@@ -1,7 +1,12 @@
 "use client";
-import { useEffect, useId, useRef, useState } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useInFlight } from "@/lib/use-in-flight";
-import { Skeleton } from "@/components/feedback/skeleton";
 import {
   chatPosition,
   dragTo,
@@ -13,11 +18,19 @@ import {
   type Point,
 } from "./position";
 import { Icon } from "@/components/ui/icon";
+import { speechRecognition, transcriptOf, type Recognition } from "./speech";
 import styles from "./chatbot.module.css";
 
 type Message =
-  | { id: number; from: "user"; text: string }
-  | { id: number; from: "bot"; html: string; options: string[] };
+  | { id: number; from: "user"; text: string; at: Date }
+  | {
+      id: number;
+      from: "bot";
+      html: string;
+      options: string[];
+      /** The quick reply picked from this answer; it stays filled, as the live app shows. */
+      chosen?: string;
+    };
 type Failure = { message: string; action?: string };
 type Frame = ReturnType<typeof chatPosition>;
 const UNAVAILABLE: Failure = {
@@ -31,6 +44,9 @@ const KEY_EDGE: Record<string, Edge> = {
 };
 // A press that moves less than this is a click, not a drag (as GN-Angular).
 const DRAG_THRESHOLD = 5;
+
+const noSubscribe = () => () => {};
+const hasSpeech = () => speechRecognition() !== undefined;
 
 const boxOf = (el: HTMLElement): Box => {
   const r = el.getBoundingClientRect();
@@ -59,9 +75,12 @@ function frameFor(el: HTMLElement, spot: Point | null) {
 export function Chatbot({
   title,
   placeholder,
+  userName,
 }: {
   title: string;
   placeholder: string;
+  /** Shown with the time under each of the user's messages, as the live app does. */
+  userName: string;
 }) {
   const launcher = useRef<HTMLButtonElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -70,6 +89,7 @@ export function Chatbot({
   const drag = useRef<{ x: number; y: number; start: Box } | null>(null);
   const dragged = useRef(false);
   const nextId = useRef(0);
+  const recognition = useRef<Recognition | null>(null);
   // null = the default bottom-right spot from CSS.
   const [spot, setSpot] = useState<Point | null>(null);
   const [moving, setMoving] = useState(false);
@@ -78,6 +98,9 @@ export function Chatbot({
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
   const [failure, setFailure] = useState<Failure | null>(null);
+  const [listening, setListening] = useState(false);
+  // The mic shows only where the browser has the Web Speech API (false on the server).
+  const canListen = useSyncExternalStore(noSubscribe, hasSpeech, () => false);
   const { run, busy } = useInFlight();
   const titleId = useId(),
     hintId = useId();
@@ -95,6 +118,8 @@ export function Chatbot({
     return () => removeEventListener("resize", onResize);
   }, [open, spot]);
 
+  useEffect(() => () => recognition.current?.stop(), []);
+
   useEffect(() => {
     log.current?.scrollTo({ top: log.current.scrollHeight });
   }, [messages, busy, failure]);
@@ -105,7 +130,12 @@ export function Chatbot({
       if (show)
         setMessages((m) => [
           ...m,
-          { id: nextId.current++, from: "user", text: question },
+          {
+            id: nextId.current++,
+            from: "user",
+            text: question,
+            at: new Date(),
+          },
         ]);
       try {
         const response = await fetch("/api/chatbot", {
@@ -142,11 +172,30 @@ export function Chatbot({
     }
     if (dialog.current?.open) return;
     if (launcher.current) setFrame(frameFor(launcher.current, spot));
-    dialog.current?.show();
+    // Modal like the live app: the page behind is dimmed and inert while the chat is open.
+    dialog.current?.showModal();
     setOpen(true);
     input.current?.focus();
     // The first open greets the bot with "hello", as legacy openChatBot does.
     if (messages.length === 0) void ask("hello", false);
+  };
+
+  const stopListening = () => recognition.current?.stop();
+
+  const toggleMic = () => {
+    const Ctor = speechRecognition();
+    if (!Ctor) return;
+    if (listening) return stopListening();
+    const r = new Ctor();
+    r.lang = "en-US";
+    r.onresult = (e) => setText(transcriptOf(e));
+    r.onend = () => {
+      recognition.current = null;
+      setListening(false);
+    };
+    recognition.current = r;
+    setListening(true);
+    r.start();
   };
 
   const close = () => {
@@ -157,11 +206,10 @@ export function Chatbot({
     event.preventDefault();
     const q = text.trim();
     if (q === "" || busy) return;
+    stopListening();
     setText("");
     void ask(q, true);
   };
-
-  const lastBot = messages.findLast((m) => m.from === "bot");
 
   return (
     <>
@@ -231,7 +279,7 @@ export function Chatbot({
           );
         }}
       >
-        <Icon name="chat" size={30} />
+        <span className={styles.bubbleIcon} aria-hidden="true" />
       </button>
       <span id={hintId} hidden>
         Drag, or use the arrow keys, to move the chat button to an edge.
@@ -242,6 +290,7 @@ export function Chatbot({
         aria-labelledby={titleId}
         style={frame ?? undefined}
         onClose={() => {
+          stopListening();
           setOpen(false);
           launcher.current?.focus();
         }}
@@ -253,6 +302,8 @@ export function Chatbot({
         }}
       >
         <div className={styles.head}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- a 24px static .ico, nothing to optimise */}
+          <img src="/images/gn.ico" alt="" width={24} height={24} />
           <h2 id={titleId}>{title}</h2>
           <button
             type="button"
@@ -266,24 +317,37 @@ export function Chatbot({
         <div className={styles.log} ref={log} role="log" aria-live="polite">
           {messages.map((m) =>
             m.from === "user" ? (
-              <p key={m.id} className={`${styles.bubble} ${styles.user}`}>
-                {m.text}
-              </p>
+              <div key={m.id} className={styles.mine}>
+                <p className={`${styles.bubble} ${styles.user}`}>{m.text}</p>
+                <small className={styles.meta}>
+                  {userName}{" "}
+                  {m.at.toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })}
+                </small>
+              </div>
             ) : (
-              <div key={m.id} className={styles.answer}>
+              <div key={m.id} className={`${styles.bubble} ${styles.bot}`}>
                 {/* Sanitized on the server (sanitizeHtml); tables render inline here, not via window.showTableById. */}
-                <div
-                  className={styles.bubble}
-                  dangerouslySetInnerHTML={{ __html: m.html }}
-                />
-                {m === lastBot && m.options.length > 0 && (
+                <div dangerouslySetInnerHTML={{ __html: m.html }} />
+                {/* Quick replies sit inside the answer bubble, stacked, as in the live app. */}
+                {m.options.length > 0 && (
                   <div className={styles.options}>
                     {m.options.map((o) => (
                       <button
                         key={o}
                         type="button"
                         disabled={busy}
-                        onClick={() => void ask(o, true)}
+                        aria-pressed={m.chosen === o}
+                        onClick={() => {
+                          setMessages((all) =>
+                            all.map((x) =>
+                              x.id === m.id ? { ...x, chosen: o } : x,
+                            ),
+                          );
+                          void ask(o, true);
+                        }}
                       >
                         {o}
                       </button>
@@ -294,12 +358,13 @@ export function Chatbot({
             ),
           )}
           {busy && (
-            <Skeleton
-              kind="lines"
-              count={2}
-              label="Waiting for the answer"
-              className={styles.pending}
-            />
+            <p
+              className={`${styles.bubble} ${styles.typing}`}
+              role="status"
+              aria-label="Thinking"
+            >
+              …
+            </p>
           )}
           {failure && (
             <p className={styles.failure} role="alert">
@@ -319,12 +384,25 @@ export function Chatbot({
             autoComplete="off"
             maxLength={2000}
           />
+          {canListen && (
+            <button
+              type="button"
+              className={styles.icon}
+              data-on={listening || undefined}
+              aria-pressed={listening}
+              aria-label="Speak"
+              onClick={toggleMic}
+            >
+              <Icon name="mic" />
+            </button>
+          )}
           <button
             type="submit"
-            className="primary"
+            className={styles.icon}
+            aria-label="Send"
             disabled={busy || text.trim() === ""}
           >
-            Send
+            <Icon name="send" />
           </button>
         </form>
       </dialog>

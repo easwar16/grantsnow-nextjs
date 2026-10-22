@@ -62,7 +62,6 @@ export function rowHref(
       mode: "view",
     });
   if (kind === "ethics")
-    // ponytail: legacy also checks getDynamicFormsCheckApplApprAccess before opening; enforce it when the Ethics record route is built.
     return link("/modules/ethics", {
       access_type: str(r, "access_type"),
       setup_flow_id: str(r, "setup_flow_id"),
@@ -160,6 +159,7 @@ export function mapWidget(
         overdue: due !== null && due <= 0,
         stage: str(r, "stage_name"),
         href: rowHref(w.kind, r, reference),
+        ...(w.kind === "ethics" ? { ethics: true } : {}),
       };
     }),
     // hasMore is unreliable on these endpoints: a full page means there may be more.

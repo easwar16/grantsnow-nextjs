@@ -144,11 +144,17 @@ export function rowFields(row: AttentionRow, format?: FormatSettings) {
     { label: "Org Unit", value: row.context },
     { label: "Created by", value: row.createdBy },
     { label: "Funder", value: row.sponsor },
-    { label: "Deadline Type", value: row.deadlineType },
-    { label: "Deadline Description", value: row.deadlineDescription },
+    // Legacy offsets these three columns by 6px in the list (GN-Dashboard layout spec).
+    { label: "Deadline Type", value: row.deadlineType, shifted: true },
+    {
+      label: "Deadline Description",
+      value: row.deadlineDescription,
+      shifted: true,
+    },
     { label: "Pending at:", value: row.stage },
     {
       label: "Total Cost",
+      shifted: true,
       value:
         row.value == null
           ? undefined

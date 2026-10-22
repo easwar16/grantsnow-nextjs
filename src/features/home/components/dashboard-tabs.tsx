@@ -13,9 +13,11 @@ export function DashboardTabs({
   additional,
   organization,
   format,
+  labels,
 }: {
-  attention: React.ReactNode;
-  insights: React.ReactNode;
+  /** Null hides the tab: legacy shows a section only when one of its panels is on. */
+  attention: React.ReactNode | null;
+  insights: React.ReactNode | null;
   additional: {
     opportunities: boolean;
     notifications: boolean;
@@ -23,16 +25,49 @@ export function DashboardTabs({
   };
   organization?: string;
   format?: FormatSettings;
+  /** RB `button-labels.*` tab names. */
+  labels: Record<
+    | "needAttention"
+    | "insights"
+    | "opportunities"
+    | "notifications"
+    | "dynamicCharts",
+    string
+  >;
 }) {
   const [selected, setSelected] = useState(0);
-  const tabs: { label: string; icon: IconName; content: React.ReactNode }[] = [
-    { label: "Need Attention", icon: "flag", content: attention },
-    { label: "Insights", icon: "chart", content: insights },
+  const tabs: {
+    label: string;
+    icon: IconName;
+    tone: string;
+    content: React.ReactNode;
+  }[] = [
+    ...(attention === null
+      ? []
+      : [
+          {
+            label: labels.needAttention,
+            icon: "flag" as const,
+            tone: "danger",
+            content: attention,
+          },
+        ]),
+    ...(insights === null
+      ? []
+      : [
+          {
+            label: labels.insights,
+            icon: "chart" as const,
+            tone: "warning",
+            content: insights,
+          },
+        ]),
     ...(additional.opportunities
       ? [
           {
-            label: "Opportunities",
+            label: labels.opportunities,
             icon: "money" as const,
+            tone: "success",
             content: <FeaturedPanel format={format} />,
           },
         ]
@@ -40,8 +75,9 @@ export function DashboardTabs({
     ...(additional.notifications
       ? [
           {
-            label: "Notifications",
+            label: labels.notifications,
             icon: "bell" as const,
+            tone: "success",
             content: <NotificationsPanel format={format} />,
           },
         ]
@@ -49,8 +85,9 @@ export function DashboardTabs({
     ...(additional.charts.length
       ? [
           {
-            label: "Dynamic Charts",
+            label: labels.dynamicCharts,
             icon: "dynamic" as const,
+            tone: "success",
             content: (
               <DynamicChartsPanel
                 charts={additional.charts}
@@ -61,6 +98,7 @@ export function DashboardTabs({
         ]
       : []),
   ];
+  if (!tabs.length) return null;
   const active = Math.min(selected, tabs.length - 1);
   return (
     <>
@@ -71,7 +109,7 @@ export function DashboardTabs({
       >
         {tabs.map((tab, i) => (
           <button
-            key={tab.label}
+            key={tab.icon}
             role="tab"
             id={`dashboard-tab-${i}`}
             aria-selected={active === i}
@@ -92,28 +130,20 @@ export function DashboardTabs({
             }}
             onClick={() => setSelected(i)}
           >
-            <Icon
-              name={tab.icon}
-              className={
-                i === 0
-                  ? "attention-icon"
-                  : i === 1
-                    ? "insights-icon"
-                    : "success-text"
-              }
-            />
-            {tab.label}
+            <Icon name={tab.icon} className={`tab-${tab.tone}`} />
+            <span>{tab.label}</span>
           </button>
         ))}
       </div>
       {tabs.map((tab, i) => (
         <section
-          key={tab.label}
+          key={tab.icon}
           role="tabpanel"
           id={`dashboard-panel-${i}`}
           aria-labelledby={`dashboard-tab-${i}`}
           hidden={active !== i}
         >
+          {/* The first tab stays mounted so its queues keep their loaded pages. */}
           {i === 0 || active === i ? tab.content : null}
         </section>
       ))}

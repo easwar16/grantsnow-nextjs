@@ -88,6 +88,10 @@ export async function mockOracle(
       ],
       ACTIVITY_TYPE: [["CASH", "Cash"]],
       PROPOSAL_TYPE: [["STANDARD", "Standard Proposal"]],
+      PROPOSAL_STAGE: [
+        ["SINGLE", "Single"],
+        ["MULTI", "Multi"],
+      ],
     };
     return {
       items: Object.entries(types).flatMap(([lookup_type_code, rows]) =>
@@ -103,15 +107,22 @@ export async function mockOracle(
   if (op === "getPre_awardGetPersonList")
     return {
       items: [
-        { person_id: 101, employee_number: "EMP101", full_name: "Alex Morgan" },
+        {
+          person_id: 101,
+          employee_number: "EMP101",
+          full_name: "Alex Morgan",
+          org_unit_id: 202,
+          org_unit_name: "Example Research University",
+          is_pi_flag: "true",
+        },
         { person_id: 102, employee_number: "EMP102", full_name: "Sam Taylor" },
       ],
     };
   if (op === "GetSponsorList")
     return {
       items: [
-        { party_name: "Research Council" },
-        { party_name: "Health Foundation" },
+        { sponsor_party_id: 301, party_name: "Research Council" },
+        { sponsor_party_id: 302, party_name: "Health Foundation" },
       ],
     };
   if (op === "getSessionLogout") return { response_msg: "SUCCESS" };
@@ -230,6 +241,25 @@ export async function mockOracle(
         { column_name: "last_update_date", column_description: "Updated On" },
       ],
     };
+  // Shell fixtures: drawer "new" dot, one organisation theme, empty profile links.
+  if (op === "getSharedGetOpportunitiesNewFlags")
+    return { is_new_preference: "Y", is_new_others: "N" };
+  if (op === "getSharedGetCustomTheme")
+    return {
+      items: [
+        {
+          legal_id: 1,
+          display_name: "Fixture Plum",
+          primary_color: "#5b2a5e",
+          secondary_color: "#f0cc71",
+          background_color: null,
+          text_color: null,
+          is_dark: "N",
+        },
+      ],
+    };
+  if (op === "getSharedDigitalPresence")
+    return { items: [{ linkedin: "https://www.linkedin.com/in/fixture" }] };
   if (op === "getNotificationsNotifications") {
     const offset = Number(query?.get("p_offset") || 0);
     return {
@@ -380,6 +410,47 @@ export async function mockOracle(
         ],
       },
     ];
+  // Card actions read the dashboard grants (opportunity-notes, apply / convert).
+  if (op === "getSecurityUser_roles" && headers.p_obj_type === "DASHBOARD")
+    return {
+      items: [
+        { page_name: "home", read_access: "Y" },
+        ...[
+          "opportunity-notes",
+          "apply-opportunities",
+          "convert-opportunity",
+          "convert-opportunity-to-proposal",
+        ].map((page_name) => ({
+          page_name,
+          read_access: "Y",
+          edit_access: "Y",
+        })),
+      ],
+    };
+  if (op === "getNotificationsGetGroupsAndRoles")
+    return {
+      items:
+        headers.p_share_to === "ROLE"
+          ? [{ value: "RESEARCH_OFFICER", description: "Research Officer" }]
+          : [{ value: "GRANTS_TEAM", description: "Grants Team" }],
+    };
+  if (op === "getPre_awardGetPersonListAll")
+    return {
+      items: [
+        {
+          person_id: 101,
+          full_name: "Alex Morgan",
+          org_unit_name: "Example Research University",
+          employee_number: "EMP101",
+        },
+        {
+          person_id: 102,
+          full_name: "Sam Taylor",
+          org_unit_name: "Faculty of Science",
+          employee_number: "EMP102",
+        },
+      ],
+    };
   if (op === "getSecurityUser_roles")
     return {
       items: [
@@ -450,11 +521,21 @@ export async function mockOracle(
   if (op === "getPre_awardGetLkpOrgUnitType")
     return {
       items: [
-        { org_unit_id: 202, org_unit_name: "Example Research University" },
-        { org_unit_id: 203, org_unit_name: "Faculty of Science" },
-        { org_unit_id: 204, org_unit_name: "Faculty of Health" },
+        {
+          org_unit_id: 202,
+          org_unit_name: "Example Research University",
+          NUM_SPACES: 0,
+        },
+        {
+          org_unit_id: 203,
+          org_unit_name: "Faculty of Science",
+          NUM_SPACES: 2,
+        },
+        { org_unit_id: 204, org_unit_name: "Faculty of Health", NUM_SPACES: 2 },
       ],
     };
+  // Fixture user may open Ethics rows (legacy checkApplApprAccess).
+  if (op === "getDynamicFormsCheckApplApprAccess") return { hasAccess: "Y" };
   if (op === "getPre_awardGetProposalsList") {
     const where = query?.get("p_where_clause"),
       offset = Number(query?.get("p_offset") || 0),
@@ -499,11 +580,19 @@ export async function mockOracle(
       outline_proposal_count: 0,
       summary: "<p>Synthetic opportunity summary.</p>",
       is_bookmarked: i % 2 ? "Y" : "N",
+      is_new: i < 3 ? "Y" : "N",
+      closing_soon: i === 1 ? "Y" : "N",
+      notes: i === 0 ? "<p>Synthetic <strong>note</strong>.</p>" : null,
+      create_application_of_interest: "Y",
+      create_outline_application: "Y",
+      create_grant_application: "Y",
     }));
     const clause = query?.get("p_where_clause") || "";
     if (clause.includes('"is_bookmarked"'))
       rows = rows.filter((r) => r.is_bookmarked === "Y");
     if (clause.includes('"shared_with_me"')) rows = [];
+    const byId = clause.match(/"opportunities_id"='(\d+)'/)?.[1];
+    if (byId) rows = rows.filter((r) => String(r.opportunities_id) === byId);
     const search = [...clause.matchAll(/LOWER\('%([^']*)%'\)/g)].map((m) =>
       m[1].toLowerCase(),
     );

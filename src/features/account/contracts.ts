@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Theme } from "./themes";
 export const accessibilityKeys = [
   "accFontSize",
   "accDyslexicFont",
@@ -8,14 +9,15 @@ export const accessibilityKeys = [
   "accHighlightLinks",
   "accContrastTheme",
 ] as const;
+// GN-Angular's tile names (image-only tiles; the name is for screen readers).
 export const accessibilityLabels = [
-  "Bigger text",
-  "Dyslexic font",
-  "Line height",
-  "Letter spacing",
-  "Enlarged cursor",
-  "Highlight links",
-  "Contrast theme",
+  "Bigger Text",
+  "Dyslexia Friendly",
+  "Line Height",
+  "Text Spacing",
+  "Cursor",
+  "Highlight Links",
+  "Contrast",
 ];
 export const accessibilitySchema = z
   .object(
@@ -56,7 +58,11 @@ export const researchSchema = z
   .strict();
 export const dashboardChange = z
   .object({
-    theme: z.enum(["theme-default", "theme-dark"]).optional(),
+    // A preset or an organisation theme id; the server checks it against getCustomTheme before saving.
+    theme: z
+      .string()
+      .regex(/^(theme-(default|dark)|apitheme:[^:\s]{1,40}:[^\n]{1,200})$/)
+      .optional(),
     accessibility: accessibilitySchema.optional(),
     needAttention: z.record(z.string(), z.boolean()).optional(),
     insights: z.record(z.string(), z.boolean()).optional(),
@@ -98,7 +104,38 @@ export type AccountData = {
     notifications?: boolean;
   };
   labels: Record<string, string>;
+  /** Preferences panel only: presets plus the organisation's themes. */
+  themes: Theme[];
+  /** RB `labels.digital-presence` is 'Y' (seeded 'N', so hidden unless the backend switches it on). */
+  presenceAllowed: boolean;
 };
+export const presenceKeys = [
+  "linkedin",
+  "scholar",
+  "research_gate",
+  "orc_id",
+  "researcher_id",
+] as const;
+export type DigitalPresence = Record<(typeof presenceKeys)[number], string>;
+// Empty, or an http(s) address: these links are shown to other users.
+const profileLink = z
+  .string()
+  .trim()
+  .max(500)
+  .refine(
+    (v) => v === "" || /^https?:\/\/[^\s]+$/i.test(v),
+    "Enter a web address.",
+  );
+/** H1: the five contracted keys only (legacy SaveDigitalPresenceActionChain). */
+export const presenceSchema = z
+  .object({
+    linkedin: profileLink,
+    scholar: profileLink,
+    research_gate: profileLink,
+    orc_id: profileLink,
+    researcher_id: profileLink,
+  })
+  .strict();
 export const personStatusSchema = z
   .object({
     status_code: z.enum(["ACTIVE", "OOO"]),

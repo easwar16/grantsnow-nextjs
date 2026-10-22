@@ -31,3 +31,6 @@ export function countText({
   const first = (query.page - 1) * query.pageSize + 1;
   return `${first}–${first + rows.length - 1} of ${total}`;
 }
+/** VBCS canCreate: no Apply or Convert on a closed, expired or withdrawn opportunity. */
+export const canCreate = (status: string) =>
+  !["CLOSED", "EXPIRED", "WITHDRAWN"].includes(status.toUpperCase());

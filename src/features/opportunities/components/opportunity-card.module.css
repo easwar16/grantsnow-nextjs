@@ -16,5 +16,211 @@
 /* Funders lead in the accent tint; co-funders stay neutral (VBCS opp-tag--primary / --secondary). */
 .tags li:not(.coFunder) {
   background: #e3f0f1;
-  color: var(--accent);
+  color: var(--accent-fg);
+}
+/* GN-Angular .opp-card status tones: open (the default stripe), active and closed. */
+.card {
+  --opp-dot: #28a87a;
+}
+.card[data-status="active"] {
+  --opp-stripe: #e0a020;
+  --opp-dot: #e0a020;
+  --opp-status-bg: #fff6e6;
+  --opp-status-text: #7a4e00;
+}
+.card[data-status="closed"] {
+  --opp-stripe: #c04040;
+  --opp-dot: #c04040;
+  --opp-status-bg: #fceaea;
+  --opp-status-text: #7a2020;
+}
+.logo,
+.logoTile {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 5px;
+}
+.logo {
+  object-fit: contain;
+  background: var(--opp-band);
+  border: 1px solid var(--opp-border);
+}
+/* oj-avatar background="teal", shape square, size sm. */
+.logoTile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: #3e7a7d;
+}
+.titleRow {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: 20px;
+}
+.pillNew {
+  color: #1e6b52;
+  background: #e4f5f0;
+}
+.pillWarn {
+  color: #7a4e00;
+  background: #fff6e6;
+}
+.card .info,
+.card .iconButton {
+  display: flex;
+  min-height: 0;
+  padding: 6px;
+  border: 0;
+  color: rgba(22, 21, 19, 0.4);
+  border-radius: var(--gn-radius);
+}
+.card .info {
+  padding: 2px;
+  color: var(--text);
+}
+.iconButton:hover,
+.info:hover {
+  color: #2c4e4e;
+  background: var(--gn-hover-tint);
+}
+.iconButton.active {
+  color: #2c4e4e;
+}
+.iconButton.hasNotes {
+  color: orangered;
+}
+.headerActions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 1px;
+  margin-left: auto;
+  padding-top: 2px;
+}
+.headerActions :global(.opportunity-status) {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-right: 6px;
+  font-weight: 600;
+}
+.badgeDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--opp-dot);
+}
+.card .comments {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  min-height: 0;
+  margin: 0 4px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 400;
+}
+.commentsCount {
+  min-width: 18px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+  color: #2c4e4e;
+  background: var(--opp-count-bg);
+  border-radius: 9px;
+}
+.bottom {
+  display: flex;
+  align-items: stretch;
+}
+.details {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+.actions {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 16px;
+  border-top: 3px solid var(--opp-divider);
+  border-left: 1px solid var(--opp-border);
+}
+.action {
+  justify-content: flex-start;
+  gap: 6px;
+  width: 200px;
+  height: 28px;
+  padding: 5px 10px;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-overflow: ellipsis;
+  border: 1.5px solid transparent;
+  border-radius: 6px;
+}
+.apply {
+  color: #2c4e4e;
+  border-color: #3a6b6b;
+}
+.apply:hover:not(:disabled) {
+  background: #dceeed;
+}
+/* eoi-btn--convert-internal (8730): a brand tint with a full-strength edge, so it never reads as disabled. */
+.convert {
+  color: color-mix(in srgb, var(--gn-brand) 80%, #000);
+  background: color-mix(in srgb, var(--gn-brand) 22%, #fff);
+  border-color: var(--gn-brand);
+}
+.convert:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--gn-brand) 34%, #fff);
+}
+.convertProposal {
+  color: #fff;
+  background: var(--gn-brand);
+  border-color: var(--gn-brand);
+}
+.convertProposal:hover:not(:disabled) {
+  color: #fff;
+  background: color-mix(in srgb, var(--gn-brand) 85%, #000);
+  border-color: color-mix(in srgb, var(--gn-brand) 85%, #000);
+}
+/* The original's small-screen layout: actions in a row under the details. */
+@media (max-width: 600px) {
+  .bottom {
+    flex-direction: column;
+  }
+  .actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-left: 0;
+    border-top: 1px solid var(--opp-border);
+  }
+  .action {
+    flex: 1;
+    width: auto;
+    justify-content: center;
+  }
 }

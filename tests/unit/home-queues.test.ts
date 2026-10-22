@@ -44,7 +44,7 @@ it("reads each queue's deadline field, not the never-returned submission_deadlin
     today,
   );
   expect(data.attention.map((r) => r.overdue)).toEqual([false, true]);
-  // Creation dates are always past; approval queues test their approval deadline instead.
+  // Approval queues are due from their creation date (owner's GN-Angular build, matching the live app).
   const pending = mapWidget(
     {
       items: [
@@ -60,7 +60,7 @@ it("reads each queue's deadline field, not the never-returned submission_deadlin
     today,
   );
   expect(pending.attention[0]).toMatchObject({
-    overdue: false,
+    overdue: true,
     date: "2026-01-01",
   });
 });

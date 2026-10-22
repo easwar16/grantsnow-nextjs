@@ -48,8 +48,9 @@
   --gn-dur: 250ms;
   --gn-dur-slow: 400ms;
 }
-/* This repo's names alias the GN tokens; declared on .dark too so they re-resolve against its overrides. */
+/* This repo's names alias the GN tokens; declared on .app / .dark too so they re-resolve against the theme there. */
 :root,
+.app,
 .dark {
   --bg: var(--gn-bg);
   --surface: var(--gn-surface);
@@ -57,6 +58,8 @@
   --muted: var(--gn-text-secondary);
   --border: var(--gn-divider);
   --accent: var(--gn-brand);
+  /* Brand as a mark on a surface (text, underlines, borders): the dark preset's near-black brand is invisible there. */
+  --accent-fg: var(--gn-brand-fg, var(--gn-brand));
   --accent-hover: color-mix(in srgb, var(--gn-brand) 85%, #000);
   --link: var(--gn-link);
   --on-accent: var(--gn-on-brand);
@@ -75,28 +78,15 @@
   --chip-success: var(--gn-tone-success-bg);
   --chip-danger: var(--gn-tone-danger-bg);
   --chip-warning: var(--gn-tone-warning-bg);
-  --tab-divider: var(--gn-divider);
-  --profile-label: var(--gn-text-secondary);
 }
 :root {
   --accent-light: #e4f1f7;
   --accent-edge: #25474b;
   --focus: var(--accent);
   /* Text and lines on the brand colour (header, drawer, announcements, side sheets). */
-  --on-accent-text: #e2ebec;
-  --on-accent-nav: #d9e3e4;
   --on-accent-link: #b8e7ef;
   --on-accent-hover: #ffffff12;
-  --on-accent-hover-strong: #ffffff18;
   --on-accent-ring: rgb(255 255 255 / 40%);
-  --on-accent-border: rgb(255 255 255 / 50%);
-  --on-accent-selected: rgb(255 255 255 / 25%);
-  --on-accent-track: rgb(255 255 255 / 30%);
-  --on-accent-strong: rgb(255 255 255 / 85%);
-  /* D28 accessibility tiles and theme buttons. */
-  --a11y-level-track: rgb(0 0 0 / 15%);
-  --a11y-level-edge: rgb(0 0 0 / 50%);
-  --swatch-selected-border: rgb(10 10 10 / 50%);
   /* Fixed dark text, for light chips that keep their colour in dark mode. */
   --ink: #161513;
   --shadow: #0002;
@@ -104,17 +94,14 @@
   --banner-bg: #fff0c4;
   --banner-text: #614714;
   --banner-border: #e8d497;
-  --success-tab: #4b7428;
-  --danger-text: #c42a1b;
+  /* GN-Angular uses the one danger red for text too. */
+  --danger-text: var(--gn-danger);
   --danger-on-dark: #ffb8aa;
-  --warning-icon: #a65412;
-  --count-accent: #ad4924;
   --notice-bg: #fff8e8;
   --notice-border: #b58523;
   --highlight-mark: #a3f28c;
   --table-head-bg: #f2efec;
   --avatar-bg: #d9e9e7;
-  --profile-avatar-bg: #e0e6e6;
   --opp-tab-bg: #f3f4f4;
   --opp-tab-active-bg: #fff;
   --opp-border: #d8e7e8;
@@ -127,16 +114,6 @@
   --opp-caption: #858984;
   --opp-band: #eff4f4;
   --opp-count-bg: #dceeee;
-  /* Theme swatches show each preset's primary and secondary (VBCS themeRegistry), whatever the current theme. */
-  --swatch-default-primary: #315357;
-  --swatch-default-secondary: #f0cc71;
-  --swatch-dark-primary: #0a0a0a;
-  --swatch-dark-secondary: #f0a957;
-  --a11y-highlight: #e3b72e;
-  --contrast-light: #fff;
-  --contrast-dark: #000;
-  --contrast-link: #0000ff;
-  --contrast-link-dark: #ffff00;
   /* CKEditor marker/pen colours from the legacy ckeditor-content.css. */
   --ck-marker-yellow: #fdfd77;
   --ck-marker-green: #62f962;
@@ -190,7 +167,9 @@ body > main {
 }
 .shell-frame > .header,
 .shell-frame > main {
-  transition: margin-left var(--dur) var(--ease);
+  transition:
+    margin-left var(--dur) var(--ease),
+    margin-right var(--dur) var(--ease);
 }
 /* Opt-in for a page that fills <main> exactly and scrolls its own lists, so <main> never scrolls there. */
 .page-fill {
@@ -421,20 +400,31 @@ input[type="radio"] {
   height: 34px;
   object-fit: contain;
 }
+/* GN-Angular .icon-btn: the menu, Help and bell buttons. */
 .header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 0;
-  width: var(--control-height);
-  min-height: var(--control-height);
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
   border: 0;
+  border-radius: var(--gn-radius);
   color: var(--on-accent);
 }
 .header-icon:hover,
 .user-menu summary:hover,
 .user-menu[open] summary {
-  background: var(--on-accent-hover-strong);
+  background: rgba(255, 255, 255, 0.1);
+}
+.header-end {
+  display: flex;
+  align-items: center;
+  gap: 1.5px;
+  margin-left: auto;
 }
 .user-menu {
-  margin-left: auto;
   position: relative;
 }
 .user-menu summary {
@@ -446,7 +436,6 @@ input[type="radio"] {
   border-radius: var(--radius);
   cursor: pointer;
   list-style: none;
-  font-weight: 700;
 }
 .user-menu[open] summary {
   box-shadow: inset 0 0 0 1px var(--on-accent-ring);
@@ -462,7 +451,7 @@ input[type="radio"] {
   z-index: 20;
   display: flex;
   flex-direction: column;
-  min-width: 200px;
+  min-width: 150px;
   padding: 6px 0;
   background: var(--surface);
   color: var(--text);
@@ -485,22 +474,25 @@ input[type="radio"] {
   outline: none;
   background: var(--hover-tint);
 }
-.user-menu-content .gn-icon {
-  color: var(--muted);
-}
+/* GN-Angular drawer.css: 240px, the brand colour under the original pattern, sized as the configure drawer (owner). */
 .navigation-drawer {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 50;
   margin: 0;
+  width: 240px;
+  max-width: 90vw;
   height: 100dvh;
   max-height: none;
-  width: 255px;
-  max-width: 90vw;
   padding: 0;
+  overflow-y: auto;
   border: 0;
-  border-right: 1px solid var(--border);
   border-radius: 0;
   box-shadow: none;
-  background: var(--bg);
-  color: var(--text);
+  color: var(--gn-on-brand);
+  background: var(--gn-brand) url("/brand/sidebar-background-pattern.png")
+    repeat;
+  background-size: 18em;
 }
 .navigation-drawer::backdrop {
   background: var(--backdrop-faint);
@@ -517,21 +509,6 @@ input[type="radio"] {
 .drawer-heading button {
   border: 0;
   color: var(--on-accent);
-}
-.navigation-drawer nav {
-  display: flex;
-  flex-direction: column;
-}
-.navigation-drawer nav a {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 15px;
-  color: var(--text);
-}
-.navigation-drawer nav a[aria-current] {
-  background: var(--accent-light);
-  border-left: 3px solid var(--accent);
 }
 main {
   max-width: none;
@@ -554,73 +531,6 @@ main {
   line-height: 1.3;
   margin: 0;
   font-weight: 700;
-}
-.kpi-strip {
-  display: flex;
-  flex-wrap: wrap;
-  margin: 25px 0 30px;
-}
-/* A fixed basis, not flex-grow, so the bordered cells stay exactly equal (as the 4-column grid was). */
-.kpi-strip > article {
-  flex: 0 0 25%;
-  min-width: 0;
-}
-.kpi-strip article {
-  padding: 18px 12px;
-  border-right: 1px solid var(--border);
-}
-.kpi-strip article:last-child {
-  border: 0;
-}
-.kpi-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.kpi-value {
-  display: flex;
-  gap: 5px;
-  align-items: baseline;
-  flex-wrap: wrap;
-  margin-top: 5px;
-}
-.kpi-value > strong {
-  font-size: 18px;
-}
-.kpi-strip small {
-  display: block;
-  color: var(--muted);
-  margin-top: 3px;
-}
-.success-text {
-  color: var(--success);
-}
-.danger-text {
-  color: var(--danger-text);
-}
-.dashboard-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-.dashboard-tabs button {
-  border-color: transparent;
-}
-.dashboard-tabs button[aria-selected="true"] {
-  border-color: var(--accent);
-}
-.dashboard-tabs button span {
-  color: var(--count-accent);
-}
-.attention-panels {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.insight-panels {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 15px;
 }
 .widget {
   padding: 12px;
@@ -647,30 +557,6 @@ main {
   padding: 0;
   margin: 0;
   list-style: none;
-}
-.attention-list > li {
-  padding: 12px;
-  background: var(--danger-bg);
-  border-bottom: 1px solid var(--bg);
-  position: relative;
-  min-height: 92px;
-}
-.attention-reference {
-  display: flex;
-  justify-content: space-between;
-  gap: 15px;
-}
-.attention-reference time {
-  color: var(--danger-text);
-}
-.attention-list p {
-  margin: 6px 0 10px;
-}
-.attention-age {
-  display: block;
-  color: var(--danger-text);
-  text-align: right;
-  margin-top: 6px;
 }
 .record-metadata {
   display: flex;
@@ -730,7 +616,7 @@ main {
   text-align: left;
 }
 .status-tabs button[aria-selected="true"] {
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--accent-fg);
   color: var(--text);
   padding-left: 9px;
 }
@@ -926,9 +812,10 @@ main {
   color: var(--muted);
   letter-spacing: 1px;
 }
-/* Dark preset: VBCS themeRegistry background/text, GN-Angular dark surfaces. The brand stays teal here
-   because --accent also draws foreground marks; the preset's #0a0a0a brand needs a separate foreground token. */
+/* Dark themes: GN-Angular dark surfaces. The theme's brand (#0a0a0a for the preset) and background/text come from
+   applyTheme on .app; marks drawn in the brand colour use --gn-brand-fg instead, so they stay visible. */
 .dark {
+  --gn-brand-fg: #a4cdd2;
   --gn-bg: #1f1e1c;
   --gn-text: #f5f4f2;
   --gn-surface: #2a2926;
@@ -948,21 +835,6 @@ main {
   color-scheme: dark;
   background: var(--bg);
   color: var(--text);
-}
-.dark .attention-reference time,
-.dark .attention-age {
-  color: var(--danger-on-dark);
-}
-@media (max-width: 900px) {
-  .kpi-strip {
-    row-gap: 15px;
-  }
-  .kpi-strip > article {
-    flex-basis: 50%;
-  }
-  .insight-panels {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 @media (max-width: 600px) {
   .home-workspace {
@@ -989,22 +861,6 @@ main {
     font-size: 11px;
     padding: 5px;
   }
-  .kpi-strip article {
-    padding: 8px;
-    min-width: 0;
-  }
-  .kpi-title {
-    flex-wrap: wrap;
-  }
-  .kpi-value > strong {
-    font-size: 15px;
-  }
-  .dashboard-tabs {
-    gap: 0;
-  }
-  .insight-panels {
-    grid-template-columns: 1fr;
-  }
   .widget {
     padding: 7px 0;
   }
@@ -1020,7 +876,7 @@ main {
   }
   .status-tabs button[aria-selected="true"] {
     border-left: 0;
-    border-bottom: 2px solid var(--accent);
+    border-bottom: 2px solid var(--accent-fg);
     padding-left: 12px;
   }
   .filter-panel {
@@ -1051,9 +907,6 @@ main {
   }
   .pagination label {
     width: 100%;
-  }
-  .attention-reference time {
-    white-space: nowrap;
   }
   .login-card {
     padding: 25px;
@@ -1094,7 +947,7 @@ main {
   color: var(--text);
 }
 .record-body nav a[aria-current] {
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--accent-fg);
   background: var(--accent-light);
 }
 .summary-panel {
@@ -1145,50 +998,6 @@ main {
     flex-basis: 100%;
   }
 }
-.announcements {
-  background: var(--accent);
-  color: var(--on-accent);
-  margin: -20px -18px 20px;
-  padding: 24px 18px 18px;
-}
-.announcements > summary {
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.announcement-slide {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 74px;
-  gap: 15px;
-}
-.announcement-slide button {
-  color: var(--on-accent);
-  border: 0;
-  font-size: 24px;
-}
-.announcement-content {
-  text-align: center;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.announcement-content a {
-  color: var(--on-accent-link);
-  text-decoration: underline;
-}
-.announcement-content mark {
-  background: var(--highlight-mark);
-}
-.announcements:not([open]) {
-  padding-bottom: 24px;
-}
-@media (max-width: 600px) {
-  .announcements {
-    margin: -16px -10px 16px;
-    padding: 20px 10px;
-  }
-}
 /* Measured against the authenticated VBCS Home at 1800 CSS pixels. */
 .app > .fixture-banner {
   position: fixed;
@@ -1206,77 +1015,10 @@ main {
 .home-workspace {
   padding: 18px 36px;
 }
-.announcements {
-  margin: -18px -36px 17px;
-  padding: 24px 16px 18px;
-  height: 135px;
-}
-.announcements:not([open]) {
-  height: auto;
-}
-.announcements > summary {
-  list-style: none;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.announcements > summary::-webkit-details-marker {
-  display: none;
-}
-.announcements > summary::before {
-  content: "\f1cb"; /* oj-ux-ico-chevron-down */
-  font-family: ojuxIconFont;
-  font-size: 16px;
-  line-height: 1;
-}
-.announcements:not([open]) > summary::before {
-  content: "\f1cf"; /* oj-ux-ico-chevron-right */
-}
-.announcement-slide {
-  min-height: 74px;
-}
 .home-context {
   margin-bottom: 36px;
   min-height: 28px;
   justify-content: flex-start;
-}
-.organization-heading {
-  margin: 0;
-}
-.organization-heading label {
-  position: relative;
-  color: var(--text);
-}
-.organization-heading select {
-  width: auto;
-  max-width: 75vw;
-  font-size: 21px;
-  font-weight: 700;
-  border: 0;
-  background: transparent;
-  padding: 0 22px 0 0;
-  min-height: 28px;
-  cursor: pointer;
-}
-.kpi-strip {
-  margin: 0 0 30px;
-}
-.kpi-strip article {
-  padding: 18px 12px;
-  min-height: 88px;
-}
-.kpi-strip article:first-child {
-  border-left: 0;
-}
-.dashboard-tabs {
-  margin-bottom: 20px;
-  gap: 0;
-}
-.dashboard-tabs button {
-  padding: 5px 11px;
-}
-.attention-panels {
-  gap: 12px;
 }
 .widget {
   padding: 12px;
@@ -1294,52 +1036,9 @@ main {
   display: flex;
   align-items: center;
 }
-.widget-view-tabs {
-  display: flex;
-  gap: 16px;
-}
-.widget-view-tabs button {
-  border: 0;
-  border-radius: 0;
-  padding: 3px 2px 9px;
-  min-height: 28px;
-  color: var(--muted);
-}
-.widget-view-tabs button[aria-selected="true"] {
-  border-bottom: 3px solid var(--accent);
-  color: var(--text);
-}
 .attention-list {
   max-height: 300px;
   overflow-y: auto;
-}
-.attention-list > li {
-  min-height: 90px;
-  padding: 10px 12px 8px;
-  background: var(--danger-bg);
-}
-.attention-list > li.upcoming {
-  background: transparent;
-}
-.attention-list p {
-  margin: 5px 190px 7px 0;
-  line-height: 14.4px;
-}
-.attention-list .record-metadata {
-  padding-right: 185px;
-}
-.attention-date {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  text-align: right;
-  color: var(--danger);
-}
-.attention-age {
-  margin-top: 4px;
-  color: inherit;
-  font-size: 12px;
 }
 .record-metadata {
   line-height: 14.4px;
@@ -1353,69 +1052,18 @@ main {
   .home-workspace {
     padding: 16px 12px;
   }
-  .announcements {
-    margin: -16px -12px 17px;
-  }
   .home-context {
     margin-bottom: 20px;
-  }
-  .organization-heading select {
-    font-size: 18px;
   }
   .widget {
     padding: 8px 0;
   }
-  .attention-list p {
-    margin-right: 0;
-  }
-  .attention-list .record-metadata {
-    padding-right: 0;
-  }
-  .attention-date {
-    position: static;
-    transform: none;
-    margin-top: 8px;
-  }
-}
-.organization-heading select {
-  width: fit-content;
-  field-sizing: content;
-  line-height: 27.5px;
 }
 .home-context {
   height: 28px;
 }
-.kpi-strip article {
-  height: 88px;
-  padding-top: 18px;
-  padding-bottom: 12px;
-}
-.kpi-value {
-  margin-top: 4px;
-}
-.kpi-value > strong {
-  line-height: 22px;
-}
-.kpi-strip small {
-  font-size: 12px;
-  margin-top: 2px;
-}
 .widget-heading {
   height: 24px;
-}
-.attention-list > li {
-  min-height: 91px;
-}
-.attention-list > li:has(.record-metadata > div:nth-child(5)) {
-  min-height: 97.8px;
-}
-.attention-panels .widget:nth-child(n + 2) {
-  border-left: 1px solid var(--border);
-  border-right: 1px solid var(--border);
-  margin-left: 6px;
-  margin-right: 6px;
-  padding-left: 6px;
-  padding-right: 6px;
 }
 
 .proposal-card {
@@ -1465,7 +1113,7 @@ main {
 }
 .category-options input {
   margin: 0;
-  accent-color: var(--accent);
+  accent-color: var(--accent-fg);
 }
 
 .listing-count {
@@ -1474,18 +1122,6 @@ main {
 }
 .widget-tools {
   position: relative;
-}
-.widget-view-tabs {
-  gap: 26px;
-}
-.kpi-value .danger-text {
-  color: var(--danger);
-}
-.attention-icon {
-  color: var(--danger);
-}
-.insights-icon {
-  color: var(--warning-icon);
 }
 .proposal-card .record-metadata > div:last-child {
   border-right: 1px solid var(--border);
@@ -1527,9 +1163,6 @@ main {
 .inside-field:has(input[type="date"]) .floating-label {
   top: 4px;
   font-size: 10px;
-}
-.attention-list > li.upcoming .attention-date {
-  color: var(--muted);
 }
 .status-tabs {
   padding-bottom: 6px;
@@ -1596,22 +1229,6 @@ a.sr-only:focus {
   background-color: transparent;
   color: var(--ck-pen-green);
 }
-.announcements {
-  padding-top: 22px;
-}
-.announcement-slide {
-  margin-top: 16px;
-  min-height: 72px;
-}
-.navigation-drawer {
-  position: fixed;
-  inset: 0 auto 0 0;
-  width: 241px;
-  height: 100dvh;
-  overflow-y: auto;
-  background: var(--bg);
-  z-index: 50;
-}
 .navigation-drawer:not(:modal) .drawer-heading {
   height: 0;
   padding: 0;
@@ -1628,26 +1245,15 @@ a.sr-only:focus {
 .navigation-drawer:not(:modal):hover .drawer-heading button {
   opacity: 1;
 }
-.navigation-drawer nav a {
-  min-height: 36px;
-  padding: 9px 12px;
-  gap: 12px;
-  font-weight: 600;
-}
-.navigation-drawer nav a[aria-current] {
-  background: transparent;
-  border-left: 3px solid var(--accent);
-  padding-left: 9px;
-}
 @media (min-width: 601px) {
   .shell-drawer-open > .header,
   .shell-drawer-open > main {
-    margin-left: 241px;
+    margin-left: 240px;
   }
-}
-@media (max-width: 600px) {
-  .navigation-drawer {
-    width: 240px;
+  /* The Preferences / Accessibility drawer pushes the page from the right, as GN-Angular's reflow drawer. */
+  .shell-configure-open > .header,
+  .shell-configure-open > main {
+    margin-right: 312px;
   }
 }
 
@@ -1673,7 +1279,7 @@ a.sr-only:focus {
 }
 .opportunity-tabs button[aria-selected="true"] {
   border-top: 0;
-  border-bottom: 3px solid var(--accent);
+  border-bottom: 3px solid var(--accent-fg);
   background: var(--opp-tab-active-bg);
   color: var(--text);
 }
@@ -1731,7 +1337,7 @@ a.sr-only:focus {
 }
 .opportunity-tags span:first-child {
   background: var(--opp-tag-accent-bg);
-  color: var(--accent);
+  color: var(--accent-fg);
 }
 .opportunity-financials {
   display: flex;
@@ -1749,7 +1355,7 @@ a.sr-only:focus {
 }
 .opportunity-financials strong {
   font-size: 15px;
-  color: var(--accent);
+  color: var(--accent-fg);
 }
 .opportunity-dates,
 .opportunity-counts {
@@ -1780,7 +1386,7 @@ a.sr-only:focus {
 .opportunity-counts strong {
   border-radius: 12px;
   background: var(--opp-count-bg);
-  color: var(--accent);
+  color: var(--accent-fg);
   padding: 3px 15px;
 }
 .opportunity-information {
@@ -1811,34 +1417,6 @@ a.sr-only:focus {
   .opportunity-card-heading {
     flex-wrap: wrap;
   }
-}
-.account-dialog {
-  padding: 0;
-  width: 480px;
-  max-width: 95vw;
-}
-.account-dialog header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--border);
-}
-.account-dialog h2 {
-  margin: 0;
-  font-size: 18px;
-}
-.account-dialog > dl,
-.account-dialog > form,
-.account-dialog > p {
-  margin: 20px 24px;
-}
-.account-dialog dt {
-  font-weight: 600;
-  margin-top: 16px;
-}
-.account-dialog dd {
-  margin: 5px 0 0;
 }
 .muted {
   color: var(--muted);
@@ -1947,18 +1525,6 @@ a.sr-only:focus {
     flex-basis: 100%;
   }
 }
-.navigation-group > summary {
-  cursor: pointer;
-  padding: 9px 12px;
-  min-height: 36px;
-  font-weight: 600;
-}
-.navigation-group > div > a {
-  padding-left: 36px;
-}
-.navigation-group > div > a[aria-current] {
-  padding-left: 33px;
-}
 .eoi-table-wrap {
   overflow-x: auto;
 }
@@ -1987,77 +1553,6 @@ a.sr-only:focus {
   flex: none;
   font-size: 16px;
   line-height: 1;
-}
-.dashboard-tabs .insights-icon {
-  color: var(--warning);
-}
-.dashboard-tabs .attention-icon {
-  color: var(--danger);
-}
-/* VBCS shell: the original artwork and navigation geometry. */
-.navigation-drawer {
-  background-color: var(--accent);
-  color: var(--on-accent-text);
-}
-.navigation-drawer::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: url("/brand/sidebar-background-pattern.png") 0 0 / 18em repeat;
-  opacity: 0.8;
-  pointer-events: none;
-}
-.navigation-drawer nav {
-  position: relative;
-}
-.navigation-drawer nav a {
-  color: var(--on-accent-nav);
-  min-height: 36px;
-  text-decoration: none;
-  padding: 9px 20px;
-  gap: 18px;
-}
-.navigation-drawer nav a:hover,
-.navigation-drawer nav a[aria-current] {
-  background: var(--on-accent-hover);
-  color: var(--on-accent);
-  text-decoration: none;
-}
-.navigation-drawer nav a[aria-current] {
-  border-left-color: var(--on-accent);
-  padding-left: 17px;
-}
-.navigation-group > summary {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 9px 20px;
-  list-style: none;
-  color: var(--on-accent-text);
-}
-.navigation-group > summary::-webkit-details-marker {
-  display: none;
-}
-.navigation-group > summary::after {
-  content: "\f1cb"; /* oj-ux-ico-chevron-down */
-  margin-left: auto;
-  font-family: ojuxIconFont;
-  font-size: 16px;
-  line-height: 1;
-  transition: transform var(--dur-fast) var(--ease);
-}
-.navigation-group[open] > summary::after {
-  transform: rotate(180deg);
-}
-.navigation-group > summary:hover {
-  background: var(--on-accent-hover);
-}
-.navigation-group > div > a {
-  padding-left: 52px;
-  font-weight: 400;
-}
-.navigation-group > div > a[aria-current] {
-  padding-left: 49px;
 }
 .navigation-drawer:not(:modal) .drawer-heading button {
   color: var(--on-accent);
@@ -2334,24 +1829,14 @@ dialog[open]::backdrop {
   transform: translateX(-100%);
   transition-duration: var(--dur);
 }
-.account-dialog-preferences,
-.account-dialog-accessibility {
-  transform: translateX(100%);
-  transition-duration: var(--dur);
-}
 @starting-style {
   .navigation-drawer[open] {
     transform: translateX(-100%);
   }
-  .account-dialog-preferences[open],
-  .account-dialog-accessibility[open] {
-    transform: translateX(100%);
-  }
 }
 /* Menus built on <details> pop in; where ::details-content exists they also fade out on close. */
 .user-menu[open] > .user-menu-content,
-.chart-options[open] > :not(summary),
-.insight-filter[open] > fieldset {
+.chart-options[open] > :not(summary) {
   animation: motion-pop-in var(--dur-fast) var(--ease);
 }
 @supports selector(::details-content) {
@@ -2394,30 +1879,29 @@ dialog[open]::backdrop {
 .record-page-loading {
   padding: 28px;
 }
+/* Notifications tab and Featured Opportunities scroll in place and load on scroll (GN-Angular). */
 .notification-list,
 .featured-opportunities {
   list-style: none;
+  margin: 0;
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+  position: relative;
+}
+.notification-list {
   padding: 0;
-  margin: 12px 0;
 }
 .notification-list li {
   display: flex;
   gap: 16px;
-  align-items: start;
-  padding: 16px 12px;
-  border-bottom: 1px solid var(--border);
+  align-items: center;
+  padding: 12px 24px;
+}
+.notification-list li + li {
+  border-top: 1px solid var(--gn-gridline);
 }
 .notification-list p {
   margin: 0 0 5px;
-}
-.notification-list time {
-  color: var(--muted);
-  font-size: 12px;
-}
-/* The 28px avatar sat in a 32px column; the margin keeps the message at the same offset. */
-.notification-list li > :first-child {
-  flex: none;
-  margin-right: 4px;
 }
 .notification-list li > div {
   flex: 1 1 0;
@@ -2425,44 +1909,88 @@ dialog[open]::backdrop {
 }
 .notification-list li > time {
   flex: none;
+  color: var(--muted);
 }
 .notification-avatar {
-  width: 28px;
-  height: 28px;
-  background: var(--avatar-bg);
   display: flex;
+  flex: none;
   align-items: center;
   justify-content: center;
-  color: var(--accent);
+  width: 24px;
+  height: 24px;
+  color: #fff;
+  background: #2f6b70;
+  border-radius: 3px;
 }
-.featured-opportunities li {
-  background: var(--surface);
-  padding: 18px;
-  border-bottom: 1px solid var(--border);
+.featured-opportunities {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
 }
 .featured-opportunities .record-metadata {
   margin: 16px 0;
 }
+:is(.notification-list, .featured-opportunities) > li.list-skeleton {
+  display: block;
+  padding: 0;
+  border: 0;
+}
+:is(.notification-list, .featured-opportunities) > li.list-empty {
+  padding: 12px;
+  color: var(--muted);
+}
+/* Dynamic Charts: module tabs in the dashboard-tab style; 12-column tiles as flex-basis (GN-Angular). */
 .dynamic-module-tabs {
   display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding: 8px 0 16px;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 0 0 12px;
 }
 .dynamic-module-tabs button {
-  border: none;
+  height: 28px;
+  padding: 0 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  border-radius: var(--gn-radius);
   background: transparent;
 }
 .dynamic-module-tabs button[aria-selected="true"] {
-  border-bottom: 3px solid var(--accent);
+  border-color: var(--gn-brand);
 }
 .dynamic-chart-grid {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 18px;
+  display: flex;
+  flex-wrap: wrap;
+}
+.dynamic-chart-tile {
+  display: flex;
+  flex-grow: 0;
+  flex-shrink: 0;
+  min-width: 0;
+  padding: 10px 10px 10px 0;
 }
 .dynamic-chart-card {
-  min-height: 300px;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  padding: 8px;
+  overflow: auto;
+  background: var(--gn-surface);
+  border: 1px solid var(--gn-divider);
+  border-radius: 2px;
+}
+.dynamic-chart-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+}
+.dynamic-chart-head h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
 }
 .dynamic-chart-card details table {
   width: 100%;
@@ -2474,52 +2002,97 @@ dialog[open]::backdrop {
   border-bottom: 1px solid var(--border);
   padding: 8px;
 }
-@media (max-width: 600px) {
-  .dynamic-chart-grid {
-    grid-template-columns: 1fr;
-  }
-  .notification-list li {
-    flex-wrap: wrap;
-  }
-  .notification-list li > :first-child {
-    margin-right: 0;
-  }
-  /* The time drops under the message, aligned to its column (avatar 28px + 16px gap). */
-  .notification-list li > time {
-    flex-basis: calc(100% - 44px);
-    margin-left: 44px;
-  }
-}
-
-.chart-options {
+.chart-menu {
   position: relative;
 }
-.chart-options[open] {
-  padding: 8px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  z-index: 2;
+.chart-menu-trigger {
+  display: flex;
+  min-height: 0;
+  padding: 4px;
+  border: 0;
+  border-radius: var(--gn-radius);
 }
-.chart-options button,
-.chart-options a {
-  display: block;
-  margin-top: 8px;
+.chart-menu-list {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+  padding: 6px 0;
+  color: var(--gn-text);
+  background: var(--gn-surface);
+  border-radius: var(--gn-radius-menu);
+  box-shadow: var(--gn-shadow-menu);
+}
+.chart-menu-list button {
+  justify-content: flex-start;
+  height: 34px;
+  padding: 0 16px;
+  font-weight: 400;
+  border: 0;
+  border-radius: 0;
+  text-align: left;
+}
+.chart-menu-list button:hover,
+.chart-menu-list button:focus-visible {
+  background: var(--gn-hover-tint);
+  outline: none;
 }
 .chart-dimension-dialog {
-  width: min(440px, 90vw);
-  padding: 24px;
+  width: min(420px, calc(100vw - 32px));
+  padding: 18px 20px 20px;
+}
+.chart-dimension-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.chart-dimension-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+.chart-dimension-close {
+  display: flex;
+  min-height: 0;
+  padding: 4px;
+  border: 0;
 }
 .dimension-fields {
   display: flex;
-  gap: 16px;
-  margin: 24px 0;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 10px 0;
 }
-.dimension-fields > * {
-  flex: 1 1 0;
+.dimension-fields > label {
+  display: flex;
+  flex: 1 1 200px;
+  flex-direction: column;
+  gap: 4px;
+}
+.dimension-fields > label > span {
+  font-weight: 600;
+}
+.chart-dimension-dialog .dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+@media (max-width: 767px) {
+  .dynamic-chart-tile {
+    flex-basis: 100% !important;
+  }
 }
 @media (max-width: 600px) {
-  .dynamic-chart-card {
-    grid-column: 1 / -1 !important;
+  .notification-list li {
+    flex-wrap: wrap;
+  }
+  /* The time drops under the message, aligned to its column (avatar 24px + 16px gap). */
+  .notification-list li > time {
+    flex-basis: calc(100% - 40px);
+    margin-left: 40px;
   }
 }
 .skeleton-proposal .skeleton-record {
@@ -2562,34 +2135,6 @@ dialog[open]::backdrop {
   min-width: 0;
   margin: 0;
 }
-/* Insights follows the VBCS full-width scatter then paired chart panels. */
-.insight-panels {
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 0;
-}
-.insight-widget {
-  border: 1px solid var(--border);
-  border-top: 0;
-  padding: 12px;
-  min-height: 184px;
-}
-.insight-widget .widget-heading {
-  margin-bottom: 8px;
-}
-.insight-widget .widget-heading h3 {
-  font-size: 12px;
-}
-.insight-widget .icon-button {
-  display: none;
-}
-.chart-expand {
-  height: 24px;
-  min-height: 24px;
-  width: 26px;
-  padding: 0;
-  font-size: 18px;
-  border-radius: var(--radius);
-}
 .insight-chart {
   position: relative;
 }
@@ -2598,7 +2143,7 @@ dialog[open]::backdrop {
   width: 100%;
 }
 .insight-chart.expanded .insight-chart-host {
-  height: 60vh;
+  height: 500px;
 }
 .chart-loading-overlay {
   position: absolute;
@@ -2629,97 +2174,7 @@ dialog[open]::backdrop {
   border-bottom: 1px solid var(--border);
   text-align: left;
 }
-.expanded-chart-dialog {
-  width: min(1200px, 94vw);
-  max-width: none;
-  max-height: 90dvh;
-  padding: 20px;
-}
-.insight-filters {
-  display: flex;
-  gap: 6px;
-  justify-content: flex-end;
-  padding: 8px 0 4px;
-  position: relative;
-}
-.insight-filter {
-  width: 240px;
-  position: relative;
-}
-.insight-filter > summary {
-  background: var(--surface);
-  border: 1px solid var(--filter-border);
-  border-radius: var(--radius);
-  min-height: 40px;
-  padding: 12px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
-  cursor: pointer;
-  list-style: none;
-}
-.insight-filter > summary::-webkit-details-marker {
-  display: none;
-}
-.filter-caption {
-  display: block;
-  font-size: 10px;
-  margin-top: -6px;
-}
-.filter-values {
-  display: block;
-  color: var(--text);
-  font-weight: 400;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.insight-filter fieldset {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  width: 100%;
-  z-index: 15;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: var(--gn-shadow-menu);
-  border-radius: var(--gn-radius-menu);
-  padding: 6px 0;
-  max-height: 250px;
-  overflow: auto;
-}
-.insight-filter fieldset label {
-  padding: 7px 12px;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  color: var(--text);
-  font-weight: 400;
-}
-.insight-filter fieldset input {
-  width: 16px;
-  min-height: 16px;
-  margin: 0;
-}
-.insight-clear {
-  align-self: center;
-  border: 0;
-  background: transparent;
-  padding: 3px;
-  min-height: 24px;
-}
 @media (max-width: 600px) {
-  .insight-widget {
-    grid-column: 1 / -1 !important;
-  }
-  .insight-filters {
-    flex-wrap: wrap;
-  }
-  .insight-filter {
-    width: calc(33.33% - 8px);
-    min-width: 100px;
-  }
   .insight-chart-host {
     height: 240px;
   }
@@ -2732,34 +2187,11 @@ dialog[open]::backdrop {
   color: var(--muted);
   font-size: 12px;
 }
-.dashboard-tabs .success-text {
-  color: var(--success-tab);
-}
-.insight-panels {
-  row-gap: 18px;
-}
-.insight-widget {
-  padding: 6px 12px;
-}
-.insight-widget .widget-heading {
-  margin-bottom: 3px;
-}
 .insight-chart-host {
   height: 153px;
 }
 .insight-chart.expanded .insight-chart-host {
-  height: 60vh;
-}
-.insight-widget > .chart-skeleton {
-  height: 153px;
-  overflow: hidden;
-}
-.insight-widget > .chart-skeleton .skeleton-chart-plot {
-  height: 120px;
-}
-.insight-widget > .chart-skeleton .skeleton-tab-row {
-  margin: 6px 0;
-  height: 15px;
+  height: 500px;
 }
 .chart-empty {
   min-height: 153px;
@@ -2786,412 +2218,80 @@ dialog[open]::backdrop {
   margin: 0;
 }
 
-.account-dialog fieldset {
-  border: 0;
-  padding: 8px 0;
-  margin: 0 0 18px;
+/* Manage profile (GN-Angular header openProfile): min(960px, 100vw - 32px); the content styles itself. */
+.profile-dialog {
+  width: min(960px, calc(100vw - 32px));
+  max-width: none;
+  padding: 0;
 }
-.account-dialog legend {
-  font-weight: 600;
-  font-size: 15px;
-  margin-bottom: 15px;
+/* ── Accessibility: GN-Angular styles.css, classes set on <html> as the original ── */
+html.accFontSize-25 {
+  zoom: 1.1;
 }
-.account-dialog form label {
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  color: inherit;
-  margin: 12px 0;
+html.accFontSize-50 {
+  zoom: 1.2;
 }
-.account-dialog select {
-  width: auto;
+html.accFontSize-75 {
+  zoom: 1.3;
 }
-.account-dialog footer {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  border-top: 1px solid var(--border);
-  padding-top: 20px;
+html.accFontSize-100 {
+  zoom: 1.4;
 }
-/* D28 configure drawer (the original .vb-configure-drawer): the nav drawer's brand colour and pattern,
-   inverted text, 20–31.25rem wide, Save centred at the bottom. */
-.account-dialog-preferences,
-.account-dialog-accessibility {
-  margin: 0 0 0 auto;
-  width: 440px;
-  min-width: min(20rem, 100vw);
-  max-width: min(31.25rem, 100vw);
-  height: 100dvh;
-  max-height: 100dvh;
-  border-radius: 0;
-  background: var(--accent) url("/brand/sidebar-background-pattern.png") 0 0 /
-    18em repeat;
-  color: var(--on-accent);
+html.accLineHeight-25 body {
+  line-height: 1.5;
 }
-:is(.account-dialog-preferences, .account-dialog-accessibility) header {
-  border-bottom: 0;
+html.accLineHeight-50 body {
+  line-height: 1.8;
 }
-:is(.account-dialog-preferences, .account-dialog-accessibility) h3 {
-  margin: 0 0 12px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: inherit;
-}
-:is(.account-dialog-preferences, .account-dialog-accessibility) footer {
-  justify-content: center;
-  border-top: 0;
-}
-/* Header, footer and theme buttons are light-on-brand; the white accessibility tiles style themselves. */
-:is(.account-dialog-preferences, .account-dialog-accessibility)
-  :is(header, footer, .theme-tiles)
-  button {
-  color: inherit;
-  border-color: var(--on-accent-border);
-}
-:is(.account-dialog-preferences, .account-dialog-accessibility)
-  :is(header, footer, .theme-tiles)
-  button:hover:not(:disabled) {
-  background: var(--on-accent-hover-strong);
-}
-/* The drawer's Save: white with brand text, as the original. */
-:is(.account-dialog-preferences, .account-dialog-accessibility) .primary {
-  height: 32px;
-  padding: 0 18px;
-  border-color: var(--gn-on-brand);
-  background: var(--gn-on-brand);
-  color: var(--accent);
-}
-:is(.account-dialog-preferences, .account-dialog-accessibility)
-  .primary:hover:not(:disabled) {
-  background: var(--on-accent-strong);
-  color: var(--accent);
-}
-/* D28 infolets: label over switch (the markup puts the switch first); children indented 40px. */
-.account-dialog-preferences form label:has(> input[role="switch"]) {
-  flex-direction: column-reverse;
-  align-items: flex-start;
-  gap: 4px;
-  margin: 6px 0;
-}
-.account-dialog-preferences fieldset > label + label {
-  margin-left: 40px;
-}
-/* Infolet switches: a 36×20 track, as GN-Angular. */
-.account-dialog-preferences input[role="switch"] {
-  appearance: none;
-  position: relative;
-  flex: none;
-  width: 36px;
-  height: 20px;
-  margin: 0;
-  border: 0;
-  border-radius: 10px;
-  background: var(--on-accent-track);
-  cursor: pointer;
-}
-.account-dialog-preferences input[role="switch"]::after {
-  content: "";
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--gn-on-brand);
-  transition: left var(--dur-fast) var(--ease);
-}
-.account-dialog-preferences input[role="switch"]:checked {
-  background: var(--on-accent-strong);
-}
-.account-dialog-preferences input[role="switch"]:checked::after {
-  left: 18px;
-  background: var(--accent);
-}
-.account-dialog-preferences input[role="switch"]:focus-visible {
-  outline: 2px solid var(--gn-on-brand);
-  outline-offset: 2px;
-}
-.account-dialog-profile {
-  width: 960px;
-  max-width: calc(100vw - 32px);
-}
-.account-tabs {
-  display: flex;
-  gap: 20px;
-  border-bottom: 1px solid var(--tab-divider);
-}
-.account-tabs button {
-  border: 0;
-  border-radius: 0;
-  padding: 12px;
-  background: transparent;
-}
-.account-tabs button[aria-selected="true"] {
-  border-bottom: 3px solid var(--accent);
-}
-.profile-grid {
-  display: flex;
-  padding: 32px 12px;
-  /* The 130px avatar sat in a 160px column + 30px gap; 60px keeps the details at 190px. */
-  gap: 60px;
-}
-.profile-grid > dl {
-  flex: 1 1 0;
-}
-.profile-avatar {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--profile-avatar-bg);
-  color: var(--ink);
-  width: 130px;
-  height: 130px;
-  font-size: 56px;
-}
-.profile-grid dl {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-  margin: 0;
-}
-.profile-grid dl > div {
-  flex: 0 0 calc(50% - 12px);
-}
-.profile-grid dt {
-  font-size: 12px;
-  color: var(--profile-label);
-}
-.profile-grid dd {
-  margin: 6px 0 0;
-}
-.research-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding: 24px 0;
-}
-.research-fields label {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-.research-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
-}
-/* D28 theme buttons: tall two-colour swatches (primary | secondary); the chosen one is tinted. */
-.theme-tiles {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-.theme-tiles button {
-  flex-direction: column;
-  gap: 4px;
-  padding: 5px;
-  border-radius: var(--gn-radius-dialog);
-}
-.theme-tiles button[aria-pressed="true"] {
-  background: var(--on-accent-selected);
-  border-color: var(--swatch-selected-border);
-}
-.theme-swatch {
-  display: block;
-  width: 75px;
-  height: 75px;
-}
-.theme-swatch.theme-default {
-  background: linear-gradient(
-    90deg,
-    var(--swatch-default-primary) 50%,
-    var(--swatch-default-secondary) 50%
-  );
-}
-.theme-swatch.theme-dark {
-  background: linear-gradient(
-    90deg,
-    var(--swatch-dark-primary) 50%,
-    var(--swatch-dark-secondary) 50%
-  );
-}
-/* D28 accessibility: white tiles in two columns, the level bar on top, a 4px black border when on. */
-.accessibility-tiles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-.accessibility-tiles > * {
-  flex: 0 0 calc(50% - 8px);
-}
-.accessibility-tiles button {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  min-height: 150px;
-  padding: 0 8px 12px;
-  overflow: hidden;
-  color: var(--ink);
-  background: var(--contrast-light);
-  border: 4px solid transparent;
-  border-radius: var(--gn-radius-dialog);
-}
-.accessibility-tiles button:hover:not(:disabled) {
-  background: var(--contrast-light);
-}
-.accessibility-tiles .selected {
-  border-color: var(--contrast-dark);
-}
-.accessibility-tiles progress {
-  appearance: none;
-  flex: none;
-  width: calc(100% + 16px);
-  height: 4px;
-  border: 0;
-  background: var(--a11y-level-track);
-  box-shadow: inset 0 0 0 1px var(--a11y-level-edge);
-}
-.accessibility-tiles progress::-webkit-progress-bar {
-  background: transparent;
-}
-.accessibility-tiles progress::-webkit-progress-value {
-  background: var(--contrast-dark);
-  transition: width var(--dur) var(--ease);
-}
-.accessibility-tiles progress::-moz-progress-bar {
-  background: var(--contrast-dark);
-}
-.accessibility-tiles button:not(.selected) progress {
-  visibility: hidden;
-}
-.accessibility-tiles img {
-  object-fit: contain;
-}
-html[class*="accLetterSpacing-"] .app {
-  letter-spacing: var(--account-spacing, 0);
-}
-html.accLetterSpacing-25 {
-  --account-spacing: 2px;
-}
-html.accLetterSpacing-50 {
-  --account-spacing: 3px;
-}
-html.accLetterSpacing-75 {
-  --account-spacing: 4px;
-}
-html.accLetterSpacing-100 {
-  --account-spacing: 5px;
-}
-html.accHighlightLinks-100 .app a {
-  text-decoration: underline !important;
-  outline: 2px solid var(--a11y-highlight);
-}
-html.accContrastTheme-100 .app {
-  background: var(--contrast-light);
-  color: var(--contrast-dark);
-}
-html.accContrastTheme-100 .app * {
-  border-color: var(--contrast-dark) !important;
-  outline-color: var(--contrast-dark) !important;
-  box-shadow: none !important;
-}
-html.accContrastTheme-100 .app a {
-  color: var(--contrast-link) !important;
-  font-weight: bold;
-  text-decoration: underline;
-}
-html.accContrastTheme-100 .app.dark {
-  background: var(--contrast-dark);
-  color: var(--contrast-light);
-}
-html.accContrastTheme-100 .app.dark * {
-  border-color: var(--contrast-light) !important;
-  outline-color: var(--contrast-light) !important;
-}
-html.accContrastTheme-100 .app.dark a {
-  color: var(--contrast-link-dark) !important;
-}
-
-html.accLineHeight-25 .app {
-  line-height: 1.7;
-}
-html.accLineHeight-50 .app {
-  line-height: 1.9;
-}
-html.accLineHeight-75 .app {
+html.accLineHeight-75 body {
   line-height: 2.1;
 }
-html.accLineHeight-100 .app {
-  line-height: 2.3;
+html.accLineHeight-100 body {
+  line-height: 2.4;
 }
-@media (max-width: 600px) {
-  .profile-grid {
-    flex-direction: column;
-    gap: 30px;
-  }
-  .profile-grid dl > div {
-    flex-basis: 100%;
-  }
+html.accLetterSpacing-25 body {
+  letter-spacing: 2px;
 }
-
+html.accLetterSpacing-50 body {
+  letter-spacing: 3px;
+}
+html.accLetterSpacing-75 body {
+  letter-spacing: 4px;
+}
+html.accLetterSpacing-100 body {
+  letter-spacing: 5px;
+}
 @font-face {
   font-family: open-dyslexic;
   src: url(/accessibility/open-dyslexic.woff) format("woff");
   font-display: swap;
 }
-html.accDyslexicFont-100 .app,
-html.accDyslexicFont-100 .app :is(button, input, select, textarea) {
-  font-family: open-dyslexic, sans-serif !important;
+html.accDyslexicFont-100 {
+  --gn-font: open-dyslexic, sans-serif;
 }
-html.accEnlargedCursor-100 .app,
-html.accEnlargedCursor-100 .app * {
+html.accDyslexicFont-100 body {
+  font-family: open-dyslexic, sans-serif;
+}
+/* The legacy redwood-overrides cursors (GN-Angular points at the tile picture instead): arrow, hand on controls. */
+html.accEnlargedCursor-100,
+html.accEnlargedCursor-100 * {
   cursor:
     url(data:image/png;base64,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),
-    auto;
-  --oj-core-cursor-clickable:
+    auto !important;
+}
+html.accEnlargedCursor-100 :is(a, button, summary, label, [role="button"]) {
+  cursor:
     url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAGYElEQVR42u1bXYhUVRz/f5x7zr13vnZnZ2ZnR81FZEkRCRGtEAmhHqKHEJ9EooeQvrAIH0JC6CFCIqQvVPYhFosIC4noIaQoIl9EM0xUKpZYa1m2cXPFlt2dubcH7+rszLmzc2funbvB/uC+nLnn//E7//Ofc/7nXICI0N/fL4QQe4noKyKaRESXiG4T0Tlmfs227UJUumOHUmozEV0CANfvQcSbQohn4rY1dEgpH0TEm82cr32EEK/HbXNoSCQSOUQcb9X5hccwjCfjtj0UMPPRoM7DnekwWiwWRdz2d4RisSgRcUrnIDOPCCH2MfNhRCyDPgqeiNuHjqCU2gb6OX6o7r1NiDirIemtuH3oCMy8W0dAPp9P179LRF/Xv0dEn8ZhN4UlqFqtamVNTk5O17c5jqNrC82WWAj4v2KFgLgNiBsrBMRtQNxYISBuA+LGCgFxG7AARNxJRCeEEPuVUtuKxaLZDb3LZgfmum7Bdd39juNApVKBiYmJChFdBYALiHiemS+mUqmL5XJ5umNlEWEP6Le7OpyCNrbNAFAlomtE9AkzH5RS7spmsz1xO95NAvxIucLMx6SUuzZs2BDbtI6LgPpd5eUgtYVlkQQR8S8i+oiILnYqy3GcjfPz818y83A2m5Xd9KOtCEDEy8lk8u48ZuYT9TIQsUxE1yB4NJwulUpdG+S2CBBCvFz7g2VZQ7X9mXmkr69PAgBIKXch4kwQEpj5cCjeFQoF0zTNB6SUO0zT3Kz5n26LAMMwFp0NJBKJItwb+Womk1mU5YnoJCyOjhkiugIAVZ1+RJw1TXN9244rpbYQ0en6Oh4izhLRGSHE3nw+L4MQgIgf10TAU34EENFMfV+vdrhgw5hlWfcBAJimuZGIfgJ9FBxry3khxAEAmIclwgwRR4lopFUCpJQPE9HvRPRDIpFYNMJBCGDmt+v6ZhHxD419U6VSKVhCNAxj71KOt/gEQm9vbw944UxEk0sQ8IZm0J7W2SGl3KHTp82Q6XQ6WalU3glqfBiYmpr6RwjxEhGdJaIXgvZPpVKfIeJcfXu1Wt3SshBvXoa1OAkVzPzqgmwhxCu6d3QHs8ysHVDtZshxnId8lB8XQgwDgFOpVHY6jvOc67r3h+1kM1iW9f7MzMwAADi2bR+fntbuja4DwKbaBtd1cy0rIaKGpSoRjda/NzAwIIQQBxDxNnQpAloBIn4OjYnwlNZXHxk36htc1+3p6emxa9vGx8crlUrlXSnldkT8LQ5nfQgwNW2VlgkgonM6Am7duqU9v5udnf3FsqztRHQ2buc9FDVtN1runUwmc35LTiGE7yFmOp22iegbiHEKlEolqZuSzHwwkCBvkeG3vj7q1y+TydhE9H1cBEgpH9HZbBjGY4EEpVKpJCJeaULCB0NDQ9oplEwm0zXL0q6CmYehMQHO9vb2pgMLM01zHSKONSFheO3atVoSLMsqeX27Bu+KTkP4e8fx7UEptU63vq4hYcRvzy2lbH31FQKY+U3Q5619HQn2IqEZCSdXrVoVa3XJtu2SbvQRcbyvr6/zErtSahARR5uQMDI4OBgbCbq5D3dGP1j2bwbLsu5DxF+bkHAiDueVUptAs21HxD8zmYzdkfB6mKa5uhkJQogj3SaAiL7wsWV/JAq9DO9bpBRCvNgt5/1upxHR5YGBgehOvizLahYJVcMwHu8GAX6j35V7h15O0CZGRLyplBqKWP8QaIqhRPRj5M4vQCm1HhEnQB+GlzKZTGSnvH7LdSllsGVvp5BSbvWrCTDze1HoXLNmjdBdzCain7vq/AIMw9gN+tp8VUq5M2x9fpseIcSzsRAAAMDMR8AnI+fz+VAzcm11GO7lndlUKpWNjYBcLie8YopuZJ4PUxcRnYdGos/E5vwClFKbwWdVls1mQ0mIhULBRsQGHYGLHlHBO4rSRUEo3wgppbaCPvvv6EhwWLBte7XumwAvbDuGt71tICCXywUvekQFIrp7AFr7WJa1sVPZzHwIGskdb8vOqAgQQnyoa5+bm+v4AynXdfs1zdeXFQH9/f3fIaLufOHREMTrboa1XvauQWS7pbGxsQoRfeu67p46ArbCnbsEnUC3x/g3Kl/aBjMfgPAOWZd6TrVo1iJEWsJi5gtRyg8DkRKQSqWuxu1grASUy+W/iWjZ3u2NnAAPbf09dQv/AY6YUYvMZujDAAAAAElFTkSuQmCC),
-    auto;
+    pointer !important;
 }
-
-html.accFontSize-25
-  .app
-  :is(p, a, label, input, select, textarea, button, dd, dt, td, th) {
-  font-size: 1rem;
+html.accHighlightLinks-100 a,
+html.accHighlightLinks-100 button {
+  color: #000 !important;
+  background-color: #ffd700 !important;
+  text-decoration: underline;
 }
-html.accFontSize-25 .app :is(h1, h2) {
-  font-size: 2.5rem;
-}
-
-html.accFontSize-50
-  .app
-  :is(p, a, label, input, select, textarea, button, dd, dt, td, th) {
-  font-size: 1.5rem;
-}
-html.accFontSize-50 .app :is(h1, h2) {
-  font-size: 3.75rem;
-}
-
-html.accFontSize-75
-  .app
-  :is(p, a, label, input, select, textarea, button, dd, dt, td, th) {
-  font-size: 1.75rem;
-}
-html.accFontSize-75 .app :is(h1, h2) {
-  font-size: 4.375rem;
-}
-
-html.accFontSize-100
-  .app
-  :is(p, a, label, input, select, textarea, button, dd, dt, td, th) {
-  font-size: 2rem;
-}
-html.accFontSize-100 .app :is(h1, h2) {
-  font-size: 5rem;
+html.accContrastTheme-100 {
+  filter: contrast(1.35);
 }
 /* Empty, error and not-found states (<State>): centred, the app font, never a serif fallback. */
 .state {
@@ -3210,4 +2310,453 @@ html.accFontSize-100 .app :is(h1, h2) {
 }
 .state-action {
   color: var(--muted);
+}
+/* Home dashboard: GN-Angular dashboard / announcements / kpi-board / attention-widget / insights / chart-dialog
+   CSS and the measured GN-Dashboard layout spec (title y208, KPIs y272, tab bar y390, first panel y430). */
+.announcements {
+  margin: -18px -36px 17px;
+  padding: 6px 15px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.announcements-toggle {
+  margin: 0;
+  font-size: inherit;
+}
+.announcements-toggle button {
+  display: flex;
+  gap: 6px;
+  min-height: 0;
+  padding: 3px 0;
+  border: 0;
+  color: inherit;
+}
+.announcements-toggle button:hover {
+  background: none;
+}
+.announcements-toggle span {
+  margin: 12px 0;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 21px;
+}
+.announcement-strip {
+  display: flex;
+  align-items: center;
+  height: 72px;
+}
+.announcement-strip > button {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  color: inherit;
+}
+.announcement-viewport {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+/* The legacy film strip slides the whole page sideways. */
+.announcement-track {
+  display: flex;
+  transition: transform 0.5s ease;
+}
+.announcement-content {
+  display: flex;
+  flex: 0 0 100%;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-width: 0;
+  min-height: 60px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.announcement-content p {
+  margin: 0;
+}
+.announcement-content a {
+  color: var(--on-accent-link);
+  text-decoration: underline;
+}
+.announcement-content mark {
+  background: var(--highlight-mark);
+}
+@media (prefers-reduced-motion: reduce) {
+  .announcement-track {
+    transition: none;
+  }
+}
+/* The org title is the picker: the native select lies transparently over the h1 and its chevron. */
+.home-heading {
+  display: flex;
+  align-items: center;
+}
+.organization-heading {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  max-width: 100%;
+  cursor: pointer;
+}
+.organization-heading h1 {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 27px;
+}
+.organization-heading select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.organization-heading:has(select:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.kpi-strip {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 37px;
+}
+.kpi-strip > article {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 25%;
+  min-width: 0;
+  min-height: 80px;
+  padding: 12px;
+  border-right: 1px solid var(--border);
+}
+.kpi-strip > article:last-child {
+  border-right: none;
+}
+/* The skeleton holds the loaded board's 88px so the tab bar does not jump. */
+.kpi-strip.skeleton-host > article {
+  height: 88px;
+}
+.kpi-error {
+  margin: 37px 0 0;
+}
+.kpi-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  white-space: nowrap;
+}
+.kpi-title > strong {
+  font-weight: 700;
+  line-height: 1;
+}
+.kpi-title > svg {
+  flex: none;
+  overflow: visible;
+}
+.kpi-value {
+  display: flex;
+  align-items: baseline;
+}
+.kpi-metric {
+  padding-right: 3px;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 24px;
+}
+.kpi-change {
+  display: flex;
+  align-items: center;
+  line-height: 16px;
+  color: var(--success);
+}
+.kpi-change.down {
+  color: var(--danger);
+}
+.kpi-meta {
+  line-height: 16px;
+  color: var(--muted);
+}
+.dashboard-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin: 18px 0 0;
+  padding: 12px 0;
+}
+.dashboard-tabs button {
+  height: 28px;
+  min-height: 28px;
+  gap: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--gn-radius);
+}
+.dashboard-tabs button[aria-selected="true"] {
+  border-color: var(--accent-fg);
+  /* GN-Angular's selected tint, verbatim. */
+  background: rgb(255 255 255 / 10%);
+}
+.dashboard-tabs .gn-icon {
+  margin: 0 7.5px;
+}
+.dashboard-tabs button > span:not(.gn-icon) {
+  padding-right: 12px;
+}
+.dashboard-tabs .tab-danger {
+  color: var(--danger);
+}
+.dashboard-tabs .tab-warning {
+  color: var(--warning);
+}
+.dashboard-tabs .tab-success {
+  color: var(--success);
+}
+.dashboard-empty {
+  margin: 0;
+  padding: 24px 12px;
+  font-size: 14px;
+}
+.attention-panels {
+  display: flex;
+  flex-direction: column;
+}
+.attention-widget,
+.insight-widget {
+  display: flex;
+  min-width: 0;
+  padding: 6px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.attention-content,
+.insight-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  padding: 6px;
+}
+/* The legacy widget-grid rule: every (3n-1)th tile's content gets side dividers. */
+.attention-widget:nth-child(3n - 1) > .attention-content,
+.insight-widget:nth-child(3n - 1) > .insight-content {
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+.attention-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.attention-head h3 {
+  margin: 0 0 9px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
+}
+.attention-view-tabs {
+  display: flex;
+  gap: 24px;
+  margin-left: 12px;
+}
+.attention-view-tabs button {
+  height: 36px;
+  min-height: 36px;
+  padding: 0 3px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  color: var(--muted);
+}
+.attention-view-tabs button:hover {
+  background: none;
+}
+.attention-view-tabs button[aria-selected="true"] {
+  color: var(--text);
+  border-bottom-color: var(--accent-fg);
+}
+.attention-list {
+  max-height: 300px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 6px 0 0;
+  list-style: none;
+}
+.attention-list > li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  line-height: 14.4px;
+}
+.attention-list > li + li {
+  border-top: 1px solid var(--gn-gridline);
+}
+.attention-list > li.overdue {
+  background: var(--danger-bg);
+}
+.attention-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.attention-main > a {
+  align-self: flex-start;
+  line-height: 15px;
+}
+.attention-title {
+  padding-top: 6px;
+}
+.attention-fields {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  padding-top: 8px;
+}
+.attention-fields > div {
+  padding-right: 9px;
+  margin-right: 9px;
+  border-right: 1px solid var(--border);
+}
+.attention-fields > div.shifted {
+  padding-top: 6px;
+}
+.attention-fields dt {
+  font-weight: 600;
+}
+.attention-fields dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.attention-meta {
+  flex: none;
+}
+.attention-list > li.overdue .attention-meta {
+  color: var(--danger);
+}
+.dark .attention-list > li.overdue .attention-meta {
+  color: var(--danger-on-dark);
+}
+.attention-note {
+  padding-top: 6px;
+}
+.attention-list > li.attention-empty {
+  padding: 24px 12px;
+  font-size: 14px;
+}
+.attention-list > li.attention-loading {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.attention-calendar {
+  height: 500px;
+  padding: 15px 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.insight-filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+}
+.insight-filter {
+  flex: 0 0 240px;
+}
+.insight-clear {
+  min-height: 0;
+  padding: 3px;
+  border: 0;
+}
+.insight-panels {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+.insight-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 27px;
+}
+.insight-head h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
+}
+.chart-expand {
+  width: 29px;
+  height: 27px;
+  min-height: 27px;
+  padding: 0;
+  border-color: var(--gn-border-input);
+}
+.chart-expand:disabled {
+  opacity: 0.4;
+}
+.insight-content .insight-chart-host,
+.insight-content > .chart-empty,
+.insight-content > .chart-skeleton {
+  height: 153px;
+  min-height: 153px;
+}
+.insight-content > .chart-skeleton {
+  overflow: hidden;
+}
+.insight-content > .chart-skeleton .skeleton-chart-plot {
+  height: 120px;
+}
+.insight-content > .chart-skeleton .skeleton-tab-row {
+  margin: 6px 0;
+  height: 15px;
+}
+.expanded-chart-dialog {
+  width: 70vw;
+  max-width: calc(100vw - 32px);
+  min-height: 60vh;
+  max-height: 90dvh;
+  padding: 16px 20px 20px;
+}
+.expanded-chart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+}
+.expanded-chart-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+.expanded-chart-close {
+  min-height: 0;
+  padding: 4px;
+  border: 0;
+}
+@media (max-width: 767px) {
+  .kpi-strip > article {
+    flex-basis: 100%;
+    border-right: none;
+  }
+  .insight-widget {
+    grid-column: 1 / -1 !important;
+  }
+}
+@media (max-width: 600px) {
+  .announcements {
+    margin: -16px -12px 17px;
+  }
+  .insight-filter {
+    flex: 1 1 100px;
+  }
 }

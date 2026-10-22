@@ -1,4 +1,5 @@
 "use client";
+import { Suspense, use, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { firstDeepLink, type NavEntry } from "@/lib/unavailable-modules";
@@ -11,60 +12,136 @@ function current(path: string, href: string) {
     ? "page"
     : undefined;
 }
-function Item({ item, path }: { item: NavEntry; path: string }) {
-  const className = item.id === firstDeepLink ? styles.deepLinks : undefined;
+/** The "new" dot (getOpportunitiesNewFlags); streamed, so a slow flag never holds the drawer. */
+function NewDot({ flag }: { flag: Promise<boolean> }) {
+  return use(flag) ? (
+    <span className={styles.newDot} role="img" aria-label="New" />
+  ) : null;
+}
+function Item({
+  item,
+  path,
+  isNew,
+}: {
+  item: NavEntry;
+  path: string;
+  isNew: Promise<boolean>;
+}) {
+  const body = (
+    <>
+      <Icon name={item.icon} />
+      <span className={styles.name}>{item.label}</span>
+      {item.isNew && (
+        <Suspense fallback={null}>
+          <NewDot flag={isNew} />
+        </Suspense>
+      )}
+    </>
+  );
   if (item.external)
     return (
       <a
         href={item.href}
         target="_blank"
         rel="noopener noreferrer"
-        className={className}
+        className={styles.item}
       >
-        <Icon name={item.icon} />
-        {item.label}
+        {body}
         <span className="sr-only"> (opens in new tab)</span>
-        <Icon name="external-link" size={12} className={styles.externalMark} />
+        <Icon name="external-link" size={12} className={styles.end} />
       </a>
     );
   return (
     <Link
       href={item.href}
       prefetch={false}
-      className={className}
+      className={styles.item}
       aria-current={current(path, item.href)}
     >
-      <Icon name={item.icon} />
-      {item.label}
+      {body}
     </Link>
   );
 }
-/** Draws the server-filtered drawer; listing an entry grants nothing (each route checks access itself). */
-export function Navigation({ items }: { items: NavEntry[] }) {
-  const path = usePathname();
+function Group({
+  item,
+  path,
+  isNew,
+}: {
+  item: NavEntry;
+  path: string;
+  isNew: Promise<boolean>;
+}) {
+  const children = item.children ?? [];
+  // Opens on the page of one of its children; otherwise collapsed, as the original.
+  const [open, setOpen] = useState(() =>
+    children.some((child) => current(path, child.href) !== undefined),
+  );
   return (
-    <nav aria-label="Main navigation">
-      {items.map((item) =>
-        item.children ? (
-          <details
-            key={item.id}
-            className="navigation-group"
-            open={item.children.some(
-              (child) => current(path, child.href) !== undefined,
-            )}
-          >
-            <summary>
-              <Icon name={item.icon} /> {item.label}
-            </summary>
-            <div>
-              {item.children.map((child) => (
-                <Item key={child.id} item={child} path={path} />
-              ))}
-            </div>
-          </details>
-        ) : (
-          <Item key={item.id} item={item} path={path} />
-        ),
+    <>
+      <button
+        type="button"
+        className={styles.item}
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <Icon name={item.icon} />
+        <span className={styles.name}>{item.label}</span>
+        {item.isNew && (
+          <Suspense fallback={null}>
+            <NewDot flag={isNew} />
+          </Suspense>
+        )}
+        <Icon
+          name={open ? "chevron-up" : "chevron-down"}
+          size={12}
+          className={styles.end}
+        />
+      </button>
+      {open && (
+        <ul className={`${styles.list} ${styles.children} enter-expand`}>
+          {children.map((child) => (
+            <li key={child.id}>
+              <Item item={child} path={path} isNew={isNew} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+/** Draws the server-filtered drawer; listing an entry grants nothing (each route checks access itself). */
+export function Navigation({
+  items,
+  isNew,
+}: {
+  items: NavEntry[];
+  isNew: Promise<boolean>;
+}) {
+  const path = usePathname();
+  const split = items.findIndex((item) => item.id === firstDeepLink);
+  const [main, deep] =
+    split === -1 ? [items, []] : [items.slice(0, split), items.slice(split)];
+  const list = (entries: NavEntry[]) => (
+    <ul className={styles.list}>
+      {entries.map((item) => (
+        <li key={item.id}>
+          {item.children ? (
+            <Group item={item} path={path} isNew={isNew} />
+          ) : (
+            <Item item={item} path={path} isNew={isNew} />
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+  return (
+    <nav aria-label="Main navigation" className={styles.nav}>
+      {list(main)}
+      {deep.length > 0 && (
+        <>
+          <hr className={styles.divider} />
+          {list(deep)}
+        </>
       )}
     </nav>
   );

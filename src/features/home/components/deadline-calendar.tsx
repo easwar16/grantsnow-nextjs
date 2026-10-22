@@ -3,6 +3,7 @@ import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/feedback/skeleton";
 import type { FormatSettings } from "@/lib/format";
 import type { AttentionRow } from "../types";
+import type { AccessDeniedText } from "./row-link";
 
 // D19: FullCalendar is its own chunk, fetched the first time a widget opens Calendar View; it measures the DOM, so no SSR.
 const DeadlineFullCalendar = dynamic(() => import("./calendar/full-calendar"), {
@@ -15,11 +16,13 @@ export function DeadlineCalendar({
   rows,
   hasMore,
   format,
+  denied,
 }: {
   widgetId: string;
   rows: AttentionRow[];
   hasMore: boolean;
   format?: FormatSettings;
+  denied: AccessDeniedText;
 }) {
   return (
     <div className="deadline-calendar">
@@ -29,7 +32,12 @@ export function DeadlineCalendar({
           to view their deadlines.
         </p>
       )}
-      <DeadlineFullCalendar widgetId={widgetId} rows={rows} format={format} />
+      <DeadlineFullCalendar
+        widgetId={widgetId}
+        rows={rows}
+        format={format}
+        denied={denied}
+      />
     </div>
   );
 }

@@ -245,18 +245,29 @@ origin is `http://localhost:3000` (as GN-Angular's `localhost:4200`), still loop
 check and the host-only cookie. Development servers resolve the ORDS hosts over IPv4 first (`src/server/configuration/dev-dns.ts`),
 because this machine's router stalls on AAAA lookups (Node waited ~6 s per lookup; DEV round trip now ~1 s).
 
+## Dashboard and chatbot parity with GN-Angular (2026-10-23)
+
+Built from a code-level gap list against GN-Angular and checked in the browser against live DEV and the live VBCS app:
+header Help and notification bell (unread count, day-grouped popup, mark-read on close), 30-minute idle dialog, drawer
+geometry and "new" dot, profile dialog with Digital Presence, Preferences/Accessibility as a push drawer with DEV custom
+themes and GN-Angular's accessibility effects, toasts, More Info help buttons (`label_description`), auto-advancing
+announcements, org picker with depth indent, KPI/tab/widget geometry, Ethics access check, Insights multi-select filters
+(quarter → month), opportunity card actions (bookmark, share, comments, notes, apply, convert), infinite scroll in
+Featured and Notifications, Dynamic Charts menu and tiles, and the chatbot launcher, Send, mic and typing indicator.
+All writes go through `oracleWrite` and stay off (`WRITES_ENABLED=false`). Live findings: approval queues are due from
+their creation date (owner's GN-Angular decision, matches live); announcement text is white on brand (only CKEditor
+markers are black); DEV has no featured opportunities.
+
 ## Open for the owner
 
 Framework and improvement choices only:
 
 - Width of the listing filter panel is remembered per browser, not per account (server preferences would be needed).
 - Chatbot: the session token still travels over plain HTTP to a raw IP, as in legacy; voice input is not ported.
-- Dark mode keeps the teal brand (the VBCS dark preset's near-black brand needs a separate foreground token first).
 - Two grids kept for backend-driven 12-column chart spans (`.insight-panels`, `.dynamic-chart-grid`).
 - Floating-label 39 px filter fields on the Proposal listing (D36 keeps them only for profile and Insights).
 - LIKE wildcards `%` / `_` stay unescaped, as in legacy; escaping needs an `ESCAPE` clause the backend must accept.
 - Overdue uses the server's calendar day, not the user's time zone.
-- Not yet built: funder tree and deep links, "new" opportunity flags, Notifications load-on-scroll, the Ethics
-  `checkApplApprAccess` gate, per-filter `list-*` visibility gates on the listing.
+- Not yet built: funder tree and deep links, per-filter `list-*` visibility gates on the listing.
 - To confirm on DEV: whether `pendingApproval` / `approvedAwards` return `appr_deadline_date`; whether
   `total_count` is filtered or global.

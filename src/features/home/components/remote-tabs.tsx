@@ -1,26 +1,27 @@
 "use client";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { InsightChart } from "./insight-chart";
 import { chartIsEmpty, dynamicChartData } from "@/lib/chart-options";
-import Link from "next/link";
 import { State } from "@/components/feedback/state";
 import { RecordSkeleton, ChartSkeleton } from "@/components/feedback/skeleton";
+import { useToast } from "@/components/feedback/toast";
+import { Icon } from "@/components/ui/icon";
 import { dateDisplay } from "@/lib/format";
+import { LatestRequest } from "@/lib/latest-request";
 import type { OpportunityPage } from "@/features/opportunities/types";
-import {
-  OpportunityCard,
-  OpportunityInformation,
-} from "@/features/opportunities/components/opportunity-card";
-import { countText } from "@/features/opportunities/display";
+import { OpportunityCard } from "@/features/opportunities/components/opportunity-card";
 import { useRemote } from "@/lib/use-remote";
 import type { FormatSettings } from "@/lib/format";
 import { useInFlight } from "@/lib/use-in-flight";
+type Failure = { code: string; message: string; action?: string };
 type NotificationPage = {
   rows: { id: string; html: string; read: boolean; date: string }[];
   offset: number;
   limit: number;
   hasMore: boolean;
+  empty: string;
 };
+type FeaturedPage = OpportunityPage & { empty: string };
 export type ChartData = {
   id: string;
   name: string;
@@ -29,135 +30,197 @@ export type ChartData = {
   rows: number;
   dimensions?: boolean;
   reportUrl?: string;
+  texts: Record<
+    "options" | "dimension" | "link" | "title" | "save" | "empty",
+    string
+  >;
   points: { series: string; group: string; value: number | null }[];
 };
+const UNREACHABLE: Failure = {
+  code: "UPSTREAM",
+  message: "This request could not be completed.",
+};
+/**
+ * GN-Angular `paged()`: pages load as the list nears its end, one request at a time. `urlOf` and `hasMore`
+ * must be stable (module-level).
+ */
+function useScrollPages<P>(
+  urlOf: (index: number) => string,
+  hasMore: (pages: P[]) => boolean,
+  threshold: number,
+) {
+  const [pages, setPages] = useState<P[]>([]),
+    [failure, setFailure] = useState<Failure>(),
+    [loading, setLoading] = useState(true),
+    requests = useRef(new LatestRequest());
+  const fetchPage = (index: number) => {
+    const request = requests.current.begin();
+    fetch(urlOf(index), { signal: request.signal, cache: "no-store" })
+      .then(async (response) => {
+        const body = await response.json();
+        if (!request.current()) return;
+        if (response.ok) setPages((all) => [...all.slice(0, index), body as P]);
+        else setFailure(body.error ?? UNREACHABLE);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!request.current()) return;
+        setFailure(UNREACHABLE);
+        setLoading(false);
+      });
+  };
+  useEffect(() => {
+    const coordinator = requests.current;
+    fetchPage(0);
+    return () => coordinator.cancel();
+    // fetchPage reads only the stable urlOf.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const next = () => {
+    setFailure(undefined);
+    setLoading(true);
+    fetchPage(pages.length);
+  };
+  return {
+    pages,
+    failure,
+    loading,
+    retry: next,
+    onScroll: (e: React.UIEvent<HTMLElement>) => {
+      const list = e.currentTarget;
+      if (
+        !loading &&
+        !failure &&
+        hasMore(pages) &&
+        list.scrollHeight - list.scrollTop - list.clientHeight < threshold
+      )
+        next();
+    },
+  };
+}
+const NOTIFICATIONS_PAGE = 25;
+const notificationsUrl = (index: number) =>
+  `/api/home/tabs/notifications?offset=${index * NOTIFICATIONS_PAGE}`;
+const moreNotifications = (pages: NotificationPage[]) =>
+  pages.at(-1)?.hasMore === true;
+/** AppDatePipe 'datetime': DEFAULT_DATE_FORMAT then `hh:mm a`, in the viewer's time zone. */
+export function localDateTime(iso: string, format?: FormatSettings) {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return iso;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const day = `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`;
+  const hours = at.getHours() % 12 || 12;
+  return `${dateDisplay(day, format)} ${pad(hours)}:${pad(at.getMinutes())} ${at.getHours() < 12 ? "AM" : "PM"}`;
+}
+/** The dashboard's Notifications tab. Unlike the bell popup, it never marks anything read (as in the original). */
 export function NotificationsPanel({ format }: { format?: FormatSettings }) {
-  const [offset, setOffset] = useState(0);
-  const { data, error, retry } = useRemote<NotificationPage>(
-    `/api/home/tabs/notifications?offset=${offset}`,
+  const { pages, failure, loading, retry, onScroll } = useScrollPages(
+    notificationsUrl,
+    moreNotifications,
+    40,
   );
+  const rows = pages.flatMap((p) => p.rows);
   return (
-    <article className="widget notification-panel">
-      <div className="widget-heading">
-        <h3>Notifications</h3>
-      </div>
-      {error ? (
+    <article className="notification-panel">
+      <ul
+        className="notification-list"
+        aria-label="Notifications"
+        onScroll={onScroll}
+      >
+        {rows.map((row) => (
+          <li key={row.id} className="enter-rise">
+            <span className="notification-avatar">
+              <Icon
+                name={row.read ? "email" : "email-unread"}
+                size={14}
+                label={row.read ? "Read message" : "Unread message"}
+              />
+            </span>
+            <div dangerouslySetInnerHTML={{ __html: row.html }} />
+            <time dateTime={row.date}>{localDateTime(row.date, format)}</time>
+          </li>
+        ))}
+        {loading && (
+          <li className="list-skeleton">
+            <RecordSkeleton
+              label="Loading notifications"
+              rows={rows.length ? 1 : 4}
+            />
+          </li>
+        )}
+        {!loading && !failure && rows.length === 0 && (
+          <li className="list-empty">{pages[0]?.empty}</li>
+        )}
+      </ul>
+      {failure && (
         <State
           title="Notifications unavailable"
-          message={error.message}
-          action={error.action}
-          code={error.code}
+          message={failure.message}
+          action={failure.action}
+          code={failure.code}
           retry={retry}
         />
-      ) : !data ? (
-        <RecordSkeleton label="Loading notifications" />
-      ) : !data.rows.length ? (
-        <State title="Nothing to show" />
-      ) : (
-        <ul className="notification-list">
-          {data.rows.map((row) => (
-            <li key={row.id}>
-              <span
-                className={`notification-avatar${row.read ? "" : " unread"}`}
-                aria-label={row.read ? "Read message" : "Unread message"}
-              >
-                {row.read ? "✉" : "●"}
-              </span>
-              <div dangerouslySetInnerHTML={{ __html: row.html }} />
-              <time dateTime={row.date}>
-                {dateDisplay(row.date, format)}{" "}
-                {new Intl.DateTimeFormat("en-GB", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  timeZone: "UTC",
-                }).format(new Date(row.date))}{" "}
-                UTC
-              </time>
-            </li>
-          ))}
-        </ul>
       )}
-      <div className="pagination">
-        <button
-          disabled={offset === 0 || !data}
-          onClick={() => setOffset(Math.max(0, offset - 25))}
-        >
-          Previous
-        </button>
-        <span>{data ? `${data.rows.length} rows on this page` : null}</span>
-        <button
-          disabled={!data?.hasMore}
-          onClick={() => setOffset(offset + 25)}
-        >
-          Next
-        </button>
-      </div>
     </article>
   );
 }
+const featuredUrl = (index: number) =>
+  `/api/home/tabs/opportunities?page=${index + 1}`;
+// The API total, not hasMore (unreliable on DEV), decides whether another page exists.
+const moreFeatured = (pages: FeaturedPage[]) =>
+  pages.length > 0 &&
+  pages.reduce((n, p) => n + p.rows.length, 0) < pages[0].total &&
+  pages.at(-1)!.rows.length > 0;
+/** The dashboard's Featured Opportunities on the shared card, loading on scroll; Home's card has no More Info (GN-Angular). */
 export function FeaturedPanel({ format }: { format?: FormatSettings }) {
-  const [page, setPage] = useState(1),
-    [preview, setPreview] = useState<OpportunityPage["rows"][number]>();
-  const dialog = useRef<HTMLDialogElement>(null);
-  const { data, error, retry } = useRemote<OpportunityPage>(
-    `/api/home/tabs/opportunities?page=${page}`,
+  const { pages, failure, loading, retry, onScroll } = useScrollPages(
+    featuredUrl,
+    moreFeatured,
+    60,
   );
+  const rows = pages.flatMap((p) => p.rows.map((row) => ({ row, page: p })));
   return (
-    <article className="widget">
+    <article className="widget featured-panel">
       <div className="widget-heading">
         <h3>Featured Opportunities</h3>
       </div>
-      {error ? (
+      <ul
+        className="featured-opportunities"
+        aria-label="Opportunities"
+        onScroll={onScroll}
+      >
+        {pages[0]?.countsUnavailable && (
+          <li role="status" className="list-empty">
+            Application and proposal counts could not be loaded.
+          </li>
+        )}
+        {rows.map(({ row, page }) => (
+          <li key={row.id} className="enter-rise">
+            <OpportunityCard format={format} row={row} card={page.card} />
+          </li>
+        ))}
+        {loading && (
+          <li className="list-skeleton">
+            <RecordSkeleton
+              variant="opportunity"
+              label="Loading featured opportunities"
+              rows={rows.length ? 1 : 3}
+            />
+          </li>
+        )}
+        {!loading && !failure && rows.length === 0 && (
+          <li className="list-empty">{pages[0]?.empty}</li>
+        )}
+      </ul>
+      {failure && (
         <State
           title="Opportunities unavailable"
-          message={error.message}
-          action={error.action}
-          code={error.code}
+          message={failure.message}
+          action={failure.action}
+          code={failure.code}
           retry={retry}
         />
-      ) : !data ? (
-        <RecordSkeleton
-          variant="opportunity"
-          label="Loading featured opportunities"
-        />
-      ) : !data.rows.length ? (
-        <State title="Nothing to show" />
-      ) : (
-        <ul className="featured-opportunities">
-          {data.countsUnavailable && (
-            <li role="status">
-              Application and proposal counts could not be loaded.
-            </li>
-          )}
-          {data.rows.map((row) => (
-            <li key={row.id}>
-              <OpportunityCard
-                format={format}
-                row={row}
-                card={data.card}
-                onMoreInfo={(next) => {
-                  setPreview(next);
-                  dialog.current?.showModal();
-                }}
-              />
-            </li>
-          ))}
-        </ul>
       )}
-      <div className="pagination">
-        <button
-          disabled={page === 1 || !data}
-          onClick={() => setPage((p) => p - 1)}
-        >
-          Previous
-        </button>
-        <span>{data ? countText(data) : "Fetching page"}</span>
-        <button disabled={!data?.hasMore} onClick={() => setPage((p) => p + 1)}>
-          Next
-        </button>
-        <Link href="/opportunities">View all opportunities</Link>
-      </div>
-      <OpportunityInformation ref={dialog} row={preview} />
     </article>
   );
 }
@@ -172,13 +235,116 @@ export function ChartGraphic({
   const data = useMemo(() => dynamicChartData(chart), [chart]);
   return chartIsEmpty(data) ? (
     <div className="chart-empty" role="status">
-      No data to display.
+      {chart.texts.empty}
     </div>
   ) : (
-    // Legacy .height-N: N × 150 px.
-    <InsightChart title={chart.name} height={150 * rows} showData data={data} />
+    // The tile is 150 × rows + 56: less its 8px padding, 28px head and borders.
+    <InsightChart
+      title={chart.name}
+      height={150 * rows + 10}
+      showData
+      data={data}
+    />
   );
 }
+/** The tile's overflow menu (GN-Angular cdkMenu): Dimension and Link, each behind its RB row. */
+function ChartMenu({
+  label,
+  dimension,
+  onDimension,
+  link,
+  onLink,
+}: {
+  label: string;
+  dimension?: string;
+  onDimension: () => void;
+  link?: string;
+  onLink: () => void;
+}) {
+  const items = [
+    ...(dimension ? [{ label: dimension, run: onDimension }] : []),
+    ...(link ? [{ label: link, run: onLink }] : []),
+  ];
+  const [open, setOpen] = useState(false),
+    host = useRef<HTMLDivElement>(null),
+    id = useId();
+  useEffect(() => {
+    if (!open) return;
+    host.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+    const outside = (e: PointerEvent) => {
+      if (!host.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", outside);
+    return () => document.removeEventListener("pointerdown", outside);
+  }, [open]);
+  const move = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const all = [
+      ...e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]'),
+    ];
+    const i = all.indexOf(document.activeElement as HTMLElement);
+    const step: Record<string, number> = { ArrowDown: 1, ArrowUp: -1 };
+    if (e.key === "Escape") {
+      setOpen(false);
+      host.current?.querySelector<HTMLElement>("button")?.focus();
+    } else if (e.key in step) {
+      e.preventDefault();
+      all[(i + step[e.key] + all.length) % all.length]?.focus();
+    }
+  };
+  return (
+    <div className="chart-menu" ref={host}>
+      <button
+        type="button"
+        className="chart-menu-trigger"
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <Icon name="overflow" />
+      </button>
+      {open && (
+        <div
+          id={id}
+          role="menu"
+          aria-label={label}
+          className="chart-menu-list enter-pop"
+          onKeyDown={move}
+        >
+          {items.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              role="menuitem"
+              tabIndex={-1}
+              onClick={() => {
+                setOpen(false);
+                item.run();
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+const validSize = (cols: string, rows: string) => {
+  const c = Number(cols),
+    r = Number(rows);
+  return (
+    cols !== "" &&
+    rows !== "" &&
+    Number.isInteger(c) &&
+    c >= 1 &&
+    c <= 12 &&
+    Number.isInteger(r) &&
+    r >= 1 &&
+    r <= 3
+  );
+};
 function RemoteChart({
   descriptor,
   organization,
@@ -189,178 +355,167 @@ function RemoteChart({
   const { data, error, retry } = useRemote<ChartData[]>(
     `/api/home/tabs/charts?id=${descriptor.id}${organization ? `&organization=${encodeURIComponent(organization)}` : ""}`,
   );
-  const dialog = useRef<HTMLDialogElement>(null);
+  const dialog = useRef<HTMLDialogElement>(null),
+    titleId = useId();
   const [dimensions, setDimensions] = useState<{
       columns: number;
       rows: number;
     }>(),
-    [saveError, setSaveError] = useState<{
-      code: string;
-      message: string;
-      action?: string;
-    }>(),
+    [draft, setDraft] = useState({ cols: "", rows: "" }),
     { run, isActive } = useInFlight(),
+    toast = useToast(),
     saving = isActive("dimensions");
   const chart = data?.[0];
-  async function save(event: React.FormEvent<HTMLFormElement>) {
+  const columns = dimensions?.columns || chart?.columns || 4,
+    rows = dimensions?.rows || chart?.rows || 1;
+  const save = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const fields = new FormData(event.currentTarget);
-    setSaveError(undefined);
-    await run(async () => {
+    if (!validSize(draft.cols, draft.rows)) return;
+    run(async () => {
       try {
         const response = await fetch("/api/home/tabs/charts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             infolet_id: Number(descriptor.id),
-            colspan: Number(fields.get("columns")),
-            rowspan: Number(fields.get("rows")),
+            colspan: Number(draft.cols),
+            rowspan: Number(draft.rows),
           }),
         });
         const body = await response.json();
         if (!response.ok) {
-          setSaveError(body.error);
+          const e: Failure = body.error ?? UNREACHABLE;
+          // Writes switched off (D27) are information, as GN-Angular shows them.
+          if (e.code === "WRITES_DISABLED") toast.show("info", e.message);
+          else toast.error(e);
           return;
         }
         setDimensions(body);
         dialog.current?.close();
       } catch {
-        setSaveError({
-          code: "UPSTREAM",
+        toast.error({
           message: "Dimensions could not be saved. Please retry.",
         });
       }
     }, "dimensions");
-  }
+  };
+  const openDimension = () => {
+    setDraft({ cols: String(columns), rows: String(rows) });
+    dialog.current?.showModal();
+  };
   return (
-    <article
-      className="widget dynamic-chart-card"
-      style={{
-        gridColumn: `span ${dimensions?.columns || chart?.columns || 6}`,
-      }}
+    <section
+      className="dynamic-chart-tile enter-rise"
+      style={{ flexBasis: `${(columns / 12) * 100}%` }}
     >
-      <div className="widget-heading">
-        <h3>{descriptor.name}</h3>
-        <div className="widget-tools">
+      <article
+        className="dynamic-chart-card"
+        style={{ height: 150 * rows + 56 }}
+      >
+        <div className="dynamic-chart-head">
+          <h3>{chart?.name ?? descriptor.name}</h3>
           {chart && (chart.dimensions || chart.reportUrl) && (
-            <details className="chart-options">
-              <summary>Options</summary>
-              {chart.dimensions && (
-                <button
-                  onClick={() => {
-                    setSaveError(undefined);
-                    dialog.current?.showModal();
-                  }}
-                >
-                  Dimensions
-                </button>
-              )}
-              {chart.reportUrl && (
-                <a
-                  href={chart.reportUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Link
-                </a>
-              )}
-            </details>
+            <ChartMenu
+              label={chart.texts.options}
+              dimension={chart.dimensions ? chart.texts.dimension : undefined}
+              onDimension={openDimension}
+              link={chart.reportUrl ? chart.texts.link : undefined}
+              onLink={() => window.open(chart.reportUrl, "_blank", "noopener")}
+            />
           )}
         </div>
-      </div>
-      {error ? (
-        <State
-          title="Chart unavailable"
-          message={error.message}
-          action={error.action}
-          code={error.code}
-          retry={retry}
-        />
-      ) : !data ? (
-        <ChartSkeleton label={`Loading ${descriptor.name}`} />
-      ) : !data.length ? (
-        <div className="chart-empty" role="status">
-          No data to display.
-        </div>
-      ) : (
-        data.map((chart) => (
-          <ChartGraphic
-            key={chart.id}
-            chart={chart}
-            rows={dimensions?.rows || chart.rows}
+        {error ? (
+          <State
+            title="Chart unavailable"
+            message={error.message}
+            action={error.action}
+            code={error.code}
+            retry={retry}
           />
-        ))
-      )}
+        ) : !data ? (
+          <ChartSkeleton label={`Loading ${descriptor.name}`} />
+        ) : !data.length ? (
+          <div className="chart-empty" role="status">
+            No data to display.
+          </div>
+        ) : (
+          data.map((c) => <ChartGraphic key={c.id} chart={c} rows={rows} />)
+        )}
+      </article>
       <dialog
         ref={dialog}
         className="chart-dimension-dialog"
-        aria-labelledby={`dimension-title-${descriptor.id}`}
+        aria-labelledby={titleId}
         onCancel={(event) => {
           if (saving) event.preventDefault();
         }}
       >
-        <h2 id={`dimension-title-${descriptor.id}`}>Dimensions</h2>
+        <div className="chart-dimension-head">
+          <h2 id={titleId}>{chart?.texts.title ?? "Dimension"}</h2>
+          <button
+            type="button"
+            className="chart-dimension-close"
+            aria-label="Close"
+            disabled={saving}
+            onClick={() => dialog.current?.close()}
+          >
+            <Icon name="close" />
+          </button>
+        </div>
         <form onSubmit={save}>
           <div className="dimension-fields">
             <label>
-              Cols
+              <span>Cols (1–12) *</span>
               <input
-                name="columns"
+                name="cols"
                 type="number"
                 min="1"
                 max="12"
+                step="1"
                 required
-                defaultValue={dimensions?.columns || chart?.columns || 6}
+                value={draft.cols}
+                disabled={saving}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, cols: e.target.value }))
+                }
               />
             </label>
             <label>
-              Rows
+              <span>Rows (1–3) *</span>
               <input
                 name="rows"
                 type="number"
                 min="1"
                 max="3"
+                step="1"
                 required
-                defaultValue={dimensions?.rows || chart?.rows || 3}
+                value={draft.rows}
+                disabled={saving}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, rows: e.target.value }))
+                }
               />
             </label>
           </div>
-          {saveError && (
-            <State
-              title="Save failed"
-              message={saveError.message}
-              action={saveError.action}
-              code={saveError.code}
-            />
-          )}
           <div className="dialog-actions">
             <button
               type="button"
               disabled={saving}
-              onClick={(event) => {
-                event.currentTarget.form
-                  ?.querySelectorAll("input")
-                  .forEach((input) => {
-                    input.value = "";
-                  });
-              }}
+              onClick={() => setDraft({ cols: "", rows: "" })}
             >
               Clear
             </button>
             <button
-              type="button"
-              disabled={saving}
-              onClick={() => dialog.current?.close()}
+              className="primary"
+              disabled={saving || !validSize(draft.cols, draft.rows)}
+              type="submit"
             >
-              Cancel
-            </button>
-            <button className="primary" disabled={saving} type="submit">
-              {saving ? "Saving…" : "Save"}
+              {chart?.texts.save ?? "Save"}
             </button>
           </div>
         </form>
       </dialog>
-    </article>
+    </section>
   );
 }
 export function DynamicChartsPanel({
@@ -409,7 +564,7 @@ export function DynamicChartsPanel({
           </button>
         ))}
       </div>
-      <section
+      <div
         role="tabpanel"
         id={`dynamic-module-${module}`}
         aria-labelledby={`dynamic-selector-${module}`}
@@ -424,7 +579,7 @@ export function DynamicChartsPanel({
               organization={organization}
             />
           ))}
-      </section>
+      </div>
     </>
   );
 }

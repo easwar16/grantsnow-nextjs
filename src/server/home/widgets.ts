@@ -5,6 +5,8 @@ import type { ChartLayout } from "@/features/home/types";
 export interface WidgetDefinition {
   id: string;
   title: string;
+  /** Dashboard RB `<group>.<name>` of the title (`title` is the fallback); its description is the More Info text. */
+  labelKey: string;
   module: string;
   section: "needAttention" | "insights";
   operation: Operation;
@@ -31,6 +33,7 @@ export interface WidgetDefinition {
 export const widgets: WidgetDefinition[] = [
   {
     id: "pApproachingDeadlines",
+    labelKey: "header-labels.proposals-approaching-deadlines",
     date: "deadline_date",
     dueBy: "deadline_date",
     title: "Proposals Approaching Deadlines",
@@ -42,8 +45,10 @@ export const widgets: WidgetDefinition[] = [
   },
   {
     id: "pPendingApprovals",
+    labelKey: "header-labels.proposals-awaiting-approval",
     date: "proposal_creation_date",
-    dueBy: "appr_deadline_date",
+    // Owner's GN-Angular build and the live app: an approval is due from its creation date.
+    dueBy: "proposal_creation_date",
     title: "Proposals Awaiting Your Approval",
     module: "PROPOSALS",
     section: "needAttention",
@@ -53,6 +58,7 @@ export const widgets: WidgetDefinition[] = [
   },
   {
     id: "cApproachingDeadlines",
+    labelKey: "header-labels.contracts-approaching-deadlines",
     date: "deadline_date",
     dueBy: "deadline_date",
     overdueNote: true,
@@ -65,6 +71,7 @@ export const widgets: WidgetDefinition[] = [
   },
   {
     id: "cPendingApprovals",
+    labelKey: "header-labels.contract-awaiting-approval",
     date: "contract_start_date",
     dueBy: "contract_start_date",
     title: "Contracts awaiting approval",
@@ -76,6 +83,7 @@ export const widgets: WidgetDefinition[] = [
   },
   {
     id: "eApproachingDeadlines",
+    labelKey: "header-labels.ethics-approaching-deadline",
     date: "deadline_date",
     dueBy: "deadline_date",
     title: "Ethics deadlines",
@@ -87,6 +95,7 @@ export const widgets: WidgetDefinition[] = [
   },
   {
     id: "ePendingApprovals",
+    labelKey: "header-labels.ethics-pending-approval",
     date: "appr_deadline_date",
     dueBy: "appr_deadline_date",
     title: "Ethics awaiting approval",
@@ -98,6 +107,7 @@ export const widgets: WidgetDefinition[] = [
   },
   {
     id: "aPendingApprovals",
+    labelKey: "header-labels.awards-awaiting-approval",
     date: "award_creation_date",
     dueBy: "appr_deadline_date",
     title: "Awards awaiting approval",
@@ -109,6 +119,7 @@ export const widgets: WidgetDefinition[] = [
   },
   {
     id: "aApprovedAwards",
+    labelKey: "header-labels.approved-awards",
     date: "last_approval_date",
     dueBy: "appr_deadline_date",
     title: "Approved awards",
@@ -120,8 +131,10 @@ export const widgets: WidgetDefinition[] = [
   },
   {
     id: "eoiPendingApprovals",
+    labelKey: "header-labels.eoi-awaiting-approval",
     date: "eoi_creation_date",
-    dueBy: "appr_deadline_date",
+    // Owner's GN-Angular build and the live app: an approval is due from its creation date.
+    dueBy: "eoi_creation_date",
     title: "EOI awaiting approval",
     module: "opportunities-eoi-list",
     section: "needAttention",
@@ -133,6 +146,7 @@ export const widgets: WidgetDefinition[] = [
   ...([
     {
       id: "ProposalsValuByCostRecovery",
+      labelKey: "header-labels.proposal-value-by-cost-recovery",
       title: "Proposal Value By Cost Recovery %",
       module: "PROPOSALS",
       operation: "getProposalGetProposalStatistics",
@@ -144,6 +158,7 @@ export const widgets: WidgetDefinition[] = [
     },
     {
       id: "grantCategoriesChart",
+      labelKey: "header-labels.highest-performing-grant-categories",
       title: "Highest Performing Grant Categories (Awarded)",
       module: "opportunities-finder",
       operation: "getSharedGetTopOppCategoryStat",
@@ -158,6 +173,7 @@ export const widgets: WidgetDefinition[] = [
     },
     {
       id: "pByYearChart",
+      labelKey: "header-labels.proposals-by-year",
       title: "Proposals by Year",
       module: "PROPOSALS",
       operation: "getProposalGetProposalStatistics",
@@ -168,6 +184,7 @@ export const widgets: WidgetDefinition[] = [
     },
     {
       id: "totalPAValueByYearChart",
+      labelKey: "header-labels.total-proposals-total-award-by-year",
       title: "Total Proposals and Total Award Value by Year",
       module: "PROPOSALS",
       operation: "getPost_awardsAwardVsCostStatistics",
@@ -176,6 +193,7 @@ export const widgets: WidgetDefinition[] = [
     },
     {
       id: "opportunityStatusChart",
+      labelKey: "header-labels.funding-opportunity-status",
       title: "Funding Opportunity Status",
       module: "opportunities-finder",
       operation: "getSharedGetOppFunnelStat",
@@ -185,6 +203,7 @@ export const widgets: WidgetDefinition[] = [
     },
     {
       id: "fundingByGrantChart",
+      labelKey: "header-labels.funding-by-grant-category",
       title: "Funding by Grant Category (Awarded)",
       module: "opportunities-finder",
       operation: "getSharedGetOppCategoryStat",
@@ -195,6 +214,7 @@ export const widgets: WidgetDefinition[] = [
     },
     {
       id: "highestGapsChart",
+      labelKey: "header-labels.highest-gaps",
       title: "Highest Gaps: Applied vs. Awarded Funding",
       module: "opportunities-finder",
       operation: "getSharedGetOppCategoryStat",
@@ -209,6 +229,7 @@ export const widgets: WidgetDefinition[] = [
     },
     {
       id: "fundingEfficiencyIndexChart",
+      labelKey: "header-labels.funding-efficiency-index",
       title: "Funding Efficiency Index",
       module: "PROPOSALS",
       operation: "getSharedGetWidgetParameters",
@@ -218,6 +239,7 @@ export const widgets: WidgetDefinition[] = [
     },
     {
       id: "pByStatusChart",
+      labelKey: "header-labels.proposals-by-status",
       title: "Proposals by Status",
       module: "PROPOSALS",
       operation: "getProposalGetProposalStatistics",
@@ -228,6 +250,7 @@ export const widgets: WidgetDefinition[] = [
     },
     {
       id: "eByStatusChart",
+      labelKey: "header-labels.ethics-by-status",
       title: "Ethics by Status",
       module: "ETHICS",
       operation: "getDynamicFormsApplicationStatistics",
@@ -238,6 +261,7 @@ export const widgets: WidgetDefinition[] = [
     },
     {
       id: "eByOrgChart",
+      labelKey: "header-labels.ethics-by-org",
       title: "Ethics by Org",
       module: "ETHICS",
       operation: "getDynamicFormsApplicationStatistics",
@@ -248,6 +272,7 @@ export const widgets: WidgetDefinition[] = [
     },
     {
       id: "eByRiskChart",
+      labelKey: "header-labels.ethics-by-risk",
       title: "Ethics by Risk",
       module: "ETHICS",
       operation: "getDynamicFormsApplicationStatistics",
@@ -258,6 +283,7 @@ export const widgets: WidgetDefinition[] = [
     },
     {
       id: "pByFacultyChart",
+      labelKey: "header-labels.proposals-by-faculty",
       title: "Proposals by School",
       module: "PROPOSALS",
       operation: "getProposalGetProposalStatistics",
@@ -268,6 +294,7 @@ export const widgets: WidgetDefinition[] = [
     },
     {
       id: "awardedProposalsChart",
+      labelKey: "header-labels.awarded-proposals-by-faculty",
       title: "Awarded Proposals by School",
       module: "AWARDS",
       operation: "getPost_awardsAwardStatistics",
@@ -278,6 +305,7 @@ export const widgets: WidgetDefinition[] = [
     },
     {
       id: "aByStatusChart",
+      labelKey: "header-labels.award-by-status",
       title: "Award by Status",
       module: "AWARDS",
       operation: "getPost_awardsAwardStatistics",

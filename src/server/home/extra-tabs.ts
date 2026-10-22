@@ -12,7 +12,11 @@ import {
   dashboardConfiguration,
   organizations,
 } from "@/server/configuration/service";
-import { resources, resourceVisible } from "@/server/configuration/resources";
+import {
+  label,
+  resources,
+  resourceVisible,
+} from "@/server/configuration/resources";
 import { scopeOrganization } from "@/server/permissions/policy";
 import { oracle } from "@/server/api/transport";
 import { sanitizeHtml } from "@/server/html/sanitize";
@@ -62,6 +66,9 @@ export async function dashboardTabs() {
   };
 }
 const NOTIFICATION_PAGE = 25;
+/** The dashboard's empty-state text (helper-texts.no-data). */
+const emptyText = (labels: Awaited<ReturnType<typeof resources>>) =>
+  label(labels, "dashboard", "helper-texts", "no-data", "No data to display.");
 export function notificationPage(raw: unknown, offset: number) {
   // The envelope's hasMore/offset do not track p_offset paging (KB GrantsNow-Dashboard), so they are not trusted.
   const body = z
@@ -106,15 +113,16 @@ export async function notifications(offset: number, signal?: AbortSignal) {
     offset % NOTIFICATION_PAGE !== 0
   )
     throw new AppError("BAD_REQUEST", "Invalid notification page.", 400);
-  return notificationPage(
-    await oracle(
+  const [raw, labels] = await Promise.all([
+    oracle(
       "getNotificationsNotifications",
       { token: session.token },
       pageQuery(offset, NOTIFICATION_PAGE),
       signal,
     ),
-    offset,
-  );
+    resources(),
+  ]);
+  return { ...notificationPage(raw, offset), empty: emptyText(labels) };
 }
 export const chartSchema = z.array(
   z.object({
@@ -163,8 +171,8 @@ export async function dynamicChart(
       403,
     );
   const org = scopeOrganization(organization, await organizations());
-  const charts = chartSchema.parse(
-    await oracle(
+  const [raw, labels] = await Promise.all([
+    oracle(
       "getSharedGetDynamicCharts",
       {
         token: session.token,
@@ -174,7 +182,19 @@ export async function dynamicChart(
       undefined,
       signal,
     ),
-  );
+    resources(),
+  ]);
+  const charts = chartSchema.parse(raw);
+  const text = (group: string, key: string, fallback: string) =>
+    label(labels, "dashboard", group, key, fallback);
+  const texts = {
+    options: text("labels", "dyn-chart-options", "Options"),
+    dimension: text("labels", "dyn-chart-dimensions", "Dimension"),
+    link: text("labels", "dyn-chart-link", "Link"),
+    title: text("dialog-titles", "dimension", "Dimension"),
+    save: text("button-labels", "save", "Save"),
+    empty: emptyText(labels),
+  };
   if (
     charts.some(
       (c) => String(c.infolet_id) !== id || c.ModuleName !== descriptor.module,
@@ -190,9 +210,11 @@ export async function dynamicChart(
         ? safeChartReport(c["report-url"], oracleSettings().apps.origin)
         : undefined,
     type: c.chart,
+    texts,
+    // GN-Angular: a chart without a size spans 4 of 12 columns and one 150px row.
     columns:
-      c.colspan ?? Number(c.grid_dimension?.match(/^(\d+)x\d+$/)?.[1] || 6),
-    rows: c.rowspan ?? Number(c.grid_dimension?.match(/^\d+x(\d+)$/)?.[1] || 3),
+      c.colspan ?? Number(c.grid_dimension?.match(/^(\d+)x\d+$/)?.[1] || 4),
+    rows: c.rowspan ?? Number(c.grid_dimension?.match(/^\d+x(\d+)$/)?.[1] || 1),
     points: c.dataProvider.map((p) => ({
       series: String(p.series ?? p.group),
       group: String(p.group),
@@ -213,7 +235,11 @@ export async function featuredOpportunities(
   const query = parseOpportunityQuery(
     new URLSearchParams({ tab: "featured", page: String(page) }),
   );
-  return listOpportunities(query, signal, true);
+  const [result, labels] = await Promise.all([
+    listOpportunities(query, signal, true),
+    resources(),
+  ]);
+  return { ...result, empty: emptyText(labels) };
 }
 
 export async function saveDimensions(raw: unknown, signal?: AbortSignal) {

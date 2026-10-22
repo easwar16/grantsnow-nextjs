@@ -45,7 +45,11 @@ export const dashboardRoles = cache(async () => {
   return z
     .object({
       items: z.array(
-        z.object({ page_name: z.string(), read_access: z.string() }),
+        z.object({
+          page_name: z.string(),
+          read_access: z.string(),
+          edit_access: z.string().nullish(),
+        }),
       ),
     })
     .parse(
@@ -55,6 +59,13 @@ export const dashboardRoles = cache(async () => {
       }),
     ).items;
 });
+/** A bad or missing depth degrades to no indentation rather than failing the org list. */
+export function orgDepth(raw: unknown) {
+  const depth = Number(raw);
+  return raw !== null && raw !== "" && Number.isInteger(depth) && depth > 0
+    ? Math.min(depth, 20)
+    : 0;
+}
 export const organizations = cache(async () => {
   const { session, user } = await authenticate();
   const raw = (await oracle("getPre_awardGetLkpOrgUnitType", {
@@ -75,6 +86,8 @@ export const organizations = cache(async () => {
         z.object({
           org_unit_id: z.union([z.string(), z.number()]),
           org_unit_name: z.string(),
+          // Tree depth of the org (legacy NUM_SPACES); the picker indents by it.
+          num_spaces: z.unknown(),
         }),
       ),
     })
@@ -82,5 +95,6 @@ export const organizations = cache(async () => {
   return body.items.map((r) => ({
     id: String(r.org_unit_id),
     name: r.org_unit_name,
+    depth: orgDepth(r.num_spaces),
   }));
 });

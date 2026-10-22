@@ -13,12 +13,21 @@ const groups = new Set(
   navigationDefinitions.filter((i) => i.children).map((i) => i.id),
 );
 /**
- * The VBCS drawer gate (getNavigationItems / getDeepLinkItems): Home and Announcements always; a group needs
+ * The VBCS drawer gate (getNavigationItems / getDeepLinkItems): Home, Announcements and the header pages always; a group needs
  * its own id and each child its own id too; any other item needs its id upper-cased. Missing access fails closed
  * (VBCS showed everything when access was unknown).
  */
 export function drawerAccess(modules: Record<string, boolean>, id: string) {
-  if (id === "home" || id === "announcements") return true;
+  // The header's Help and the bell's View all are always there, as legacy globalHeadersADP / the bell.
+  if (
+    [
+      "home",
+      "announcements",
+      "tutorials",
+      "announcements-notifications",
+    ].includes(id)
+  )
+    return true;
   const group = groupOf.get(id);
   if (group) return modules[group] === true && modules[id] === true;
   if (groups.has(id)) return modules[id] === true;

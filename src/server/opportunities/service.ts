@@ -8,7 +8,6 @@ import {
 import { oracle } from "@/server/api/transport";
 import { dashboardRoles } from "@/server/configuration/service";
 import {
-  label,
   resources,
   resourceVisible,
   type Resources,
@@ -23,6 +22,13 @@ import {
 } from "@/features/opportunities/types";
 import { splitFunders } from "@/features/opportunities/display";
 import { opportunityOracleQuery } from "./query";
+import {
+  cardActions,
+  cardLabelTexts,
+  opportunityGlobals,
+  type Opener,
+  type RoleRow,
+} from "./gates";
 import { AppError } from "@/lib/errors";
 const text = z.string().nullish();
 const schema = z.object({
@@ -48,6 +54,16 @@ const schema = z.object({
       summary: text,
       deadline_date: text,
       is_bookmarked: text,
+      is_new: z.union([z.number(), z.string()]).nullish(),
+      closing_soon: text,
+      other_bookmarks: text,
+      notes: text,
+      shared_by: text,
+      shared_datetime: text,
+      shared_comment: text,
+      create_application_of_interest: text,
+      create_outline_application: text,
+      create_grant_application: text,
     }),
   ),
   total_count: z.number().int().nonnegative(),
@@ -89,6 +105,22 @@ export function mapOpportunities(
     logo: safeUrl(row.logo),
     site: row.site || undefined,
     bookmarked: row.is_bookmarked === "Y",
+    isNew: Number(row.is_new) > 0 || row.is_new === "Y",
+    closingSoon: row.closing_soon === "Y",
+    otherBookmarks: row.other_bookmarks || undefined,
+    notes: row.notes ? sanitizeHtml(row.notes) : undefined,
+    shared:
+      row.shared_by || row.shared_comment
+        ? {
+            by: row.shared_by || undefined,
+            at: row.shared_datetime || undefined,
+            comment: row.shared_comment?.trim() || undefined,
+          }
+        : undefined,
+    canApply: row.create_application_of_interest === "Y",
+    canConvert: row.create_outline_application === "Y",
+    canConvertToProposal: row.create_grant_application === "Y",
+    closingAt: row.closing_date || undefined,
     // VBCS finder gates: labels.funder / labels.cofunders.
     funders: show("funder") ? splitFunders(row.funders) : undefined,
     coFunders: show("cofunders") ? splitFunders(row.co_funders) : undefined,
@@ -136,36 +168,20 @@ export function mapOpportunities(
       : {}),
   };
 }
-const cardFallbacks: OpportunityCardModel["labels"] = {
-  "publication-date": "Publication Date",
-  "opening-date": "Opening Date",
-  "closing-date": "Closing Date",
-  "funding-type": "Funding Type",
-  "total-fund": "Total Fund",
-  "aoi-count": "Number of Applications",
-  "proposals-count": "Number of Proposals",
-  "outline-proposals-count": "Number of Outline Proposals",
-  "not-available": "N/A",
-  "check-website": "Check website",
-  "more-info": "More Info",
-};
-/** Card labels come from the opener's bundle (finder: opportunities-eoi, Home: dashboard), as the two VBCS cards. */
+/** Card labels and controls come from the opener's bundle (finder: opportunities-eoi, Home: dashboard), as the two VBCS cards. */
 export function opportunityCard(
   rows: Resources,
-  bundle: "opportunities-eoi" | "dashboard",
+  opener: Opener,
+  roles: RoleRow[] | null = null,
+  tab = "",
+  deadlineDays: number | null = null,
 ): OpportunityCardModel {
   return {
-    labels: Object.fromEntries(
-      Object.entries(cardFallbacks).map(([key, fallback]) => [
-        key,
-        key === "more-info"
-          ? label(rows, bundle, "button-labels", "more_info", fallback)
-          : label(rows, bundle, "labels", key, fallback),
-      ]),
-    ) as OpportunityCardModel["labels"],
+    labels: cardLabelTexts(rows, opener),
     dates: opportunityDateKeys.filter((key) =>
       resourceVisible(rows, "opportunities-eoi", "labels", key),
     ),
+    actions: cardActions(rows, roles, opener, tab, deadlineDays),
   };
 }
 export async function listOpportunities(
@@ -177,7 +193,7 @@ export async function listOpportunities(
   // Home's Featured tab is gated on the finder id alone (shell-page.html); the finder page on its drawer entry.
   if (dashboardFeatured) requireModule(user, "opportunities-finder");
   else requireDrawerAccess(user, "opportunities-finder");
-  const [raw, labels, formatting, roles] = await Promise.all([
+  const [raw, labels, formatting, roles, deadlineDays] = await Promise.all([
     oracle(
       "getSharedGetOpportunities",
       {
@@ -201,6 +217,7 @@ export async function listOpportunities(
       (rows) => rows,
       () => null,
     ),
+    opportunityGlobals(),
   ]);
   return {
     ...mapOpportunities(
@@ -215,7 +232,10 @@ export async function listOpportunities(
     ),
     card: opportunityCard(
       labels,
-      dashboardFeatured ? "dashboard" : "opportunities-eoi",
+      dashboardFeatured ? "dashboard" : "finder",
+      roles,
+      query.tab,
+      deadlineDays,
     ),
   };
 }

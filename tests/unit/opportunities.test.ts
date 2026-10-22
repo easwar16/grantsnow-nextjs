@@ -170,7 +170,7 @@ it("labels the card from the opener's bundle and gates date columns", () => {
   expect(home.labels["total-fund"]).toBe("Award value");
   expect(home.labels["publication-date"]).toBe("Publication Date");
   expect(home.dates).toEqual(["publication-date"]);
-  expect(
-    opportunityCard(rows, "opportunities-eoi").labels["publication-date"],
-  ).toBe("Published");
+  expect(opportunityCard(rows, "finder").labels["publication-date"]).toBe(
+    "Published",
+  );
 });

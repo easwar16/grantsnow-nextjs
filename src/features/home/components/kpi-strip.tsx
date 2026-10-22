@@ -55,14 +55,16 @@ export function KpiStrip({ items, error }: { items: Kpi[]; error?: string }) {
             <div className="kpi-value">
               {k.metric !== null &&
                 k.metric !== "" &&
-                k.metric !== undefined && <strong>{k.metric}</strong>}
+                k.metric !== undefined && (
+                  <strong className="kpi-metric">{k.metric}</strong>
+                )}
               {k.periodChangeIndicator && (
                 <span
                   className={
                     k.trendColor === "danger" ||
                     k.periodChangeIndicator.value < 0
-                      ? "danger-text"
-                      : "success-text"
+                      ? "kpi-change down"
+                      : "kpi-change"
                   }
                 >
                   <Icon
@@ -79,7 +81,7 @@ export function KpiStrip({ items, error }: { items: Kpi[]; error?: string }) {
                 </span>
               )}
             </div>
-            <small>{k.meta}</small>
+            <div className="kpi-meta">{k.meta}</div>
           </article>
         );
       })}

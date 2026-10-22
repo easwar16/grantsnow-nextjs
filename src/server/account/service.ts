@@ -5,7 +5,13 @@ import { dateDisplay } from "@/lib/format";
 import { displayFormat } from "@/server/configuration/formatting";
 import { widgets } from "@/server/home/widgets";
 import { authenticate } from "@/server/session/service";
-import { oracle, assertBusiness, businessError } from "@/server/api/transport";
+import {
+  oracle,
+  oracleWrite,
+  assertBusiness,
+  businessError,
+} from "@/server/api/transport";
+import { availableThemes } from "./themes";
 import {
   resources,
   resourceVisible,
@@ -23,7 +29,10 @@ import {
   dashboardChange,
   researchSchema,
   personStatusSchema,
+  presenceKeys,
+  presenceSchema,
   type AccountData,
+  type DigitalPresence,
 } from "@/features/account/contracts";
 const visible = (rows: Resources, key: string) =>
   resourceVisible(rows, "dashboard", "labels", key);
@@ -168,6 +177,8 @@ export async function accountData(panel = "profile"): Promise<AccountData> {
     researchAllowed,
     options,
     labels: Object.fromEntries(widgets.map((w) => [w.id, w.title])),
+    themes: panel === "preferences" ? await availableThemes() : [],
+    presenceAllowed: visible(rows, "digital-presence"),
     settings: {
       theme: typeof config.theme === "string" ? config.theme : "theme-default",
       accessibility,
@@ -239,8 +250,37 @@ async function write(path: string, token: string, body: unknown) {
       throw new AppError("BUSINESS", "Oracle could not save these settings.");
   }
 }
+/** The five profile links (legacy getSharedDigitalPresence2, `pid` from the session); RB-gated, fail closed. */
+export async function digitalPresence(): Promise<DigitalPresence> {
+  const { session, user } = await authenticate();
+  if (!visible(await resources(), "digital-presence"))
+    throw new AppError("FORBIDDEN", "Digital presence is unavailable.", 403);
+  const body = assertBusiness(
+    await oracle("getSharedDigitalPresence", {
+      token: session.token,
+      pid: user.personId,
+    }),
+  );
+  const item = (
+    Array.isArray(body.items) ? (body.items[0] ?? {}) : {}
+  ) as Record<string, unknown>;
+  return Object.fromEntries(
+    presenceKeys.map((k) => [k, typeof item[k] === "string" ? item[k] : ""]),
+  ) as DigitalPresence;
+}
 export async function saveAccount(kind: string, body: unknown) {
   const { session, user } = await authenticate();
+  if (kind === "presence") {
+    if (!visible(await resources(), "digital-presence"))
+      throw new AppError("FORBIDDEN", "Digital presence is unavailable.", 403);
+    // The legacy contract carries the token in the query string; it goes as a header here (no tokens in URLs).
+    await oracleWrite(
+      "postSharedDigitalPresence",
+      { token: session.token },
+      presenceSchema.parse(body),
+    );
+    return;
+  }
   if (kind === "status") {
     const rows = await resources();
     if (!visible(rows, "manage"))
@@ -310,6 +350,11 @@ export async function saveAccount(kind: string, body: unknown) {
   if (kind !== "dashboard")
     throw new AppError("BAD_REQUEST", "Unknown settings change.", 400);
   const input = dashboardChange.parse(body);
+  if (
+    input.theme !== undefined &&
+    !(await availableThemes()).some((t) => t.id === input.theme)
+  )
+    throw new AppError("FORBIDDEN", "Unknown theme.", 403);
   const current = assertBusiness(
     await oracle("getSharedDashboardPreferences", { token: session.token }),
   );

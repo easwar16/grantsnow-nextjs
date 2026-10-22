@@ -1,26 +1,37 @@
 "use client";
 import { RecordSkeleton } from "@/components/feedback/skeleton";
-import Link from "next/link";
 import { useRef, useState } from "react";
 import type { AttentionRow, HomeFilters, WidgetResult } from "../types";
 import { State } from "@/components/feedback/state";
 import { LatestRequest } from "@/lib/latest-request";
-import { RecordMetadata } from "@/components/ui/record-metadata";
+import { HelpButton } from "@/components/ui/help-button";
 import { DeadlineCalendar } from "./deadline-calendar";
+import { RowLink, type AccessDeniedText } from "./row-link";
 import { rowFields } from "./calendar/model";
 import { dateDisplay, type FormatSettings } from "@/lib/format";
 type PublicError = { code: string; message: string; action?: string };
+/** RB texts of a queue panel; `calendar` is absent when `labels.dashboard-calendar-view` is not visible. */
+export interface WidgetLabels {
+  list: string;
+  calendar?: string;
+  empty: string;
+  denied: AccessDeniedText;
+}
 /** Legacy loads the next page once the list is scrolled to within this many pixels of its end. */
 const SCROLL_THRESHOLD = 48;
 export function Widget({
   id,
   title,
+  help,
+  labels,
   initial,
   filters,
   format,
 }: {
   id: string;
   title: string;
+  help?: string | null;
+  labels: WidgetLabels;
   initial: WidgetResult;
   filters: HomeFilters;
   format?: FormatSettings;
@@ -83,59 +94,60 @@ export function Widget({
     )
       void load(rows.length);
   }
+  const shown = labels.calendar === undefined ? "list" : view;
   return (
-    <article className="widget">
-      <div className="widget-heading">
-        <h3>{title}</h3>
-        <div className="widget-tools">
-          {!error && rows.length > 0 && (
-            <div
-              className="widget-view-tabs"
-              role="tablist"
-              aria-label={`${title} view`}
+    <article className="attention-widget">
+      <div className="attention-content">
+        <div className="attention-head">
+          <h3>
+            {title} <HelpButton html={help} />
+          </h3>
+          <div
+            className="attention-view-tabs"
+            role="tablist"
+            aria-label={`${title} view`}
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={shown === "list"}
+              onClick={() => setView("list")}
             >
+              {labels.list}
+            </button>
+            {labels.calendar !== undefined && (
               <button
+                type="button"
                 role="tab"
-                aria-selected={view === "list"}
-                onClick={() => setView("list")}
-              >
-                List View
-              </button>
-              <button
-                role="tab"
-                aria-selected={view === "calendar"}
+                aria-selected={shown === "calendar"}
                 onClick={() => setView("calendar")}
               >
-                Calendar View
+                {labels.calendar}
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
-      {loading === "refresh" ? (
-        <RecordSkeleton label={`Loading ${title}`} />
-      ) : error ? (
-        <State
-          title="Widget unavailable"
-          message={error.message}
-          action={error.action}
-          code={error.code}
-          retry={() => load(0)}
-        />
-      ) : rows.length === 0 ? (
-        <State
-          title="Nothing to show"
-          message="No records match your current scope and filters."
-        />
-      ) : view === "calendar" ? (
-        <DeadlineCalendar
-          widgetId={id}
-          rows={rows}
-          hasMore={hasMore}
-          format={format}
-        />
-      ) : (
-        <>
+        {loading === "refresh" ? (
+          <RecordSkeleton label={`Loading ${title}`} />
+        ) : error ? (
+          <State
+            title="Widget unavailable"
+            message={error.message}
+            action={error.action}
+            code={error.code}
+            retry={() => load(0)}
+          />
+        ) : shown === "calendar" ? (
+          <div className="attention-calendar">
+            <DeadlineCalendar
+              widgetId={id}
+              rows={rows}
+              hasMore={hasMore}
+              format={format}
+              denied={labels.denied}
+            />
+          </div>
+        ) : (
           <ul
             className="attention-list"
             tabIndex={0}
@@ -143,39 +155,61 @@ export function Widget({
             onScroll={(event) => loadMoreOnScroll(event.currentTarget)}
           >
             {rows.map((r) => (
-              <li key={r.id} className={r.overdue ? "overdue" : "upcoming"}>
-                <div className="attention-reference">
-                  <Link href={r.href} prefetch={false}>
+              <li key={r.id} className={r.overdue ? "overdue" : undefined}>
+                <div className="attention-main">
+                  <RowLink row={r} denied={labels.denied}>
                     {r.reference}
-                  </Link>
+                  </RowLink>
+                  <div className="attention-title">{r.title}</div>
+                  <dl className="attention-fields">
+                    {rowFields(r, format)
+                      .filter(
+                        (f) =>
+                          f.value !== null &&
+                          f.value !== undefined &&
+                          f.value !== "",
+                      )
+                      .map((f) => (
+                        <div
+                          key={f.label}
+                          className={f.shifted ? "shifted" : undefined}
+                        >
+                          <dt>{f.label}</dt>
+                          <dd>{f.value}</dd>
+                        </div>
+                      ))}
+                  </dl>
                 </div>
-                <p>{r.title}</p>
-                <RecordMetadata fields={rowFields(r, format)} />
-                <div className="attention-date">
+                <div className="attention-meta">
                   {r.date && (
                     <time dateTime={r.date.slice(0, 10)}>
                       {dateDisplay(r.date, format)}
                     </time>
                   )}
-                  {r.age && <span className="attention-age">{r.age}</span>}
+                  {r.age && <div className="attention-note">{r.age}</div>}
                 </div>
               </li>
             ))}
+            {rows.length === 0 && (
+              <li className="attention-empty">{labels.empty}</li>
+            )}
+            {loading === "more" && (
+              <li className="attention-loading">
+                <RecordSkeleton rows={1} label={`Loading more ${title}`} />
+              </li>
+            )}
           </ul>
-          {loading === "more" && (
-            <RecordSkeleton rows={1} label={`Loading more ${title}`} />
-          )}
-          {moreError && (
-            <State
-              title="More records unavailable"
-              message={moreError.message}
-              action={moreError.action}
-              code={moreError.code}
-              retry={() => load(rows.length)}
-            />
-          )}
-        </>
-      )}
+        )}
+        {moreError && shown === "list" && (
+          <State
+            title="More records unavailable"
+            message={moreError.message}
+            action={moreError.action}
+            code={moreError.code}
+            retry={() => load(rows.length)}
+          />
+        )}
+      </div>
     </article>
   );
 }

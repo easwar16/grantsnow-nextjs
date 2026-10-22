@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -17,6 +16,7 @@ import {
   viewLabel,
   type CalendarProvider,
 } from "./model";
+import { RowLink, type AccessDeniedText } from "../row-link";
 import styles from "./calendar.module.css";
 
 const PLUGINS = [dayGridPlugin, timeGridPlugin];
@@ -38,10 +38,12 @@ export default function DeadlineFullCalendar({
   widgetId,
   rows,
   format,
+  denied,
 }: {
   widgetId: string;
   rows: AttentionRow[];
   format?: FormatSettings;
+  denied: AccessDeniedText;
 }) {
   const [hidden, setHidden] = useState<ReadonlySet<CalendarProvider>>(
       new Set(),
@@ -179,13 +181,13 @@ export default function DeadlineFullCalendar({
             )}
           </div>
           <div className={styles.panelFooter}>
-            <Link
+            <RowLink
               className={styles.viewButton}
-              href={selected.href}
-              prefetch={false}
+              row={selected}
+              denied={denied}
             >
               {viewLabel(provider)}
-            </Link>
+            </RowLink>
           </div>
         </aside>
       )}

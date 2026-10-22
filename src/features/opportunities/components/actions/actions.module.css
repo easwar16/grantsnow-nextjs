@@ -1,0 +1,226 @@
+/* The card dialogs (GN-Angular share/notes/convert/comments dialogs: 18px 20px 20px, a 15px/700 title). */
+.dialog {
+  max-height: calc(100dvh - 32px);
+  padding: 18px 20px 20px;
+  overflow-y: auto;
+}
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+.close {
+  display: flex;
+  min-height: 0;
+  padding: 4px;
+  border: 0;
+}
+.subtitle,
+.message {
+  margin: 0;
+  color: var(--gn-text-secondary);
+}
+.message {
+  color: var(--gn-text);
+}
+.label {
+  font-weight: 600;
+}
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.foot {
+  display: flex;
+  flex-basis: 100%;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+}
+.danger {
+  background: var(--gn-danger);
+  border-color: var(--gn-danger);
+}
+.danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--gn-danger) 85%, #000);
+}
+.meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--gn-text-secondary);
+}
+.counter {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+.counter.limit {
+  font-weight: 600;
+  color: var(--gn-danger);
+}
+.people {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.people legend {
+  margin-bottom: 4px;
+  padding: 0;
+}
+.choices {
+  max-height: 200px;
+  margin: 4px 0 0;
+  padding: 4px 0;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--gn-divider);
+  border-radius: var(--gn-radius);
+}
+.choices label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+}
+.choices label:hover {
+  background: var(--gn-hover-tint);
+}
+.empty,
+.state {
+  margin: 0;
+  padding: 12px 0;
+  color: var(--gn-text-secondary);
+}
+.state {
+  padding: 16px 0;
+  font-style: italic;
+  text-align: center;
+}
+/* Notes: the old editor's taller writing area. */
+.richText {
+  border: 1px solid var(--gn-border-input);
+  border-radius: var(--gn-radius);
+}
+.toolbar {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border-bottom: 1px solid var(--gn-divider);
+}
+.toolbar button {
+  min-width: 28px;
+  min-height: 24px;
+  padding: 0 6px;
+  border: 0;
+}
+.editor {
+  min-height: 220px;
+  max-height: 50vh;
+  padding: 8px 10px;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+.editor:focus-visible {
+  outline: 2px solid var(--gn-brand);
+  outline-offset: -2px;
+}
+.editor[aria-readonly="true"] {
+  background: var(--gn-solid-tint);
+}
+/* Share comments: one entry with an avatar, author and time. */
+.comment {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--gn-divider);
+  border-radius: 6px;
+}
+.commentHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--gn-on-brand);
+  background: var(--gn-brand);
+  border-radius: 50%;
+}
+.author {
+  font-weight: 600;
+}
+.time {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--gn-text-secondary);
+}
+.commentBody {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* oj-form-layout columns=4: four equal cells to a row (D36). */
+.convert {
+  --cols: 4;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.cell {
+  flex: 0 0 calc((100% - (var(--cols) - 1) * 16px) / var(--cols));
+  min-width: 0;
+}
+fieldset.cell {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+fieldset.cell legend {
+  margin-bottom: 4px;
+  padding: 0;
+}
+.convert [aria-invalid="true"] {
+  border-color: var(--gn-danger);
+}
+.radios {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 28px;
+}
+.radio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+@media (max-width: 900px) {
+  .convert {
+    --cols: 2;
+  }
+}
+@media (max-width: 520px) {
+  .convert {
+    --cols: 1;
+  }
+}

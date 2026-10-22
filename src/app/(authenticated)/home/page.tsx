@@ -24,18 +24,39 @@ import type { FormatSettings } from "@/lib/format";
 import { displayFormat } from "@/server/configuration/formatting";
 import { RecordSkeleton, KpiSkeleton } from "@/components/feedback/skeleton";
 import { State } from "@/components/feedback/state";
+import {
+  label,
+  resourceDescription,
+  resourceVisible,
+  resources,
+  type Resources,
+} from "@/server/configuration/resources";
+import type { WidgetLabels } from "@/features/home/components/widget";
 export const metadata = { title: "Home" };
+/** A dashboard RB entry by its `<group>.<name>` key. */
+const dashboardKey = (key: string) => {
+  const dot = key.indexOf(".");
+  return [key.slice(0, dot), key.slice(dot + 1)] as const;
+};
+const dashboardLabel = (rows: Resources, key: string, fallback: string) =>
+  label(rows, "dashboard", ...dashboardKey(key), fallback);
+const dashboardHelp = (rows: Resources, key: string) =>
+  resourceDescription(rows, "dashboard", ...dashboardKey(key));
 async function LoadedKpis({ organization }: { organization?: string }) {
   return <KpiStrip {...await loadKpis(organization)} />;
 }
 async function LoadedWidget({
   id,
   title,
+  help,
+  labels,
   filters,
   format,
 }: {
   id: string;
   title: string;
+  help: string | null;
+  labels: WidgetLabels;
   filters: HomeFilters;
   format?: FormatSettings;
 }) {
@@ -43,6 +64,8 @@ async function LoadedWidget({
     <Widget
       id={id}
       title={title}
+      help={help}
+      labels={labels}
       initial={await widgetResult(id, filters)}
       filters={filters}
       format={format}
@@ -89,21 +112,53 @@ export default async function Home({
   const orgs = await organizations();
   const additionalTabs = await dashboardTabs();
   const format = await displayFormat();
-  const panels = (["needAttention", "insights"] as const).map((section) => (
-    <div
-      key={section}
-      className={
-        section === "needAttention" ? "attention-panels" : "insight-panels"
-      }
-    >
-      {enabled
-        .filter((w) => w.section === section)
-        .map((w) =>
-          section === "insights" ? (
+  const rb = await resources();
+  const empty = dashboardLabel(
+    rb,
+    "helper-texts.no-data",
+    "No data to display.",
+  );
+  const widgetLabels: WidgetLabels = {
+    list: dashboardLabel(rb, "labels.dashboard-list-view", "List View"),
+    // Legacy shows Calendar View only when its RB row is visible.
+    calendar: resourceVisible(
+      rb,
+      "dashboard",
+      "labels",
+      "dashboard-calendar-view",
+    )
+      ? dashboardLabel(rb, "labels.dashboard-calendar-view", "Calendar View")
+      : undefined,
+    empty,
+    denied: {
+      summary: dashboardLabel(
+        rb,
+        "error-msg.access-not-granted",
+        "Access not Granted",
+      ),
+      detail: "Please Contact your System Admin",
+    },
+  };
+  const panels = (["needAttention", "insights"] as const).map((section) => {
+    const shown = enabled.filter((w) => w.section === section);
+    if (!shown.length) return null;
+    return (
+      <div
+        key={section}
+        className={
+          section === "needAttention" ? "attention-panels" : "insight-panels"
+        }
+      >
+        {shown.map((w) => {
+          const title = dashboardLabel(rb, w.labelKey, w.title),
+            help = dashboardHelp(rb, w.labelKey);
+          return section === "insights" ? (
             <InsightWidget
               key={`${w.id}:${params.toString()}`}
               id={w.id}
-              title={w.title}
+              title={title}
+              help={help}
+              empty={empty}
               filters={filters}
               columns={w.columns || 6}
               format={format}
@@ -112,30 +167,37 @@ export default async function Home({
             <Suspense
               key={`${w.id}:${params.toString()}`}
               fallback={
-                <article className="widget">
-                  <h3>{w.title}</h3>
-                  <RecordSkeleton label={`Loading ${w.title}`} />
+                <article className="attention-widget">
+                  <div className="attention-content">
+                    <div className="attention-head">
+                      <h3>{title}</h3>
+                    </div>
+                    <RecordSkeleton label={`Loading ${title}`} />
+                  </div>
                 </article>
               }
             >
               <LoadedWidget
                 id={w.id}
-                title={w.title}
+                title={title}
+                help={help}
+                labels={widgetLabels}
                 filters={filters}
                 format={format}
               />
             </Suspense>
-          ),
-        )}
-      {!enabled.some((w) => w.section === section) && (
-        <State title="No widgets enabled" />
-      )}
-    </div>
-  ));
+          );
+        })}
+      </div>
+    );
+  });
   return (
     <>
-      <Announcements {...await loadAnnouncements()} />
-      <div className="home-context">
+      <Announcements
+        title={dashboardLabel(rb, "labels.announcements", "Announcements")}
+        {...await loadAnnouncements()}
+      />
+      <div className="home-heading">
         <OrganizationHeading
           organizations={orgs}
           selected={filters.organization}
@@ -153,14 +215,52 @@ export default async function Home({
         additional={additionalTabs}
         organization={filters.organization}
         format={format}
+        labels={{
+          needAttention: dashboardLabel(
+            rb,
+            "button-labels.need-attention",
+            "Need Attention",
+          ),
+          insights: dashboardLabel(rb, "button-labels.insights", "Insights"),
+          opportunities: dashboardLabel(
+            rb,
+            "button-labels.opportunities",
+            "Opportunities",
+          ),
+          notifications: dashboardLabel(
+            rb,
+            "button-labels.notifications",
+            "Notifications",
+          ),
+          dynamicCharts: dashboardLabel(
+            rb,
+            "button-labels.dynamic-charts",
+            "Dynamic Charts",
+          ),
+        }}
         attention={panels[0]}
         insights={
-          <>
-            <HomeFilterControls currentYear={new Date().getFullYear()} />
-            {panels[1]}
-          </>
+          panels[1] && (
+            <>
+              <HomeFilterControls
+                currentYear={new Date().getFullYear()}
+                labels={{
+                  year: dashboardLabel(rb, "labels.years", "Years"),
+                  quarter: dashboardLabel(rb, "labels.quarter", "Quarter"),
+                  month: dashboardLabel(rb, "labels.months", "Months"),
+                }}
+              />
+              {panels[1]}
+            </>
+          )
         }
       />
+      {panels.every((p) => p === null) &&
+        !additionalTabs.opportunities &&
+        !additionalTabs.notifications &&
+        !additionalTabs.charts.length && (
+          <p className="dashboard-empty">{empty}</p>
+        )}
     </>
   );
 }

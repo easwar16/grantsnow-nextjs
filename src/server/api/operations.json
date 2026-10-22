@@ -266,5 +266,109 @@
     "service": "apps",
     "path": "/shared/PersonStatus",
     "headers": ["token"]
+  },
+  "getSharedGetOpportunitiesNewFlags": {
+    "service": "apps",
+    "path": "/shared/getOpportunitiesNewFlags",
+    "headers": ["token"]
+  },
+  "getSharedGetCustomTheme": {
+    "service": "apps",
+    "path": "/shared/getCustomTheme",
+    "headers": ["token"]
+  },
+  "getDynamicFormsCheckApplApprAccess": {
+    "service": "apps",
+    "path": "/dynamicForms/checkApplApprAccess",
+    "headers": ["token"]
+  },
+  "getPre_awardGetPersonListAll": {
+    "service": "apps",
+    "path": "/pre_award/getPersonListAll",
+    "headers": ["token"]
+  },
+  "getSharedDigitalPresence": {
+    "service": "apps",
+    "path": "/shared/digitalPresence",
+    "headers": ["token", "pid"]
+  },
+  "getNotificationsGetGroupsAndRoles": {
+    "service": "apps",
+    "path": "/notifications/getGroupsAndRoles",
+    "headers": ["token", "p_share_to"]
+  },
+  "getDynamicFormsInsertRequest": {
+    "service": "apps",
+    "path": "/dynamicForms/insertRequest/",
+    "headers": [
+      "token",
+      "P_REF_OBJECT_ID",
+      "P_REF_OBJECT_TYPE",
+      "P_REQUEST_TYPE"
+    ],
+    "method": "GET",
+    "write": true
+  },
+  "postNotificationsNotifications": {
+    "service": "apps",
+    "path": "/notifications/notifications/",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "postSharedDigitalPresence": {
+    "service": "apps",
+    "path": "/shared/digitalPresence",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "postSharedBookmarkOpp": {
+    "service": "apps",
+    "path": "/shared/bookmarkOpp",
+    "headers": ["token", "p_opp_id"],
+    "method": "POST",
+    "write": true
+  },
+  "deleteSharedBookmarkOpp": {
+    "service": "apps",
+    "path": "/shared/bookmarkOpp",
+    "headers": ["token", "p_opp_id"],
+    "method": "DELETE",
+    "write": true
+  },
+  "postSharedOppAddlDetails": {
+    "service": "apps",
+    "path": "/shared/oppAddlDetails",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "postNotificationsSendPersonNotifications": {
+    "service": "apps",
+    "path": "/notifications/sendPersonNotifications",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "postProposalProposal": {
+    "service": "apps",
+    "path": "/Proposal/proposal",
+    "headers": ["token", "legal_id", "org_id"],
+    "method": "POST",
+    "write": true
+  },
+  "postDynamicFormsDynFormResponse": {
+    "service": "apps",
+    "path": "/dynamicForms/dynFormResponse",
+    "headers": [
+      "token",
+      "P_TOKEN",
+      "P_FORM_ID",
+      "P_OBJECT_ID",
+      "P_OBJECT_TYPE"
+    ],
+    "method": "POST",
+    "write": true
   }
 }

@@ -1,0 +1,109 @@
+/* GN-Angular shared/multi-select, inside variant. */
+.host {
+  position: relative;
+  display: flex;
+}
+.field {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  min-height: 45px;
+  padding: 4px 32px 4px 13px;
+  cursor: pointer;
+  background: var(--gn-surface);
+  border: 1px solid var(--gn-border-input);
+  border-radius: var(--gn-radius);
+}
+.field:focus-visible {
+  outline: 2px solid var(--gn-brand);
+  outline-offset: 1px;
+}
+.placeholder,
+.label {
+  color: var(--gn-text-secondary);
+}
+.label {
+  font-size: 11px;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-top: 2px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 4px 1px 8px;
+  background: var(--gn-hover-tint);
+  border-radius: 10px;
+}
+.chip button {
+  display: flex;
+  min-height: 0;
+  padding: 2px;
+  border: 0;
+  background: none;
+  color: inherit;
+}
+.caret {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+}
+.panel {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  min-width: 100%;
+  max-height: 280px;
+  color: var(--gn-text);
+  background: var(--gn-surface);
+  border: 1px solid var(--gn-divider);
+  border-radius: var(--gn-radius-menu);
+  box-shadow: var(--gn-shadow-menu);
+}
+.search {
+  margin: 8px;
+  padding: 6px 8px;
+  font: inherit;
+  border: 1px solid var(--gn-border-input);
+  border-radius: var(--gn-radius);
+}
+.panel ul {
+  flex: 1;
+  margin: 0;
+  padding: 0 0 6px;
+  overflow-y: auto;
+  list-style: none;
+}
+.panel li label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-weight: 400;
+  color: var(--gn-text);
+  cursor: pointer;
+}
+.panel li label:hover {
+  background: var(--gn-hover-tint);
+}
+.panel li input {
+  width: auto;
+  min-height: 0;
+  margin: 0;
+}
+.none {
+  padding: 6px 12px;
+  color: var(--gn-text-secondary);
+}
