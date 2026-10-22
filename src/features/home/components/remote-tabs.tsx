@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { idPart } from "@/lib/ids";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { InsightChart } from "./insight-chart";
 import { chartIsEmpty, dynamicChartData } from "@/lib/chart-options";
 import { State } from "@/components/feedback/state";
@@ -121,14 +122,15 @@ export function NotificationsPanel({ format }: { format?: FormatSettings }) {
   );
   const rows = pages.flatMap((p) => p.rows);
   return (
-    <article className="notification-panel">
+    <article id="notifications-panel" className="notification-panel">
       <ul
+        id="notifications-list"
         className="notification-list"
         aria-label="Notifications"
         onScroll={onScroll}
       >
         {rows.map((row) => (
-          <li key={row.id} className="enter-rise">
+          <li key={row.id} id={`notification-${row.id}`} className="enter-rise">
             <span className="notification-avatar">
               <Icon
                 name={row.read ? "email" : "email-unread"}
@@ -149,7 +151,9 @@ export function NotificationsPanel({ format }: { format?: FormatSettings }) {
           </li>
         )}
         {!loading && !failure && rows.length === 0 && (
-          <li className="list-empty">{pages[0]?.empty}</li>
+          <li id="notifications-empty" className="list-empty">
+            {pages[0]?.empty}
+          </li>
         )}
       </ul>
       {failure && (
@@ -180,11 +184,12 @@ export function FeaturedPanel({ format }: { format?: FormatSettings }) {
   );
   const rows = pages.flatMap((p) => p.rows.map((row) => ({ row, page: p })));
   return (
-    <article className="widget featured-panel">
+    <article id="featured-panel" className="widget featured-panel">
       <div className="widget-heading">
         <h3>Featured Opportunities</h3>
       </div>
       <ul
+        id="featured-list"
         className="featured-opportunities"
         aria-label="Opportunities"
         onScroll={onScroll}
@@ -195,7 +200,7 @@ export function FeaturedPanel({ format }: { format?: FormatSettings }) {
           </li>
         )}
         {rows.map(({ row, page }) => (
-          <li key={row.id} className="enter-rise">
+          <li key={row.id} id={`featured-${row.id}`} className="enter-rise">
             <OpportunityCard format={format} row={row} card={page.card} />
           </li>
         ))}
@@ -209,7 +214,9 @@ export function FeaturedPanel({ format }: { format?: FormatSettings }) {
           </li>
         )}
         {!loading && !failure && rows.length === 0 && (
-          <li className="list-empty">{pages[0]?.empty}</li>
+          <li id="featured-empty" className="list-empty">
+            {pages[0]?.empty}
+          </li>
         )}
       </ul>
       {failure && (
@@ -240,6 +247,7 @@ export function ChartGraphic({
   ) : (
     // The tile is 150 × rows + 56: less its 8px padding, 28px head and borders.
     <InsightChart
+      id={`dynamic-chart-${idPart(chart.id)}-graphic`}
       title={chart.name}
       height={150 * rows + 10}
       showData
@@ -249,12 +257,14 @@ export function ChartGraphic({
 }
 /** The tile's overflow menu (GN-Angular cdkMenu): Dimension and Link, each behind its RB row. */
 function ChartMenu({
+  id,
   label,
   dimension,
   onDimension,
   link,
   onLink,
 }: {
+  id: string;
   label: string;
   dimension?: string;
   onDimension: () => void;
@@ -262,12 +272,13 @@ function ChartMenu({
   onLink: () => void;
 }) {
   const items = [
-    ...(dimension ? [{ label: dimension, run: onDimension }] : []),
-    ...(link ? [{ label: link, run: onLink }] : []),
+    ...(dimension
+      ? [{ key: "dimension", label: dimension, run: onDimension }]
+      : []),
+    ...(link ? [{ key: "link", label: link, run: onLink }] : []),
   ];
   const [open, setOpen] = useState(false),
-    host = useRef<HTMLDivElement>(null),
-    id = useId();
+    host = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
     host.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
@@ -294,19 +305,20 @@ function ChartMenu({
   return (
     <div className="chart-menu" ref={host}>
       <button
+        id={`${id}-button`}
         type="button"
         className="chart-menu-trigger"
         aria-label={label}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-controls={id}
+        aria-controls={`${id}-list`}
         onClick={() => setOpen((o) => !o)}
       >
         <Icon name="overflow" />
       </button>
       {open && (
         <div
-          id={id}
+          id={`${id}-list`}
           role="menu"
           aria-label={label}
           className="chart-menu-list enter-pop"
@@ -314,7 +326,8 @@ function ChartMenu({
         >
           {items.map((item) => (
             <button
-              key={item.label}
+              key={item.key}
+              id={`${id}-${item.key}`}
               type="button"
               role="menuitem"
               tabIndex={-1}
@@ -356,7 +369,7 @@ function RemoteChart({
     `/api/home/tabs/charts?id=${descriptor.id}${organization ? `&organization=${encodeURIComponent(organization)}` : ""}`,
   );
   const dialog = useRef<HTMLDialogElement>(null),
-    titleId = useId();
+    base = `dynamic-chart-${idPart(descriptor.id)}`;
   const [dimensions, setDimensions] = useState<{
       columns: number;
       rows: number;
@@ -405,10 +418,12 @@ function RemoteChart({
   };
   return (
     <section
+      id={base}
       className="dynamic-chart-tile enter-rise"
       style={{ flexBasis: `${(columns / 12) * 100}%` }}
     >
       <article
+        id={`${base}-card`}
         className="dynamic-chart-card"
         style={{ height: 150 * rows + 56 }}
       >
@@ -416,6 +431,7 @@ function RemoteChart({
           <h3>{chart?.name ?? descriptor.name}</h3>
           {chart && (chart.dimensions || chart.reportUrl) && (
             <ChartMenu
+              id={`${base}-menu`}
               label={chart.texts.options}
               dimension={chart.dimensions ? chart.texts.dimension : undefined}
               onDimension={openDimension}
@@ -444,15 +460,19 @@ function RemoteChart({
       </article>
       <dialog
         ref={dialog}
+        id={`${base}-dimension`}
         className="chart-dimension-dialog"
-        aria-labelledby={titleId}
+        aria-labelledby={`${base}-dimension-title`}
         onCancel={(event) => {
           if (saving) event.preventDefault();
         }}
       >
         <div className="chart-dimension-head">
-          <h2 id={titleId}>{chart?.texts.title ?? "Dimension"}</h2>
+          <h2 id={`${base}-dimension-title`}>
+            {chart?.texts.title ?? "Dimension"}
+          </h2>
           <button
+            id={`${base}-dimension-close`}
             type="button"
             className="chart-dimension-close"
             aria-label="Close"
@@ -462,11 +482,12 @@ function RemoteChart({
             <Icon name="close" />
           </button>
         </div>
-        <form onSubmit={save}>
+        <form id={`${base}-dimension-form`} onSubmit={save}>
           <div className="dimension-fields">
             <label>
               <span>Cols (1–12) *</span>
               <input
+                id={`${base}-cols`}
                 name="cols"
                 type="number"
                 min="1"
@@ -483,6 +504,7 @@ function RemoteChart({
             <label>
               <span>Rows (1–3) *</span>
               <input
+                id={`${base}-rows`}
                 name="rows"
                 type="number"
                 min="1"
@@ -499,6 +521,7 @@ function RemoteChart({
           </div>
           <div className="dialog-actions">
             <button
+              id={`${base}-dimension-clear`}
               type="button"
               disabled={saving}
               onClick={() => setDraft({ cols: "", rows: "" })}
@@ -506,6 +529,7 @@ function RemoteChart({
               Clear
             </button>
             <button
+              id={`${base}-dimension-save`}
               className="primary"
               disabled={saving || !validSize(draft.cols, draft.rows)}
               type="submit"
@@ -530,6 +554,7 @@ export function DynamicChartsPanel({
   return (
     <>
       <div
+        id="dynamic-chart-tabs"
         className="dynamic-module-tabs"
         role="tablist"
         aria-label="Dynamic chart modules"

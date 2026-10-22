@@ -370,5 +370,56 @@
     ],
     "method": "POST",
     "write": true
+  },
+  "getSharedOpportunitiesFilter": {
+    "service": "apps",
+    "path": "/shared/OpportunitiesFilter",
+    "headers": ["token"]
+  },
+  "getSharedGetOppFunderTypes": {
+    "service": "apps",
+    "path": "/shared/getOppFunderTypes",
+    "headers": ["token"]
+  },
+  "getSharedGetOppCallCodes": {
+    "service": "apps",
+    "path": "/shared/getOppCallCodes",
+    "headers": ["token"]
+  },
+  "getSharedFinalizablePages": {
+    "service": "apps",
+    "path": "/shared/finalizablePages",
+    "headers": ["token", "p_obj_type", "p_obj_id"]
+  },
+  "getProposalGetLockedModules": {
+    "service": "apps",
+    "path": "/Proposal/getLockedModules/",
+    "headers": ["token", "module_name"]
+  },
+  "getProposalGetLockStatus": {
+    "service": "apps",
+    "path": "/Proposal/getLockStatus/",
+    "headers": ["token", "prop_id", "lock_level", "module_name"]
+  },
+  "postProposalInsertModuleLock": {
+    "service": "apps",
+    "path": "/Proposal/insertModuleLock/",
+    "headers": ["token", "legal_id", "org_id"],
+    "method": "POST",
+    "write": true
+  },
+  "postPre_awardAttachments": {
+    "service": "apps",
+    "path": "/pre_award/attachments/",
+    "headers": ["token", "org_id", "legal_id"],
+    "method": "POST",
+    "write": true
+  },
+  "deletePre_awardAttachments": {
+    "service": "apps",
+    "path": "/pre_award/attachments/",
+    "headers": ["token", "id", "org_id", "legal_id"],
+    "method": "DELETE",
+    "write": true
   }
 }

@@ -10,8 +10,10 @@ import { homeAccess } from "./service";
 import { pageQuery } from "./paging";
 import {
   dashboardConfiguration,
+  forgetDashboardConfiguration,
   organizations,
 } from "@/server/configuration/service";
+import { early } from "@/server/async";
 import {
   label,
   resources,
@@ -22,10 +24,10 @@ import { oracle } from "@/server/api/transport";
 import { sanitizeHtml } from "@/server/html/sanitize";
 import { AppError } from "@/lib/errors";
 import { listOpportunities } from "@/server/opportunities/service";
-import { parseOpportunityQuery } from "@/features/opportunities/schemas";
+import { finderRequest } from "@/features/opportunities/schemas";
 export async function dashboardTabs() {
-  const { user } = await homeAccess();
-  const [config, labels] = await Promise.all([
+  const [{ user }, config, labels] = await Promise.all([
+    homeAccess(),
     dashboardConfiguration(),
     resources(),
   ]);
@@ -103,8 +105,11 @@ export function notificationPage(raw: unknown, offset: number) {
   };
 }
 export async function notifications(offset: number, signal?: AbortSignal) {
-  const { session } = await homeAccess();
-  if (!(await dashboardTabs()).notifications)
+  const [{ session }, tabs] = await Promise.all([
+    homeAccess(),
+    dashboardTabs(),
+  ]);
+  if (!tabs.notifications)
     throw new AppError("FORBIDDEN", "Notifications are not enabled.", 403);
   if (
     !Number.isSafeInteger(offset) ||
@@ -162,15 +167,19 @@ export async function dynamicChart(
   organization: string | undefined,
   signal?: AbortSignal,
 ) {
-  const { session } = await homeAccess();
-  const descriptor = (await dashboardTabs()).charts.find((c) => c.id === id);
+  const orgs = early(organizations());
+  const [{ session }, tabs] = await Promise.all([
+    homeAccess(),
+    dashboardTabs(),
+  ]);
+  const descriptor = tabs.charts.find((c) => c.id === id);
   if (!descriptor)
     throw new AppError(
       "FORBIDDEN",
       "This chart is not enabled for your account.",
       403,
     );
-  const org = scopeOrganization(organization, await organizations());
+  const org = scopeOrganization(organization, await orgs);
   const [raw, labels] = await Promise.all([
     oracle(
       "getSharedGetDynamicCharts",
@@ -232,9 +241,9 @@ export async function featuredOpportunities(
       "Featured opportunities are not enabled.",
       403,
     );
-  const query = parseOpportunityQuery(
-    new URLSearchParams({ tab: "featured", page: String(page) }),
-  );
+  if (!Number.isInteger(page) || page < 1 || page > 10000)
+    throw new AppError("BAD_REQUEST", "Invalid opportunity page.", 400);
+  const query = finderRequest({ tab: "featured", offset: (page - 1) * 25 });
   const [result, labels] = await Promise.all([
     listOpportunities(query, signal, true),
     resources(),
@@ -250,8 +259,11 @@ export async function saveDimensions(raw: unknown, signal?: AbortSignal) {
       "Chart dimensions must be whole numbers from 1 to 12.",
       400,
     );
-  const { session } = await homeAccess();
-  const descriptor = (await dashboardTabs()).charts.find(
+  const [{ session }, tabs] = await Promise.all([
+    homeAccess(),
+    dashboardTabs(),
+  ]);
+  const descriptor = tabs.charts.find(
     (c) => c.id === String(parsed.data.infolet_id),
   );
   if (!descriptor?.dimensions)
@@ -260,6 +272,11 @@ export async function saveDimensions(raw: unknown, signal?: AbortSignal) {
       "Chart dimensions are not editable for this report.",
       403,
     );
-  await saveChartPreference(session.token, parsed.data, signal);
+  try {
+    await saveChartPreference(session.token, parsed.data, signal);
+  } finally {
+    // Even a failed save may have landed; the next read asks Oracle again.
+    forgetDashboardConfiguration(session.token);
+  }
   return { columns: parsed.data.colspan, rows: parsed.data.rowspan };
 }

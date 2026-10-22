@@ -215,6 +215,7 @@ export function Chatbot({
     <>
       <button
         ref={launcher}
+        id="chatbot-launcher"
         type="button"
         className={styles.launcher}
         data-moving={moving || undefined}
@@ -286,6 +287,7 @@ export function Chatbot({
       </span>
       <dialog
         ref={dialog}
+        id="chatbot-dialog"
         className={styles.dialog}
         aria-labelledby={titleId}
         style={frame ?? undefined}
@@ -301,11 +303,12 @@ export function Chatbot({
           }
         }}
       >
-        <div className={styles.head}>
+        <div id="chatbot-header" className={styles.head}>
           {/* eslint-disable-next-line @next/next/no-img-element -- a 24px static .ico, nothing to optimise */}
           <img src="/images/gn.ico" alt="" width={24} height={24} />
           <h2 id={titleId}>{title}</h2>
           <button
+            id="chatbot-close"
             type="button"
             className={styles.close}
             aria-label="Close"
@@ -314,10 +317,20 @@ export function Chatbot({
             <Icon name="close" />
           </button>
         </div>
-        <div className={styles.log} ref={log} role="log" aria-live="polite">
+        <div
+          id="chatbot-log"
+          className={styles.log}
+          ref={log}
+          role="log"
+          aria-live="polite"
+        >
           {messages.map((m) =>
             m.from === "user" ? (
-              <div key={m.id} className={styles.mine}>
+              <div
+                key={m.id}
+                id={`chatbot-message-${m.id}`}
+                className={styles.mine}
+              >
                 <p className={`${styles.bubble} ${styles.user}`}>{m.text}</p>
                 <small className={styles.meta}>
                   {userName}{" "}
@@ -328,12 +341,19 @@ export function Chatbot({
                 </small>
               </div>
             ) : (
-              <div key={m.id} className={`${styles.bubble} ${styles.bot}`}>
+              <div
+                key={m.id}
+                id={`chatbot-message-${m.id}`}
+                className={`${styles.bubble} ${styles.bot}`}
+              >
                 {/* Sanitized on the server (sanitizeHtml); tables render inline here, not via window.showTableById. */}
                 <div dangerouslySetInnerHTML={{ __html: m.html }} />
                 {/* Quick replies sit inside the answer bubble, stacked, as in the live app. */}
                 {m.options.length > 0 && (
-                  <div className={styles.options}>
+                  <div
+                    id={`chatbot-message-${m.id}-options`}
+                    className={styles.options}
+                  >
                     {m.options.map((o) => (
                       <button
                         key={o}
@@ -359,6 +379,7 @@ export function Chatbot({
           )}
           {busy && (
             <p
+              id="chatbot-typing"
               className={`${styles.bubble} ${styles.typing}`}
               role="status"
               aria-label="Thinking"
@@ -367,15 +388,16 @@ export function Chatbot({
             </p>
           )}
           {failure && (
-            <p className={styles.failure} role="alert">
+            <p id="chatbot-error" className={styles.failure} role="alert">
               {failure.message}
               {failure.action && <span> {failure.action}</span>}
             </p>
           )}
         </div>
-        <form className={styles.foot} onSubmit={submit}>
+        <form id="chatbot-form" className={styles.foot} onSubmit={submit}>
           <input
             ref={input}
+            id="chatbot-input"
             name="question"
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -386,6 +408,7 @@ export function Chatbot({
           />
           {canListen && (
             <button
+              id="chatbot-mic"
               type="button"
               className={styles.icon}
               data-on={listening || undefined}
@@ -397,6 +420,7 @@ export function Chatbot({
             </button>
           )}
           <button
+            id="chatbot-send"
             type="submit"
             className={styles.icon}
             aria-label="Send"

@@ -1,12 +1,21 @@
 "use client";
-import { useEffect, useEffectEvent, useState } from "react";
+import { DateInput } from "@/components/ui/date-input";
+import { Select } from "@/components/ui/select";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { RecordSkeleton } from "@/components/feedback/skeleton";
+import { Skeleton } from "@/components/feedback/skeleton";
 import { useToast } from "@/components/feedback/toast";
 import { useInFlight } from "@/lib/use-in-flight";
 import { ActionDialog, useConfirm } from "./action-dialog";
 import { endDateAfter, monthsBetween, yearOf } from "./duration";
-import { callAction, useActionFailure, type ActionError } from "./request";
+import {
+  callAction,
+  sharedRead,
+  takeRead,
+  useActionFailure,
+  warmRead,
+  type ActionError,
+} from "./request";
 import styles from "./actions.module.css";
 type Option = { value: string; label: string };
 type Field =
@@ -56,16 +65,30 @@ const inRange = (iso: string) => {
   const y = yearOf(iso);
   return y > 1900 && y < 2200;
 };
+const setupQuery = (
+  opener: string,
+  kind: ConvertKind,
+  opportunityId: string,
+  requestId?: string,
+) => ({ opener, kind, opportunityId, ...(requestId ? { requestId } : {}) });
+/** Starts the convert setup read before the dialog opens (on intent, or while the deadline warning is up). */
+export const warmConvert = (...args: Parameters<typeof setupQuery>) =>
+  warmRead("convert", setupQuery(...args));
 /** Converts an opportunity into an outline or full proposal, then opens the new proposal. */
 export function ConvertDialog({
+  id,
   opener,
   kind,
   opportunityId,
+  requestId,
   onClose,
 }: {
+  id: string;
   opener: "finder" | "dashboard";
   kind: ConvertKind;
   opportunityId: string;
+  /** The EOI record's convert of an approved application: its `eoi-*` keys and `request_id`. */
+  requestId?: string;
   onClose: () => void;
 }) {
   const [setup, setSetup] = useState<Setup>(),
@@ -83,10 +106,11 @@ export function ConvertDialog({
     [orgUnits, setOrgUnits] = useState<Option[]>([]),
     [touched, setTouched] = useState(false),
     { run, isActive } = useInFlight(),
-    { ask, element: confirmation } = useConfirm(),
+    { ask, element: confirmation } = useConfirm(`${id}-warning`),
     toast = useToast(),
     fail = useActionFailure(),
     router = useRouter(),
+    latestPi = useRef(""),
     saving = isActive("convert");
   const setupFailed = useEffectEvent((error: ActionError) => {
     toast.error(error);
@@ -94,11 +118,10 @@ export function ConvertDialog({
   });
   useEffect(() => {
     let live = true;
-    callAction<Setup>("convert", undefined, {
-      opener,
-      kind,
-      opportunityId,
-    }).then((r) => {
+    takeRead<Setup>(
+      "convert",
+      setupQuery(opener, kind, opportunityId, requestId),
+    ).then((r) => {
       if (!live) return;
       if (!r.ok) return setupFailed(r.error);
       setSetup(r.data);
@@ -114,11 +137,11 @@ export function ConvertDialog({
     return () => {
       live = false;
     };
-  }, [opener, kind, opportunityId]);
+  }, [opener, kind, opportunityId, requestId]);
   if (!setup)
     return (
-      <ActionDialog title="" width={960} onClose={onClose}>
-        <RecordSkeleton label="Loading convert options" />
+      <ActionDialog id={id} title="" width={960} onClose={onClose}>
+        <Skeleton kind="lines" count={4} label="Loading convert options" />
       </ActionDialog>
     );
   const { gates, texts } = setup;
@@ -139,8 +162,11 @@ export function ConvertDialog({
     const next = setup.pis.find((p) => p.value === personId);
     setV((s) => ({ ...s, piId: personId, orgUnitId: next?.orgUnitId ?? "" }));
     setOrgUnits([]);
+    latestPi.current = personId;
     if (!personId) return;
-    const r = await callAction<Option[]>("org-units", undefined, { personId });
+    const r = await sharedRead<Option[]>("org-units", { personId });
+    // Latest wins: a slower list for an earlier pick never replaces the current one.
+    if (latestPi.current !== personId) return;
     // A failed org-unit list degrades to empty, as the original.
     const units = r.ok ? r.data : [];
     if (!r.ok) toast.error(r.error);
@@ -221,6 +247,7 @@ export function ConvertDialog({
         end: v.end,
         sponsorId: id(v.sponsorId),
         confidential: v.confidential,
+        ...(requestId ? { requestId: Number(requestId) } : {}),
       });
       if (!result.ok) return fail(result.error);
       toast.show("success", result.data.message);
@@ -236,11 +263,30 @@ export function ConvertDialog({
     value: string,
     options: Option[],
     onChange: (value: string) => void,
+    // Long lists (people, org units, funders) are typed into, as GN-Angular's gn-select.
+    searchable = false,
   ) =>
-    gates[f].show && (
+    gates[f].show &&
+    (searchable ? (
+      <div className={`gn-field ${styles.cell}`}>
+        <label className="gn-label" htmlFor={`${id}-${f}-trigger`}>
+          {label(f)}
+        </label>
+        <Select
+          id={`${id}-${f}`}
+          label={gates[f].label}
+          options={options}
+          value={value}
+          disabled={saving}
+          invalid={!!invalid(f, value)}
+          onChange={onChange}
+        />
+      </div>
+    ) : (
       <label className={`gn-field ${styles.cell}`}>
         <span className="gn-label">{label(f)}</span>
         <select
+          id={`${id}-${f}`}
           className="gn-control"
           value={value}
           disabled={saving}
@@ -255,9 +301,10 @@ export function ConvertDialog({
           ))}
         </select>
       </label>
-    );
+    ));
   return (
     <ActionDialog
+      id={id}
       title={texts.title}
       subtitle={setup.heading}
       width={960}
@@ -265,6 +312,7 @@ export function ConvertDialog({
       onClose={onClose}
     >
       <form
+        id={`${id}-form`}
         className={styles.convert}
         onSubmit={(e) => {
           e.preventDefault();
@@ -279,55 +327,66 @@ export function ConvertDialog({
             label: p.detail ? `${p.label} (${p.detail})` : p.label,
           })),
           pickPi,
+          true,
         )}
         {gates["employee-number"].show && (
           <label className={`gn-field ${styles.cell}`}>
             <span className="gn-label">{label("employee-number")}</span>
             <input
+              id={`${id}-employee-number`}
               className="gn-control"
               value={pi?.employeeNumber ?? ""}
               readOnly
             />
           </label>
         )}
-        {select("org-unit", v.orgUnitId, orgUnits, (orgUnitId) =>
-          setV((s) => ({ ...s, orgUnitId })),
+        {select(
+          "org-unit",
+          v.orgUnitId,
+          orgUnits,
+          (orgUnitId) => setV((s) => ({ ...s, orgUnitId })),
+          true,
         )}
         {select("activity-type", v.activityType, setup.activities, (a) =>
           setV((s) => ({ ...s, activityType: a })),
         )}
         {gates["start-date"].show && (
-          <label className={`gn-field ${styles.cell}`}>
-            <span className="gn-label">{label("start-date")}</span>
-            <input
-              className="gn-control"
-              type="date"
+          <div className={`gn-field ${styles.cell}`}>
+            <span className="gn-label" aria-hidden="true">
+              {label("start-date")}
+            </span>
+            <DateInput
+              id={`${id}-start-date`}
+              label={label("start-date")}
               max={v.end || undefined}
               value={v.start}
               disabled={saving}
-              aria-invalid={invalid("start-date", v.start)}
-              onChange={(e) => changeDate("start", e.target.value)}
+              invalid={!!invalid("start-date", v.start)}
+              onChange={(date) => changeDate("start", date)}
             />
-          </label>
+          </div>
         )}
         {gates["end-date"].show && (
-          <label className={`gn-field ${styles.cell}`}>
-            <span className="gn-label">{label("end-date")}</span>
-            <input
-              className="gn-control"
-              type="date"
+          <div className={`gn-field ${styles.cell}`}>
+            <span className="gn-label" aria-hidden="true">
+              {label("end-date")}
+            </span>
+            <DateInput
+              id={`${id}-end-date`}
+              label={label("end-date")}
               min={v.start || undefined}
               value={v.end}
               disabled={saving}
-              aria-invalid={invalid("end-date", v.end)}
-              onChange={(e) => changeDate("end", e.target.value)}
+              invalid={!!invalid("end-date", v.end)}
+              onChange={(date) => changeDate("end", date)}
             />
-          </label>
+          </div>
         )}
         {gates["duration-months"].show && (
           <label className={`gn-field ${styles.cell}`}>
             <span className="gn-label">{label("duration-months")}</span>
             <input
+              id={`${id}-duration-months`}
               className="gn-control"
               type="number"
               min="0"
@@ -338,19 +397,27 @@ export function ConvertDialog({
             />
           </label>
         )}
-        {select("primary-sponsor", v.sponsorId, setup.sponsors, (s) =>
-          setV((x) => ({ ...x, sponsorId: s })),
+        {select(
+          "primary-sponsor",
+          v.sponsorId,
+          setup.sponsors,
+          (s) => setV((x) => ({ ...x, sponsorId: s })),
+          true,
         )}
         {select("stage", v.stage, setup.stages, (stage) =>
           setV((s) => ({ ...s, stage })),
         )}
         {gates.confidential.show && (
-          <fieldset className={`gn-field ${styles.cell}`}>
+          <fieldset
+            id={`${id}-confidential`}
+            className={`gn-field ${styles.cell}`}
+          >
             <legend className="gn-label">{label("confidential")}</legend>
             <div className={styles.radios}>
               {(["Y", "N"] as const).map((c) => (
                 <label key={c} className={styles.radio}>
                   <input
+                    id={`${id}-confidential-${c.toLowerCase()}`}
                     type="radio"
                     name="confidential"
                     value={c}
@@ -367,6 +434,7 @@ export function ConvertDialog({
         <div className={styles.foot}>
           <button
             type="button"
+            id={`${id}-cancel`}
             className="gn-btn gn-btn--solid"
             disabled={saving}
             onClick={onClose}
@@ -375,6 +443,7 @@ export function ConvertDialog({
           </button>
           <button
             type="submit"
+            id={`${id}-create`}
             className="gn-btn gn-btn--primary"
             disabled={saving}
           >

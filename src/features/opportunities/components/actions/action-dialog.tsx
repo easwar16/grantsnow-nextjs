@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import styles from "./actions.module.css";
 /**
@@ -7,6 +7,7 @@ import styles from "./actions.module.css";
  * it. While `busy` it cannot be dismissed, so a write in flight is never orphaned (D44).
  */
 export function ActionDialog({
+  id,
   title,
   subtitle,
   width,
@@ -15,6 +16,8 @@ export function ActionDialog({
   onClose,
   children,
 }: {
+  /** The dialog's page-unique id; its parts derive theirs from it. */
+  id: string;
   title: string;
   subtitle?: string;
   width: number;
@@ -23,8 +26,7 @@ export function ActionDialog({
   onClose: () => void;
   children: React.ReactNode;
 }) {
-  const ref = useRef<HTMLDialogElement>(null),
-    id = useId();
+  const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = ref.current;
     if (dialog && !dialog.open) dialog.showModal();
@@ -32,18 +34,20 @@ export function ActionDialog({
   return (
     <dialog
       ref={ref}
+      id={id}
       className={styles.dialog}
       style={{ width: `min(${width}px, calc(100vw - 32px))` }}
-      aria-labelledby={id}
+      aria-labelledby={`${id}-title`}
       onCancel={(e) => {
         if (busy) e.preventDefault();
       }}
       onClose={onClose}
     >
       <div className={styles.head}>
-        <h2 id={id}>{title}</h2>
+        <h2 id={`${id}-title`}>{title}</h2>
         <button
           type="button"
+          id={`${id}-close`}
           className={styles.close}
           aria-label={closeLabel}
           disabled={busy}
@@ -66,7 +70,7 @@ export interface ConfirmOptions {
   danger?: boolean;
 }
 /** `ask(options)` resolves true on confirm, false on cancel or dismiss; render `element` once in the caller. */
-export function useConfirm() {
+export function useConfirm(id: string) {
   const [pending, setPending] = useState<
     (ConfirmOptions & { resolve: (ok: boolean) => void }) | null
   >(null);
@@ -81,23 +85,28 @@ export function useConfirm() {
   };
   const element = pending && (
     <ActionDialog
+      id={id}
       title={pending.title}
-      width={420}
+      width={440}
       closeLabel={pending.cancel}
       onClose={() => settle(false)}
     >
-      <p className={styles.message}>{pending.message}</p>
-      {pending.detail && <p className={styles.subtitle}>{pending.detail}</p>}
+      <p id={`${id}-message`} className={styles.message}>
+        {pending.message}
+      </p>
+      {pending.detail && <p className={styles.detail}>{pending.detail}</p>}
       <div className={styles.foot}>
         <button
           type="button"
-          className="gn-btn gn-btn--solid"
+          id={`${id}-cancel`}
+          className="gn-btn gn-btn--outlined"
           onClick={() => settle(false)}
         >
           {pending.cancel}
         </button>
         <button
           type="button"
+          id={`${id}-confirm`}
           className={`gn-btn gn-btn--primary${pending.danger ? ` ${styles.danger}` : ""}`}
           onClick={() => settle(true)}
         >

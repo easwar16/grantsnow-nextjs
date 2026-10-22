@@ -54,9 +54,10 @@ export function UserMenu({
   }
   return (
     <>
-      <details className="user-menu" ref={menu}>
+      <details id="user-menu" className="user-menu" ref={menu}>
         <summary
           ref={trigger}
+          id="user-menu-button"
           aria-haspopup="menu"
           onKeyDown={(event) => {
             if (event.key !== "ArrowDown") return;
@@ -71,12 +72,14 @@ export function UserMenu({
           <Icon name="caret-down" />
         </summary>
         <div
+          id="user-menu-list"
           className="user-menu-content"
           role="menu"
           aria-label={name}
           onKeyDown={menuKeys}
         >
           <button
+            id="user-menu-profile"
             role="menuitem"
             onClick={() => {
               closeMenu();
@@ -88,6 +91,7 @@ export function UserMenu({
             {labels.manageProfile}
           </button>
           <button
+            id="user-menu-preferences"
             role="menuitem"
             onClick={() => {
               closeMenu();
@@ -98,6 +102,7 @@ export function UserMenu({
             {labels.preferences}
           </button>
           <button
+            id="user-menu-accessibility"
             role="menuitem"
             onClick={() => {
               closeMenu();
@@ -107,8 +112,12 @@ export function UserMenu({
             <Icon name="accessibility" />
             {labels.accessibility}
           </button>
-          <form action="/api/auth/logout" method="post">
-            <button role="menuitem" type="submit">
+          <form
+            id="user-menu-sign-out-form"
+            action="/api/auth/logout"
+            method="post"
+          >
+            <button id="user-menu-sign-out" role="menuitem" type="submit">
               <Icon name="logout" />
               {labels.signOut}
             </button>
@@ -117,6 +126,7 @@ export function UserMenu({
       </details>
       <dialog
         ref={dialog}
+        id="profile-dialog"
         className="profile-dialog"
         aria-labelledby="profile-title"
         onClose={() => {

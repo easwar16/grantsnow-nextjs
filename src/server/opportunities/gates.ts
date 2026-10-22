@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { z } from "zod";
 import { authenticate } from "@/server/session/service";
-import { oracle } from "@/server/api/transport";
+import { referenceRead } from "./reference";
 import { AppError } from "@/lib/errors";
 import {
   label,
@@ -18,6 +18,18 @@ export type RoleRow = {
   read_access: string | null;
   edit_access?: string | null;
 };
+/**
+ * Runs `data` alongside `check` but settles it only once the check has passed, so nothing is returned before the
+ * check and a denial is always the error reported (a later failure of `data` is never left unhandled).
+ */
+export async function afterCheck<T>(
+  check: Promise<unknown>,
+  data: Promise<T>,
+): Promise<T> {
+  data.catch(() => undefined);
+  await check;
+  return data;
+}
 export const bundleOf = (opener: Opener) =>
   opener === "finder" ? "opportunities-eoi" : "dashboard";
 /** Role based: every row for the page must grant it; no rows (or no roles read) denies. */
@@ -47,13 +59,14 @@ export function cardActions(
       new: finder && visible("labels", "new"),
       closingSoon: finder && visible("labels", "closing-soon"),
     },
-    moreInfo: finder,
+    moreInfo: finder && visible("button-labels", "more_info"),
     status: !finder || visible("labels", "status"),
     share: visible("button-labels", "share"),
     notes:
       access("opportunity-notes").read && visible("button-labels", "notes"),
     notesEdit: access("opportunity-notes").edit,
-    comments: finder && tab === "shared",
+    comments:
+      finder && tab === "shared" && visible("button-labels", "share-comments"),
     apply:
       access("apply-opportunities").read && visible("button-labels", "apply"),
     convert:
@@ -169,28 +182,48 @@ const FIELD_FALLBACKS: Record<ConvertField, string> = {
   stage: "Proposal Stage",
   confidential: "Confidential",
 };
+/** The application convert's own keys (the EOI page's `dialogProposalEOI`), and its seed-mandatory fields. */
+const APPLICATION_KEYS: Partial<Record<ConvertField, string>> = {
+  "full-name": "eoi-full-name",
+  "employee-number": "eoi-employee-number",
+  "org-unit": "eoi-org-unit",
+  "start-date": "eoi-start-date",
+  "end-date": "eoi-end-date",
+  "primary-sponsor": "eoi-primary-sponsor",
+  stage: "eoi-proposal-stage",
+};
+const APPLICATION_SEED_REQUIRED: ConvertField[] = [
+  "full-name",
+  "org-unit",
+  "start-date",
+  "end-date",
+];
 /**
  * GN-Angular gatesOf: each field is gated by its `labels.<key>` row in the opener's bundle; the finder has one
- * stage key per kind, the dashboard one. Required comes from the row's flag, else the seed default.
+ * stage key per kind, the dashboard one. Required comes from the row's flag, else the seed default. `application`
+ * is the EOI record's convert (an approved application): its `eoi-*` keys and seed defaults.
  */
 export function convertGates(
   rows: Resources,
   opener: Opener,
   kind: ConvertKind,
+  application = false,
 ) {
   const bundle = bundleOf(opener),
     finder = opener === "finder";
   const key = (f: ConvertField) =>
-    f === "stage"
+    (application && APPLICATION_KEYS[f]) ||
+    (f === "stage"
       ? finder && kind === "OUTLINE_PROPOSAL"
         ? "outline-proposal-stage"
         : "proposal-stage"
-      : f;
+      : f);
   return Object.fromEntries(
     CONVERT_FIELDS.map((f) => {
       const show = resourceVisible(rows, bundle, "labels", key(f));
-      const seed =
-        SEED_REQUIRED.includes(f) && !(finder && f === "activity-type");
+      const seed = application
+        ? APPLICATION_SEED_REQUIRED.includes(f)
+        : SEED_REQUIRED.includes(f) && !(finder && f === "activity-type");
       return [
         f,
         {
@@ -230,7 +263,7 @@ export const opportunityGlobals = cache(async () => {
   try {
     return deadlineWarningDays(
       globals.parse(
-        await oracle("getPre_award_costingGetGlobalVar", {
+        await referenceRead("getPre_award_costingGetGlobalVar", {
           token: session.token,
         }),
       ).items,

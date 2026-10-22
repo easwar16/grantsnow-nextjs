@@ -11,7 +11,6 @@ const opportunityPages: Record<string, string> = {
   "opportunities-finder": "/opportunities",
   "opportunities-eoi-list": "/opportunities/eoi",
   "opportunities-analytics": "/opportunities/analytics",
-  "opportunities-register": "/opportunities/register",
 };
 /**
  * Repairs a backend link whose `&` separators became `=` (legacy shell beforeEnterHandlerChain.js:24-48):

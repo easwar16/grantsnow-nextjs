@@ -51,8 +51,9 @@ export function HomeFilterControls({
   }
   const quarters = selected("quarter");
   return (
-    <div className="insight-filters">
+    <div id="insights-filters" className="insight-filters">
       <MultiSelect
+        id="insights-filter-year"
         className="insight-filter"
         label={labels.year}
         options={yearOptions(currentYear)}
@@ -60,6 +61,7 @@ export function HomeFilterControls({
         onChange={(year) => apply({ year })}
       />
       <MultiSelect
+        id="insights-filter-quarter"
         className="insight-filter"
         label={labels.quarter}
         options={QUARTERS}
@@ -69,6 +71,7 @@ export function HomeFilterControls({
         }
       />
       <MultiSelect
+        id="insights-filter-month"
         className="insight-filter"
         label={labels.month}
         options={monthOptions(quarters)}
@@ -77,6 +80,7 @@ export function HomeFilterControls({
       />
       {(["year", "quarter", "month"] as const).some((k) => draft.has(k)) && (
         <button
+          id="insights-filter-clear"
           type="button"
           className="insight-clear"
           aria-label="Clear insights filters"

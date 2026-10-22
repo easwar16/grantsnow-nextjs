@@ -1,13 +1,23 @@
 "use client";
-import { useEffect, useEffectEvent, useId, useMemo, useState } from "react";
-import { RecordSkeleton } from "@/components/feedback/skeleton";
+import { useEffect, useEffectEvent, useMemo, useState } from "react";
+import { InsideField } from "@/components/ui/inside-field";
+import { MultiSelect } from "@/components/ui/multi-select";
+import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/feedback/skeleton";
 import { useToast } from "@/components/feedback/toast";
 import { useInFlight } from "@/lib/use-in-flight";
 import { ActionDialog } from "./action-dialog";
-import { callAction, useActionFailure, type ActionError } from "./request";
+import {
+  callAction,
+  sharedRead,
+  takeRead,
+  useActionFailure,
+  warmRead,
+  type ActionError,
+} from "./request";
 import styles from "./actions.module.css";
 type SendTo = "ROLE" | "GROUP" | "INDIVIDUAL";
-type Option = { value: string; label: string };
+type Option = { value: string; label: string; detail?: string };
 type Texts = Record<
   | "title"
   | "sendTo"
@@ -48,13 +58,17 @@ export function shareProblem(
   if (v.comment.trim().length > maxLength) return texts.tooLong;
   return null;
 }
+/** Starts the share setup read before the dialog opens (hover or focus on Share). */
+export const warmShare = () => warmRead("share");
 /** The one 8516 share dialog for the finder and Home: to a role, a group or chosen people, with an optional comment. */
 export function ShareDialog({
+  id,
   opportunityId,
-  heading,
   onClose,
 }: {
+  id: string;
   opportunityId: string;
+  /** The opportunity's title; live's dialog shows none, so it is kept only for callers' symmetry. */
   heading: string;
   onClose: () => void;
 }) {
@@ -63,20 +77,18 @@ export function ShareDialog({
     [values, setValues] = useState<Record<string, Option[] | "failed">>({}),
     [value, setValue] = useState(""),
     [people, setPeople] = useState<string[]>([]),
-    [search, setSearch] = useState(""),
     [comment, setComment] = useState(""),
     { run, isActive } = useInFlight(),
     toast = useToast(),
     fail = useActionFailure(),
-    saving = isActive("share"),
-    ids = useId();
+    saving = isActive("share");
   const setupFailed = useEffectEvent((error: ActionError) => {
     toast.error(error);
     onClose();
   });
   useEffect(() => {
     let live = true;
-    callAction<{ texts: Texts; maxLength: number }>("share").then((r) => {
+    takeRead<{ texts: Texts; maxLength: number }>("share").then((r) => {
       if (!live) return;
       if (r.ok) setSetup(r.data);
       else setupFailed(r.error);
@@ -88,32 +100,22 @@ export function ShareDialog({
   useEffect(() => {
     if (!sendTo || values[sendTo]) return;
     let live = true;
-    callAction<Option[]>("share-values", undefined, { type: sendTo }).then(
-      (r) => {
-        if (!live) return;
-        // A failed list degrades to empty, as the original's toast.degrade.
-        if (!r.ok) toast.error(r.error);
-        setValues((all) => ({ ...all, [sendTo]: r.ok ? r.data : "failed" }));
-      },
-    );
+    sharedRead<Option[]>("share-values", { type: sendTo }).then((r) => {
+      if (!live) return;
+      // A failed list degrades to empty, as the original's toast.degrade.
+      if (!r.ok) toast.error(r.error);
+      setValues((all) => ({ ...all, [sendTo]: r.ok ? r.data : "failed" }));
+    });
     return () => {
       live = false;
     };
   }, [sendTo, values, toast]);
   const list = sendTo ? values[sendTo] : undefined;
   const options = useMemo(() => (Array.isArray(list) ? list : []), [list]);
-  const matches = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return (
-      term
-        ? options.filter((o) => o.label.toLowerCase().includes(term))
-        : options
-    ).slice(0, SHOWN);
-  }, [options, search]);
   if (!setup)
     return (
-      <ActionDialog title="" width={520} onClose={onClose}>
-        <RecordSkeleton label="Loading share options" />
+      <ActionDialog id={id} title="" width={600} onClose={onClose}>
+        <Skeleton kind="lines" count={4} label="Loading share options" />
       </ActionDialog>
     );
   const { texts, maxLength } = setup;
@@ -139,121 +141,105 @@ export function ShareDialog({
     }, "share");
   };
   return (
+    // Live: no subtitle, 600px, every field a Redwood inside-label box.
     <ActionDialog
+      id={id}
       title={texts.title}
-      subtitle={heading}
-      width={520}
+      width={600}
       busy={saving}
       onClose={onClose}
     >
-      <div className={styles.form}>
-        <label className="gn-field">
-          <span className="gn-label">{texts.sendTo} *</span>
-          <select
-            className="gn-control"
+      <div id={`${id}-form`} className={styles.form}>
+        <InsideField
+          htmlFor={`${id}-send-to-trigger`}
+          label={texts.sendTo}
+          filled={sendTo !== ""}
+          required
+        >
+          <Select
+            id={`${id}-send-to`}
+            label={texts.sendTo}
+            options={SEND_TO.map((t) => ({ value: t.code, label: t.label }))}
             value={sendTo}
             disabled={saving}
-            onChange={(e) => {
-              setSendTo(e.target.value as SendTo | "");
+            onChange={(next) => {
+              // A new recipient kind starts afresh, as live clears its value and people.
+              setSendTo(next as SendTo | "");
               setValue("");
-            }}
-          >
-            <option value="" />
-            {SEND_TO.map((t) => (
-              <option key={t.code} value={t.code}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        {sendTo && sendTo !== "INDIVIDUAL" && (
-          <label className="gn-field">
-            <span className="gn-label">{texts.sendToValue} *</span>
-            {list === undefined ? (
-              <RecordSkeleton label={`Loading ${texts.sendToValue}`} />
-            ) : (
-              <select
-                className="gn-control"
-                value={value}
-                disabled={saving}
-                onChange={(e) => setValue(e.target.value)}
-              >
-                <option value="" />
-                {options.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            )}
-          </label>
-        )}
-        {sendTo === "INDIVIDUAL" && (
-          <fieldset className={`gn-field ${styles.people}`}>
-            <legend className="gn-label">
-              {texts.fullName} * ({people.length} selected)
-            </legend>
-            <input
-              type="search"
-              aria-label={`Search ${texts.fullName}`}
-              placeholder="Search"
-              value={search}
-              disabled={saving}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            {list === undefined ? (
-              <RecordSkeleton label={`Loading ${texts.fullName}`} />
-            ) : matches.length === 0 ? (
-              <p className={styles.empty}>No data to display.</p>
-            ) : (
-              <ul className={styles.choices}>
-                {matches.map((o) => (
-                  <li key={o.value}>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={people.includes(o.value)}
-                        disabled={saving}
-                        onChange={(e) =>
-                          setPeople((all) =>
-                            e.target.checked
-                              ? [...all, o.value]
-                              : all.filter((p) => p !== o.value),
-                          )
-                        }
-                      />
-                      {o.label}
-                    </label>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </fieldset>
-        )}
-        <label className="gn-field">
-          <span className="gn-label">{texts.comment}</span>
-          <textarea
-            className="gn-control"
-            rows={3}
-            maxLength={maxLength}
-            value={comment}
-            disabled={saving}
-            aria-describedby={`${ids}-help`}
-            onChange={(e) => setComment(e.target.value)}
-            onPaste={(e) => {
-              // maxLength trims a long paste; this only says so, as shareCommentPasteChain does.
-              const t = e.currentTarget,
-                pasted = e.clipboardData.getData("text");
-              if (
-                t.value.length -
-                  (t.selectionEnd - t.selectionStart) +
-                  pasted.length >
-                maxLength
-              )
-                toast.show("warning", texts.truncated);
+              setPeople([]);
             }}
           />
-          <span className={styles.meta} id={`${ids}-help`}>
+        </InsideField>
+        {sendTo && sendTo !== "INDIVIDUAL" && (
+          <InsideField
+            htmlFor={`${id}-send-to-value-trigger`}
+            label={texts.sendToValue}
+            filled={value !== ""}
+            required
+          >
+            <Select
+              id={`${id}-send-to-value`}
+              label={texts.sendToValue}
+              options={options}
+              value={value}
+              disabled={saving || list === undefined}
+              emptyText={
+                list === undefined ? "Loading…" : "No data to display."
+              }
+              onChange={setValue}
+            />
+          </InsideField>
+        )}
+        {sendTo === "INDIVIDUAL" && (
+          <InsideField
+            htmlFor={`${id}-people-field`}
+            label={texts.fullName}
+            filled={people.length > 0}
+            required
+          >
+            <MultiSelect
+              id={`${id}-people`}
+              variant="chips"
+              label={texts.fullName}
+              options={options}
+              value={people}
+              limit={SHOWN}
+              closeOnPick
+              disabled={saving || list === undefined}
+              onChange={setPeople}
+            />
+          </InsideField>
+        )}
+        <div className={styles.commentField}>
+          <InsideField
+            htmlFor={`${id}-comment`}
+            label={texts.comment}
+            filled
+            multiline
+          >
+            <textarea
+              id={`${id}-comment`}
+              rows={3}
+              maxLength={maxLength}
+              value={comment}
+              disabled={saving}
+              aria-describedby={`${id}-comment-help`}
+              onChange={(e) => setComment(e.target.value)}
+              onPaste={(e) => {
+                // maxLength trims a long paste; this only says so, as shareCommentPasteChain does.
+                const t = e.currentTarget,
+                  pasted = e.clipboardData.getData("text");
+                if (
+                  t.value.length -
+                    (t.selectionEnd - t.selectionStart) +
+                    pasted.length >
+                  maxLength
+                )
+                  toast.show("warning", texts.truncated);
+              }}
+            />
+          </InsideField>
+          <span className={styles.meta} id={`${id}-comment-help`}>
             <span>{texts.commentHelp}</span>
             <span
               className={`${styles.counter}${comment.length >= maxLength ? ` ${styles.limit}` : ""}`}
@@ -262,10 +248,11 @@ export function ShareDialog({
               {comment.length} / {maxLength}
             </span>
           </span>
-        </label>
+        </div>
         <div className={styles.foot}>
           <button
             type="button"
+            id={`${id}-cancel`}
             className="gn-btn gn-btn--solid"
             disabled={saving}
             onClick={onClose}
@@ -274,6 +261,7 @@ export function ShareDialog({
           </button>
           <button
             type="button"
+            id={`${id}-submit`}
             className="gn-btn gn-btn--primary"
             disabled={saving || comment.length > maxLength}
             onClick={submit}

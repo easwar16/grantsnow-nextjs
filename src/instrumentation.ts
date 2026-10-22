@@ -10,9 +10,11 @@ export async function register() {
       const { preferIpv4Lookup } =
         await import("./server/configuration/dev-dns");
       preferIpv4Lookup(
-        [process.env.ORDS_BASE_URL, process.env.ORDS_APPS_URL].flatMap((u) =>
-          u ? [new URL(u).hostname] : [],
-        ),
+        [
+          process.env.ORDS_BASE_URL,
+          process.env.ORDS_APPS_URL,
+          process.env.OIC_BASE_URL,
+        ].flatMap((u) => (u ? [new URL(u).hostname] : [])),
       );
     }
   }

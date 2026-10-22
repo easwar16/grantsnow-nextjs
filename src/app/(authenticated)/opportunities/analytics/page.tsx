@@ -21,14 +21,15 @@ async function Chart({
   type: "TOP_FUNDERS" | "FUNDING_TYPE";
   title: string;
 }) {
+  const id = `opportunity-analytics-${type === "TOP_FUNDERS" ? "top-funders" : "funding-type"}`;
   let rows;
   try {
     rows = await opportunityStatistics(type);
   } catch (error) {
     const e = publicError(error);
     return (
-      <article className="analytics-panel">
-        <h2>{title}</h2>
+      <article id={id} className="analytics-panel">
+        <h2 id={`${id}-title`}>{title}</h2>
         <State
           title="Statistics unavailable"
           message={e.message}
@@ -54,13 +55,14 @@ async function Chart({
     { end: 0, stops: [] },
   ).stops;
   return (
-    <article className="analytics-panel">
-      <h2>{title}</h2>
+    <article id={id} className="analytics-panel">
+      <h2 id={`${id}-title`}>{title}</h2>
       {!rows.length ? (
         <State title="No statistics returned" />
       ) : type === "TOP_FUNDERS" ? (
         <>
           <div
+            id={`${id}-chart`}
             className="funding-bars"
             role="img"
             aria-label={`Average funding amount by funder: ${rows.map((r) => `${r.label}: ${r.value}`).join("; ")}`}
@@ -87,13 +89,14 @@ async function Chart({
         <div className="funding-pie-layout">
           {total > 0 && (
             <div
+              id={`${id}-chart`}
               className="funding-pie"
               role="img"
               aria-label={rows.map((r) => `${r.label}: ${r.value}`).join("; ")}
               style={{ background: `conic-gradient(${segments.join(",")})` }}
             />
           )}
-          <dl>
+          <dl id={`${id}-legend`}>
             {rows.map((r, i) => (
               <div key={r.id}>
                 <dt>
@@ -120,9 +123,12 @@ export default async function Analytics() {
     return <State title="Access denied" code="FORBIDDEN" />;
   }
   return (
-    <section className="analytics-workspace">
+    <section id="opportunity-analytics" className="analytics-workspace">
       <h1>Analytics Dashboard</h1>
-      <div className="opportunity-analytics-grid">
+      <div
+        id="opportunity-analytics-grid"
+        className="opportunity-analytics-grid"
+      >
         {(
           [
             ["TOP_FUNDERS", "Top Funders"],

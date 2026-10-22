@@ -1,3 +1,4 @@
+import { idPart } from "@/lib/ids";
 import { InsightWidget } from "@/features/home/components/insight-widget";
 import { dashboardTabs } from "@/server/home/extra-tabs";
 import { OrganizationHeading } from "@/features/home/components/organization-heading";
@@ -84,6 +85,7 @@ export default async function Home({
     if (e instanceof AppError && e.status === 403)
       return (
         <State
+          id="home-access-denied"
           title="Access denied"
           message="Your session does not permit access to Home."
           code="FORBIDDEN"
@@ -101,18 +103,27 @@ export default async function Home({
   } catch {
     return (
       <>
-        <State title="Invalid dashboard filters" code="BAD_REQUEST" />
-        <Link className="button" href="/home">
+        <State
+          id="home-invalid-filters"
+          title="Invalid dashboard filters"
+          code="BAD_REQUEST"
+        />
+        <Link id="home-filters-reset" className="button" href="/home">
           Reset dashboard filters
         </Link>
       </>
     );
   }
-  const enabled = await enabledWidgets();
-  const orgs = await organizations();
-  const additionalTabs = await dashboardTabs();
-  const format = await displayFormat();
-  const rb = await resources();
+  // Independent reads start together; announcements handle their own failure.
+  const [enabled, orgs, additionalTabs, format, rb, announcements] =
+    await Promise.all([
+      enabledWidgets(),
+      organizations(),
+      dashboardTabs(),
+      displayFormat(),
+      resources(),
+      loadAnnouncements(),
+    ]);
   const empty = dashboardLabel(
     rb,
     "helper-texts.no-data",
@@ -145,6 +156,9 @@ export default async function Home({
     return (
       <div
         key={section}
+        id={
+          section === "needAttention" ? "home-need-attention" : "home-insights"
+        }
         className={
           section === "needAttention" ? "attention-panels" : "insight-panels"
         }
@@ -167,7 +181,10 @@ export default async function Home({
             <Suspense
               key={`${w.id}:${params.toString()}`}
               fallback={
-                <article className="attention-widget">
+                <article
+                  id={`home-widget-${idPart(w.id)}-loading`}
+                  className="attention-widget"
+                >
                   <div className="attention-content">
                     <div className="attention-head">
                       <h3>{title}</h3>
@@ -195,16 +212,21 @@ export default async function Home({
     <>
       <Announcements
         title={dashboardLabel(rb, "labels.announcements", "Announcements")}
-        {...await loadAnnouncements()}
+        {...announcements}
       />
-      <div className="home-heading">
+      <div id="home-heading" className="home-heading">
         <OrganizationHeading
           organizations={orgs}
           selected={filters.organization}
           fallback={user.organization}
         />
         <span className="sr-only">Welcome, {user.name.split(" ")[0]}.</span>
-        <Link className="sr-only" href="/proposals" prefetch={false}>
+        <Link
+          id="home-proposals-link"
+          className="sr-only"
+          href="/proposals"
+          prefetch={false}
+        >
           View Proposals
         </Link>
       </div>
@@ -259,7 +281,9 @@ export default async function Home({
         !additionalTabs.opportunities &&
         !additionalTabs.notifications &&
         !additionalTabs.charts.length && (
-          <p className="dashboard-empty">{empty}</p>
+          <p id="home-empty" className="dashboard-empty">
+            {empty}
+          </p>
         )}
     </>
   );

@@ -1,22 +1,28 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
+import { usePresence } from "@/lib/use-presence";
 import styles from "./help-button.module.css";
 /**
  * GN-Angular's More Info button: rendered only when there is a text (the RB key's `label_description`, sanitised
  * on the server), shown in a popup below the button (above when there is no room). Escape or an outside click closes it.
+ * `id` names the root; the button and popup take `${id}-button` and `${id}-popup`.
  */
 export function HelpButton({
+  id,
   html,
   label = "More Info",
 }: {
+  id?: string;
   html?: string | null;
   label?: string;
 }) {
   const [open, setOpen] = useState(false),
     [above, setAbove] = useState(false),
     host = useRef<HTMLSpanElement>(null),
-    id = useId();
+    autoId = useId(),
+    popup = id ? `${id}-popup` : autoId;
+  const presence = usePresence(open);
   useEffect(() => {
     if (!open) return;
     const rect = host.current?.getBoundingClientRect();
@@ -36,21 +42,24 @@ export function HelpButton({
   }, [open]);
   if (html === null || html === undefined || html.trim() === "") return null;
   return (
-    <span ref={host} className={styles.host}>
+    <span ref={host} id={id} className={styles.host}>
       <button
+        id={id ? `${id}-button` : undefined}
         type="button"
         className={styles.help}
         aria-label={label}
         aria-expanded={open}
-        aria-controls={id}
+        aria-controls={popup}
         onClick={() => setOpen((o) => !o)}
       >
         <Icon name="info" size={14} />
       </button>
-      {open && (
+      {presence.mounted && (
         <div
-          id={id}
-          className={`${styles.popup} ${above ? styles.above : ""} enter-pop`}
+          id={popup}
+          className={`${styles.popup} ${above ? styles.above : ""} ${presence.motion.className}`}
+          inert={presence.leaving}
+          onAnimationEnd={presence.motion.onAnimationEnd}
           role="dialog"
           aria-label={label}
         >

@@ -1,4 +1,5 @@
 "use client";
+import { idPart } from "@/lib/ids";
 import { useEffect, useMemo, useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -82,14 +83,20 @@ export default function DeadlineFullCalendar({
     });
   }
 
-  const provider = selected && providerOf(selected);
+  const provider = selected && providerOf(selected),
+    base = `calendar-${idPart(widgetId)}`;
   return (
-    <div className={styles.calendar}>
+    <div id={`${base}-view`} className={styles.calendar}>
       {sidebarOpen && (
-        <aside className={styles.sidebar} aria-label="Calendars">
+        <aside
+          id={`${base}-sidebar`}
+          className={styles.sidebar}
+          aria-label="Calendars"
+        >
           <div className={styles.sidebarHeader}>
             <span className={styles.sidebarTitle}>Calendars</span>
             <button
+              id={`${base}-sidebar-close`}
               className={styles.close}
               type="button"
               aria-label="Close calendars"
@@ -102,6 +109,7 @@ export default function DeadlineFullCalendar({
             {providers.map((p) => (
               <button
                 key={p.provider}
+                id={`${base}-provider-${p.provider}`}
                 className={styles.sidebarItem}
                 type="button"
                 aria-pressed={!hidden.has(p.provider)}
@@ -123,7 +131,7 @@ export default function DeadlineFullCalendar({
           </div>
         </aside>
       )}
-      <div className={styles.mount} ref={mount}>
+      <div id={`${base}-grid`} className={styles.mount} ref={mount}>
         <FullCalendar
           ref={calendar}
           plugins={PLUGINS}
@@ -146,7 +154,11 @@ export default function DeadlineFullCalendar({
         />
       </div>
       {selected && provider && (
-        <aside className={styles.panel} aria-label={selected.reference}>
+        <aside
+          id={`${base}-details`}
+          className={styles.panel}
+          aria-label={selected.reference}
+        >
           <div className={styles.panelHeader}>
             <div className={styles.panelHeaderInner}>
               <span className={styles.badge}>{PROVIDER_LABELS[provider]}</span>
@@ -154,6 +166,7 @@ export default function DeadlineFullCalendar({
             </div>
             <button
               ref={closeButton}
+              id={`${base}-details-close`}
               className={styles.close}
               type="button"
               aria-label="Close details"
@@ -182,6 +195,7 @@ export default function DeadlineFullCalendar({
           </div>
           <div className={styles.panelFooter}>
             <RowLink
+              id={`${base}-details-open`}
               className={styles.viewButton}
               row={selected}
               denied={denied}

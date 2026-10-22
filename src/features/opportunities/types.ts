@@ -8,11 +8,12 @@ export interface OpportunityRow {
   coFunders?: string[];
   site?: string;
   logo?: string;
-  fundingType?: string;
-  totalFund?: string;
+  /** The card's meta cells that have a value and pass their RB gate; money as the raw number, shared-on as ISO. */
+  meta?: Partial<Record<MetaKey, string>>;
   currency?: string;
   published?: string;
   opening?: string;
+  /** The finder's comma-separated sponsor deadline list (else the closing date); the card formats each date. */
   closing?: string;
   applications?: number;
   proposals?: number;
@@ -39,6 +40,23 @@ export const opportunityDateKeys = [
   "opening-date",
   "closing-date",
 ] as const;
+/** The card's meta cells in the original's order (GN-Angular finder.ts META). */
+export const META_KEYS = [
+  "funding-type",
+  "total-fund",
+  "fund-ceiling",
+  "programme",
+  "call",
+  "type-of-mga",
+  "award-floor",
+  "assistance-listing",
+  "funding-opportunity-no",
+  "cost-sharing",
+  "funder-type",
+  "shared-by",
+  "shared-on",
+] as const;
+export type MetaKey = (typeof META_KEYS)[number];
 export type OpportunityLabelKey =
   | (typeof opportunityDateKeys)[number]
   | "funding-type"
@@ -90,6 +108,8 @@ export interface CardActions {
 export interface OpportunityCardModel {
   labels: Record<OpportunityLabelKey, string>;
   dates: (typeof opportunityDateKeys)[number][];
+  /** The meta cells this card shows, in order, with their labels; money cells are highlighted. */
+  meta: { key: MetaKey; label: string; kind: "text" | "money" | "date" }[];
   actions: CardActions;
 }
 export interface OpportunityPage {

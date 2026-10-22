@@ -11,11 +11,13 @@ export interface AccessDeniedText {
 }
 /** A queue record's link; Ethics records ask `/api/home/ethics-access` first, as legacy did. */
 export function RowLink({
+  id,
   row,
   denied,
   className,
   children,
 }: {
+  id?: string;
   row: AttentionRow;
   denied: AccessDeniedText;
   className?: string;
@@ -26,7 +28,7 @@ export function RowLink({
     [checking, setChecking] = useState(false);
   if (!row.ethics)
     return (
-      <Link className={className} href={row.href} prefetch={false}>
+      <Link id={id} className={className} href={row.href} prefetch={false}>
         {children}
       </Link>
     );
@@ -55,6 +57,7 @@ export function RowLink({
   }
   return (
     <a
+      id={id}
       className={className}
       href={row.href}
       aria-busy={checking || undefined}

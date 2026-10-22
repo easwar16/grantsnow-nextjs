@@ -36,6 +36,7 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
       <div className={styles.head}>
         <h2 id="profile-title">{labels.manageProfileTitle}</h2>
         <button
+          id="profile-close"
           type="button"
           className={styles.close}
           aria-label={labels.close}
@@ -45,10 +46,10 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
         </button>
       </div>
       {remote.error ? (
-        <div className={styles.body} role="alert">
+        <div id="profile-error" className={styles.body} role="alert">
           <p>{remote.error.message}</p>
           {remote.error.action && <p>{remote.error.action}</p>}
-          <button type="button" onClick={remote.retry}>
+          <button id="profile-retry" type="button" onClick={remote.retry}>
             Retry
           </button>
         </div>
@@ -125,9 +126,10 @@ function Profile({
     manage: labels.manage,
   };
   const presenceValue = presence ?? presenceRemote.data ?? null;
-  const footer = (onSave: () => void) => (
+  const footer = (name: string, onSave: () => void) => (
     <div className={styles.foot}>
       <button
+        id={`profile-${name}-save`}
         type="button"
         className="primary"
         disabled={busy}
@@ -140,6 +142,7 @@ function Profile({
   return (
     <>
       <div
+        id="profile-tabs"
         className={styles.tabs}
         role="tablist"
         aria-label="Manage profile sections"
@@ -165,6 +168,7 @@ function Profile({
         {tabs.map((id) => (
           <button
             key={id}
+            id={`profile-tab-${id}`}
             type="button"
             role="tab"
             aria-selected={tab === id}
@@ -175,10 +179,15 @@ function Profile({
           </button>
         ))}
       </div>
-      <div className={styles.body} role="tabpanel" aria-label={tabName[tab]}>
+      <div
+        id="profile-panel"
+        className={styles.body}
+        role="tabpanel"
+        aria-label={tabName[tab]}
+      >
         <div className="enter-fade" key={tab}>
           {tab === "profile" && (
-            <div className={styles.profile}>
+            <div id="profile-details" className={styles.profile}>
               <div className={styles.avatar}>
                 <Icon name="employee" size={48} />
               </div>
@@ -194,16 +203,25 @@ function Profile({
           )}
           {tab === "pref" && (
             <>
-              <div className={styles.form}>
+              <div id="profile-preferences" className={styles.form}>
                 {(
                   [
-                    ["research_areas", labels.researchAreas],
-                    ["favourite_funder", labels.favouriteFunders],
-                    ["research_keywords", labels.researchKeywords],
+                    ["research_areas", "research-areas", labels.researchAreas],
+                    [
+                      "favourite_funder",
+                      "favourite-funders",
+                      labels.favouriteFunders,
+                    ],
+                    [
+                      "research_keywords",
+                      "research-keywords",
+                      labels.researchKeywords,
+                    ],
                   ] as const
-                ).map(([key, name]) => (
+                ).map(([key, id, name]) => (
                   <ResearchSelection
                     key={key}
+                    id={`profile-${id}`}
                     label={name}
                     options={initial.options[key] || []}
                     values={research[key]}
@@ -214,6 +232,7 @@ function Profile({
                 ))}
               </div>
               {footer(
+                "preferences",
                 () => void save("research", research, labels.profileSaved),
               )}
             </>
@@ -221,13 +240,14 @@ function Profile({
           {tab === "digital-presence" &&
             (presenceValue ? (
               <>
-                <div className={styles.form}>
+                <div id="profile-presence" className={styles.form}>
                   {presenceKeys.map((key) => (
                     <label className={styles.linkField} key={key}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={links[key][1]} alt="" />
                       <span>{links[key][0]}</span>
                       <input
+                        id={`profile-presence-${key.replaceAll("_", "-")}`}
                         type="url"
                         value={presenceValue[key]}
                         onChange={(e) =>
@@ -240,12 +260,19 @@ function Profile({
                     </label>
                   ))}
                 </div>
-                {footer(() => void save("presence", presenceValue, "Success"))}
+                {footer(
+                  "presence",
+                  () => void save("presence", presenceValue, "Success"),
+                )}
               </>
             ) : presenceRemote.error ? (
-              <div role="alert">
+              <div id="profile-presence-error" role="alert">
                 <p>{presenceRemote.error.message}</p>
-                <button type="button" onClick={presenceRemote.retry}>
+                <button
+                  id="profile-presence-retry"
+                  type="button"
+                  onClick={presenceRemote.retry}
+                >
                   Retry
                 </button>
               </div>
@@ -259,7 +286,7 @@ function Profile({
                 onChange={setStatus}
                 organizations={initial.organizations}
               />
-              {footer(saveStatus)}
+              {footer("status", saveStatus)}
             </>
           )}
         </div>
@@ -268,18 +295,20 @@ function Profile({
   );
 }
 function ResearchSelection({
+  id,
   label,
   options,
   values,
   onChange,
 }: {
+  id: string;
   label: string;
   options: string[];
   values: string[];
   onChange: (v: string[]) => void;
 }) {
   const [draft, setDraft] = useState("");
-  const list = `${label.replaceAll(" ", "-")}-options`;
+  const list = `${id}-options`;
   // Custom values are allowed, as the original's allowCustom multi-select; commas would split the stored list.
   const add = () => {
     const value = draft.trim();
@@ -288,10 +317,11 @@ function ResearchSelection({
     setDraft("");
   };
   return (
-    <div className={styles.research}>
+    <div id={id} className={styles.research}>
       <label>
         <span>{label}</span>
         <input
+          id={`${id}-input`}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           list={list}
@@ -307,10 +337,10 @@ function ResearchSelection({
           <option key={value} value={value} />
         ))}
       </datalist>
-      <button type="button" onClick={add}>
+      <button id={`${id}-add`} type="button" onClick={add}>
         Add
       </button>
-      <div className={styles.chips}>
+      <div id={`${id}-chips`} className={styles.chips}>
         {values.map((value) => (
           <button
             type="button"
@@ -349,10 +379,11 @@ function StatusEditor({
   };
   const instant = (v: string) => (v ? new Date(v).toISOString() : "");
   return (
-    <div className={`${styles.form} ${styles.grid}`}>
+    <div id="profile-status" className={`${styles.form} ${styles.grid}`}>
       <label>
         <span>{labels.selectStatus}</span>
         <select
+          id="profile-status-select"
           value={value.status_code}
           onChange={(e) =>
             onChange({
@@ -370,6 +401,7 @@ function StatusEditor({
           <label>
             <span>{labels.startDatetime} *</span>
             <input
+              id="profile-status-start"
               type="datetime-local"
               required
               value={local(value.effective_start_date)}
@@ -384,6 +416,7 @@ function StatusEditor({
           <label>
             <span>{labels.endDatetime} *</span>
             <input
+              id="profile-status-end"
               type="datetime-local"
               required
               value={local(value.effective_end_date)}
@@ -398,6 +431,7 @@ function StatusEditor({
           <label className={styles.wide}>
             <span>{labels.statusMessage} *</span>
             <textarea
+              id="profile-status-message"
               rows={5}
               required
               value={value.status_msg}
@@ -408,7 +442,11 @@ function StatusEditor({
           </label>
           <label>
             <span>{labels.selectOrg}</span>
-            <select value={org} onChange={(e) => setOrg(e.target.value)}>
+            <select
+              id="profile-proxy-organization"
+              value={org}
+              onChange={(e) => setOrg(e.target.value)}
+            >
               <option value="" />
               {organizations.map((o) => (
                 <option value={o.id} key={o.id}>
@@ -418,9 +456,13 @@ function StatusEditor({
             </select>
           </label>
           {people.error ? (
-            <div role="alert">
+            <div id="profile-proxy-error" role="alert">
               {people.error.message}
-              <button type="button" onClick={people.retry}>
+              <button
+                id="profile-proxy-retry"
+                type="button"
+                onClick={people.retry}
+              >
                 Retry
               </button>
             </div>
@@ -430,6 +472,7 @@ function StatusEditor({
             <label>
               <span>{labels.selectProxy}</span>
               <select
+                id="profile-proxy-person"
                 value=""
                 disabled={!people.data}
                 onChange={(e) => {
@@ -458,7 +501,7 @@ function StatusEditor({
               </select>
             </label>
           )}
-          <table className={styles.wide}>
+          <table id="profile-proxies" className={styles.wide}>
             <thead>
               <tr>
                 <th>{labels.orgName}</th>
@@ -477,7 +520,10 @@ function StatusEditor({
                 </tr>
               ) : (
                 value.proxy_users.map((p, i) => (
-                  <tr key={`${p.org_id}:${p.proxy_pid}`}>
+                  <tr
+                    key={`${p.org_id}:${p.proxy_pid}`}
+                    id={`profile-proxy-${p.org_id}-${p.proxy_pid}`}
+                  >
                     <td>
                       {organizations.find((o) => o.id === p.org_id)?.name ||
                         p.org_id}
@@ -488,6 +534,7 @@ function StatusEditor({
                     </td>
                     <td>
                       <button
+                        id={`profile-proxy-${p.org_id}-${p.proxy_pid}-remove`}
                         type="button"
                         className={styles.danger}
                         aria-label="Remove proxy"

@@ -1,3 +1,4 @@
+import { idPart } from "@/lib/ids";
 import type { Kpi } from "@/server/home/kpis";
 import { sparklineSegments } from "../sparkline";
 import { Icon } from "@/components/ui/icon";
@@ -5,23 +6,30 @@ export function KpiStrip({ items, error }: { items: Kpi[]; error?: string }) {
   if (error)
     return (
       <section
+        id="home-kpis-error"
         className="kpi-error"
         role="status"
         aria-label="Key performance indicators unavailable"
       >
         <p>{error}</p>
-        <a href="/home">Retry dashboard</a>
+        <a id="home-kpis-retry" href="/home">
+          Retry dashboard
+        </a>
       </section>
     );
   if (!items.length) return null;
   return (
-    <section className="kpi-strip" aria-label="Key performance indicators">
+    <section
+      id="home-kpis"
+      className="kpi-strip"
+      aria-label="Key performance indicators"
+    >
       {items.map((k) => {
         const segments = sparklineSegments(
           k.trendChart?.data.map((r) => r.value) ?? [],
         );
         return (
-          <article key={k.id}>
+          <article key={k.id} id={`kpi-${idPart(k.id)}`}>
             <div className="kpi-title">
               <strong>{k.title}</strong>
               {segments.length > 0 && (

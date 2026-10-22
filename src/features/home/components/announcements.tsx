@@ -32,15 +32,20 @@ export function Announcements({
   }, [expanded, paused, count]);
   if (error)
     return (
-      <p className="notice" role="status">
+      <p id="home-announcements-error" className="notice" role="status">
         Announcements unavailable. {error}
       </p>
     );
   if (!count) return null;
   return (
-    <section className="announcements" aria-label={title}>
+    <section
+      id="home-announcements"
+      className="announcements"
+      aria-label={title}
+    >
       <h2 className="announcements-toggle">
         <button
+          id="home-announcements-toggle"
           type="button"
           aria-expanded={expanded}
           onClick={() => setExpanded((e) => !e)}
@@ -51,6 +56,7 @@ export function Announcements({
       </h2>
       {expanded && (
         <div
+          id="home-announcements-strip"
           className="announcement-strip enter-expand"
           role="region"
           aria-roledescription="carousel"
@@ -61,6 +67,7 @@ export function Announcements({
           onBlur={() => setPaused(false)}
         >
           <button
+            id="home-announcements-previous"
             type="button"
             aria-label="Previous announcement"
             onClick={() => setIndex(stepSlide(current, -1, count))}
@@ -88,6 +95,7 @@ export function Announcements({
             </div>
           </div>
           <button
+            id="home-announcements-next"
             type="button"
             aria-label="Next announcement"
             onClick={() => setIndex(stepSlide(current, 1, count))}

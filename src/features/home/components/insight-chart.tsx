@@ -10,6 +10,7 @@ import { moneyDisplay, type FormatSettings } from "@/lib/format";
 const internal = (href?: string) =>
   href?.startsWith("/") && !href.startsWith("//") ? href : undefined;
 export function InsightChart({
+  id,
   title,
   data,
   expanded = false,
@@ -17,6 +18,7 @@ export function InsightChart({
   height,
   format,
 }: {
+  id: string;
   title: string;
   data: WidgetData;
   expanded?: boolean;
@@ -84,6 +86,8 @@ export function InsightChart({
         loading = false;
       }
     }
+    // The engine chunk loads while the tile is still hidden or sizing; render's own import shares it.
+    import("./chart-engine").catch(() => {});
     // ECharts only listens for window resizes; the tile and dialog change size on their own.
     const resize = new ResizeObserver(() => {
       void render();
@@ -105,7 +109,7 @@ export function InsightChart({
         }).format(v);
   const g = data.gauge;
   return (
-    <div className={`insight-chart${expanded ? " expanded" : ""}`}>
+    <div id={id} className={`insight-chart${expanded ? " expanded" : ""}`}>
       {!ready && !failed && (
         <div className="chart-loading-overlay">
           <ChartSkeleton label={`Loading ${title} chart`} />
@@ -119,13 +123,14 @@ export function InsightChart({
       )}
       <div
         ref={host}
+        id={`${id}-canvas`}
         className="insight-chart-host"
         style={height ? { height } : undefined}
         role="img"
         aria-label={`${title}: ${g ? "gauge" : `${data.statistics.length} data points`}; accessible values below`}
       />
       {(expanded || showData || failed) && (
-        <details className="insight-data" open={expanded}>
+        <details id={`${id}-data`} className="insight-data" open={expanded}>
           <summary>View chart data</summary>
           <table>
             <thead>

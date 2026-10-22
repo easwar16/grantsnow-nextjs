@@ -33,7 +33,13 @@ export const shareInput = z.discriminatedUnion("sendTo", [
     .strict(),
 ]);
 export type ShareInput = z.infer<typeof shareInput>;
-export const applyInput = z.object({ opportunityId: id }).strict();
+/** Apply opens the new application: its Summary from a card, its form from More Info. */
+export const applyInput = z
+  .object({
+    opportunityId: id,
+    tab: z.enum(["summary", "application"]).default("summary"),
+  })
+  .strict();
 export const convertInput = z
   .object({
     opener,
@@ -47,6 +53,8 @@ export const convertInput = z
     end: isoDate.or(z.literal("")),
     sponsorId: id.nullable(),
     confidential: z.enum(["Y", "N"]),
+    /** Set by the EOI record's convert (an approved application). */
+    requestId: id.optional(),
   })
   .strict();
 export type ConvertInput = z.infer<typeof convertInput>;
@@ -111,6 +119,8 @@ export interface ProposalPlan {
   confidential: "Y" | "N";
   createdBy: number;
   currency: string | null;
+  /** The approved application converted (the EOI record's convert). */
+  requestId?: number;
 }
 /** The convert's `{proposals}` body, an explicit pick (H1) as the VBCS opportunity convert chains build it. */
 export function proposalPayload(p: ProposalPlan) {
@@ -156,6 +166,7 @@ export function proposalPayload(p: ProposalPlan) {
       currency_code: p.currency,
       attribute_1: o.call ?? null,
       attribute_2: o.programme ?? null,
+      ...(p.requestId !== undefined ? { request_id: p.requestId } : {}),
     },
   };
 }

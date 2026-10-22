@@ -15,6 +15,20 @@
 .panel[data-open="false"] {
   width: auto;
 }
+/* A page-owned toggle slides the panel shut: the width runs to 0 while the content keeps its own width. */
+.layout:not([data-dragging]) .panel {
+  transition:
+    width var(--dur) var(--ease),
+    border-color var(--dur) var(--ease);
+}
+.panel[data-collapsed] {
+  width: 0;
+  overflow: hidden;
+  border-right-width: 0;
+}
+.panel[data-collapsed] > .body {
+  width: var(--filter-panel-width);
+}
 .header {
   display: flex;
   justify-content: flex-end;
@@ -29,6 +43,10 @@
 }
 .body[hidden] {
   display: none;
+}
+/* Without its own header (a page-owned toggle), the body takes GN-Angular's 6px top inset. */
+.body:first-child {
+  padding-top: 6px;
 }
 /* An 8px grab strip centred on the panel border. */
 .handle {
@@ -68,6 +86,9 @@
   .layout {
     flex-direction: column;
     overflow-y: auto;
+  }
+  .panel[data-collapsed] {
+    display: none;
   }
   .panel,
   .panel[data-open="false"] {

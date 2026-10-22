@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { authenticate } from "@/server/session/service";
 import { oracle } from "@/server/api/transport";
+import { memo, memoKey, TTL } from "@/server/cache/memo";
 import {
   customThemeId,
   isColour,
@@ -42,9 +43,15 @@ export const availableThemes = cache(async (): Promise<Theme[]> => {
   try {
     return [
       ...presetThemes,
-      ...customThemeRows(
-        await oracle("getSharedGetCustomTheme", { token: session.token }),
-      ),
+      // Only a good answer is kept (memo never keeps a failure), so the presets-only fallback is retried.
+      ...(await memo(
+        memoKey("custom-themes", session.token),
+        TTL.config,
+        async () =>
+          customThemeRows(
+            await oracle("getSharedGetCustomTheme", { token: session.token }),
+          ),
+      )),
     ];
   } catch (e) {
     // An expired session must still send the user to sign in.

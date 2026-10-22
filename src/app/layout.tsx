@@ -20,7 +20,7 @@ export default function RootLayout({
         <link rel="stylesheet" href={oracleGallery} />
       </head>
       <body>
-        <a className="skip-link" href="#main">
+        <a id="skip-link" className="skip-link" href="#main">
           Skip to content
         </a>
         {children}

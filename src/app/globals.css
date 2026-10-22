@@ -102,18 +102,12 @@
   --highlight-mark: #a3f28c;
   --table-head-bg: #f2efec;
   --avatar-bg: #d9e9e7;
-  --opp-tab-bg: #f3f4f4;
+  /* GN-Angular finder.css unselected tab. */
+  --opp-tab-bg: #f1efed;
   --opp-tab-active-bg: #fff;
   --opp-border: #d8e7e8;
   --opp-stripe: #1fb47b;
-  --opp-status-bg: #e3f5ef;
-  --opp-status-text: #176d52;
   --opp-tag-bg: #eceeed;
-  --opp-tag-accent-bg: #e3f0f1;
-  --opp-divider: #ecf3f3;
-  --opp-caption: #858984;
-  --opp-band: #eff4f4;
-  --opp-count-bg: #dceeee;
   /* CKEditor marker/pen colours from the legacy ckeditor-content.css. */
   --ck-marker-yellow: #fdfd77;
   --ck-marker-green: #62f962;
@@ -133,7 +127,9 @@
   /* Lets transitions run to and from `auto` sizes where supported (Chromium 129+); others jump. */
   interpolate-size: allow-keywords;
 }
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 /* D35: the document never scrolls; every scroll bar belongs to a component (<main>, a list, a panel). */
@@ -141,6 +137,10 @@ html,
 body {
   height: 100%;
   overflow: hidden;
+}
+/* GN-Angular's root size: 1rem is 12px, as its rem values (help popup, calendar) assume. */
+html {
+  font-size: var(--gn-font-size);
 }
 /* Anything position:absolute inside <main> resolves against it, so it cannot escape and scroll the page. */
 main {
@@ -172,7 +172,9 @@ body > main {
     margin-right var(--dur) var(--ease);
 }
 /* Opt-in for a page that fills <main> exactly and scrolls its own lists, so <main> never scrolls there. */
+/* Positioned so absolutely placed descendants (.sr-only text in long lists) cannot give the page its own scroll range. */
 .page-fill {
+  position: relative;
   height: 100%;
   min-height: 0;
   overflow: hidden;
@@ -181,14 +183,19 @@ body {
   margin: 0;
   color: var(--text);
   background: var(--bg);
-  /* Measured body: 12px / 15px. */
+  /* Measured body: 12px / 15px; a fixed length (GN-Angular), so larger text does not scale its line box. */
   font-size: var(--gn-font-size);
-  line-height: 1.25;
+  line-height: 15px;
   font-variant-numeric: tabular-nums;
+}
+h1,
+h6 {
+  margin: 0;
 }
 a {
   color: var(--link);
   text-decoration: none;
+  cursor: pointer;
 }
 a:hover {
   text-decoration: underline;
@@ -200,7 +207,8 @@ textarea {
   font: inherit;
 }
 button,
-.button {
+.button,
+.gn-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -223,12 +231,14 @@ button,
     transform var(--dur-fast) var(--ease);
 }
 button:hover,
-.button:hover {
+.button:hover,
+.gn-btn:hover {
   background: var(--hover-tint);
   text-decoration: none;
 }
 button:active:not(:disabled),
-.button:active {
+.button:active,
+.gn-btn:active:not(:disabled) {
   transform: scale(0.97);
 }
 button:disabled,
@@ -276,7 +286,8 @@ button:disabled,
   width: var(--control-height);
   padding: 0;
 }
-input,
+/* The field box; checkboxes and radios stay native (GN-Angular), so they never take its padding or border. */
+input:not([type="checkbox"], [type="radio"]),
 select,
 textarea,
 .gn-control {
@@ -288,6 +299,8 @@ textarea,
   color: var(--text);
   border: 1px solid var(--control-border);
   border-radius: var(--radius);
+  /* A control inside a label keeps regular text; GN-Angular bolds only the label text. */
+  font-weight: 400;
   transition:
     border-color var(--dur-fast) var(--ease),
     box-shadow var(--dur-fast) var(--ease);
@@ -301,6 +314,7 @@ select:not([multiple], [size]),
 textarea {
   min-height: var(--control-height);
   line-height: 1.4;
+  resize: vertical;
 }
 /* Redwood focus on fields: the border and a 1px ring take the brand colour instead of an outline. */
 :is(
@@ -332,11 +346,11 @@ textarea {
   flex: 1 1 0;
   min-width: 0;
 }
-label {
+/* A field label (GN-Angular .gn-field: 4px gap, text colour); a label around a checkbox or radio is left alone. */
+label:where(:not(:has(input[type="checkbox"], input[type="radio"]))) {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  color: var(--muted);
+  gap: 4px;
   font-weight: 600;
 }
 input[type="checkbox"],
@@ -815,6 +829,8 @@ main {
 /* Dark themes: GN-Angular dark surfaces. The theme's brand (#0a0a0a for the preset) and background/text come from
    applyTheme on .app; marks drawn in the brand colour use --gn-brand-fg instead, so they stay visible. */
 .dark {
+  --gn-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%23f5f4f2' stroke-width='1.2'/%3E%3C/svg%3E");
+  --gn-check-tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-5' fill='none' stroke='%231f1e1c' stroke-width='1.6'/%3E%3C/svg%3E");
   --gn-brand-fg: #a4cdd2;
   --gn-bg: #1f1e1c;
   --gn-text: #f5f4f2;
@@ -1013,7 +1029,8 @@ main {
   pointer-events: none;
 }
 .home-workspace {
-  padding: 18px 36px;
+  /* GN-Angular dashboard.css :host. */
+  padding: 17px 36px 36px;
 }
 .home-context {
   margin-bottom: 36px;
@@ -1145,6 +1162,8 @@ main {
   left: 10px;
   pointer-events: none;
   font-weight: 500;
+  /* A Redwood inside label is secondary text; it no longer inherits the old muted label rule. */
+  color: var(--muted);
 }
 .inside-field input,
 .inside-field select {
@@ -1257,138 +1276,6 @@ a.sr-only:focus {
   }
 }
 
-.opportunity-results {
-  flex: 1;
-  min-width: 0;
-  padding: 12px;
-}
-
-.opportunity-tabs {
-  display: flex;
-  margin-bottom: 20px;
-}
-.opportunity-tabs button {
-  flex: 1 1 0;
-  min-width: 0;
-  border: 0;
-  border-radius: 0;
-  background: var(--opp-tab-bg);
-  color: var(--muted);
-  min-height: 36px;
-  border-top: 2px solid transparent;
-}
-.opportunity-tabs button[aria-selected="true"] {
-  border-top: 0;
-  border-bottom: 3px solid var(--accent-fg);
-  background: var(--opp-tab-active-bg);
-  color: var(--text);
-}
-.opportunity-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-  max-height: calc(100dvh - 200px);
-  overflow-y: auto;
-}
-.opportunity-card {
-  flex-shrink: 0;
-  border: 1px solid var(--opp-border);
-  border-left: 4px solid var(--opp-stripe);
-  border-radius: 7px;
-  background: var(--surface);
-  overflow: hidden;
-}
-.opportunity-card-heading {
-  display: flex;
-  align-items: start;
-  gap: 10px;
-  padding: 10px 16px 6px;
-}
-.opportunity-card-heading h2 {
-  font-size: 14px;
-  margin: 0;
-  line-height: 20px;
-}
-.opportunity-card-heading button {
-  font-size: 15px;
-  padding: 0;
-  min-height: 20px;
-}
-.opportunity-status {
-  margin-left: auto;
-  white-space: nowrap;
-  border-radius: 12px;
-  background: var(--opp-status-bg);
-  color: var(--opp-status-text);
-  padding: 3px 9px;
-  font-size: 11px;
-}
-.opportunity-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  padding: 4px 16px 8px;
-}
-.opportunity-tags span {
-  background: var(--opp-tag-bg);
-  padding: 3px 7px;
-  font-size: 11px;
-  border-radius: var(--radius);
-}
-.opportunity-tags span:first-child {
-  background: var(--opp-tag-accent-bg);
-  color: var(--accent-fg);
-}
-.opportunity-financials {
-  display: flex;
-  gap: 30px;
-  border-top: 3px solid var(--opp-divider);
-  padding: 8px 16px;
-}
-.opportunity-card small {
-  display: block;
-  font-size: 9px;
-  letter-spacing: 0.7px;
-  text-transform: uppercase;
-  color: var(--opp-caption);
-  margin-bottom: 3px;
-}
-.opportunity-financials strong {
-  font-size: 15px;
-  color: var(--accent-fg);
-}
-.opportunity-dates,
-.opportunity-counts {
-  display: flex;
-  background: var(--opp-band);
-}
-/* Fixed thirds: a card with fewer counts keeps the same columns. */
-.opportunity-dates > div,
-.opportunity-counts > div {
-  flex: 0 0 calc(100% / 3);
-  min-width: 0;
-}
-.opportunity-dates > div {
-  padding: 6px 10px;
-}
-.opportunity-counts > div {
-  padding: 5px 12px;
-  border-top: 1px solid var(--opp-border);
-  border-right: 1px solid var(--opp-border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.opportunity-counts small {
-  margin: 0;
-}
-.opportunity-counts strong {
-  border-radius: 12px;
-  background: var(--opp-count-bg);
-  color: var(--accent-fg);
-  padding: 3px 15px;
-}
 .opportunity-information {
   max-width: 800px;
   width: 90vw;
@@ -1400,23 +1287,6 @@ a.sr-only:focus {
   width: var(--control-height);
   padding: 0;
   border: 0;
-}
-@media (max-width: 600px) {
-  .opportunity-tabs button {
-    padding: 5px;
-    font-size: 11px;
-  }
-  .opportunity-dates,
-  .opportunity-counts {
-    flex-direction: column;
-  }
-  .opportunity-dates > div,
-  .opportunity-counts > div {
-    flex-basis: auto;
-  }
-  .opportunity-card-heading {
-    flex-wrap: wrap;
-  }
 }
 .muted {
   color: var(--muted);
@@ -1578,15 +1448,16 @@ a.sr-only:focus {
   --shine: color-mix(in srgb, currentColor 16%, transparent);
   display: block;
   height: 12px;
-  border-radius: var(--radius);
+  /* GN-Angular skeleton.css .bone: 4px radius, a 90deg sweep over 200%, 1.4s linear. */
+  border-radius: 4px;
   background: linear-gradient(
-    100deg,
-    var(--bone) 25%,
-    var(--shine) 45%,
-    var(--bone) 65%
-  );
-  background-size: 240% 100%;
-  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+      90deg,
+      var(--bone) 25%,
+      var(--shine) 50%,
+      var(--bone) 75%
+    )
+    0 0 / 200% 100%;
+  animation: skeleton-shimmer 1.4s linear infinite;
   margin-bottom: 10px;
 }
 .skeleton-reference {
@@ -1668,11 +1539,8 @@ a.sr-only:focus {
   margin: 0;
 }
 @keyframes skeleton-shimmer {
-  from {
-    background-position: 100% 0;
-  }
   to {
-    background-position: -100% 0;
+    background-position: -200% 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1742,6 +1610,12 @@ a.sr-only:focus {
     transform: scale(0.96);
   }
 }
+@keyframes motion-pop-out {
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
 @keyframes motion-expand {
   from {
     height: 0;
@@ -1765,6 +1639,9 @@ a.sr-only:focus {
 }
 .enter-pop {
   animation: motion-pop-in var(--dur-fast) var(--ease);
+}
+.leave-pop {
+  animation: motion-pop-out var(--dur-fast) var(--ease) forwards;
 }
 .enter-expand {
   overflow: hidden;
@@ -1848,6 +1725,112 @@ dialog[open]::backdrop {
   details:not([open])::details-content {
     opacity: 0;
   }
+}
+/* Baseline motion for every interaction (owner, 2026-10-22). :where() keeps it at zero specificity, so a
+   component's own transition or animation always wins. */
+:where(
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  summary,
+  label,
+  [role="tab"],
+  [role="option"],
+  [role="combobox"]
+) {
+  transition:
+    color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease),
+    opacity var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease);
+}
+@keyframes motion-check {
+  50% {
+    transform: scale(1.2);
+  }
+}
+:where(input[type="checkbox"], input[type="radio"]):checked {
+  animation: motion-check var(--dur-fast) var(--ease);
+}
+/* A region refreshing its data dims until the new rows arrive. */
+:where([aria-busy="true"]:not([role="status"])) {
+  opacity: 0.6;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+/* Rows rise in only where GN-Angular's did (record rows tagged .enter-rise: finder cards, EOI rows, queue rows,
+   notifications); animating every list item on mount (menus, trees, option lists) made the app feel choppy. */
+/* Native selects draw the same 12px chevron, 9px from the end, as the Select / MultiSelect triggers, so every
+   dropdown's arrow lines up whichever control renders it. */
+select:not([multiple], [size]) {
+  padding-right: 28px;
+  appearance: none;
+  background-image: var(--gn-select-chevron);
+  background-position: right 9px center;
+  background-repeat: no-repeat;
+  background-size: 12px;
+}
+/* Redwood oj-checkboxset glyph, measured on live (finder Status): a 12px square in the text colour, filled with a
+   tick when checked, in an 18px slot (6px gap to the label). */
+:root {
+  --gn-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%23161513' stroke-width='1.2'/%3E%3C/svg%3E");
+  --gn-check-tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-5' fill='none' stroke='%23ffffff' stroke-width='1.6'/%3E%3C/svg%3E");
+}
+input.gn-check {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin: 0 6px 0 0;
+  padding: 0;
+  appearance: none;
+  background: transparent center / 12px no-repeat;
+  border: 1px solid var(--gn-text);
+  border-radius: 2px;
+  cursor: pointer;
+}
+input.gn-check:checked {
+  background-color: var(--gn-text);
+  background-image: var(--gn-check-tick);
+}
+input.gn-check:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+/* Collapsible sections (filter groups and the like) slide open and closed. A <details class="gn-collapsible">
+   animates its content's height where ::details-content exists (others just open), and must stay display: block
+   (a flex <details> jumps instead of animating, verified in Chromium 154); any other block uses
+   .gn-collapse[data-open] around one child, made inert by its owner while closed. */
+@supports selector(::details-content) {
+  details.gn-collapsible::details-content {
+    block-size: 0;
+    overflow: clip;
+    transition:
+      block-size var(--dur) var(--ease),
+      opacity var(--dur) var(--ease),
+      content-visibility var(--dur) var(--ease) allow-discrete;
+  }
+  details.gn-collapsible[open]::details-content {
+    block-size: auto;
+  }
+}
+.gn-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows var(--dur) var(--ease),
+    opacity var(--dur) var(--ease);
+}
+.gn-collapse[data-open="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.gn-collapse > * {
+  min-height: 0;
+  overflow: hidden;
 }
 /* Reduced motion: everything still runs (end events fire, leaves complete) but in 1ms. */
 @media (prefers-reduced-motion: reduce) {
@@ -2064,7 +2047,8 @@ dialog[open]::backdrop {
   display: flex;
   flex-wrap: wrap;
   gap: 14px;
-  margin: 10px 0;
+  /* GN-Angular: 10px under the head, the form's 14px gap above the foot. */
+  margin: 10px 0 14px;
 }
 .dimension-fields > label {
   display: flex;
@@ -2075,10 +2059,20 @@ dialog[open]::backdrop {
 .dimension-fields > label > span {
   font-weight: 600;
 }
+/* GN-Angular dimension-dialog.css: 32px inputs, 6px 10px padding. */
+.dimension-fields input {
+  height: 32px;
+  padding: 6px 10px;
+}
 .chart-dimension-dialog .dialog-actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+/* GN-Angular dialog buttons: 28px, 0 14px. */
+.chart-dimension-dialog .dialog-actions button {
+  height: 28px;
+  padding: 0 14px;
 }
 @media (max-width: 767px) {
   .dynamic-chart-tile {
@@ -2197,7 +2191,7 @@ dialog[open]::backdrop {
   min-height: 153px;
 }
 .announcement-skeleton {
-  margin: -18px -36px 17px;
+  margin: -17px -36px 17px;
   height: 135px;
 }
 
@@ -2314,7 +2308,7 @@ html.accContrastTheme-100 {
 /* Home dashboard: GN-Angular dashboard / announcements / kpi-board / attention-widget / insights / chart-dialog
    CSS and the measured GN-Dashboard layout spec (title y208, KPIs y272, tab bar y390, first panel y430). */
 .announcements {
-  margin: -18px -36px 17px;
+  margin: -17px -36px 17px;
   padding: 6px 15px;
   background: var(--accent);
   color: var(--on-accent);

@@ -17,10 +17,11 @@ export function OrganizationHeading({
     params = useSearchParams();
   const name = organizations.find((o) => o.id === selected)?.name || fallback;
   return (
-    <div className="organization-heading">
+    <div id="home-organization" className="organization-heading">
       <h1>{name}</h1>
       <Icon name="chevron-down" size={18} />
       <select
+        id="home-organization-select"
         aria-label="Dashboard organization"
         value={selected}
         onChange={(e) => {

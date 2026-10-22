@@ -300,7 +300,8 @@
 .warn {
   display: block;
   margin-top: 3px;
-  font-size: 0.9em;
+  /* GN-Angular .cal-warn. */
+  font-size: 0.78em;
   font-weight: 500;
   color: var(--danger);
 }

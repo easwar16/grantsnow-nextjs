@@ -92,6 +92,20 @@ export async function mockOracle(
         ["SINGLE", "Single"],
         ["MULTI", "Multi"],
       ],
+      FILTER_OPERATOR: [
+        ["BETWEEN", "Between"],
+        ["GT", "Greater Than"],
+        ["LT", "Less Than"],
+        ["NULL", "Null"],
+        ["NOT_NULL", "Not Null"],
+      ],
+      EOI_STATUS: [
+        ["DRFT", "Draft"],
+        ["AIA", "Awaiting Internal Approval"],
+        ["IA", "Internally Approved"],
+        ["REJ", "Rejected"],
+        ["AWARD", "Awarded"],
+      ],
     };
     return {
       items: Object.entries(types).flatMap(([lookup_type_code, rows]) =>
@@ -157,7 +171,42 @@ export async function mockOracle(
   }
   if (op === "getSharedUserPreferenceLOV")
     return { items: [{ label: "Medicine" }, { label: "Research" }] };
-  if (op === "getSharedGetOppFunders") return { items: [{ value: "UKRI" }] };
+  // Finder funder tree: a site row (value = site) and its funders; UKRI stays for the profile's favourites.
+  if (op === "getSharedGetOppFunders")
+    return {
+      items: [
+        {
+          value: "UKRI",
+          site: "UKRI",
+          site_name: "UK Research and Innovation",
+        },
+        { value: "MRC", site: "UKRI", site_name: "UK Research and Innovation" },
+        { value: "Fixture source", site: "Fixture source", site_name: null },
+        {
+          value: "Example Research Council",
+          site: "Fixture source",
+          site_name: null,
+        },
+      ],
+    };
+  if (op === "getSharedOpportunitiesFilter")
+    return {
+      items: [
+        ["STATUS", "Open", "OPEN"],
+        ["STATUS", "Upcoming", "UPCOMING"],
+        ["STATUS", "Closed", "CLOSED"],
+        ["STATUS", "Open ", "open"],
+        ["FUNDING_TYPE", "Grant", "Grant"],
+        ["FUNDING_TYPE", "Fellowship", "Fellowship"],
+      ].map(([filter_type, label, value]) => ({ filter_type, label, value })),
+    };
+  if (op === "getSharedGetOppFunderTypes")
+    return {
+      items: [{ funder_type: "Charity" }, { funder_type: "Government" }],
+    };
+  // Dev returns one row with no code; the finder drops it.
+  if (op === "getSharedGetOppCallCodes")
+    return { items: [{ call: "CALL-2026-01" }, { call: null }] };
   if (op === "getSharedDashboardPreferences") {
     const { fixtureSettings } = await import("./account-store");
     const saved = fixtureSettings("shared/dashboardPreferences");
@@ -223,6 +272,10 @@ export async function mockOracle(
         { var_key: "DEFAULT_CURRENCY_CODE", var_value: "GBP" },
         { var_key: "DEFAULT_DATE_FORMAT", var_value: "DD-MMM-YYYY" },
         { var_key: "DECIMAL_PLACES_COUNT", var_value: "2" },
+        // Dynamic-form files: storage folder, size limit (MB) and allowed types.
+        { var_key: "INSTANCE", var_value: "dev" },
+        { var_key: "DEFAULT_SIZE_FORMAT", var_value: "4" },
+        { var_key: "ALLOWED_EXTENSIONS", var_value: "pdf,docx,txt,png,jpg" },
       ],
     };
   if (op === "getSharedAnnouncements")
@@ -346,11 +399,24 @@ export async function mockOracle(
         "dynamic-form-3",
         "dynamic-form-4",
         "dynamic-form-5",
-      ].map((tab) => ({
+      ].map((tab, i) => ({
+        page_id: i + 1,
         page_name: `opportunities-eoi-${tab}`,
         read_access: "Y",
+        // Form tabs are editable on the fixture draft (dynamic-form saves need edit).
+        ...(tab === "application" || tab.startsWith("dynamic-form-")
+          ? { edit_access: "Y" }
+          : {}),
       })),
     };
+  // The EOI record's finalize state: nothing to finalize, nothing locked.
+  if (
+    op === "getSharedFinalizablePages" ||
+    op === "getProposalGetLockedModules"
+  )
+    return { items: [] };
+  if (op === "getProposalGetLockStatus")
+    return { status: "UNLOCK", lock_module_id: null };
   if (op === "getDynamicFormsGetRequestDetails") {
     const id = Number(headers.request_id);
     return {
@@ -368,6 +434,12 @@ export async function mockOracle(
       ],
     };
   }
+  // Form file fields list by secondary type; the in-memory fixture table holds what the file flow stored.
+  if (
+    op === "getPre_awardAttachmentsProposal_id" &&
+    query?.has("p_sec_obj_type")
+  )
+    return (await import("./attachments")).fixtureAttachments(query);
   if (
     op === "getPre_awardAttachmentsProposal_id" ||
     op === "getApproval_setupApproval_stages" ||
@@ -375,7 +447,23 @@ export async function mockOracle(
     op === "getSharedObjectStatus"
   )
     return { items: [] };
-  if (op === "getProposalEthical_dynFormsP_ref_module")
+  // Dynamic forms (shapes as GN-Angular's specs and GrantsNow-Dynamic-Forms.md): conditions, dependent fields and
+  // LOVs, every field type, an optional section, a GRID and a FILE field.
+  if (op === "getProposalEthical_dynFormsP_ref_module") {
+    const f = (
+      fieldId: number,
+      description: string,
+      fieldType: string,
+      more: Record<string, unknown> = {},
+    ) => ({
+      fieldId,
+      description,
+      fieldType,
+      isRequired: "N",
+      isVisible: "Y",
+      colspan: 6,
+      ...more,
+    });
     return [
       {
         formId: 1,
@@ -385,19 +473,93 @@ export async function mockOracle(
             sectionId: 1,
             sectionName: "Project",
             sectionType: "FORM",
+            colspan: 12,
+            maxColumns: 2,
             isVisible: "Y",
+            isMandatory: "Y",
+            helperText: "&lt;p&gt;Tell us about the project.&lt;&#x2F;p&gt;",
             fields: [
-              {
-                fieldId: 1,
-                description: "Project title",
-                isVisible: "Y",
-                fieldType: "TEXT",
-              },
+              f(1, "Project title", "TEXTBOX", {
+                isRequired: "Y",
+                helperText:
+                  "&lt;p&gt;As on the funder&#39;s form.&lt;&#x2F;p&gt;",
+              }),
+              f(2, "Project code", "TEXTBOX", {
+                regexValidation: "[A-Z]{3}-\\d{3}",
+              }),
+              f(3, "Amount", "NUMERIC", { isRequired: "Y" }),
+              f(4, "Start date", "DATE"),
+              f(5, "Ethics approval needed", "RADIO", {
+                options: [
+                  { optionId: 51, optionValue: "Yes", dependent_fields: "6" },
+                  { optionId: 52, optionValue: "No" },
+                ],
+              }),
+              f(6, "Ethics details", "TEXTFIELD", {
+                isVisible: "C",
+                isRequired: "Y",
+              }),
+              f(7, "Themes", "CHECKBOX", {
+                options: [
+                  { optionId: 71, optionValue: "Health" },
+                  { optionId: 72, optionValue: "Climate" },
+                ],
+              }),
+              f(8, "Country", "LOV", {
+                options: [
+                  { optionId: 81, optionValue: "United Kingdom" },
+                  { optionId: 82, optionValue: "France" },
+                ],
+              }),
+              f(9, "City", "LOV", {
+                parent_header_attr: 8,
+                options: [
+                  { optionId: 91, optionValue: "Leeds", parent_lkp_code: "81" },
+                  { optionId: 92, optionValue: "Paris", parent_lkp_code: "82" },
+                ],
+              }),
+              f(10, "Supporting document", "FILE"),
+              f(11, "Summary", "RICHTEXTEDITOR", {
+                colspan: 12,
+                regexValidation: "[\\s\\S]{0,400}",
+                regexDesc:
+                  "Use less than 400 characters (including formatting)",
+              }),
+            ],
+          },
+          {
+            sectionId: 2,
+            sectionName: "Budget lines",
+            sectionType: "GRID",
+            colspan: 12,
+            isVisible: "Y",
+            isMandatory: "N",
+            fields: [
+              f(21, "Item", "TEXTBOX", { isRequired: "Y" }),
+              f(22, "Cost", "NUMERIC"),
+            ],
+          },
+          {
+            sectionId: 3,
+            sectionName: "Partners",
+            sectionType: "FORM",
+            colspan: 12,
+            maxColumns: 2,
+            isVisible: "Y",
+            isMandatory: "N",
+            fields: [
+              f(31, "Partner organisations", "COMBOBOXMANY", {
+                options: [
+                  { optionId: 311, optionValue: "University of Leeds" },
+                  { optionId: 312, optionValue: "Sorbonne" },
+                ],
+              }),
             ],
           },
         ],
       },
     ];
+  }
   if (op === "getProposalEthicaldynFormResponse")
     return [
       {
@@ -405,7 +567,23 @@ export async function mockOracle(
         sections: [
           {
             section_id: 1,
-            fields: [{ field_id: 1, value: "Synthetic research project" }],
+            fields: [
+              { field_id: 1, value: "Synthetic research project" },
+              { field_id: 3, value: "1250.5" },
+              { field_id: 5, value: "52" },
+              { field_id: 7, value: "71~~72" },
+              {
+                field_id: 11,
+                value: "<p><strong>Synthetic</strong> summary.</p>",
+              },
+            ],
+          },
+          {
+            section_id: 2,
+            fields: [
+              { field_id: 21, value: "Travel~~Equipment" },
+              { field_id: 22, value: "300~~" },
+            ],
           },
         ],
       },
@@ -571,6 +749,11 @@ export async function mockOracle(
       site: "Fixture source",
       funding_type: i % 2 ? "Grant" : "Fellowship",
       total_fund: 100000 + i * 1000,
+      high_award_range: 50000,
+      funder_type: i % 3 ? "Government" : "Charity",
+      programme: "Fixture programme",
+      call: "CALL-2026-01",
+      deadline_date: i === 0 ? "2026-11-15, 2026-12-01" : null,
       currency_code: "GBP",
       publication_date: "2026-10-01",
       opening_date: "2026-10-05",
@@ -593,13 +776,25 @@ export async function mockOracle(
     if (clause.includes('"shared_with_me"')) rows = [];
     const byId = clause.match(/"opportunities_id"='(\d+)'/)?.[1];
     if (byId) rows = rows.filter((r) => String(r.opportunities_id) === byId);
-    const search = [...clause.matchAll(/LOWER\('%([^']*)%'\)/g)].map((m) =>
-      m[1].toLowerCase(),
-    );
+    // Title words, funding types and funder types as the finder's where clause sends them.
+    const like = (column: string) =>
+      [
+        ...clause.matchAll(
+          new RegExp(`LOWER\\("${column}"\\) LIKE LOWER\\('%([^']*)%'\\)`, "g"),
+        ),
+      ].map((m) => m[1].replaceAll("''", "'").toLowerCase());
+    const search = like("opp_heading");
     if (search.length)
       rows = rows.filter((r) =>
         search.every((word) => r.opp_heading.toLowerCase().includes(word)),
       );
+    const fundingTypes = like("funding_type");
+    if (fundingTypes.length)
+      rows = rows.filter((r) =>
+        fundingTypes.some((t) => r.funding_type.toLowerCase().includes(t)),
+      );
+    const funderType = clause.match(/"funder_type"='([^']*)'/)?.[1];
+    if (funderType) rows = rows.filter((r) => r.funder_type === funderType);
     const offset = Number(query?.get("p_offset") || 0),
       limit = Number(query?.get("p_limit") || 25);
     return {
@@ -612,25 +807,43 @@ export async function mockOracle(
   if (op === "getDynamicFormsAllRequests") {
     const offset = Number(query?.get("p_offset") || 0),
       limit = Number(query?.get("p_limit") || 25);
+    // Synthetic EOI requests: statuses cycle through the EOI_STATUS fixture; funder text keeps a parenthesised comma.
+    const statuses = [
+      ["DRFT", "Draft"],
+      ["AIA", "Awaiting Internal Approval"],
+      ["IA", "Internally Approved"],
+      ["REJ", "Rejected"],
+      ["AWARD", "Awarded"],
+    ];
     let rows = proposals.map((p, i) => ({
       request_id: p.proposal_id,
       request_number: `EOI_${i + 1}`,
-      status: "Draft",
-      status_lkp_code: "DRFT",
+      status: statuses[i % statuses.length][1],
+      status_lkp_code: statuses[i % statuses.length][0],
       opp_heading: p.proposal_title,
       full_name: p.full_name,
       org_unit_name: p.org_unit_name,
-      funders: p.primary_sponsorer,
+      funders:
+        i % 3 === 0
+          ? `${p.primary_sponsorer}, UKRI (MRC, EPSRC)`
+          : p.primary_sponsorer,
       creation_date: p.creation_date,
       last_update_date: p.last_update_date,
+      logo: null,
     }));
-    const match = query
-      ?.get("p_where_clause")
-      ?.match(/LOWER\("opp_heading"\) LIKE LOWER\('%([^']*)%'\)/);
-    if (match)
-      rows = rows.filter((r) =>
-        r.opp_heading.toLowerCase().includes(match[1].toLowerCase()),
+    const where = query?.get("p_where_clause");
+    if (where) rows = rows.filter(whereMatcher(where));
+    const order = query?.get("p_order_by")?.match(/^"(\w+)"$/)?.[1];
+    if (order) {
+      const dir = query?.get("p_sort_order") === "ASC" ? 1 : -1;
+      rows.sort(
+        (a, b) =>
+          dir *
+          String(a[order as keyof (typeof rows)[number]] ?? "").localeCompare(
+            String(b[order as keyof (typeof rows)[number]] ?? ""),
+          ),
       );
+    }
     return {
       items: rows.slice(offset, offset + limit),
       totalcount: rows.length,

@@ -1,4 +1,5 @@
 "use client";
+import { idPart } from "@/lib/ids";
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRemote } from "@/lib/use-remote";
@@ -49,6 +50,7 @@ export function ConfigureDrawer({
   const title = useId();
   return (
     <aside
+      id="configure-drawer"
       className={styles.drawer}
       role="dialog"
       aria-labelledby={title}
@@ -63,6 +65,7 @@ export function ConfigureDrawer({
             : labels.userPreferences}
         </h2>
         <button
+          id="configure-drawer-close"
           type="button"
           className={styles.iconButton}
           aria-label={labels.close}
@@ -73,10 +76,11 @@ export function ConfigureDrawer({
         </button>
       </div>
       {remote.error ? (
-        <div className={styles.body} role="alert">
+        <div id="configure-drawer-error" className={styles.body} role="alert">
           <p>{remote.error.message}</p>
           {remote.error.action && <p>{remote.error.action}</p>}
           <button
+            id="configure-drawer-retry"
             type="button"
             className={styles.textButton}
             onClick={remote.retry}
@@ -173,13 +177,17 @@ function Settings({
   }
   return (
     <>
-      <div className={styles.body}>
+      <div id="configure-settings" className={styles.body}>
         {mode === "accessibility" ? (
-          <div className={`${styles.panels} enter-fade`}>
+          <div
+            id="configure-accessibility"
+            className={`${styles.panels} enter-fade`}
+          >
             {accessibilityKeys.map((key, i) => {
               const level = draft.accessibility[key] || 0;
               return (
                 <button
+                  id={`configure-accessibility-${idPart(key)}`}
                   type="button"
                   key={key}
                   className={styles.panel}
@@ -202,18 +210,21 @@ function Settings({
           </div>
         ) : (
           <>
-            <section className="enter-fade">
+            <section id="configure-theme" className="enter-fade">
               <h3 className={styles.heading}>
-                {labels.theme} <HelpButton html={labels.themeHelp} />
+                {labels.theme}{" "}
+                <HelpButton id="configure-theme-help" html={labels.themeHelp} />
               </h3>
               <div className={styles.themes}>
                 <div
+                  id="configure-theme-list"
                   className={styles.swatches}
                   role="radiogroup"
                   aria-label={labels.theme}
                 >
                   {initial.themes.map((t) => (
                     <button
+                      id={`configure-theme-${t.id}`}
                       type="button"
                       key={t.id}
                       role="radio"
@@ -235,6 +246,7 @@ function Settings({
                   ))}
                 </div>
                 <button
+                  id="configure-theme-reset"
                   type="button"
                   className={styles.textButton}
                   title="Reset to the organisation default theme"
@@ -244,15 +256,20 @@ function Settings({
                 </button>
               </div>
             </section>
-            <section>
+            <section id="configure-infolets">
               <h3 className={styles.heading}>
-                {labels.infolets} <HelpButton html={labels.infoletsHelp} />
+                {labels.infolets}{" "}
+                <HelpButton
+                  id="configure-infolets-help"
+                  html={labels.infoletsHelp}
+                />
               </h3>
               {(["needAttention", "insights"] as const).map((group) => (
-                <div key={group}>
+                <div key={group} id={`configure-group-${idPart(group)}`}>
                   <label className={styles.switch}>
                     <span>{labels[group]}</span>
                     <input
+                      id={`configure-group-${idPart(group)}-switch`}
                       type="checkbox"
                       role="switch"
                       checked={Object.values(draft[group]).some(Boolean)}
@@ -264,6 +281,7 @@ function Settings({
                       <label className={styles.switch} key={key}>
                         <span>{initial.labels[key] || friendlyName(key)}</span>
                         <input
+                          id={`configure-infolet-${idPart(key)}`}
                           type="checkbox"
                           role="switch"
                           checked={on}
@@ -289,6 +307,7 @@ function Settings({
                           : labels.notifications}
                       </span>
                       <input
+                        id={`configure-${key}`}
                         type="checkbox"
                         role="switch"
                         checked={draft[key] === true}
@@ -303,8 +322,9 @@ function Settings({
           </>
         )}
       </div>
-      <div className={styles.foot}>
+      <div id="configure-footer" className={styles.foot}>
         <button
+          id="configure-save"
           type="button"
           className={styles.primary}
           disabled={busy}

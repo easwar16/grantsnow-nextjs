@@ -41,6 +41,7 @@ function Item({
   if (item.external)
     return (
       <a
+        id={`navigation-${item.id}`}
         href={item.href}
         target="_blank"
         rel="noopener noreferrer"
@@ -53,6 +54,7 @@ function Item({
     );
   return (
     <Link
+      id={`navigation-${item.id}`}
       href={item.href}
       prefetch={false}
       className={styles.item}
@@ -79,6 +81,7 @@ function Group({
   return (
     <>
       <button
+        id={`navigation-${item.id}`}
         type="button"
         className={styles.item}
         aria-expanded={open}
@@ -98,7 +101,10 @@ function Group({
         />
       </button>
       {open && (
-        <ul className={`${styles.list} ${styles.children} enter-expand`}>
+        <ul
+          id={`navigation-${item.id}-list`}
+          className={`${styles.list} ${styles.children} enter-expand`}
+        >
           {children.map((child) => (
             <li key={child.id}>
               <Item item={child} path={path} isNew={isNew} />
@@ -121,8 +127,8 @@ export function Navigation({
   const split = items.findIndex((item) => item.id === firstDeepLink);
   const [main, deep] =
     split === -1 ? [items, []] : [items.slice(0, split), items.slice(split)];
-  const list = (entries: NavEntry[]) => (
-    <ul className={styles.list}>
+  const list = (id: string, entries: NavEntry[]) => (
+    <ul id={id} className={styles.list}>
       {entries.map((item) => (
         <li key={item.id}>
           {item.children ? (
@@ -135,12 +141,12 @@ export function Navigation({
     </ul>
   );
   return (
-    <nav aria-label="Main navigation" className={styles.nav}>
-      {list(main)}
+    <nav id="navigation" aria-label="Main navigation" className={styles.nav}>
+      {list("navigation-main", main)}
       {deep.length > 0 && (
         <>
           <hr className={styles.divider} />
-          {list(deep)}
+          {list("navigation-deep-links", deep)}
         </>
       )}
     </nav>

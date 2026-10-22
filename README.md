@@ -18,7 +18,14 @@ npm run dev
 
 Open <http://localhost:3000> (the exact `APP_ORIGIN`: sign-in/out check it and the session cookie is host-only). This workspace uses the explicitly authorized connected DEV session: `DEV_BROWSER_SESSION=true`, `FIXTURE_MODE=false`. Paste your GrantsNow `token` cookie and click **Open connected DEV workspace**; the token stays server-side and every protected read validates it with Oracle. See [DEV browser session](docs/dev-browser-session.md) for expiry, refresh and security boundaries.
 
-On another checkout, copy `.env.example` to `.env.local`, set `APP_ORIGIN=http://localhost:3000`, `APP_ENV=development`, `FIXTURE_MODE=true`, and generate a random `SESSION_PASSWORD` of at least 32 characters. Example generation: `node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"`. Keep the key in the ignored file, never in source control.
+On another checkout:
+
+1. `cp .env.example .env.local`. The example already points at the GrantsNow DEV environment (ORDS, OIC, APEX tools, chatbot) and uses the paste-token login.
+2. Set `SESSION_PASSWORD` to a random key of at least 32 characters: `node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"`.
+3. Optional, for EOI file upload/download: get `GN_OIC_USER` / `GN_OIC_PASSWORD` privately from the team lead. Without them file storage shows as not connected and everything else works.
+4. `npm ci && npm run dev`, open <http://localhost:3000>, and paste your GrantsNow `token` cookie (from the signed-in VBCS app) on the login page.
+
+`.env.local` stays git-ignored: it holds the session key and the OIC credentials, which must never reach source control. For offline work without DEV, set `FIXTURE_MODE=true` and `DEV_BROWSER_SESSION=false`.
 
 ## Connect real DEV services
 

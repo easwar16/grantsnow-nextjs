@@ -9,10 +9,15 @@ const state = vi.hoisted(() => ({
     edit_access?: string;
   }[],
   labels: [] as Record<string, unknown>[],
+  record: vi.fn(),
+  token: "server-token",
+}));
+vi.mock("@/server/opportunities/record", () => ({
+  eoiConvertSource: state.record,
 }));
 vi.mock("@/server/session/service", () => ({
   authenticate: async () => ({
-    session: { token: "server-token" },
+    session: { token: state.token },
     user: {
       personId: "101",
       organizationId: "202",
@@ -162,6 +167,7 @@ beforeEach(() => {
   state.oracleWrite.mockReset().mockResolvedValue({});
   state.roles = [];
   state.labels = [];
+  state.token = "server-token";
 });
 afterEach(() => vi.unstubAllEnvs());
 describe("payload builders", () => {
@@ -276,12 +282,20 @@ describe("gates", () => {
     ).toEqual({ read: false, edit: true });
   });
   it("shows the finder pills, More Info and Shared-tab comments, and Home none of them (GN-Angular CardView)", () => {
-    const rows = ["new", "closing-soon", "status"].map((label_name) => ({
-      module_name: "OPPORTUNITIES-EOI",
-      label_type: "labels",
-      label_name,
-      is_visible: "Y" as const,
-    }));
+    const rows = [
+      ...["new", "closing-soon", "status"].map((label_name) => ({
+        module_name: "OPPORTUNITIES-EOI",
+        label_type: "labels",
+        label_name,
+        is_visible: "Y" as const,
+      })),
+      ...["more_info", "share-comments"].map((label_name) => ({
+        module_name: "OPPORTUNITIES-EOI",
+        label_type: "button-labels",
+        label_name,
+        is_visible: "Y" as const,
+      })),
+    ];
     const finder = cardActions(rows, null, "finder", "shared", 3);
     expect(finder).toMatchObject({
       pills: { new: true, closingSoon: true },
@@ -295,6 +309,12 @@ describe("gates", () => {
       pills: { new: false, closingSoon: false },
       moreInfo: false,
       status: true,
+      comments: false,
+    });
+    // Without a 'Y' row (missing, null or 'N') More Info and comments stay hidden.
+    const noButtons = rows.filter((r) => r.label_type === "labels");
+    expect(cardActions(noButtons, null, "finder", "shared", 3)).toMatchObject({
+      moreInfo: false,
       comments: false,
     });
   });
@@ -429,25 +449,25 @@ describe("POST /api/opportunities/actions", () => {
       comments: "Look",
     });
   });
-  it("applies only to an open opportunity that allows it, and returns the new request id", async () => {
+  it("applies only to an open opportunity that allows it, and creates nothing before the form's Create", async () => {
     state.roles = grant("apply-opportunities");
     state.oracle.mockResolvedValue(
       opportunity({ opportunity_status: "CLOSED" }),
     );
     expect((await post("apply", { opportunityId: 5 })).status).toBe(403);
     state.oracle.mockResolvedValue(opportunity());
-    state.oracleWrite.mockResolvedValue({ request_id: 88 });
     const applied = await post("apply", { opportunityId: 5 });
-    expect(await applied.json()).toEqual({ requestId: "88" });
-    expect(state.oracleWrite).toHaveBeenCalledWith(
-      "getDynamicFormsInsertRequest",
-      {
-        token: "server-token",
-        P_REF_OBJECT_ID: "5",
-        P_REF_OBJECT_TYPE: "OPPORTUNITIES",
-        P_REQUEST_TYPE: "OPPORTUNITIES-EOI",
-      },
-    );
+    expect(await applied.json()).toEqual({
+      href: "/opportunities/eoi/new/5/summary",
+    });
+    const fromDetail = await post("apply", {
+      opportunityId: 5,
+      tab: "application",
+    });
+    expect(await fromDetail.json()).toEqual({
+      href: "/opportunities/eoi/new/5/application",
+    });
+    expect(state.oracleWrite).not.toHaveBeenCalled();
   });
   it("stops a convert with a missing required field before any write", async () => {
     state.roles = grant("convert-opportunity-to-proposal");
@@ -511,6 +531,47 @@ describe("POST /api/opportunities/actions", () => {
       { field_id: 3, value: "" },
     ]);
   });
+  it("converts an approved application from its record: request_id, eoi-* gates, no summary seed", async () => {
+    state.record.mockResolvedValue({
+      session: { token: "server-token" },
+      user: { personId: "101", organizationId: "202", legalId: "77" },
+      opportunityId: 5,
+    });
+    state.oracle.mockImplementation(async (op: string) => convertReads(op));
+    state.oracleWrite.mockResolvedValueOnce({ proposal: 900, Prop_id: 901 });
+    const dialog = await (
+      await get(
+        "convert",
+        "opener=finder&kind=PROPOSAL&opportunityId=5&requestId=12",
+      )
+    ).json();
+    expect(dialog.texts.title).toBe("Convert to Full Proposal");
+    expect(dialog.gates["activity-type"].required).toBe(false);
+    const response = await post("convert", {
+      ...convertBody,
+      activityType: null,
+      requestId: 12,
+    });
+    expect(response.status).toBe(200);
+    expect(state.record).toHaveBeenCalledWith("12", "PROPOSAL");
+    expect(state.oracleWrite).toHaveBeenCalledTimes(1);
+    expect(state.oracleWrite.mock.calls[0][2].proposals).toMatchObject({
+      request_id: 12,
+      converted_from_opp_id: 5,
+    });
+  });
+  it("refuses a record convert for another opportunity than the application's", async () => {
+    state.record.mockResolvedValue({
+      session: { token: "server-token" },
+      user: { personId: "101", organizationId: "202", legalId: "77" },
+      opportunityId: 6,
+    });
+    state.oracle.mockImplementation(async (op: string) => convertReads(op));
+    expect(
+      (await post("convert", { ...convertBody, requestId: 12 })).status,
+    ).toBe(400);
+    expect(state.oracleWrite).not.toHaveBeenCalled();
+  });
   it("rejects a PI the list does not offer", async () => {
     state.roles = grant("convert-opportunity-to-proposal");
     state.oracle.mockImplementation(async (op: string) => convertReads(op));
@@ -535,6 +596,55 @@ describe("POST /api/opportunities/actions", () => {
       activityType: "CASH",
     });
     expect(body.pis).toHaveLength(1);
+  });
+});
+describe("parallel reads", () => {
+  it("fails the convert dialog closed when access is denied, whatever the parallel reads do", async () => {
+    // Every reference read succeeds or fails on its own; none of it may reach the response.
+    state.oracle.mockImplementation(async (op: string) => {
+      if (op === "GetSponsorList") throw new AppError("UPSTREAM", "down");
+      return convertReads(op);
+    });
+    const denied = await get(
+      "convert",
+      "opener=finder&kind=PROPOSAL&opportunityId=5",
+    );
+    expect(denied.status).toBe(403);
+    const body = await denied.json();
+    expect(body.error.code).toBe("FORBIDDEN");
+    expect(JSON.stringify(body)).not.toMatch(/Server heading|Alex Morgan/);
+    state.record.mockRejectedValue(
+      new AppError("FORBIDDEN", "This application cannot be converted.", 403),
+    );
+    const record = await get(
+      "convert",
+      "opener=finder&kind=PROPOSAL&opportunityId=5&requestId=12",
+    );
+    expect(record.status).toBe(403);
+    expect(JSON.stringify(await record.json())).not.toMatch(/Server heading/);
+  });
+  it("memoises lookups and sponsors per session, never across sessions", async () => {
+    state.roles = grant("convert-opportunity-to-proposal");
+    state.oracle.mockImplementation(async (op: string) => convertReads(op));
+    const open = () =>
+      get("convert", "opener=finder&kind=PROPOSAL&opportunityId=5");
+    expect((await open()).status).toBe(200);
+    expect((await open()).status).toBe(200);
+    state.token = "other-token";
+    expect((await open()).status).toBe(200);
+    const tokens = (op: string) =>
+      state.oracle.mock.calls
+        .filter(([name]) => name === op)
+        .map(([, headers]) => headers.token);
+    for (const op of [
+      "getPre_awardGetLookupTypesCodes",
+      "GetSponsorList",
+      "getPre_awardGetPersonList",
+      "getPre_awardGetLkpOrgUnitType",
+    ])
+      expect(tokens(op)).toEqual(["server-token", "other-token"]);
+    // The opportunity itself is record data: read every time.
+    expect(tokens("getSharedGetOpportunities")).toHaveLength(3);
   });
 });
 describe("client helpers", () => {

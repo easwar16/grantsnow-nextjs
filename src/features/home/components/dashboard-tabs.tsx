@@ -1,4 +1,5 @@
 "use client";
+import { idPart } from "@/lib/ids";
 import { useState } from "react";
 import type { FormatSettings } from "@/lib/format";
 import { Icon, type IconName } from "@/components/ui/icon";
@@ -37,6 +38,7 @@ export function DashboardTabs({
 }) {
   const [selected, setSelected] = useState(0);
   const tabs: {
+    key: string;
     label: string;
     icon: IconName;
     tone: string;
@@ -46,6 +48,7 @@ export function DashboardTabs({
       ? []
       : [
           {
+            key: "need-attention",
             label: labels.needAttention,
             icon: "flag" as const,
             tone: "danger",
@@ -56,6 +59,7 @@ export function DashboardTabs({
       ? []
       : [
           {
+            key: "insights",
             label: labels.insights,
             icon: "chart" as const,
             tone: "warning",
@@ -65,6 +69,7 @@ export function DashboardTabs({
     ...(additional.opportunities
       ? [
           {
+            key: "opportunities",
             label: labels.opportunities,
             icon: "money" as const,
             tone: "success",
@@ -75,6 +80,7 @@ export function DashboardTabs({
     ...(additional.notifications
       ? [
           {
+            key: "notifications",
             label: labels.notifications,
             icon: "bell" as const,
             tone: "success",
@@ -85,6 +91,7 @@ export function DashboardTabs({
     ...(additional.charts.length
       ? [
           {
+            key: "dynamic-charts",
             label: labels.dynamicCharts,
             icon: "dynamic" as const,
             tone: "success",
@@ -103,6 +110,7 @@ export function DashboardTabs({
   return (
     <>
       <div
+        id="home-tabs"
         className="dashboard-tabs"
         role="tablist"
         aria-label="Dashboard sections"
@@ -111,9 +119,9 @@ export function DashboardTabs({
           <button
             key={tab.icon}
             role="tab"
-            id={`dashboard-tab-${i}`}
+            id={`home-tab-${idPart(tab.key)}`}
             aria-selected={active === i}
-            aria-controls={`dashboard-panel-${i}`}
+            aria-controls={`home-panel-${idPart(tab.key)}`}
             tabIndex={active === i ? 0 : -1}
             onKeyDown={(event) => {
               let next: number | undefined;
@@ -125,7 +133,9 @@ export function DashboardTabs({
               if (next !== undefined) {
                 event.preventDefault();
                 setSelected(next);
-                document.getElementById(`dashboard-tab-${next}`)?.focus();
+                document
+                  .getElementById(`home-tab-${idPart(tabs[next].key)}`)
+                  ?.focus();
               }
             }}
             onClick={() => setSelected(i)}
@@ -139,8 +149,8 @@ export function DashboardTabs({
         <section
           key={tab.icon}
           role="tabpanel"
-          id={`dashboard-panel-${i}`}
-          aria-labelledby={`dashboard-tab-${i}`}
+          id={`home-panel-${idPart(tab.key)}`}
+          aria-labelledby={`home-tab-${idPart(tab.key)}`}
           hidden={active !== i}
         >
           {/* The first tab stays mounted so its queues keep their loaded pages. */}

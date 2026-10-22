@@ -19,12 +19,14 @@ function stamp(value: string | undefined, format?: FormatSettings) {
 }
 /** The Shared tab's Comments: the one comment the opportunity was shared with (8516 dropped the history endpoint). */
 export function CommentsDialog({
+  id,
   heading,
   shared,
   texts,
   format,
   onClose,
 }: {
+  id: string;
   heading: string;
   shared?: { by?: string; at?: string; comment?: string };
   texts: {
@@ -40,6 +42,7 @@ export function CommentsDialog({
   const comment = shared?.comment;
   return (
     <ActionDialog
+      id={id}
       title={texts.title}
       subtitle={`${heading} · ${comment ? 1 : 0} ${comment ? texts.singular : texts.plural}`}
       width={640}
@@ -47,7 +50,7 @@ export function CommentsDialog({
       onClose={onClose}
     >
       {comment ? (
-        <div className={`${styles.comment} enter-rise`}>
+        <div id={`${id}-comment`} className={`${styles.comment} enter-rise`}>
           <div className={styles.commentHead}>
             <span className={styles.avatar} aria-hidden="true">
               {initials(shared?.by)}
@@ -60,7 +63,9 @@ export function CommentsDialog({
           <div className={styles.commentBody}>{comment}</div>
         </div>
       ) : (
-        <p className={styles.state}>{texts.none}</p>
+        <p id={`${id}-empty`} className={styles.state}>
+          {texts.none}
+        </p>
       )}
     </ActionDialog>
   );

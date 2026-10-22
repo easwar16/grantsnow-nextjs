@@ -29,7 +29,9 @@ function writeWidth(page: string, width?: number) {
 
 /**
  * A listing page's left filter column with a user-resizable width, beside its own scrolling results.
- * `page` keys the stored width; `id` names the collapsible filter body.
+ * `page` keys the stored width; `id` names the collapsible filter body, `${id}-panel` the aside, `${id}-resize` the
+ * handle and `${id}-results` the results column. Passing `open` makes the page own the
+ * toggle (GN-Angular: the finder's toolbar button; the EOI list has none), so the panel drops its own header.
  */
 export function FilterPanel({
   id,
@@ -37,18 +39,21 @@ export function FilterPanel({
   page,
   filters,
   children,
+  open: controlled,
 }: {
   id: string;
   label: string;
   page: string;
   filters: ReactNode;
   children: ReactNode;
+  open?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null),
     drag = useRef<{ x: number; width: number }>(undefined);
   const [width, setWidth] = useState(PANEL_WIDTH.initial),
     [limit, setLimit] = useState(PANEL_WIDTH.max),
-    [open, setOpen] = useState(true);
+    [own, setOwn] = useState(true),
+    open = controlled ?? own;
   const shown = Math.min(width, limit);
   // A layout effect applies the stored width before the browser paints a client navigation.
   useLayoutEffect(() => {
@@ -73,24 +78,35 @@ export function FilterPanel({
       className={styles.layout}
       style={{ "--filter-panel-width": `${shown}px` } as React.CSSProperties}
     >
-      <aside className={styles.panel} data-open={open} aria-label={label}>
-        <div className={styles.header}>
-          <button
-            type="button"
-            className={styles.toggle}
-            aria-expanded={open}
-            aria-controls={id}
-            onClick={() => setOpen(!open)}
-          >
-            Filters <span aria-hidden="true">{open ? "«" : "»"}</span>
-          </button>
-        </div>
+      <aside
+        id={`${id}-panel`}
+        className={styles.panel}
+        data-open={open}
+        data-collapsed={controlled === false || undefined}
+        inert={controlled === false}
+        aria-label={label}
+      >
+        {controlled === undefined && (
+          <div className={styles.header}>
+            <button
+              id={`${id}-toggle`}
+              type="button"
+              className={styles.toggle}
+              aria-expanded={open}
+              aria-controls={id}
+              onClick={() => setOwn(!open)}
+            >
+              Filters <span aria-hidden="true">{open ? "«" : "»"}</span>
+            </button>
+          </div>
+        )}
         <div id={id} className={styles.body} hidden={!open}>
           {filters}
         </div>
       </aside>
       {open && (
         <div
+          id={`${id}-resize`}
           role="separator"
           aria-orientation="vertical"
           aria-label={`Resize ${label}`}
@@ -106,6 +122,8 @@ export function FilterPanel({
             event.currentTarget.focus();
             event.currentTarget.setPointerCapture(event.pointerId);
             drag.current = { x: event.clientX, width: shown };
+            // The width follows the pointer directly; the collapse transition would make it lag.
+            root.current?.setAttribute("data-dragging", "");
           }}
           onPointerMove={(event) => {
             if (!drag.current) return;
@@ -119,6 +137,7 @@ export function FilterPanel({
           onLostPointerCapture={() => {
             if (!drag.current) return;
             drag.current = undefined;
+            root.current?.removeAttribute("data-dragging");
             writeWidth(page, shown);
           }}
           onKeyDown={(event) => {
@@ -133,7 +152,9 @@ export function FilterPanel({
           }}
         />
       )}
-      <div className={styles.results}>{children}</div>
+      <div id={`${id}-results`} className={styles.results}>
+        {children}
+      </div>
     </div>
   );
 }

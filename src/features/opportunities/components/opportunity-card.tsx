@@ -1,25 +1,39 @@
 "use client";
-import { useState } from "react";
+import { memo, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { dateDisplay, moneyDisplay, type FormatSettings } from "@/lib/format";
 import { useInFlight } from "@/lib/use-in-flight";
 import type { OpportunityCardModel, OpportunityRow } from "../types";
 import { canCreate } from "../display";
 import { Icon } from "@/components/ui/icon";
+import { preloadEditor } from "@/components/ui/rich-text";
 import { useConfirm } from "./actions/action-dialog";
 import { CommentsDialog } from "./actions/comments-dialog";
-import { ConvertDialog, type ConvertKind } from "./actions/convert-dialog";
+import {
+  ConvertDialog,
+  warmConvert,
+  type ConvertKind,
+} from "./actions/convert-dialog";
 import { nearDeadline } from "./actions/duration";
 import { NotesDialog } from "./actions/notes-dialog";
 import { callAction, useActionFailure } from "./actions/request";
-import { ShareDialog } from "./actions/share-dialog";
+import { ShareDialog, warmShare } from "./actions/share-dialog";
 import styles from "./opportunity-card.module.css";
 const dateValue = {
   "publication-date": "published",
   "opening-date": "opening",
   "closing-date": "closing",
 } as const;
+/** formatDatesToString: each date of a comma-separated sponsor deadline list, formatted. */
+const deadlineList = (raw: string, format?: FormatSettings) =>
+  raw
+    .split(",")
+    .map((d) => d.trim())
+    .filter(Boolean)
+    .map((d) => dateDisplay(d, format))
+    .join(", ");
 type Open =
   | { dialog: "notes" | "share" | "comments" }
   | { dialog: "convert"; kind: ConvertKind }
@@ -37,17 +51,20 @@ const plainText = (html: string) =>
     .replace(/\s+/g, " ")
     .trim();
 /** The one opportunity card for the finder and Home's Featured tab (D32), with GN-Angular's card actions. */
-export function OpportunityCard({
+/** Memoised: a card re-renders only when its own row, card model or format changes, not on every finder click. */
+export const OpportunityCard = memo(function OpportunityCard({
   row,
   card,
-  onMoreInfo,
   format,
+  idPrefix = "opportunity",
 }: {
   row: OpportunityRow;
   card: OpportunityCardModel;
-  /** The finder's More Info; Home's card has none. */
+  /** @deprecated More Info now opens the detail page (`/opportunities/<id>`); this is ignored. */
   onMoreInfo?: (row: OpportunityRow) => void;
   format?: FormatSettings;
+  /** Keeps the card's ids unique where another list shows the same opportunity. */
+  idPrefix?: string;
 }) {
   const { labels, actions } = card;
   // Bookmark and notes saves patch this card in place (the original reloaded the list); a new row drops the patch.
@@ -61,10 +78,11 @@ export function OpportunityCard({
       row,
       patch: { ...(l.row === row ? l.patch : {}), ...change },
     }));
+  const id = `${idPrefix}-${o.id}`;
   const [open, setOpen] = useState<Open>(null),
     close = () => setOpen(null),
     { run, isActive } = useInFlight(),
-    { ask, element: confirmation } = useConfirm(),
+    { ask, element: confirmation } = useConfirm(`${id}-deadline`),
     fail = useActionFailure(),
     router = useRouter();
   const counts = (
@@ -74,6 +92,11 @@ export function OpportunityCard({
       ["outline-proposals-count", o.outlines],
     ] as const
   ).filter(([, n]) => n !== undefined);
+  // The cells the card's gates show that have a value, in the original's order.
+  const metaCells = card.meta.flatMap((cell) => {
+    const value = o.meta?.[cell.key];
+    return value === undefined ? [] : [{ ...cell, value }];
+  });
   const creatable = canCreate(o.status);
   const can = {
     apply: creatable && actions.apply && o.canApply === true,
@@ -105,23 +128,28 @@ export function OpportunityCard({
   const apply = () =>
     run(async () => {
       if (!(await deadlineOk())) return;
-      const result = await callAction<{ requestId: string }>("apply", {
+      // The server checks the gates; the application is created only on its form's Create.
+      const result = await callAction<{ href: string }>("apply", {
         opportunityId: Number(o.id),
       });
       if (!result.ok) return fail(result.error);
-      router.push(`/opportunities/eoi/${result.data.requestId}`);
+      router.push(result.data.href);
     }, "apply");
+  const warm = (kind: ConvertKind) => warmConvert(actions.opener, kind, o.id);
   const convert = (kind: ConvertKind) =>
     run(async () => {
+      // The setup loads while the deadline warning is read.
+      warm(kind);
       if (await deadlineOk()) setOpen({ dialog: "convert", kind });
     }, "convert");
   return (
     <article
+      id={id}
       className={`opportunity-card ${styles.card}`}
       aria-label={o.title}
       data-status={o.status.toLowerCase()}
     >
-      <div className="opportunity-card-heading">
+      <div id={`${id}-heading`} className={styles.header}>
         {o.logo ? (
           <Image
             className={styles.logo}
@@ -139,7 +167,12 @@ export function OpportunityCard({
         <div className={styles.titleRow}>
           <h3 className={styles.title}>
             {o.url ? (
-              <a href={o.url} target="_blank" rel="noopener noreferrer">
+              <a
+                id={`${id}-link`}
+                href={o.url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 {o.title}
                 <span className="sr-only"> (opens in new tab)</span>
               </a>
@@ -157,26 +190,29 @@ export function OpportunityCard({
               {labels["closing-soon"]}
             </span>
           )}
-          {actions.moreInfo && onMoreInfo && (
-            <button
-              type="button"
+          {actions.moreInfo && (
+            // More Info opens the opportunity's summary as a detail page (the original's isDetailPage).
+            <Link
+              id={`${id}-more-info`}
               className={styles.info}
+              href={`/opportunities/${o.id}`}
+              prefetch={false}
               aria-label={`${labels["more-info"]}: ${o.title}`}
-              onClick={() => onMoreInfo(o)}
             >
               <Icon name="info" />
-            </button>
+            </Link>
           )}
         </div>
-        <div className={styles.headerActions}>
+        <div id={`${id}-header-actions`} className={styles.headerActions}>
           {actions.status && o.status && (
-            <span className="opportunity-status">
+            <span id={`${id}-status`} className={styles.badge}>
               <span className={styles.badgeDot} aria-hidden="true" />
               {o.status}
             </span>
           )}
           <button
             type="button"
+            id={`${id}-bookmark`}
             className={`${styles.iconButton}${o.bookmarked ? ` ${styles.active}` : ""}`}
             aria-pressed={o.bookmarked}
             aria-label={o.bookmarked ? "Remove bookmark" : "Bookmark"}
@@ -193,8 +229,11 @@ export function OpportunityCard({
           {actions.share && (
             <button
               type="button"
+              id={`${id}-share`}
               className={styles.iconButton}
               aria-label={labels.share}
+              onPointerEnter={warmShare}
+              onFocus={warmShare}
               onClick={() => setOpen({ dialog: "share" })}
             >
               <Icon name="share" />
@@ -203,6 +242,7 @@ export function OpportunityCard({
           {actions.comments && (
             <button
               type="button"
+              id={`${id}-comments`}
               className={styles.comments}
               onClick={() => setOpen({ dialog: "comments" })}
             >
@@ -216,9 +256,12 @@ export function OpportunityCard({
           {actions.notes && (
             <button
               type="button"
+              id={`${id}-notes`}
               className={`${styles.iconButton}${notesText ? ` ${styles.hasNotes}` : ""}`}
               aria-label={labels.notes}
               title={notesText || undefined}
+              onPointerEnter={actions.notesEdit ? preloadEditor : undefined}
+              onFocus={actions.notesEdit ? preloadEditor : undefined}
               onClick={() => setOpen({ dialog: "notes" })}
             >
               <Icon name="notes" />
@@ -227,7 +270,7 @@ export function OpportunityCard({
         </div>
       </div>
       {(o.site || o.funders?.length || o.coFunders?.length) && (
-        <ul className={`opportunity-tags ${styles.tags}`}>
+        <ul id={`${id}-tags`} className={styles.tags}>
           {o.site && <li>{o.site}</li>}
           {o.funders?.map((funder, i) => (
             <li key={`f${i}`}>{funder}</li>
@@ -240,37 +283,45 @@ export function OpportunityCard({
         </ul>
       )}
       <div className={styles.bottom}>
-        <div className={styles.details}>
-          {(o.fundingType || o.totalFund !== undefined) && (
-            <div className="opportunity-financials">
-              {o.fundingType && (
-                <div>
-                  <small>{labels["funding-type"]}</small>
-                  {o.fundingType}
+        <div id={`${id}-details`} className={styles.details}>
+          {metaCells.length > 0 && (
+            <div id={`${id}-meta`} className={styles.meta}>
+              {metaCells.map(({ key, label, kind, value }) => (
+                <div key={key} id={`${id}-${key}`}>
+                  <small>{label}</small>
+                  {kind === "money" ? (
+                    <strong>
+                      {moneyDisplay(value, o.currency, format).replace(
+                        /\.00$/,
+                        "",
+                      )}
+                    </strong>
+                  ) : kind === "date" ? (
+                    dateDisplay(value, format)
+                  ) : (
+                    value
+                  )}
                 </div>
-              )}
-              {o.totalFund !== undefined && (
-                <div>
-                  <small>{labels["total-fund"]}</small>
-                  <strong>
-                    {moneyDisplay(o.totalFund, o.currency, format).replace(
-                      /\.00$/,
-                      "",
-                    )}
-                  </strong>
-                </div>
-              )}
+              ))}
             </div>
           )}
           {card.dates.length > 0 && (
-            <div className="opportunity-dates">
+            <div id={`${id}-dates`} className={styles.dates}>
               {card.dates.map((key) => {
                 const value = o[dateValue[key]];
                 return (
-                  <div key={key}>
+                  <div
+                    key={key}
+                    id={`${id}-${key}`}
+                    className={
+                      key === "closing-date" ? styles.closing : undefined
+                    }
+                  >
                     <small>{labels[key]}</small>
                     {value
-                      ? dateDisplay(value, format)
+                      ? key === "closing-date"
+                        ? deadlineList(value, format)
+                        : dateDisplay(value, format)
                       : key === "closing-date"
                         ? labels["check-website"]
                         : labels["not-available"]}
@@ -280,9 +331,9 @@ export function OpportunityCard({
             </div>
           )}
           {counts.length > 0 && (
-            <div className="opportunity-counts">
+            <div id={`${id}-counts`} className={styles.counts}>
               {counts.map(([key, n]) => (
-                <div key={key}>
+                <div key={key} id={`${id}-${key}`}>
                   <small>{labels[key]}</small>
                   <strong>{n}</strong>
                 </div>
@@ -291,10 +342,11 @@ export function OpportunityCard({
           )}
         </div>
         {(can.apply || can.convert || can.convertToProposal) && (
-          <div className={styles.actions}>
+          <div id={`${id}-create-actions`} className={styles.actions}>
             {can.apply && (
               <button
                 type="button"
+                id={`${id}-apply`}
                 className={`${styles.action} ${styles.apply}`}
                 disabled={isActive("apply")}
                 onClick={apply}
@@ -306,8 +358,11 @@ export function OpportunityCard({
             {can.convert && (
               <button
                 type="button"
+                id={`${id}-convert`}
                 className={`${styles.action} ${styles.convert}`}
                 disabled={isActive("convert") || open?.dialog === "convert"}
+                onPointerEnter={() => warm("OUTLINE_PROPOSAL")}
+                onFocus={() => warm("OUTLINE_PROPOSAL")}
                 onClick={() => convert("OUTLINE_PROPOSAL")}
               >
                 <Icon name="workflow" />
@@ -317,8 +372,11 @@ export function OpportunityCard({
             {can.convertToProposal && (
               <button
                 type="button"
+                id={`${id}-convert-to-proposal`}
                 className={`${styles.action} ${styles.convertProposal}`}
                 disabled={isActive("convert") || open?.dialog === "convert"}
+                onPointerEnter={() => warm("PROPOSAL")}
+                onFocus={() => warm("PROPOSAL")}
                 onClick={() => convert("PROPOSAL")}
               >
                 <Icon name="workflow" />
@@ -331,6 +389,7 @@ export function OpportunityCard({
       {confirmation}
       {open?.dialog === "notes" && (
         <NotesDialog
+          id={`${id}-notes-dialog`}
           opportunityId={o.id}
           heading={o.title}
           notes={o.notes ?? ""}
@@ -349,10 +408,16 @@ export function OpportunityCard({
         />
       )}
       {open?.dialog === "share" && (
-        <ShareDialog opportunityId={o.id} heading={o.title} onClose={close} />
+        <ShareDialog
+          id={`${id}-share-dialog`}
+          opportunityId={o.id}
+          heading={o.title}
+          onClose={close}
+        />
       )}
       {open?.dialog === "comments" && (
         <CommentsDialog
+          id={`${id}-comments-dialog`}
           heading={o.title}
           shared={o.shared}
           texts={{
@@ -368,6 +433,7 @@ export function OpportunityCard({
       )}
       {open?.dialog === "convert" && (
         <ConvertDialog
+          id={`${id}-convert-dialog`}
           opener={actions.opener}
           kind={open.kind}
           opportunityId={o.id}
@@ -376,44 +442,4 @@ export function OpportunityCard({
       )}
     </article>
   );
-}
-/** The More Info dialog both card lists share; the summary is sanitised on the server. */
-export function OpportunityInformation({
-  row,
-  ref,
-}: {
-  row?: OpportunityRow;
-  ref: React.Ref<HTMLDialogElement>;
-}) {
-  return (
-    <dialog
-      ref={ref}
-      className="opportunity-information"
-      aria-label="Opportunity information"
-    >
-      <button
-        type="button"
-        className="dialog-close"
-        aria-label="Close opportunity information"
-        onClick={(e) => e.currentTarget.closest("dialog")?.close()}
-      >
-        <Icon name="close" />
-      </button>
-      <h2>{row?.title}</h2>
-      {row?.summary ? (
-        <div
-          className="announcement-content"
-          dangerouslySetInnerHTML={{ __html: row.summary }}
-        />
-      ) : (
-        <p>No additional summary was returned.</p>
-      )}
-      {row?.url && (
-        <a href={row.url} target="_blank" rel="noopener noreferrer">
-          View funder website
-          <span className="sr-only"> (opens in new tab)</span>
-        </a>
-      )}
-    </dialog>
-  );
-}
+});

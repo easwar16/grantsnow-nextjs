@@ -1,0 +1,132 @@
+import "server-only";
+import { z } from "zod";
+import { oracle, oracleWrite } from "@/server/api/transport";
+import { label, resources } from "@/server/configuration/resources";
+import { oicConnected } from "@/server/api/oic";
+import { AppError } from "@/lib/errors";
+import type {
+  DynamicFormData,
+  DynamicFormText,
+} from "@/features/dynamic-form/models";
+import { authorizeForm, formTarget, type FormTarget } from "./access";
+import { checkAnswers, mapAnswers, mapForms } from "./forms";
+import { formGlobals } from "./globals";
+import { early } from "@/server/async";
+const BUNDLE = "opportunities-eoi";
+const TEXTS: Record<DynamicFormText, [string, string, string]> = {
+  noData: ["helper-texts", "no-data", "No data to display."],
+  dragAndDrop: ["labels", "drag-and-drop", "Drag and drop, or select a file"],
+  noFile: ["labels", "no-file", "No file"],
+  download: ["button-labels", "download", "Download"],
+  delete: ["button-labels", "delete", "Delete"],
+  insertRow: ["button-labels", "insert-row", "Insert Row"],
+  edit: ["button-labels", "edit", "Edit"],
+  done: ["button-labels", "done", "Done"],
+  cancel: ["button-labels", "cancel", "Cancel"],
+  requiredFields: [
+    "error-msg",
+    "required-fields",
+    "Please fill all the required fields",
+  ],
+  fileLarge: ["labels", "file-large", "File not accepted"],
+  fileUnique: [
+    "error-msg",
+    "file-should-be-unique",
+    "A file with this name is already attached",
+  ],
+  sourceCode: ["labels", "source-code", "Source code"],
+  moreInfo: ["button-labels", "more_info", "More Info"],
+  storageOff: [
+    "labels",
+    "file-storage-off",
+    "File storage is not connected in this environment.",
+  ],
+};
+async function formTexts() {
+  const rows = await resources();
+  return Object.fromEntries(
+    Object.entries(TEXTS).map(([k, [group, key, fallback]]) => [
+      k,
+      label(rows, BUNDLE, group, key, fallback),
+    ]),
+  ) as Record<DynamicFormText, string>;
+}
+/** dynForms for the target; `p_id` / `p_obj_id` are the record (empty for a new application), as the original sends. */
+async function definitions(token: string, t: FormTarget, objectId: string) {
+  return mapForms(
+    await oracle("getProposalEthical_dynFormsP_ref_module", {
+      token,
+      p_id: objectId,
+      p_obj_id: objectId,
+      p_obj_type: t.objectType,
+      p_ref_module: t.slot,
+    }),
+  );
+}
+const hasSections = (forms: { sections: unknown[] }[]) =>
+  forms.some((f) => f.sections.length > 0);
+/** GET: the form and its answers as the allowlisted display model, with the settings the fields need. */
+export async function loadForm(t: FormTarget): Promise<DynamicFormData> {
+  // Settings and labels are not the record's; they load while access is checked.
+  const settings = early(formGlobals()),
+    labels = early(formTexts());
+  const { token } = await authorizeForm(t, "read");
+  const objectId = t.objectId ?? "";
+  const [forms, rawAnswers, globals, texts] = await Promise.all([
+    definitions(token, t, objectId),
+    t.objectId === undefined
+      ? Promise.resolve([])
+      : oracle("getProposalEthicaldynFormResponse", {
+          P_TOKEN: token,
+          P_REF_OBJ_ID: t.objectId,
+          P_REF_MODULE: t.slot,
+        }),
+    settings,
+    labels,
+  ]);
+  return {
+    forms,
+    answers: mapAnswers(rawAnswers, forms),
+    settings: {
+      decimals: globals.decimals,
+      maxMb: globals.maxMb,
+      accept: globals.accept,
+      storage: oicConnected() && globals.instance !== null,
+    },
+    texts,
+  };
+}
+const saveInput = z
+  .object({ target: formTarget, answers: z.unknown() })
+  .strict();
+/**
+ * POST: WRITES the answers (`dynFormResponse`, P_FORM_ID = the first form's, P_TOKEN from the session), after checking
+ * them against the form definition read here. A just-created draft has no sections of its own yet (backend finding,
+ * GN-Opportunities 2026-10-14), so its definition falls back to the one a new application gets.
+ */
+export async function saveForm(raw: unknown) {
+  const parsed = saveInput.safeParse(raw);
+  if (!parsed.success)
+    throw new AppError("BAD_REQUEST", "Invalid form request.", 400);
+  const t = parsed.data.target;
+  const { token, record } = await authorizeForm(t, "edit");
+  if (record === null)
+    throw new AppError("BAD_REQUEST", "Save the application first.", 400);
+  let forms = await definitions(token, t, record.id);
+  if (!hasSections(forms)) forms = await definitions(token, t, "");
+  if (forms.length === 0)
+    throw new AppError("BAD_REQUEST", "There is no form to save.", 400);
+  const answers = checkAnswers(forms, parsed.data.answers);
+  await oracleWrite(
+    "postDynamicFormsDynFormResponse",
+    {
+      token,
+      P_TOKEN: token,
+      P_FORM_ID: String(forms[0].formId),
+      P_OBJECT_ID: record.id,
+      P_OBJECT_TYPE: t.slot,
+    },
+    answers,
+  );
+  return { saved: true };
+}

@@ -98,6 +98,15 @@
 .form label > span {
   font-weight: 600;
 }
+/* GN-Angular profile-dialog.css: 32px fields with 6px 10px padding. */
+.form :is(input, select) {
+  height: 32px;
+  padding: 6px 10px;
+}
+.form textarea {
+  min-height: 32px;
+  padding: 6px 10px;
+}
 .linkField.linkField {
   flex-direction: row;
   align-items: center;
@@ -150,6 +159,11 @@
   display: flex;
   justify-content: flex-end;
   padding-top: 16px;
+}
+/* GN-Angular .primary: 28px, 0 14px. */
+.foot button {
+  height: 28px;
+  padding: 0 14px;
 }
 @media (max-width: 600px) {
   .facts {

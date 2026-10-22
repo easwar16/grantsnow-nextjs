@@ -62,3 +62,36 @@ The current source also contains initial Opportunity finder, register, analytics
 See [dashboard-parity.md](dashboard-parity.md) and [home-coverage.md](home-coverage.md). Original sidebar artwork/desktop reflow, geometric route/component skeletons, all five configured dashboard tabs and fifteen supported source Insights preferences are now implemented. Insights uses source panel order/chart types, full-width scatter and paired panels, measured colours, multi-select date filters, expansion, complete-result paging and shared modular ECharts rendering. Notification/featured/dynamic read views are connected to verified contracts. Dynamic dimension saving is implemented and fixture-tested, with no live preference write. Remaining opportunity mutations, chart drill reconciliation, unbuilt navigation/header controls and exact calendar/pixel parity are explicitly outstanding.
 
 Current validation: 152 unit/integration checks and 11 fixture browser journeys passed; TypeScript/lint and production build are recorded in implementation-status. Live KPI/Insights/notifications were observed. Funding Opportunity Status returns Oracle HTTP 555; unrelated widget settings do not constitute a funding-efficiency gauge. No live Next.js IDCS login was claimed.
+
+## Opportunities and EOI increment — 2026-10-22
+
+The finder, the EOI list, the EOI record and the finder's dialogs were ported from GN-Angular, then measured against the live DEV app and adjusted. The live numbers are in the GrantsNow KB, `GrantsNow-Opportunities.md` § _Live DEV measurements (2026-10-22)_. The rules this work added are in [grantsnow-foundations.md](grantsnow-foundations.md) § _Engineering rules_: RB items show only on `'Y'`, every element has a unique short id, every interaction and update animates, listing filters share one look, `DateInput` uses the global format, and the app runs in parallel without races.
+
+- **Shared UI:**
+  - `Select` and `MultiSelect` are type-in comboboxes: matches in bold, fixed overlays placed by `useAnchor`, live's "more results" cap, detail lines.
+  - `InsideField` is the Redwood inside-label box, used by the EOI list drawer and the Share dialog.
+  - Also added: `FilterSection` and its helpers, `DateInput`, `usePresence` (leave animations) and `highlight`.
+- **Finder:** GN-Angular's panel toggle and Advanced filter, collapsible sections that animate, and the live Status checkbox glyph.
+- **EOI list:** live's navigation-list statuses, inside-label fields, card rows and centred carets.
+- **Share dialog:** live's flow: select-singles, a chip multi-select for people with detail lines, and changing Send To clears the selection.
+- **Convert dialog:** searchable PI, Org Unit and Primary Funder; the date picker is anchored under its field.
+- **Performance:** independent server reads run in parallel and session-keyed memos hold reference data; setups are prefetched on hover; cards and the funder tree are memoised.
+  - Finder page: 18–27 s → 6.2 s.
+  - Convert dialog: 29–34 s → 10.6 s cold, 3.0 s warm.
+  - Main-thread block per finder click: 120–160 ms → 0.
+
+**Evidence:** 561 unit/integration tests and 12 fixture Chromium journeys passed, with typecheck and lint. The finder filters, EOI list filters and every finder dialog were exercised in the browser against live DEV data (mocked: none). No live write was made; dialogs were closed without Send, Save or Create.
+
+**Outstanding:**
+
+- Escape while Chrome's native date picker is open also closes the enclosing dialog.
+- Not yet browser-tested: the Comments dialog, the deadline-warning dialog, the Bookmarked / Shared tabs, resizing the filter panel and narrow screens.
+- The Advanced filter's values are not written to the URL.
+- Proposals and Contracts belong to another owner and were not changed.
+
+**Later the same day: caching and the app store.**
+
+- **Server:** the reference data the VBCS app holds app-wide is now held per session through `cachedRead` / `forgetRead` (`src/server/cache/reads.ts`), and every matching save clears it. Covered: user preferences, person status, new flags, notifications, announcements and EOI record roles. The full VBCS inventory is in the GrantsNow KB, `GrantsNow-Shared-Features.md` § _App-level data the VBCS app holds_.
+- **Client:** an app store (`src/lib/app-store.tsx`, `useReducer` + Context) backs `useRemote` and the dialog reads. It shares one request per key and keeps the latest answer.
+- **Setup:** `.env.example` carries every DEV URL, so a teammate supplies only the credentials (see the README).
+- **Checks:** 563 unit/integration tests, typecheck and lint passed.

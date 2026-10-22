@@ -1,4 +1,5 @@
 "use client";
+import { idPart } from "@/lib/ids";
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/feedback/skeleton";
 import type { FormatSettings } from "@/lib/format";
@@ -10,6 +11,12 @@ const DeadlineFullCalendar = dynamic(() => import("./calendar/full-calendar"), {
   ssr: false,
   loading: () => <Skeleton kind="lines" count={8} label="Loading calendar" />,
 });
+/** Fetches the calendar chunk on intent (hover or focus on Calendar View); the bundler shares it. */
+export const preloadCalendar = () => {
+  import("./calendar/full-calendar").catch(() => {
+    // The calendar's own load retries and shows its failure.
+  });
+};
 
 export function DeadlineCalendar({
   widgetId,
@@ -25,9 +32,9 @@ export function DeadlineCalendar({
   denied: AccessDeniedText;
 }) {
   return (
-    <div className="deadline-calendar">
+    <div id={`calendar-${idPart(widgetId)}`} className="deadline-calendar">
       {hasMore && (
-        <p className="notice">
+        <p id={`calendar-${idPart(widgetId)}-notice`} className="notice">
           Calendar shows the loaded records. Load further records in List View
           to view their deadlines.
         </p>

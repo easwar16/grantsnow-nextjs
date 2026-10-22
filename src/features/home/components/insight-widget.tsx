@@ -1,4 +1,5 @@
 "use client";
+import { idPart } from "@/lib/ids";
 import { useRef } from "react";
 import type { HomeFilters, WidgetData } from "../types";
 import { chartIsEmpty } from "@/lib/chart-options";
@@ -37,15 +38,17 @@ export function InsightWidget({
   const empty = data && chartIsEmpty(data);
   return (
     <section
+      id={`insight-${idPart(id)}`}
       className="insight-widget"
       style={{ gridColumn: `span ${data?.presentation?.columns || columns}` }}
     >
       <div className="insight-content">
         <div className="insight-head">
           <h3>
-            {title} <HelpButton html={help} />
+            {title} <HelpButton id={`insight-${idPart(id)}-help`} html={help} />
           </h3>
           <button
+            id={`insight-${idPart(id)}-expand`}
             type="button"
             className="chart-expand"
             disabled={!data || !!empty}
@@ -71,19 +74,27 @@ export function InsightWidget({
             {data.presentation?.type === "gauge" ? "" : emptyText}
           </div>
         ) : (
-          <InsightChart title={title} data={data} format={format} />
+          <InsightChart
+            id={`insights-chart-${idPart(id)}`}
+            title={title}
+            data={data}
+            format={format}
+          />
         )}
       </div>
       <dialog
         ref={dialog}
+        id={`insight-${idPart(id)}-dialog`}
         className="expanded-chart-dialog"
         aria-label={`Expanded ${title}`}
       >
         <div className="expanded-chart-head">
           <h2>
-            {title} <HelpButton html={help} />
+            {title}{" "}
+            <HelpButton id={`insight-${idPart(id)}-dialog-help`} html={help} />
           </h2>
           <button
+            id={`insight-${idPart(id)}-dialog-close`}
             type="button"
             className="expanded-chart-close"
             aria-label="Close expanded chart"
@@ -93,7 +104,13 @@ export function InsightWidget({
           </button>
         </div>
         {data && !empty && (
-          <InsightChart title={title} data={data} format={format} expanded />
+          <InsightChart
+            id={`insights-chart-${idPart(id)}-expanded`}
+            title={title}
+            data={data}
+            format={format}
+            expanded
+          />
         )}
       </dialog>
     </section>

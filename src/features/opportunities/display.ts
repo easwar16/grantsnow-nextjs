@@ -1,4 +1,3 @@
-import type { OpportunityPage } from "./types";
 /**
  * Funder tags: split on commas outside parentheses, so "X (A, B)" stays one tag (VBCS split on every comma).
  * A stray ")" never drives the depth below zero.
@@ -21,16 +20,6 @@ export function splitFunders(value: string | null | undefined): string[] {
   return tags.map((t) => t.trim()).filter((t) => t !== "");
 }
 
-/** The true position in the API total, not the page size (VBCS showed the last page's size). */
-export function countText({
-  rows,
-  total,
-  query,
-}: Pick<OpportunityPage, "rows" | "total" | "query">) {
-  if (!rows.length) return `0 of ${total}`;
-  const first = (query.page - 1) * query.pageSize + 1;
-  return `${first}–${first + rows.length - 1} of ${total}`;
-}
 /** VBCS canCreate: no Apply or Convert on a closed, expired or withdrawn opportunity. */
 export const canCreate = (status: string) =>
   !["CLOSED", "EXPIRED", "WITHDRAWN"].includes(status.toUpperCase());

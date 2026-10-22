@@ -172,6 +172,7 @@ async function send(
     "getSharedGetDynamicCharts",
   ];
   const timeout = aggregates.includes(operation) ? 90000 : 60000;
+  const started = performance.now();
   try {
     response = await fetch(url, {
       method: op.method ?? "GET",
@@ -199,6 +200,9 @@ async function send(
     );
     throw new AppError("UPSTREAM", "Oracle is unavailable. Please retry.");
   }
+  // Slow calls name themselves in development, so latency is traced to Oracle or to our own waits.
+  const took = Math.round(performance.now() - started);
+  if (took > 1000) devTrace(operation, `${took} ms`);
   if (!response.ok) devTrace(operation, `HTTP ${response.status}`);
   if (response.status === 401) throw expired();
   if (response.status === 403)

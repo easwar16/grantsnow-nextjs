@@ -1,6 +1,7 @@
 import "server-only";
 import { AppError } from "@/lib/errors";
 import { cache } from "react";
+import { memo, memoKey, TTL } from "@/server/cache/memo";
 import { z } from "zod";
 import { oracle } from "@/server/api/transport";
 import { sanitizeHtml } from "@/server/html/sanitize";
@@ -33,18 +34,21 @@ export function mergeResourceDefaults(raw: unknown) {
 }
 export const resources = cache(async () => {
   const { session } = await authenticate();
-  let rows: unknown = [];
-  try {
-    rows = await oracle("getSharedLabels", {
-      token: session.token,
-      module_name:
-        "DASHBOARD,PROPOSAL,OUTLINE_PROPOSAL,SUB_PROPOSAL,EXTENSION_PROPOSAL,OPPORTUNITIES-EOI",
-    });
-  } catch (e) {
-    // Legacy merges backend rows over the seeds; with the labels call unreachable the seeds alone render.
-    if (!(e instanceof AppError && e.code === "UPSTREAM")) throw e;
-  }
-  return mergeResourceDefaults(rows);
+  // Shared across this session's requests for a few minutes (labels change only by admin edits).
+  return memo(memoKey("labels", session.token), TTL.config, async () => {
+    let rows: unknown = [];
+    try {
+      rows = await oracle("getSharedLabels", {
+        token: session.token,
+        module_name:
+          "DASHBOARD,PROPOSAL,OUTLINE_PROPOSAL,SUB_PROPOSAL,EXTENSION_PROPOSAL,OPPORTUNITIES-EOI",
+      });
+    } catch (e) {
+      // Legacy merges backend rows over the seeds; with the labels call unreachable the seeds alone render.
+      if (!(e instanceof AppError && e.code === "UPSTREAM")) throw e;
+    }
+    return mergeResourceDefaults(rows);
+  });
 });
 export type Resources = Awaited<ReturnType<typeof resources>>;
 export function label(

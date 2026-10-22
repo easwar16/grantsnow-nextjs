@@ -1,8 +1,10 @@
 import "server-only";
 import { z } from "zod";
 import { authenticate } from "@/server/session/service";
-import { oracle, oracleWrite } from "@/server/api/transport";
+import { oracleWrite } from "@/server/api/transport";
 import { sanitizeHtml } from "@/server/html/sanitize";
+import { cachedRead, forgetRead } from "@/server/cache/reads";
+import { TTL } from "@/server/cache/memo";
 // The original bell popup lists the five latest.
 const POPUP_ITEMS = 5;
 export interface BellNotification {
@@ -50,12 +52,18 @@ export function repairNotificationHtml(html: string | null | undefined) {
 /** The backend stores UTC but usually sends no zone designator. */
 export const utcOf = (datetime: string) =>
   /[zZ]|[+-]\d\d:?\d\d$/.test(datetime) ? datetime : `${datetime}Z`;
-async function list() {
+/** The user's notifications, held briefly and shared by the bell and the Notifications tab (VBCS shell cache, 9326). */
+async function list(fresh = false) {
   const { session } = await authenticate();
+  if (fresh) forgetRead("getNotificationsNotifications", session.token);
   return {
     token: session.token,
     items: rows.parse(
-      await oracle("getNotificationsNotifications", { token: session.token }),
+      await cachedRead(
+        "getNotificationsNotifications",
+        { token: session.token },
+        TTL.access,
+      ),
     ).items,
   };
 }
@@ -83,13 +91,18 @@ export async function bell(): Promise<Bell> {
  * from the user's own list on the server, never from the browser.
  */
 export async function markAllRead() {
-  const { token, items } = await list();
+  // Fresh ids, so nothing that arrived inside the hold is skipped.
+  const { token, items } = await list(true);
   const unread = items.filter((n) => n.is_read === "N").map((n) => n.id);
   if (unread.length === 0) return { marked: 0 };
-  await oracleWrite(
-    "postNotificationsNotifications",
-    { token },
-    { items: unread.map((id) => ({ id, is_read: "Y" })) },
-  );
+  try {
+    await oracleWrite(
+      "postNotificationsNotifications",
+      { token },
+      { items: unread.map((id) => ({ id, is_read: "Y" })) },
+    );
+  } finally {
+    forgetRead("getNotificationsNotifications", token);
+  }
   return { marked: unread.length };
 }

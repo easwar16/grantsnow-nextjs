@@ -1,11 +1,12 @@
 "use client";
+import { idPart } from "@/lib/ids";
 import { RecordSkeleton } from "@/components/feedback/skeleton";
 import { useRef, useState } from "react";
 import type { AttentionRow, HomeFilters, WidgetResult } from "../types";
 import { State } from "@/components/feedback/state";
 import { LatestRequest } from "@/lib/latest-request";
 import { HelpButton } from "@/components/ui/help-button";
-import { DeadlineCalendar } from "./deadline-calendar";
+import { DeadlineCalendar, preloadCalendar } from "./deadline-calendar";
 import { RowLink, type AccessDeniedText } from "./row-link";
 import { rowFields } from "./calendar/model";
 import { dateDisplay, type FormatSettings } from "@/lib/format";
@@ -96,18 +97,20 @@ export function Widget({
   }
   const shown = labels.calendar === undefined ? "list" : view;
   return (
-    <article className="attention-widget">
+    <article id={`widget-${idPart(id)}`} className="attention-widget">
       <div className="attention-content">
         <div className="attention-head">
           <h3>
-            {title} <HelpButton html={help} />
+            {title} <HelpButton id={`widget-${idPart(id)}-help`} html={help} />
           </h3>
           <div
+            id={`widget-${idPart(id)}-views`}
             className="attention-view-tabs"
             role="tablist"
             aria-label={`${title} view`}
           >
             <button
+              id={`widget-${idPart(id)}-list-view`}
               type="button"
               role="tab"
               aria-selected={shown === "list"}
@@ -117,9 +120,12 @@ export function Widget({
             </button>
             {labels.calendar !== undefined && (
               <button
+                id={`widget-${idPart(id)}-calendar-view`}
                 type="button"
                 role="tab"
                 aria-selected={shown === "calendar"}
+                onPointerEnter={preloadCalendar}
+                onFocus={preloadCalendar}
                 onClick={() => setView("calendar")}
               >
                 {labels.calendar}
@@ -138,7 +144,10 @@ export function Widget({
             retry={() => load(0)}
           />
         ) : shown === "calendar" ? (
-          <div className="attention-calendar">
+          <div
+            id={`widget-${idPart(id)}-calendar`}
+            className="attention-calendar"
+          >
             <DeadlineCalendar
               widgetId={id}
               rows={rows}
@@ -149,15 +158,24 @@ export function Widget({
           </div>
         ) : (
           <ul
+            id={`widget-${idPart(id)}-list`}
             className="attention-list"
             tabIndex={0}
             aria-label={`${title} records`}
             onScroll={(event) => loadMoreOnScroll(event.currentTarget)}
           >
             {rows.map((r) => (
-              <li key={r.id} className={r.overdue ? "overdue" : undefined}>
+              <li
+                key={r.id}
+                id={`widget-${idPart(id)}-row-${idPart(r.id)}`}
+                className={`enter-rise${r.overdue ? " overdue" : ""}`}
+              >
                 <div className="attention-main">
-                  <RowLink row={r} denied={labels.denied}>
+                  <RowLink
+                    id={`widget-${idPart(id)}-link-${idPart(r.id)}`}
+                    row={r}
+                    denied={labels.denied}
+                  >
                     {r.reference}
                   </RowLink>
                   <div className="attention-title">{r.title}</div>
@@ -191,7 +209,9 @@ export function Widget({
               </li>
             ))}
             {rows.length === 0 && (
-              <li className="attention-empty">{labels.empty}</li>
+              <li id={`widget-${idPart(id)}-empty`} className="attention-empty">
+                {labels.empty}
+              </li>
             )}
             {loading === "more" && (
               <li className="attention-loading">

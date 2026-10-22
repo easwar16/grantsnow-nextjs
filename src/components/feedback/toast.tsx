@@ -38,10 +38,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={show}>
       {children}
-      <div className={styles.stack} aria-live="polite">
+      <div id="toast-stack" className={styles.stack} aria-live="polite">
         {toasts.map((t) => (
           <div
             key={t.id}
+            id={`toast-${t.id}`}
             className={`${styles.toast} ${styles[t.severity]} enter-rise`}
             role={t.severity === "error" ? "alert" : "status"}
           >
@@ -51,6 +52,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               {t.detail && <div className={styles.detail}>{t.detail}</div>}
             </div>
             <button
+              id={`toast-${t.id}-close`}
               type="button"
               className={styles.close}
               aria-label="Close"

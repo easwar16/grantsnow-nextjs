@@ -1,0 +1,133 @@
+/* Redwood inside-label field, measured on live (EOI list drawer, Share dialog): a 39px box, 3px radius, label 12px
+   semibold at 70%, 12px start inset; the label centred while empty and at 4px from the top on focus or with a value. */
+.box {
+  position: relative;
+  display: flex;
+  flex: none;
+  min-width: 0;
+  min-height: 39px;
+  background: var(--gn-surface);
+  border: 1px solid var(--gn-border-input);
+  border-radius: var(--gn-radius);
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
+}
+.box:focus-within {
+  border-color: var(--gn-brand);
+  box-shadow: 0 0 0 1px var(--gn-brand);
+}
+/* Block, not the global label's flex column, so the required dot follows the text on one line. */
+.label {
+  display: block;
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  right: 30px;
+  z-index: 1;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 14.4px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--gn-text-secondary);
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition:
+    top var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease);
+}
+.box[data-filled] .label,
+.box:focus-within .label {
+  top: 4px;
+  transform: none;
+}
+.required {
+  margin-left: 3px;
+  font-size: 10px;
+  vertical-align: 3px;
+  color: var(--gn-link);
+}
+.box > :not(.label) {
+  flex: 1;
+  min-width: 0;
+}
+/* The control fills the box and keeps its text under the floated label. */
+.box :is(input:not([type="checkbox"], [type="radio"]), select, textarea) {
+  height: 37px;
+  min-height: 0;
+  padding: 12px 12px 0;
+  font-size: 12px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.box input:has(+ button) {
+  padding-right: 30px;
+}
+.box :is(input, select, textarea):focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+/* The date pattern shows only while the field is being typed in; at rest the label alone is shown, as on live. */
+.box:not(:focus-within) input::placeholder {
+  color: transparent;
+}
+/* oj-select-single's caret: one filled triangle centred on the box's end, whatever the text offset. A native select's
+   own arrow and the Select's chevron give way to it. */
+.box:has(> select, [data-part="field"]:not([data-multi]))::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  width: 10px;
+  height: 10px;
+  background: var(--gn-text);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1 3h8L5 8z'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+.box > select {
+  padding-right: 30px;
+  background-image: none;
+  appearance: none;
+}
+/* A Select / MultiSelect inside gives way to this box: no border or ring of its own, no chevron. */
+.box [data-part="field"],
+.box [data-part="field"]:focus-within,
+.box [data-part="field"][data-open] {
+  min-height: 37px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.box [data-part="field"] > input[role="combobox"] {
+  height: 37px;
+  padding: 12px 30px 0 12px;
+}
+.box [data-part="field"] > span:last-child {
+  display: none;
+}
+/* MultiSelect chips: a wrapping line under the floated label; the box grows with it. */
+.box [data-part="field"][data-multi] {
+  padding: 17px 12px 0;
+}
+.box [data-part="field"][data-multi] input[role="combobox"] {
+  height: 20px;
+  padding: 0;
+}
+/* oj-text-area inside: 69px, label kept at the top, the text below it. */
+.box[data-multiline] {
+  min-height: 69px;
+}
+.box[data-multiline] textarea {
+  height: 67px;
+  min-height: 67px;
+  padding: 22px 12px 6px;
+  line-height: 1.4;
+  resize: vertical;
+}

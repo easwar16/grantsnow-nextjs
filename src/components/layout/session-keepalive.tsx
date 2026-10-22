@@ -64,10 +64,12 @@ export function SessionKeepAlive() {
   }, []);
   if (!failure) return null;
   return (
-    <div className="notice" role="alert">
+    <div id="session-notice" className="notice" role="alert">
       <strong>{failure.message}</strong>
       {failure.action && <p>{failure.action}</p>}
-      <a href={signIn()}>Sign in again</a>
+      <a id="session-sign-in" href={signIn()}>
+        Sign in again
+      </a>
     </div>
   );
 }

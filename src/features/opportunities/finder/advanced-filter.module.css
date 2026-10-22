@@ -1,0 +1,83 @@
+/* oj-popup with a 3-column compact form layout, 2/5 of the page wide on desktop (GN-Angular advanced-filter). */
+.popup {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(40vw, 760px);
+  min-width: min(560px, calc(100vw - 32px));
+  max-height: 70vh;
+  padding: 16px;
+  overflow-y: auto;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 16%);
+}
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* Angular labels keep the text colour; the global label rule would grey them. */
+.form label {
+  color: var(--text);
+}
+/* Three equal cells per row, whatever each holds, so every 28px field has the same width (D36); .gn-field supplies the label stack. */
+.row {
+  display: flex;
+  gap: 16px;
+}
+.cell {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.status {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.status legend {
+  margin-bottom: 4px;
+}
+.checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+/* Angular .check: a 6px gap (the global label's is 5px). */
+.checks label {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-weight: 400;
+  cursor: pointer;
+}
+/* Angular's foot sits outside the form, 14px below it (the popup's gap), not the form's 12px. */
+.foot {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+.foot button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+@media (max-width: 768px) {
+  .popup {
+    position: fixed;
+    top: 72px;
+    left: 16px;
+    right: 16px;
+    width: auto;
+    min-width: 0;
+  }
+  .row {
+    flex-direction: column;
+  }
+}

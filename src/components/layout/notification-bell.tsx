@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRemote } from "@/lib/use-remote";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
@@ -24,8 +24,7 @@ export function NotificationBell() {
     failure = remote.error ?? null;
   const [open, setOpen] = useState(false);
   const host = useRef<HTMLDivElement>(null),
-    button = useRef<HTMLButtonElement>(null),
-    id = useId();
+    button = useRef<HTMLButtonElement>(null);
   const close = useCallback(() => {
     setOpen(false);
     if (!bell?.unread) return;
@@ -62,9 +61,10 @@ export function NotificationBell() {
   }, [open, close]);
   const unread = bell?.unread ?? 0;
   return (
-    <div className={styles.host} ref={host}>
+    <div id="notifications" className={styles.host} ref={host}>
       <button
         ref={button}
+        id="notifications-button"
         type="button"
         className={styles.bell}
         aria-label={
@@ -73,7 +73,7 @@ export function NotificationBell() {
             : labels.notifications
         }
         aria-expanded={open}
-        aria-controls={open ? id : undefined}
+        aria-controls={open ? "notifications-panel" : undefined}
         onClick={() => (open ? close() : setOpen(true))}
       >
         <Icon name="bell" />
@@ -85,13 +85,14 @@ export function NotificationBell() {
       </button>
       {open && (
         <div
-          id={id}
+          id="notifications-panel"
           className={`${styles.popup} enter-pop`}
           role="dialog"
           aria-label={labels.notifications}
         >
           <div className={styles.head}>
             <Link
+              id="notifications-view-all"
               className={styles.link}
               href="/modules/announcements-notifications"
               prefetch={false}
@@ -100,12 +101,16 @@ export function NotificationBell() {
               {labels.viewAll}
             </Link>
           </div>
-          <div className={styles.list}>
+          <div id="notifications-list" className={styles.list}>
             {failure ? (
               <div className={styles.empty} role="alert">
                 <p>{failure.message}</p>
                 {failure.action && <p>{failure.action}</p>}
-                <button type="button" onClick={remote.retry}>
+                <button
+                  id="notifications-retry"
+                  type="button"
+                  onClick={remote.retry}
+                >
                   Retry
                 </button>
               </div>
@@ -115,12 +120,20 @@ export function NotificationBell() {
               <div className={styles.empty}>{labels.noData}</div>
             ) : (
               groupByDay(bell.latest).map((day) => (
-                <section key={day.day} aria-label={day.label ?? day.day}>
+                <section
+                  key={day.day}
+                  id={`notifications-day-${day.day}`}
+                  aria-label={day.label ?? day.day}
+                >
                   <div className={styles.day}>
                     {day.label ?? dateDisplay(day.day, format)}
                   </div>
                   {day.items.map((n) => (
-                    <div className={styles.row} key={n.id}>
+                    <div
+                      id={`notification-${n.id}`}
+                      className={styles.row}
+                      key={n.id}
+                    >
                       <div
                         className={styles.content}
                         dangerouslySetInnerHTML={{ __html: n.html }}

@@ -39,6 +39,7 @@ export function IdleDialog() {
   return (
     <dialog
       ref={dialog}
+      id="idle-dialog"
       className={styles.dialog}
       aria-labelledby="idle-title"
       onCancel={(e) => e.preventDefault()}
@@ -49,8 +50,13 @@ export function IdleDialog() {
     >
       <h2 id="idle-title">{labels.warning}</h2>
       <p>{labels.sessionExpired}</p>
-      <form action="/api/auth/logout" method="post" className={styles.foot}>
-        <button type="submit" className="primary">
+      <form
+        id="idle-dialog-form"
+        action="/api/auth/logout"
+        method="post"
+        className={styles.foot}
+      >
+        <button id="idle-dialog-login" type="submit" className="primary">
           {labels.login}
         </button>
       </form>

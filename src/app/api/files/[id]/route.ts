@@ -1,0 +1,51 @@
+import { json, failure } from "@/server/api/http";
+import { sameOrigin } from "@/lib/security";
+import { appOrigin } from "@/server/configuration/environment";
+import { AppError } from "@/lib/errors";
+import { targetFromQuery } from "@/server/dynamic-form/access";
+import { deleteFile, downloadFile } from "@/server/files/service";
+type Context = { params: Promise<{ id: string }> };
+async function attachmentId(context: Context) {
+  const { id } = await context.params;
+  if (!/^[1-9]\d{0,14}$/.test(id))
+    throw new AppError("BAD_REQUEST", "Invalid file.", 400);
+  return Number(id);
+}
+/** `filename` for ASCII clients, `filename*` (RFC 5987) for the real name. */
+function disposition(name: string) {
+  const ascii = name.replace(/[^\x20-\x7e]|["\\]/g, "_");
+  return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(name)}`;
+}
+/** A stored file's bytes: GET /api/files/{attachmentId}?objectType&slot&objectId. Always a download, never rendered. */
+export async function GET(request: Request, context: Context) {
+  try {
+    const id = await attachmentId(context);
+    const { bytes, fileName } = await downloadFile(
+      targetFromQuery(new URL(request.url).searchParams),
+      id,
+    );
+    return new Response(bytes as BodyInit, {
+      headers: {
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": disposition(fileName),
+        "Content-Length": String(bytes.byteLength),
+        "Cache-Control": "private, no-store",
+        Vary: "Cookie",
+      },
+    });
+  } catch (e) {
+    return failure(e);
+  }
+}
+/** WRITES: deletes a stored file and its record. */
+export async function DELETE(request: Request, context: Context) {
+  try {
+    sameOrigin(request, appOrigin());
+    const id = await attachmentId(context);
+    return json(
+      await deleteFile(targetFromQuery(new URL(request.url).searchParams), id),
+    );
+  } catch (e) {
+    return failure(e);
+  }
+}
