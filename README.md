@@ -47,6 +47,19 @@ DEV_BROWSER_SESSION=false FIXTURE_MODE=false npm run build
 
 Playwright starts a separate dev server on port 3100 with isolated synthetic settings. It does not require live credentials or reuse your port-3000 session. Unit tests mock the server-only boundary for Node tests; production imports retain the real guard.
 
+## Clearing local build and test output
+
+Git-ignored output accumulates locally: e2e scratch copies, the build-check output and Playwright results. Clear it any time with:
+
+```sh
+npm run clean -- --dry-run   # list what would go and its size, delete nothing
+npm run clean                # .validation, .next-check, test-results, playwright-report, tsconfig.tsbuildinfo
+npm run clean -- --dev       # also the dev build cache (.next); skipped while `npm run dev` is running
+npm run clean -- --deps      # also node_modules; restore with `npm ci`
+```
+
+It never touches source, docs, `.env*` files or git. `npm run test:e2e` now removes its own scratch copy after each run; set `GRANTSNOW_KEEP_E2E=1` to keep one for debugging.
+
 ## Reference patterns
 
 - **Server service:** `src/server/proposals/service.ts` loads initial Server Component data directly and serves the same protected browser refresh handler.

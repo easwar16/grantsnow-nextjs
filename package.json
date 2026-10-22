@@ -14,7 +14,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "node scripts/run-e2e.mjs",
-    "check": "npm run typecheck && npm run lint && npm test && npm run build"
+    "check": "npm run typecheck && npm run lint && npm test && npm run build",
+    "clean": "node scripts/clean.mjs"
   },
   "dependencies": {
     "@fullcalendar/core": "6.1.22",
