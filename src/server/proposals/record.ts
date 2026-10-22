@@ -2,10 +2,11 @@ import "server-only";
 import { z } from "zod";
 import { authenticate } from "@/server/session/service";
 import { oracle } from "@/server/api/transport";
-import { requireModule, requireRead } from "@/server/permissions/policy";
+import { requireModule } from "@/server/permissions/policy";
 import {
   resources,
   label,
+  resourceVisible,
   type Resources,
 } from "@/server/configuration/resources";
 import {
@@ -43,6 +44,42 @@ const summarySchema = z.object({
     )
     .nullish(),
 });
+/** The record's bundle: its per-type bundle when provisioned (any row), otherwise `proposal`; keys never fall back one by one. */
+export function proposalBundle(rb: Resources, type: RecordIdentity["type"]) {
+  const bundle = type.toLowerCase();
+  return rb.some((r) => r.module_name.toLowerCase() === bundle)
+    ? bundle
+    : "proposal";
+}
+const roleRow = z.object({
+  page_name: z.string(),
+  read_access: z.string().nullish(),
+  edit_access: z.string().nullish(),
+  delete_access: z.string().nullish(),
+});
+/**
+ * Object roles per page (legacy prepareRoles). Legacy lets the last duplicate row win while its entry
+ * gate denies on any read 'N'; here a right holds only when every row for the page grants it.
+ */
+export function objectAccess(items: z.infer<typeof roleRow>[]) {
+  const access = new Map<
+    string,
+    { read: boolean; edit: boolean; delete: boolean }
+  >();
+  for (const row of items) {
+    const prior = access.get(row.page_name) ?? {
+      read: true,
+      edit: true,
+      delete: true,
+    };
+    access.set(row.page_name, {
+      read: prior.read && row.read_access === "Y",
+      edit: prior.edit && row.edit_access === "Y",
+      delete: prior.delete && row.delete_access === "Y",
+    });
+  }
+  return access;
+}
 export function mapSummary(
   raw: unknown,
   identity: RecordIdentity,
@@ -65,33 +102,18 @@ export function mapSummary(
       403,
     );
   const pi = r.departments?.find((d) => d.investigator_type_lkp_code === "PI");
-  const resourceModule = identity.type.toLowerCase();
+  const bundle = proposalBundle(rb, identity.type);
   function field(
     key: string,
     fallback: string,
     value: unknown,
     kind: "text" | "date" = "text",
   ) {
-    const specific = rb.find(
-      (x) =>
-        x.module_name.toLowerCase() === resourceModule &&
-        x.label_type === "labels" &&
-        x.label_name === key,
-    );
-    const generic = rb.find(
-      (x) =>
-        x.module_name.toLowerCase() === "proposal" &&
-        x.label_type === "labels" &&
-        x.label_name === key,
-    );
-    const resource = specific || generic;
-    if (resource?.is_visible !== "Y") return [];
+    if (!resourceVisible(rb, bundle, "labels", key)) return [];
     return [
       {
         key,
-        label:
-          resource.label_value ||
-          label(rb, "proposal", "labels", key, fallback),
+        label: label(rb, bundle, "labels", key, fallback),
         value: typeof value === "string" ? value : "",
         kind,
       },
@@ -145,20 +167,15 @@ export async function loadSummary(input: RecordIdentity) {
   const identity = recordIdentity.parse(input),
     { session, user } = await authenticate();
   requireModule(user, "PROPOSALS");
-  const roles = z
-    .object({
-      items: z.array(
-        z.object({ page_name: z.string(), read_access: z.string() }),
-      ),
-    })
-    .parse(
-      await oracle("getSecurityUser_roles", {
-        token: session.token,
-        p_obj_type: identity.type,
-        p_obj_id: identity.id,
-      }),
-    );
-  requireRead(roles.items, "proposals-summary");
+  const roles = z.object({ items: z.array(roleRow) }).parse(
+    await oracle("getSecurityUser_roles", {
+      token: session.token,
+      p_obj_type: identity.type,
+      p_obj_id: identity.id,
+    }),
+  );
+  if (!objectAccess(roles.items).get("proposals-summary")?.read)
+    throw new AppError("FORBIDDEN", "Read access has not been granted.", 403);
   const [raw, rb] = await Promise.all([
     oracle(
       "getProposalProposal_id",

@@ -7,9 +7,6 @@ export function json(data: unknown, status = 200) {
   });
 }
 export function failure(e: unknown) {
-  const error = publicError(e);
-  return json(
-    { error: { code: error.code, message: error.message } },
-    error.status,
-  );
+  const { status, ...error } = publicError(e);
+  return json({ error }, status);
 }

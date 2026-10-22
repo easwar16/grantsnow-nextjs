@@ -1,4 +1,14 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Locator } from "@playwright/test";
+/** Scroll a list to its end until the next-page request shows (a scroll before hydration goes unhandled). */
+async function nextPageOnScroll(list: Locator, signal: Locator) {
+  await expect(async () => {
+    await list.evaluate((e) => {
+      e.scrollTop = 0;
+      e.scrollTop = e.scrollHeight;
+    });
+    await expect(signal).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 20000 });
+}
 async function navigateProposals(page: import("@playwright/test").Page) {
   await page
     .getByRole("button", { name: "Application Navigation Drawer" })
@@ -71,10 +81,15 @@ test("Home queues, organization/year filters, independent failure/retry, navigat
       });
     else await route.continue();
   });
-  await widget
-    .getByRole("button", { name: "Refresh Proposals Approaching Deadlines" })
-    .click();
-  await expect(widget.getByText("Isolated test failure")).toBeVisible();
+  // The whole-institution scope has a second page; scrolling the queue requests it, and that request fails in isolation.
+  await page
+    .getByRole("combobox", { name: "Dashboard organization" })
+    .selectOption("202");
+  await expect(page).toHaveURL(/organization=202/);
+  await nextPageOnScroll(
+    widget.locator(".attention-list"),
+    widget.getByText("Isolated test failure"),
+  );
   await expect(
     page.getByRole("heading", { name: "Contracts awaiting approval" }),
   ).toBeVisible();
@@ -82,9 +97,12 @@ test("Home queues, organization/year filters, independent failure/retry, navigat
   await widget.getByRole("button", { name: "Retry", exact: true }).click();
   await expect(widget.getByText("Isolated test failure")).toHaveCount(0);
   await widget.getByRole("tab", { name: "Calendar View", exact: true }).click();
-  await expect(widget.locator(".calendar-grid")).toBeVisible();
-  await widget.getByRole("button", { name: "Previous calendar month" }).click();
-  await expect(widget.locator(".calendar-grid")).toBeVisible();
+  // FullCalendar (D17) loads on first open of Calendar View.
+  const title = widget.locator(".fc-toolbar-title");
+  await expect(widget.locator(".fc-daygrid")).toBeVisible();
+  const month = await title.textContent();
+  await widget.getByRole("button", { name: "Previous Month" }).click();
+  await expect(title).not.toHaveText(month ?? "");
   await widget.getByRole("tab", { name: "List View", exact: true }).click();
   await expect(widget.locator(".attention-list")).toBeVisible();
   await navigateProposals(page);
@@ -376,13 +394,13 @@ test("preview-style desktop drawer, user menu and Opportunities routes", async (
     page.getByRole("heading", { name: "Funding opportunities", exact: true }),
   ).toHaveCount(1);
   await expect(page.locator(".opportunity-card")).toHaveCount(25);
-  await expect(page.locator(".listing-count")).toHaveText("25 of 58");
+  await expect(page.locator(".listing-count")).toHaveText("1–25 of 58");
   await page.getByRole("tab", { name: "Bookmarked", exact: true }).click();
-  await expect(page.locator(".listing-count")).toHaveText("25 of 29");
+  await expect(page.locator(".listing-count")).toHaveText("1–25 of 29");
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await expect(page.locator(".opportunity-card")).toHaveCount(4);
   await page
-    .getByRole("button", { name: /More information:/ })
+    .getByRole("button", { name: /More Info:/ })
     .first()
     .click();
   await expect(
@@ -429,13 +447,21 @@ test("record skeletons remain visible during delayed refresh and honor reduced m
     await new Promise((resolve) => setTimeout(resolve, 800));
     await route.continue();
   });
-  await page
-    .getByRole("button", { name: "Refresh Proposals Approaching Deadlines" })
-    .click();
   const loading = page.getByRole("status", {
-    name: "Loading Proposals Approaching Deadlines",
+    name: "Loading more Proposals Approaching Deadlines",
   });
-  await expect(loading).toBeVisible();
+  await nextPageOnScroll(
+    page
+      .locator("article")
+      .filter({
+        has: page.getByRole("heading", {
+          name: "Proposals Approaching Deadlines",
+          exact: true,
+        }),
+      })
+      .locator(".attention-list"),
+    loading,
+  );
   await expect(loading).toHaveAttribute("aria-busy", "true");
   await expect(loading.locator(".skeleton").first()).toHaveCSS(
     "animation-name",
@@ -506,12 +532,15 @@ test("all configured dashboard tabs load, page, recover and reject unapproved ch
       },
     }),
   );
-  await page.getByRole("button", { name: "Refresh notifications" }).click();
+  await page
+    .locator(".notification-panel")
+    .getByRole("button", { name: "Next", exact: true })
+    .click();
   await expect(page.getByText("Isolated notification failure")).toBeVisible();
   await page.unroute("**/api/home/tabs/notifications?*");
   await page.getByRole("button", { name: "Retry", exact: true }).click();
   await expect(
-    page.getByText("Synthetic notification 1", { exact: true }),
+    page.getByText("Synthetic notification 26", { exact: true }),
   ).toBeVisible();
   await page.getByRole("tab", { name: "Dynamic Charts", exact: true }).click();
   await expect(

@@ -32,7 +32,7 @@ Calendar event parity, chart-to-list reconciliation, dynamic insights/KPIs, cust
 
 ## Run here
 
-`nvm use 24`, `npm ci`, `npm run dev`; open `http://127.0.0.1:3000` and select **Enter fixture workspace**. The ignored local environment is already prepared with a random session key and explicitly labelled synthetic data. For production-like compilation use `FIXTURE_MODE=false npm run build`; running the production server additionally requires complete verified live settings, HTTPS origin and `FIXTURE_MODE=false`.
+`nvm use 24`, `npm ci`, `npm run dev`; open `http://localhost:3000` and select **Enter fixture workspace**. The ignored local environment is already prepared with a random session key and explicitly labelled synthetic data. For production-like compilation use `FIXTURE_MODE=false npm run build`; running the production server additionally requires complete verified live settings, HTTPS origin and `FIXTURE_MODE=false`.
 
 ## Current dashboard/loader increment — 2026-10-14
 

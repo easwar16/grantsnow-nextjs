@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { Icon } from "@/components/ui/icon";
 export function Announcements({
   messages,
   error,
@@ -30,7 +31,7 @@ export function Announcements({
             setPage((page + messages.length - 1) % messages.length)
           }
         >
-          ‹
+          <Icon name="chevron-left" />
         </button>
         <div
           className="announcement-content"
@@ -41,7 +42,7 @@ export function Announcements({
           aria-label="Next announcement"
           onClick={() => setPage((page + 1) % messages.length)}
         >
-          ›
+          <Icon name="chevron-right" />
         </button>
         <span className="sr-only">
           Displaying page {page + 1} of {messages.length}

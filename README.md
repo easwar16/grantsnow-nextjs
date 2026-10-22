@@ -16,9 +16,9 @@ npm ci
 npm run dev
 ```
 
-Open <http://127.0.0.1:3000>. This workspace now uses the explicitly authorized connected DEV browser session: `DEV_BROWSER_SESSION=true`, `FIXTURE_MODE=false`. Click **Open connected DEV workspace**. The captured backend token stays in an ignored, protected server-side file; every protected read validates it with Oracle. See [DEV browser session](docs/dev-browser-session.md) for expiry, refresh and security boundaries.
+Open <http://localhost:3000> (the exact `APP_ORIGIN`: sign-in/out check it and the session cookie is host-only). This workspace uses the explicitly authorized connected DEV session: `DEV_BROWSER_SESSION=true`, `FIXTURE_MODE=false`. Paste your GrantsNow `token` cookie and click **Open connected DEV workspace**; the token stays server-side and every protected read validates it with Oracle. See [DEV browser session](docs/dev-browser-session.md) for expiry, refresh and security boundaries.
 
-On another checkout, copy `.env.example` to `.env.local`, set `APP_ORIGIN=http://127.0.0.1:3000`, `APP_ENV=development`, `FIXTURE_MODE=true`, and generate a random `SESSION_PASSWORD` of at least 32 characters. Example generation: `node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"`. Keep the key in the ignored file, never in source control.
+On another checkout, copy `.env.example` to `.env.local`, set `APP_ORIGIN=http://localhost:3000`, `APP_ENV=development`, `FIXTURE_MODE=true`, and generate a random `SESSION_PASSWORD` of at least 32 characters. Example generation: `node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"`. Keep the key in the ignored file, never in source control.
 
 ## Connect real DEV services
 

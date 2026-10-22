@@ -1,4 +1,8 @@
-import { capturedBrowserSession } from "@/server/session/browser-session";
+import {
+  capturedBrowserSession,
+  pastedBrowserSession,
+} from "@/server/session/browser-session";
+import { AppError } from "@/lib/errors";
 import * as oidc from "openid-client";
 import {
   appOrigin,
@@ -15,12 +19,30 @@ import { failure } from "@/server/api/http";
 export async function POST(request: Request) {
   try {
     sameOrigin(request, appOrigin());
-    const returnTo = safeReturn((await request.formData()).get("returnTo"));
+    const form = await request.formData(),
+      returnTo = safeReturn(form.get("returnTo")),
+      pasted = form.get("token");
     let store = await storage();
     store.destroy();
     store = await storage();
     if (browserSessionMode()) {
-      const b = await capturedBrowserSession();
+      let b;
+      try {
+        b =
+          typeof pasted === "string" && pasted.trim() !== ""
+            ? await pastedBrowserSession(pasted)
+            : await capturedBrowserSession();
+      } catch (e) {
+        // A form post: send the user back to the token field, not a JSON error page.
+        const reason =
+          e instanceof AppError && e.code === "EXPIRED"
+            ? "EXPIRED"
+            : "TOKEN_REJECTED";
+        return Response.redirect(
+          new URL(`/login?reason=${reason}`, appOrigin()),
+          303,
+        );
+      }
       store.app = {
         token: b.token,
         expiresAt: b.expiresAt,

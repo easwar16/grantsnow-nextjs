@@ -1,9 +1,9 @@
 import "server-only";
 import { z } from "zod";
 import { authenticate } from "@/server/session/service";
-import { requireModule } from "@/server/permissions/policy";
+import { requireDrawerAccess } from "@/server/permissions/policy";
 import { oracle } from "@/server/api/transport";
-import { resources } from "@/server/configuration/resources";
+import { resources, resourceVisible } from "@/server/configuration/resources";
 import { AppError } from "@/lib/errors";
 export const eoiQuerySchema = z.object({
   search: z.string().max(200).default(""),
@@ -57,7 +57,7 @@ export function eoiOracleQuery(q: EoiQuery) {
 }
 export async function listEois(q: EoiQuery, signal?: AbortSignal) {
   const { user, session } = await authenticate();
-  requireModule(user, "opportunities-eoi-list");
+  requireDrawerAccess(user, "opportunities-eoi-list");
   const [raw, labels] = await Promise.all([
     oracle(
       "getDynamicFormsAllRequests",
@@ -68,17 +68,8 @@ export async function listEois(q: EoiQuery, signal?: AbortSignal) {
     resources(),
   ]);
   const b = schema.parse(raw);
-  const visible = new Set(
-    labels
-      .filter(
-        (r) =>
-          r.module_name.toLowerCase() === "opportunities-eoi" &&
-          r.label_type === "labels" &&
-          r.is_visible === "Y",
-      )
-      .map((r) => r.label_name),
-  );
-  const show = (key: string) => visible.has(key);
+  const show = (key: string) =>
+    resourceVisible(labels, "opportunities-eoi", "labels", key);
   const rows = b.items.map((r) => ({
     id: String(r.request_id),
     reference: r.request_number,

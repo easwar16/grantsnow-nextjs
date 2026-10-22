@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { accessibilityKeys } from "@/features/account/contracts";
 import { AccountPanel } from "@/features/account/account-panel";
+import { Icon } from "@/components/ui/icon";
 type Panel = "profile" | "preferences" | "accessibility";
 export function UserMenu({
   name,
@@ -81,7 +82,7 @@ export function UserMenu({
           }}
         >
           {name}
-          <span aria-hidden="true">▾</span>
+          <Icon name="caret-down" />
         </summary>
         <div
           className="user-menu-content"
@@ -90,28 +91,20 @@ export function UserMenu({
           onKeyDown={menuKeys}
         >
           <button role="menuitem" onClick={() => open("profile")}>
-            <span className="ux-icon" aria-hidden="true">
-              {"\uf8a8"}
-            </span>
+            <Icon name="user-configuration" />
             Manage profile
           </button>
           <button role="menuitem" onClick={() => open("preferences")}>
-            <span className="ux-icon" aria-hidden="true">
-              {"\uf34b"}
-            </span>
+            <Icon name="settings" />
             Preferences
           </button>
           <button role="menuitem" onClick={() => open("accessibility")}>
-            <span className="ux-icon" aria-hidden="true">
-              {"\uf103"}
-            </span>
+            <Icon name="accessibility" />
             Accessibility
           </button>
           <form action="/api/auth/logout" method="post">
             <button role="menuitem" type="submit">
-              <span className="ux-icon" aria-hidden="true">
-                {"\uf2d5"}
-              </span>
+              <Icon name="logout" />
               Sign Out
             </button>
           </form>
@@ -145,7 +138,7 @@ export function UserMenu({
             aria-label="Close account settings"
             onClick={() => dialog.current?.close()}
           >
-            ×
+            <Icon name="close" />
           </button>
         </header>
         {opened && (

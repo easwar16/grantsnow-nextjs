@@ -1,0 +1,262 @@
+# GrantsNow foundations carried into the Next.js rebuild
+
+Collected 2026-10-22 from three sources: the legacy VBCS app (`GrantsNow`), its knowledge base, and the
+first rebuild attempt in Angular (`GN-Angular`, decisions D1–D45, frozen at `0005b12` on 2026-10-15).
+This file holds the rules that still apply in Next.js. Mechanism and evidence stay in the sources it
+links to. Do not copy those sources here.
+
+Conflicts between these rules and the code were settled on 2026-10-22 (§ _Decisions 2026-10-22_). Any new
+conflict goes in § _Open for the owner_; do not change that code silently.
+
+## Sources of truth
+
+1. **The legacy code on `origin/development`** of the VBCS repo is the source of truth for behaviour and the
+   backend contract. It is read-only. Never commit, switch branches or edit there. `uat` is the
+   behavioural baseline for what users see. Promotion runs `dev → demo → uat → Staged → PROD`.
+2. **The GrantsNow KB** (Obsidian, `GrantsNow/KB-Meta.md` first) describes old-app behaviour, the RB/RBAC
+   model, defects and failure signatures. **The GN-Rebuild KB** (`GN-Rebuild/GN-Rebuild-Meta.md`) records
+   rebuild decisions and status. Findings about the old app or the backend go to the GrantsNow KB.
+   Build decisions go to GN-Rebuild or to this repo's `docs/`.
+3. **Prompt packs, `docs/migration/*` and other external specs are input only.** The Angular build found
+   flows ported from dead chains and guessed field names in two such packs (2026-10-14). Check every
+   claim against the legacy code and build from the code.
+4. **The OpenAPI files show intent, not what arrives.** Build Zod schemas from real payloads and the page
+   models and chains that consume them, then confirm against live DEV.
+
+## Backend contract (ORDS `apps` / `base`, OIC)
+
+These rules belong in `src/server/api/*` and nowhere else.
+
+- **HTTP 200 can be a failure.** Check `status: 'ERROR'`, `response_msg` / `response_message === 'ERROR'`,
+  and populated `error_code` / `error_description`. Some endpoints return a PL/SQL error **object** where
+  an array is contracted, so `!response.ok` never fires. Validate the shape and do not cast it.
+- **Errors carry `error_code : error_description` plus `preventive_action`.** The legacy app shows these
+  verbatim in a transient toast. The rebuild passes only those three fields to the client (`businessError` in
+  `src/server/api/transport.ts`); `State` shows the preventive action under the message.
+- **Dead-session replies are not uniform.** One of them is the literal text `Context Not Set: N`. Match
+  it to "session expired", not to a generic failure.
+- **Paging is `p_offset` / `p_limit`** everywhere except the claims `unit-funds-list` / `fund-inquiry`
+  endpoints (`offset` / `limit`). Live DEV, 2026-10-22: the Proposal listing pages by 10, Home queues by 25.
+  `hasMore` is unreliable (a short last page can say `"true"`, a mid page `"false"`): use `total_count`
+  when present, else "the page came back full". `size` is never a total; page rows are never the API total.
+- **List filters are a SQL `p_where_clause`, built on the server.** Live DEV, 2026-10-22, title filter:
+  `p_where_clause=(LOWER("proposal_title") LIKE LOWER('%test%'))`. Sort is `p_order_by="col"` +
+  `p_sort_order`. Columns come from a fixed allowlist and values are quoted literals with `'` doubled
+  (`src/server/proposals/where-clause.ts`); the browser never sends SQL. `services/apps/transforms.js` (ORDS
+  `q` JSON) is unused by the legacy app.
+- **Header names vary by operation** (`token` vs `p_token`, `org_id` / `org-id` / `p_org_id`, header
+  casing). Copy them from the legacy call site into `operations.json`. Never normalise them.
+- **Build every write payload with an explicit pick** (a `toPayload()` per entity). VBCS typed variables
+  silently dropped undeclared keys. React does not, so posting a view model would send every field the UI
+  ever saw.
+- **Identity comes from the server, never the browser.** That covers `person_id`, `org_id` and `legal_id`
+  for scope, and the approval actor (legacy sends `action_by` from the client; derive it from the session
+  instead). The session token never goes in a URL (D25). The digital-presence save's contract puts it in
+  the query string; send it as a header.
+- **Who the user is comes from `base/session/validate`**: `pid`, `org_id`, `org_name`, `full_name`,
+  `legal_id` (Angular D45, as legacy `current_user`). Validate has no email. Default dashboard org is
+  validate's `org_id`.
+- **Run validate once per token, not on a poll** (D24). Extend the token about one minute before
+  `expiry_datetime` via `session/extend_token`, then schedule again from the returned expiry. An unchanged
+  expiry schedules nothing (D37). This repo validates per protected request on the server, which already
+  covers revocation. Do not add a client poll.
+- **Module access:** a module needs `module_access[].is_accessible === 'Y'`. In the drawer, a group needs its
+  own id and each child needs its own. Home and Announcements always show. Unknown access fails closed:
+  legacy showed everything, and the rebuild does not (D24).
+- **Files:** attachment records live in ORDS (`/pre_award/attachments/`). The bytes go to Object Storage through
+  OIC (`UPLOAD_OBJECT` / `GET_OBJECT` / `DELETE_OBJECT`), which needs Basic credentials. That must be a
+  server-side relay here, never browser credentials. `UPLOAD_OBJECT` accepts only
+  `application/octet-stream` (415 otherwise). Object keys stay deterministic
+  (`…/<objectNum>/<module>/<file name>`): the duplicate-name gates rely on one object per name per record.
+  Make names header-safe only by percent-encoding non-Latin-1 characters.
+- **Dates:** `new Date('YYYY-MM-DD')` is UTC midnight and shows one day early west of UTC. Parse
+  date-only values as calendar dates. Legacy overdue logic uses truncated-day comparisons.
+- **Decimals are view-only.** Format with `maximumFractionDigits: DECIMAL_PLACES_COUNT || 2`. Never round
+  values that are sent or stored. Financial masks are shown verbatim.
+- **Backend HTML** (announcements, opportunity summaries, chatbot answers) is sanitised once on the server.
+  CKEditor content needs its `.ck-content` / `text-*` / `marker-*` classes kept where it is shown.
+- **Legacy deep links** `?page=shell&shell=<module>&<module>=<page>&<id>=…` are emitted by backend
+  notifications and reports, sometimes with `=` where `&` should be. Old emails live forever, so keep a
+  redirect shim for that scheme.
+- **The chatbot** (`http://140.238.102.187:8000`) is plain HTTP on a raw IP. It rejects a localhost Origin
+  in CORS, and `/query` returns a 307 to an absolute `/query/`. The question travels in a `user-query`
+  header. Proxy it server-side and call `/query/`. The improvement list is in GN-Rebuild § _Chatbot: later_.
+
+## Resource bundles (RB) and visibility
+
+- **Merge direction:** local seed defaults first, backend rows on top, so the backend wins and seeds fill
+  the gaps (`_.merge(strings, backendRows)` in legacy `shell-page.js`). Keys are lower-cased per module.
+  Here, the seeds are `src/server/configuration/resource-defaults.json`.
+- **Fail closed:** a control shows only when its entry has `is_visible === 'Y'`. A missing bundle, key or
+  flag hides it. The helpers never throw on a missing module, group or key.
+- **Bundle fallback:** a per-type proposal bundle (`outline_proposal`, `sub_proposal`, …) that is not
+  provisioned falls back to `proposal`. A key missing inside an existing bundle does **not** fall back,
+  because the gap may be intentional.
+- **A new field is done only when it has all five of these.** Legacy ticket 8886 is the reference.
+  1. A seeded default with `is_visible: 'N'`.
+  2. A literal label fallback.
+  3. A visibility gate.
+  4. A required gate.
+  5. For editable fields, a More Info help button whose text comes from the entry's `description`.
+     Check existing gates first, and say so if an `'N'` would hide something currently on screen.
+- **Promote with visibility off:** anything new going to `uat` or higher arrives with `'N'`. Never carry a
+  `'Y'` upstream. Each environment has its own backend bundle.
+- **A label is never a feature flag.** Gate on the visibility metadata, not on label text.
+- **Strip hidden fields on the server.** A hidden field never reaches the client DTO. Hiding it with CSS
+  is not enough.
+
+## Behaviour proven in the Angular build (port the rule, not the code)
+
+- **Write gate:** every backend write passes one gate that is off by default (Angular D27,
+  `writesEnabled`). Turn it on only for a named test against a designated DEV record, then turn it off.
+  This matches this repo's rule that browser access does not authorise live mutations.
+- **A save blocks its control until it ends, and nothing is throttled** (D44). Every user-triggered write
+  disables its control from click to settle, whether it succeeds or fails. That covers save, create,
+  submit, delete, toggle and finalize. Per-item controls block only their own item. A confirm-then-send
+  flow is one pending unit, so the confirm cannot open twice. Saves take from under a second to about
+  10 s, so no throttle window works. Debounce only input that repeats by design (search-as-you-type,
+  scroll paging).
+- **Dynamic forms engine** (D40, D42; legacy `dynamic-form`, 28 hosts):
+  - Hidden fields are disabled, so they skip validation and are sent **empty**.
+  - GRID rows are keyed by `fieldId`, not the column label. One row is edited at a time. A row missing a
+    required column cannot be committed. Deleting every row clears the table.
+  - An empty number stays empty, not 0.
+  - FILE saves run deletes, then uploads, then answers, and **stop at the first failure**.
+  - The file folder uses the record number, so it is read after create (legacy wrote `/undefined/`).
+  - `ETHICS` / `DUE_DILIGENCE` map to `RESPONSES` scope in one function.
+  - Size limit is `DEFAULT_SIZE_FORMAT` (4 MB) and types come from `ALLOWED_EXTENSIONS`. Names are unique
+    across the form.
+  - Leaving a page with unsaved changes asks first.
+- **Record pages:**
+  - Each tab is a child route, so back and forward work.
+  - Tabs share per-record state instead of re-fired events.
+  - Object roles come from `security/user_roles` with `p_obj_type` / `p_obj_id`.
+  - Lock and finalize state comes from `getLockedModules` / `getLockStatus`.
+  - Comments and audit trail are shared components that take `(objectType, objectId, page)`.
+- **Unbuilt modules** open an in-app placeholder route. Only external tools (APEX Reports and
+  Administration, Support, API docs) open a new tab (D23).
+- **Each dashboard widget and chart is a definition in data**: endpoint, org header, chart type and a
+  row → view-model mapping. A slow or failing panel degrades on its own and never holds the page.
+- **Libraries that measure their container** (ECharts, FullCalendar) need a `ResizeObserver`, because
+  they only listen for window resizes.
+- **Open backend questions carried over:**
+  - An existing record's form omits fields added after its answers were saved.
+  - Most never-saved draft applications get no sections.
+  - It is unverified whether `base/getSessionLogin` is as open as `session/validate` on DEV.
+
+## Look and feel (owner's brief, carried from Angular)
+
+- **Match the live DEV VBCS app, and measure it.** Check computed styles and bounding boxes at the same
+  viewport, and do not judge by eye (D8).
+- **The document never scrolls; components do** (D35). Anything `position: absolute` needs a positioned
+  ancestor inside its scroll container. A stray `sr-only` label once made the main area scroll on every
+  page load. Applied: `<main>` is the one scroll container; a full-height page takes `.page-fill`.
+- **Form fields are one size, 28 px,** set in rows of equal cells, with related fields sharing a row (D36).
+- **Use one loading placeholder,** the skeleton with `role="status"`, not "Loading…" text (D30).
+- **Use one motion system,** CSS tokens only. Honour `prefers-reduced-motion`, and give dialogs exit
+  animations too (D29).
+- **Colours, fonts and radii come only from tokens.** Oracle Sans comes from Oracle's CDN, with Open Sans as
+  the fallback.
+- **Add no dependency until the owner agrees to it,** one library at a time as the need arises.
+
+## Engineering rules (owner's style, from the VBCS and Angular work)
+
+- **Centralise.** Anything two modules need becomes one component or helper driven by backend metadata.
+  Module differences live in data.
+- Prefer small pure functions, guard clauses and early returns. Use `?.`, `??`, destructuring and default
+  params.
+- **Test for emptiness explicitly** (`=== null || === undefined || === ''`). `0` and `false` are valid
+  values.
+- **Comments say why in one line, two at most.** Keep JSDoc for non-obvious contracts. Verify a comment
+  before trusting it, and fix it when you touch its code. Longer reasoning goes in docs or the KB.
+- **Bound every wait or loop** with timeouts or safety counters. Do not port legacy polling for
+  late-arriving params; pass the data down instead.
+- **Degrade, don't abort,** when one element is bad.
+- **Use try/catch only where something throws and the catch does something useful.** No empty catches,
+  no `.catch(() => {})`, and no console-only catch that hides a failure from the user.
+- **Keep diffs minimal.** Fix at the true cause and flag neighbouring problems separately. Add state,
+  helpers or params only when strictly needed. No single-use wrappers.
+- **Invent nothing.** Add no checks, toasts, payload changes or defaults without an identified defect.
+  When reverting, return to HEAD exactly.
+- **Mark a deliberate shortcut** with a `// ponytail:` comment that names its ceiling and the upgrade
+  path.
+- **Diagnose before editing.** A one-line error is not a diagnosis. Get the full stack, or a decisive diff
+  of vendor or source code, first. When a fix fails, say what that rules out before trying the next one.
+- **When a result doesn't match the source, suspect a stale cache first.** Next's `.next/dev` produced an
+  HMR loop here. Angular's `node_modules/.vitest-cache` served old compiles.
+
+## What not to carry
+
+- VBCS concepts: chains, `$application` / `$page` scopes, SDP/ADP, `oj-*` tags or classes, translation
+  store paths, Redwood/JET workarounds. The `vbcs-grantsnow` skill applies only to the legacy repo.
+- Angular mechanisms: RxJS streams, NgZone, CDK overlays, `InFlight`, `LABEL_MODULE`. Keep only the
+  behaviour.
+- VBCS hidden-behaviour workarounds H1–H28 (KB `GrantsNow-Migration.md`). The exceptions are H1 (explicit
+  payload pick), H11 (RB merge order), H22 (200 + ERROR) and H26 (legacy deep links), which must be
+  reproduced on purpose.
+- Legacy defects listed per screen in the GrantsNow module notes. Design them out and record which.
+- Angular's session architecture: a pasted browser token, ORDS called from the browser, and the dev proxy
+  injecting OIC credentials. This repo's server-side BFF (IDCS + sealed cookie + allowlisted transport)
+  replaces it. That BFF is the KB migration study's option (a).
+
+## Decisions 2026-10-22
+
+The owner asked for behavioural conflicts to be settled against the live DEV app, owner rules to win where
+they exist, configured values to be used, legacy defects to be fixed and access to be role based. Framework
+and improvement choices stay with the owner (§ _Open for the owner_).
+
+| Conflict                                                                   | Settled by                                         | Now                                                                                  |
+| -------------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Listing filters sent as ORDS `q` JSON                                      | Live DEV network + legacy `services/transforms.js` | SQL `p_where_clause` / `p_order_by` / `p_sort_order`, server-built from an allowlist |
+| Paging `offset` / `limit`, 5 rows with Prev/Next on Home                   | Live DEV (`p_limit=25`) + GN-Dashboard rule        | `p_offset` / `p_limit`; Home queues 25 per page, scroll, cap 100                     |
+| Trusting `hasMore`                                                         | GN-Dashboard live note                             | `total_count`, else full page                                                        |
+| Backend error text hidden                                                  | Owner rule                                         | `error_code : error_description` + `preventive_action`, nothing else                 |
+| `Context Not Set` shown as a contract error                                | KB + GN-Angular                                    | Session expired                                                                      |
+| No automatic token extension                                               | D37                                                | Extend one minute before expiry, reschedule from the reply                           |
+| Per-key fallback to the `proposal` bundle                                  | Owner decision 2026-10-19                          | Fallback only when the per-type bundle is absent                                     |
+| Summary shows fields unless `'N'` (legacy)                                 | Owner decision 2026-10-19                          | `'Y'` only, everywhere                                                               |
+| Any role row grants object read                                            | Make it role based                                 | Every row for the page must grant it                                                 |
+| Drawer group shown if any child is granted; placeholders shown to everyone | D24 + legacy `getNavigationItems`                  | Group needs its own grant; placeholders need theirs                                  |
+| External tools as in-app placeholders                                      | D23 + live drawer                                  | New tab, per-environment URLs (`APEX_*`, `CUSTOMER_SUPPORT_URL`)                     |
+| Configured decimals and date format unused                                 | Use configured things                              | `DECIMAL_PLACES_COUNT` / `DEFAULT_DATE_FORMAT` on every screen                       |
+| Overdue: every proposal deadline pink; tomorrow overdue                    | Fix legacy defects                                 | Correct date field per queue, calendar days, due today or earlier                    |
+| Settings save posted the whole GET body                                    | H1                                                 | Contracted keys only                                                                 |
+| Two opportunity cards                                                      | D32                                                | One shared card                                                                      |
+| Document scroll, 38 px fields, no motion system, grid layouts, raw colours | D35, D36, D29, D7                                  | Applied in `globals.css`                                                             |
+| Unrecognised legacy email links                                            | H26                                                | Redirected to the new routes                                                         |
+| Live writes ungated                                                        | D27                                                | `WRITES_ENABLED=false` by default                                                    |
+
+## Decisions 2026-10-22 (owner's second round)
+
+| Owner instruction               | Done                                                                                                                                                                                                                                                                                                                             |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DOMPurify if better             | Yes: legacy `renderAsHTML` uses it, it parses like a browser and keeps authored styles/tables (D15). Server-side with jsdom (`src/server/html/sanitize.ts`), hardened: no `<style>`/form controls, no positioning or `url()` in styles, links new-tab, http(s)/mailto/relative only. `sanitize-html` removed                     |
+| FullCalendar                    | 6.1.22 via `@fullcalendar/react` (D17), loaded on first Calendar View (D19), ported legacy/GN-Angular calendar                                                                                                                                                                                                                   |
+| Dependencies                    | `sanitize-html` and its types removed; everything left in `dependencies` runs in production (zod validates every Oracle reply); test/tooling packages are dev-only                                                                                                                                                               |
+| Agreed fonts and styles         | Oracle gallery bundle linked as VB/GN-Angular do (Oracle Sans + `oj-ux-ico` glyphs, D13/D14), Open Sans listed as fallback, `<Icon>` component, GN tokens and component styles                                                                                                                                                   |
+| Charts we had                   | Every GN-Angular Insights and Dynamic chart, drill-downs, legend truncation, FEI gauge, funnel, stacking                                                                                                                                                                                                                         |
+| Filters on the left, adjustable | One `FilterPanel` on Proposals, Opportunities and EOI: drag or keyboard resize, per-browser width, collapsible                                                                                                                                                                                                                   |
+| Chatbot, bottom right           | Server proxy `/api/chatbot` (session token added server-side, answers sanitised), gated by `CHATBOT_URL` + global var `CHATBOT_ENABLED=Y`, draggable launcher snapping to edges, default bottom-right                                                                                                                            |
+| Real data not loading           | Machine DNS: the router stalls on IPv6 (AAAA) lookups, so Node needs ~6 s per lookup and parallel requests hit the 10 s connect timeout. Fix is local DNS. App hardened: read/aggregate timeouts 60/90 s, one validate per token per 60 s (D24), seeded labels when `shared/labels` is unreachable, dev-only failure diagnostics |
+
+Later the same day: the hover-only "Refresh" buttons on Home widgets (Need Attention, Notifications, Featured,
+Dynamic Charts) were removed at the owner's request, to be re-added if needed; the error-state "Retry" stays. The dev
+origin is `http://localhost:3000` (as GN-Angular's `localhost:4200`), still loopback-only and exact for the Origin
+check and the host-only cookie. Development servers resolve the ORDS hosts over IPv4 first (`src/server/configuration/dev-dns.ts`),
+because this machine's router stalls on AAAA lookups (Node waited ~6 s per lookup; DEV round trip now ~1 s).
+
+## Open for the owner
+
+Framework and improvement choices only:
+
+- Width of the listing filter panel is remembered per browser, not per account (server preferences would be needed).
+- Chatbot: the session token still travels over plain HTTP to a raw IP, as in legacy; voice input is not ported.
+- Dark mode keeps the teal brand (the VBCS dark preset's near-black brand needs a separate foreground token first).
+- Two grids kept for backend-driven 12-column chart spans (`.insight-panels`, `.dynamic-chart-grid`).
+- Floating-label 39 px filter fields on the Proposal listing (D36 keeps them only for profile and Insights).
+- LIKE wildcards `%` / `_` stay unescaped, as in legacy; escaping needs an `ESCAPE` clause the backend must accept.
+- Overdue uses the server's calendar day, not the user's time zone.
+- Not yet built: funder tree and deep links, "new" opportunity flags, Notifications load-on-scroll, the Ethics
+  `checkApplApprAccess` gate, per-filter `list-*` visibility gates on the listing.
+- To confirm on DEV: whether `pendingApproval` / `approvedAwards` return `appr_deadline_date`; whether
+  `total_count` is filtered or global.

@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import type { FormatSettings } from "@/lib/format";
+import { Icon, type IconName } from "@/components/ui/icon";
 import {
   DynamicChartsPanel,
   FeaturedPanel,
@@ -10,6 +12,7 @@ export function DashboardTabs({
   insights,
   additional,
   organization,
+  format,
 }: {
   attention: React.ReactNode;
   insights: React.ReactNode;
@@ -19,20 +22,27 @@ export function DashboardTabs({
     charts: { id: string; name: string; module: string }[];
   };
   organization?: string;
+  format?: FormatSettings;
 }) {
   const [selected, setSelected] = useState(0);
-  const tabs = [
-    { label: "Need Attention", icon: "\uf6b3", content: attention },
-    { label: "Insights", icon: "\uf6cd", content: insights },
+  const tabs: { label: string; icon: IconName; content: React.ReactNode }[] = [
+    { label: "Need Attention", icon: "flag", content: attention },
+    { label: "Insights", icon: "chart", content: insights },
     ...(additional.opportunities
-      ? [{ label: "Opportunities", icon: "\uf215", content: <FeaturedPanel /> }]
+      ? [
+          {
+            label: "Opportunities",
+            icon: "money" as const,
+            content: <FeaturedPanel format={format} />,
+          },
+        ]
       : []),
     ...(additional.notifications
       ? [
           {
             label: "Notifications",
-            icon: "\uf2f9",
-            content: <NotificationsPanel />,
+            icon: "bell" as const,
+            content: <NotificationsPanel format={format} />,
           },
         ]
       : []),
@@ -40,7 +50,7 @@ export function DashboardTabs({
       ? [
           {
             label: "Dynamic Charts",
-            icon: "\uf230",
+            icon: "dynamic" as const,
             content: (
               <DynamicChartsPanel
                 charts={additional.charts}
@@ -82,12 +92,16 @@ export function DashboardTabs({
             }}
             onClick={() => setSelected(i)}
           >
-            <span
-              aria-hidden="true"
-              className={`ux-icon ${i === 0 ? "attention-icon" : i === 1 ? "insights-icon" : "success-text"}`}
-            >
-              {tab.icon}
-            </span>
+            <Icon
+              name={tab.icon}
+              className={
+                i === 0
+                  ? "attention-icon"
+                  : i === 1
+                    ? "insights-icon"
+                    : "success-text"
+              }
+            />
             {tab.label}
           </button>
         ))}

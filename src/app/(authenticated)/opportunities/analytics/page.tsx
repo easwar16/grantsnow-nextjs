@@ -1,7 +1,7 @@
 import { ChartSkeleton } from "@/components/feedback/skeleton";
 import { Suspense } from "react";
 import { pageIdentity } from "@/server/auth/page";
-import { requireModule } from "@/server/permissions/policy";
+import { requireDrawerAccess } from "@/server/permissions/policy";
 import { opportunityStatistics } from "@/server/opportunities/analytics";
 import { State } from "@/components/feedback/state";
 import { publicError } from "@/lib/errors";
@@ -32,6 +32,7 @@ async function Chart({
         <State
           title="Statistics unavailable"
           message={e.message}
+          action={e.action}
           code={e.code}
         />
       </article>
@@ -114,7 +115,7 @@ async function Chart({
 export default async function Analytics() {
   const { user } = await pageIdentity("/opportunities/analytics");
   try {
-    requireModule(user, "opportunities-analytics");
+    requireDrawerAccess(user, "opportunities-analytics");
   } catch {
     return <State title="Access denied" code="FORBIDDEN" />;
   }

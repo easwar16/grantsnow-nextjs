@@ -24,6 +24,19 @@ function choices(raw: unknown, value: string, label: string): Choice[] {
   // rows sharing a party name. A filter value must have one selectable option.
   return [...new Map(options.map((option) => [option.value, option])).values()];
 }
+const sortColumn = /^[A-Za-z][A-Za-z0-9_]{0,62}$/;
+/** The configured Date Sort columns (legacy fetchDateTypes, `p_obj_type` PROPOSAL); an unsafe name is dropped. */
+export const sortChoices = cache(async (): Promise<Choice[]> => {
+  const { session } = await authenticate();
+  return choices(
+    await oracle("getSharedGetObjectDates", {
+      token: session.token,
+      p_obj_type: "PROPOSAL",
+    }),
+    "column_name",
+    "column_description",
+  ).filter((c) => sortColumn.test(c.value));
+});
 export const listingChoices = cache(async (): Promise<ListingChoices> => {
   const { session, user } = await authenticate();
   requireModule(user, "PROPOSALS");
@@ -40,6 +53,7 @@ export const listingChoices = cache(async (): Promise<ListingChoices> => {
     oracle("getPre_awardGetPersonList", headers),
     oracle("GetSponsorList", headers),
     organizations(),
+    sortChoices(),
   ]);
   const result: ListingChoices = {
     statuses: [],
@@ -50,6 +64,7 @@ export const listingChoices = cache(async (): Promise<ListingChoices> => {
     sponsors: [],
     activities: [],
     proposalTypes: [],
+    sorts: [],
     errors: [],
   };
   const labels = [
@@ -57,6 +72,7 @@ export const listingChoices = cache(async (): Promise<ListingChoices> => {
     "Investigator/assigned-to",
     "Sponsor",
     "Department",
+    "Date sort",
   ];
   settled.forEach((r, i) => {
     if (r.status === "rejected")
@@ -99,6 +115,7 @@ export const listingChoices = cache(async (): Promise<ListingChoices> => {
   } catch {
     result.errors.push("Sponsor choices returned an invalid contract.");
   }
+  if (settled[4].status === "fulfilled") result.sorts = settled[4].value;
   if (settled[3].status === "fulfilled")
     result.departments = settled[3].value.map((r) => ({
       value: r.id,

@@ -24,21 +24,77 @@ export function resolveOperationPath(
     return value;
   });
 }
-export function assertBusiness(body: unknown) {
-  if (!body || typeof body !== "object")
-    throw new AppError("CONTRACT", "Oracle returned an invalid response.");
+const BUSINESS_FALLBACK =
+  "Oracle could not complete this request. Contact your administrator if it persists.";
+// ORDS answers an unknown or timed-out token with this text (sometimes `Context Not Set: N`), not a 401.
+const DEAD_SESSION = /^\s*Context Not Set\b/i;
+/** Backend error text: plain, single-line, trimmed and capped; empty when absent. */
+function backendText(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  if (typeof value !== "string") return "";
+  return value
+    .replace(/[\x00-\x1f\x7f]+/g, " ")
+    .trim()
+    .slice(0, 500);
+}
+/** The failure an ORDS body reports (HTTP 200 included), or null for a success body. */
+export function businessError(body: unknown): AppError | null {
+  if (typeof body === "string")
+    return DEAD_SESSION.test(body) ? expired() : null;
+  if (!body || typeof body !== "object" || Array.isArray(body)) return null;
   const b = body as Record<string, unknown>;
   if (
-    b.response_msg === "ERROR" ||
-    b.error_code ||
-    b.error_msg ||
-    b.error_description
+    [b.ERROR_MSG, b.error_msg, b.error_description].some(
+      (v) => typeof v === "string" && DEAD_SESSION.test(v),
+    )
   )
-    throw new AppError(
-      "BUSINESS",
-      "Oracle could not complete this request. Contact your administrator if it persists.",
-    );
-  return b;
+    return expired();
+  const code = backendText(b.error_code),
+    description = backendText(b.error_description);
+  const failed =
+    b.response_msg === "ERROR" ||
+    b.response_message === "ERROR" ||
+    b.status === "ERROR" ||
+    code !== "" ||
+    description !== "" ||
+    backendText(b.error_msg) !== "" ||
+    backendText(b.ERROR_MSG) !== "";
+  if (!failed) return null;
+  // Owner rule: show `error_code : error_description` + `preventive_action` verbatim; nothing else from the body.
+  const summary = [code, description].filter((t) => t !== "").join(" : ");
+  return new AppError(
+    "BUSINESS",
+    summary || BUSINESS_FALLBACK,
+    502,
+    backendText(b.preventive_action) || undefined,
+  );
+}
+function expired() {
+  return new AppError(
+    "EXPIRED",
+    "Your GrantsNow session has expired. Sign in again.",
+    401,
+  );
+}
+export function assertBusiness(body: unknown) {
+  const error = businessError(body);
+  if (error) throw error;
+  if (!body || typeof body !== "object")
+    throw new AppError("CONTRACT", "Oracle returned an invalid response.");
+  return body as Record<string, unknown>;
+}
+/** JSON when the body is JSON, otherwise the raw text (some dead-session replies are plain text). */
+function parseBody(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+/** Development only: which operation failed and how (status, business code, timeout); never the token or body. */
+function devTrace(operation: Operation, detail: string) {
+  if (process.env.APP_ENV === "development")
+    console.warn(`[oracle] ${operation}: ${detail}`);
 }
 export async function oracle(
   operation: Operation,
@@ -71,8 +127,8 @@ export async function oracle(
   );
   if (query) url.search = query.toString();
   let response: Response;
-  // The verified DEV KPI aggregation takes ~42 seconds; ordinary reads retain
-  // the shorter timeout. Its independent Suspense boundary keeps Home usable.
+  // DEV answers slowly (awardPendingApproval ~27 s, KPI statistics 40–60 s, GrantsNow-Dashboard.md); legacy sets no
+  // limit. Bounded anyway: reads 60 s, aggregations 90 s. Each widget's own Suspense boundary keeps Home usable.
   const aggregates: Operation[] = [
     "getSharedGetKpiStatistics",
     "getProposalGetProposalStatistics",
@@ -84,7 +140,7 @@ export async function oracle(
     "getSharedGetWidgetParameters",
     "getSharedGetDynamicCharts",
   ];
-  const timeout = aggregates.includes(operation) ? 60000 : 15000;
+  const timeout = aggregates.includes(operation) ? 90000 : 60000;
   try {
     response = await fetch(url, {
       method: "GET",
@@ -101,23 +157,31 @@ export async function oracle(
         ? AbortSignal.any([signal, AbortSignal.timeout(timeout)])
         : AbortSignal.timeout(timeout),
     });
+  } catch (e) {
+    devTrace(
+      operation,
+      e instanceof Error && e.name === "TimeoutError"
+        ? `timed out after ${timeout / 1000}s`
+        : `network error ${e instanceof Error ? `${e.name} ${String((e.cause as { code?: string } | undefined)?.code ?? "")}` : ""}`,
+    );
+    throw new AppError("UPSTREAM", "Oracle is unavailable. Please retry.");
+  }
+  if (!response.ok) devTrace(operation, `HTTP ${response.status}`);
+  if (response.status === 401) throw expired();
+  if (response.status === 403)
+    throw new AppError("FORBIDDEN", "Oracle denied access to this data.", 403);
+  let body: unknown;
+  try {
+    body = parseBody(await response.text());
   } catch {
     throw new AppError("UPSTREAM", "Oracle is unavailable. Please retry.");
   }
-  if (response.status === 401)
-    throw new AppError(
-      "EXPIRED",
-      "Your GrantsNow session has expired. Sign in again.",
-      401,
-    );
-  if (response.status === 403)
-    throw new AppError("FORBIDDEN", "Oracle denied access to this data.", 403);
   if (!response.ok)
-    throw new AppError("UPSTREAM", "Oracle is unavailable. Please retry.");
-  try {
-    return assertBusiness(await response.json());
-  } catch (e) {
-    if (e instanceof AppError) throw e;
-    throw new AppError("CONTRACT", "Oracle returned an unreadable response.");
-  }
+    throw (
+      businessError(body) ??
+      new AppError("UPSTREAM", "Oracle is unavailable. Please retry.")
+    );
+  const failure = businessError(body);
+  if (failure) devTrace(operation, `${failure.code} ${failure.message}`);
+  return assertBusiness(body);
 }

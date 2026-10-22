@@ -3,33 +3,62 @@ import { fixtureMode } from "@/server/configuration/environment";
 import type { Operation } from "@/server/api/transport";
 import { fixtureUser, proposals } from "./fixtures";
 import { widgets } from "@/server/home/widgets";
-function matches(
-  row: Record<string, unknown>,
-  node: Record<string, unknown>,
-): boolean {
-  if (Array.isArray(node.$and)) return node.$and.every((c) => matches(row, c));
-  if (Array.isArray(node.$or)) return node.$or.some((c) => matches(row, c));
-  return Object.entries(node).every(([key, ops]) => {
-    if (key === "$orderby") return true;
-    const value = String(row[key] ?? "");
-    return Object.entries(ops as Record<string, unknown>).every(
-      ([op, want]) => {
-        const target =
-          typeof want === "object" && want
-            ? String((want as Record<string, unknown>).$date)
-            : String(want);
-        return op === "$instr"
-          ? value.toLowerCase().includes(target.toLowerCase())
-          : op === "$eq"
-            ? value === target
-            : op === "$gte"
-              ? value >= target
-              : op === "$lte"
-                ? value <= target
-                : false;
-      },
-    );
-  });
+/**
+ * Evaluates the p_where_clause grammar that src/server/proposals/where-clause.ts emits:
+ * `( atom (AND|OR atom)* )`, atoms `LOWER("c") LIKE LOWER('%v%')`, `"c"='v'`, `"c">='v'`, `"c"<='v'`.
+ */
+function whereMatcher(
+  clause: string,
+): (row: Record<string, unknown>) => boolean {
+  let i = 0;
+  const literal = () => {
+    const m = /^'((?:[^']|'')*)'/.exec(clause.slice(i));
+    if (!m) throw new Error("Fixture where clause: literal expected.");
+    i += m[0].length;
+    return m[1].replaceAll("''", "'");
+  };
+  const atom = (): ((row: Record<string, unknown>) => boolean) => {
+    if (clause[i] === "(") return group();
+    const like = /^LOWER\("(\w+)"\) LIKE LOWER\(/.exec(clause.slice(i));
+    if (like) {
+      i += like[0].length;
+      const want = literal().replaceAll("%", "").toLowerCase();
+      i += 1;
+      return (row) =>
+        String(row[like[1]] ?? "")
+          .toLowerCase()
+          .includes(want);
+    }
+    const cmp = /^"(\w+)"(>=|<=|=)/.exec(clause.slice(i));
+    if (!cmp) throw new Error("Fixture where clause: atom expected.");
+    i += cmp[0].length;
+    const want = literal();
+    return (row) => {
+      // Fixture dates are ISO; compare their calendar-day form with the bound.
+      const v = String(row[cmp[1]] ?? "")
+        .replace(/^(\d{4}-\d{2}-\d{2})T/, "$1 ")
+        .slice(0, want.length);
+      return cmp[2] === ">="
+        ? v >= want
+        : cmp[2] === "<="
+          ? v <= want
+          : v === want;
+    };
+  };
+  const group = (): ((row: Record<string, unknown>) => boolean) => {
+    i += 1;
+    const parts = [atom()];
+    let any = false;
+    for (let m; (m = /^ (AND|OR) /.exec(clause.slice(i)));) {
+      i += m[0].length;
+      any = m[1] === "OR";
+      parts.push(atom());
+    }
+    i += 1;
+    return (row) =>
+      any ? parts.some((p) => p(row)) : parts.every((p) => p(row));
+  };
+  return group();
 }
 export async function mockOracle(
   op: Operation,
@@ -194,8 +223,15 @@ export async function mockOracle(
         { msg: "<p>Explore the Home dashboard and Proposal listing.</p>" },
       ],
     };
+  if (op === "getSharedGetObjectDates")
+    return {
+      items: [
+        { column_name: "creation_date", column_description: "Created On" },
+        { column_name: "last_update_date", column_description: "Updated On" },
+      ],
+    };
   if (op === "getNotificationsNotifications") {
-    const offset = Number(query?.get("offset") || 0);
+    const offset = Number(query?.get("p_offset") || 0);
     return {
       items: Array.from({ length: 30 }, (_, i) => ({
         id: i + 1,
@@ -420,13 +456,13 @@ export async function mockOracle(
       ],
     };
   if (op === "getPre_awardGetProposalsList") {
-    const q = JSON.parse(query?.get("q") || "{}"),
+    const where = query?.get("p_where_clause"),
       offset = Number(query?.get("p_offset") || 0),
       limit = Number(query?.get("p_limit") || 10);
-    const rows = proposals.filter((r) => matches(r, q));
-    const order = Object.entries(q.$orderby || {})[0];
-    if (order) {
-      const [key, dir] = order;
+    const rows = where ? proposals.filter(whereMatcher(where)) : [...proposals];
+    const key = query?.get("p_order_by")?.replaceAll('"', ""),
+      dir = query?.get("p_sort_order");
+    if (key) {
       rows.sort(
         (a, b) =>
           String(a[key as keyof typeof a]).localeCompare(
@@ -567,6 +603,36 @@ export async function mockOracle(
         { RN: 2, x: "P_0002", Y: 80000 },
       ],
     };
+  // Synthetic statistics per chart_type, carrying the drill codes the legacy rows carry.
+  const status = [
+    { label: "Draft", code: "DRFT", value: 12 },
+    { label: "Submitted", code: "SUB", value: 8 },
+    { label: "Awarded", code: "AWARD", value: 5 },
+  ];
+  const faculties = [
+    { label: "Faculty of Science", code: "203", value: 9 },
+    { label: "Faculty of Health", code: "204", value: 6 },
+  ];
+  const statistics: Record<string, Record<string, unknown>[]> = {
+    PROP_STATUS: status,
+    AWARD_STATUS: status,
+    ETHICS_STATUS: status,
+    PROP_FACULTY: faculties,
+    ETHICS_ORG: faculties,
+    AWARD_FACULTY: faculties.map(({ label, value }) => ({ label, value })),
+    ETHICS_RISK: [
+      { label: "Low", code: "LOW", value: 7 },
+      { label: "High", code: "HIGH", value: 2 },
+    ],
+    YEAR_STATUS: status.map((s) => ({
+      label: headers.year?.split(",")[0] || "2026",
+      code: s.label,
+      status_code: s.code,
+      value: s.value,
+    })),
+  };
+  if (headers.chart_type && statistics[headers.chart_type])
+    return { items: statistics[headers.chart_type] };
   const w = widgets.find(
     (w) =>
       w.operation === op &&
@@ -581,7 +647,8 @@ export async function mockOracle(
         { label: headers.year || "2026", code: "Awarded", value: 5 },
       ],
     };
-  const offset = Number(query?.get("offset") || 0),
+  const offset = Number(query?.get("p_offset") || 0),
+    limit = Number(query?.get("p_limit") || 25),
     org = headers[w.orgHeader];
   const source = proposals.filter(
     (r) =>
@@ -590,7 +657,7 @@ export async function mockOracle(
       r.org_unit_name ===
         (org === "203" ? "Faculty of Science" : "Faculty of Health"),
   );
-  const rows = source.slice(offset, offset + 5).map((p, i) => ({
+  const rows = source.slice(offset, offset + limit).map((p, i) => ({
     ...p,
     deadline_id: i,
     deadline_date: "2026-11-01",

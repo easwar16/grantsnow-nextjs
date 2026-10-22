@@ -52,6 +52,7 @@ export default async function Register() {
       <State
         title="Registration configuration unavailable"
         message={e.message}
+        action={e.action}
         code={e.code}
       />
     );

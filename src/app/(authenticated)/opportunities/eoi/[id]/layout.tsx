@@ -2,6 +2,7 @@ import Link from "next/link";
 import { pageIdentity } from "@/server/auth/page";
 import { eoiRecordContext } from "@/server/opportunities/record";
 import { State } from "@/components/feedback/state";
+import { Icon } from "@/components/ui/icon";
 import { publicError } from "@/lib/errors";
 export default async function EoiLayout({
   children,
@@ -23,6 +24,7 @@ export default async function EoiLayout({
           e.code === "FORBIDDEN" ? "Access denied" : "Application unavailable"
         }
         message={e.message}
+        action={e.action}
         code={e.code}
       />
     );
@@ -31,7 +33,7 @@ export default async function EoiLayout({
     <section className="record-workspace">
       <header className="record-header">
         <Link href="/opportunities/eoi" prefetch={false}>
-          ← Applications of Interest
+          <Icon name="arrow-left" /> Applications of Interest
         </Link>
         <h1>Application of Interest</h1>
       </header>

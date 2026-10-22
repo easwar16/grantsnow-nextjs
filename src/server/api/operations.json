@@ -24,6 +24,11 @@
     "path": "/pre_award/getProposalsList/",
     "headers": ["token"]
   },
+  "getSharedGetObjectDates": {
+    "service": "apps",
+    "path": "/shared/getObjectDates",
+    "headers": ["token", "p_obj_type"]
+  },
   "getSecurityUser_roles": {
     "service": "apps",
     "path": "/security/user_roles",

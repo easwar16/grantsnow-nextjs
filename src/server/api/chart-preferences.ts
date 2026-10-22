@@ -2,15 +2,16 @@ import "server-only";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import {
+  assertWritesEnabled,
   fixtureMode,
   oracleSettings,
 } from "@/server/configuration/environment";
-import { assertBusiness } from "./transport";
+import { assertBusiness, businessError } from "./transport";
 export const chartDimensions = z
   .object({
     infolet_id: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
     colspan: z.number().int().min(1).max(12),
-    rowspan: z.number().int().min(1).max(12),
+    rowspan: z.number().int().min(1).max(3),
   })
   .strict();
 // The sole write operation here is the verified personal chart-layout preference.
@@ -21,6 +22,7 @@ export async function saveChartPreference(
 ) {
   chartDimensions.parse(body);
   if (fixtureMode()) return;
+  assertWritesEnabled();
   const config = oracleSettings();
   let response: Response;
   try {
@@ -66,9 +68,13 @@ export async function saveChartPreference(
     try {
       body = JSON.parse(text);
     } catch {
-      throw new AppError(
-        "CONTRACT",
-        "Oracle returned an unreadable preference response.",
+      // A dead session can answer in plain text ("Context Not Set: N").
+      throw (
+        businessError(text) ??
+        new AppError(
+          "CONTRACT",
+          "Oracle returned an unreadable preference response.",
+        )
       );
     }
     assertBusiness(body);

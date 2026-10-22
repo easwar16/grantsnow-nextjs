@@ -7,14 +7,15 @@ import { oracleSettings } from "@/server/configuration/environment";
 import "server-only";
 import { z } from "zod";
 import { homeAccess } from "./service";
+import { pageQuery } from "./paging";
 import {
   dashboardConfiguration,
   organizations,
 } from "@/server/configuration/service";
-import { resources } from "@/server/configuration/resources";
+import { resources, resourceVisible } from "@/server/configuration/resources";
 import { scopeOrganization } from "@/server/permissions/policy";
 import { oracle } from "@/server/api/transport";
-import { cleanAnnouncement } from "./announcements";
+import { sanitizeHtml } from "@/server/html/sanitize";
 import { AppError } from "@/lib/errors";
 import { listOpportunities } from "@/server/opportunities/service";
 import { parseOpportunityQuery } from "@/features/opportunities/schemas";
@@ -25,13 +26,7 @@ export async function dashboardTabs() {
     resources(),
   ]);
   const visible = (key: string) =>
-    labels.some(
-      (r) =>
-        r.module_name.toLowerCase() === "dashboard" &&
-        r.label_type === "button-labels" &&
-        r.label_name === key &&
-        r.is_visible === "Y",
-    );
+    resourceVisible(labels, "dashboard", "button-labels", key);
   const moduleAccess: Record<string, string> = {
     PROPOSAL: "PROPOSALS",
     AWARD: "AWARDS",
@@ -40,13 +35,7 @@ export async function dashboardTabs() {
     OPPORTUNITIES: "opportunities-finder",
   };
   const chartOption = (key: string) =>
-    labels.some(
-      (r) =>
-        r.module_name.toLowerCase() === "dashboard" &&
-        r.label_type === "labels" &&
-        r.label_name === key &&
-        r.is_visible === "Y",
-    );
+    resourceVisible(labels, "dashboard", "labels", key);
   const charts = Object.entries(config.dynamicCharts || {})
     .filter(
       ([, c]) =>
@@ -72,7 +61,9 @@ export async function dashboardTabs() {
     charts: visible("dynamic-charts") ? charts : [],
   };
 }
+const NOTIFICATION_PAGE = 25;
 export function notificationPage(raw: unknown, offset: number) {
+  // The envelope's hasMore/offset do not track p_offset paging (KB GrantsNow-Dashboard), so they are not trusted.
   const body = z
     .object({
       items: z.array(
@@ -83,15 +74,9 @@ export function notificationPage(raw: unknown, offset: number) {
           datetime: z.string(),
         }),
       ),
-      hasMore: z.union([z.boolean(), z.enum(["true", "false"])]),
-      offset: z.number().int().nonnegative(),
-      limit: z.number().int().positive(),
     })
     .parse(raw);
-  if (
-    body.offset !== offset ||
-    new Set(body.items.map((r) => String(r.id))).size !== body.items.length
-  )
+  if (new Set(body.items.map((r) => String(r.id))).size !== body.items.length)
     throw new AppError(
       "CONTRACT",
       "Notifications returned inconsistent paging.",
@@ -99,15 +84,15 @@ export function notificationPage(raw: unknown, offset: number) {
   return {
     rows: body.items.map((r) => ({
       id: String(r.id),
-      html: cleanAnnouncement(r.notific_content),
+      html: sanitizeHtml(r.notific_content),
       read: r.is_read === "Y",
       date: /(?:Z|[+-]\d\d:\d\d)$/.test(r.datetime)
         ? r.datetime
         : `${r.datetime}Z`,
     })),
     offset,
-    limit: body.limit,
-    hasMore: body.hasMore === true || body.hasMore === "true",
+    limit: NOTIFICATION_PAGE,
+    hasMore: body.items.length >= NOTIFICATION_PAGE,
   };
 }
 export async function notifications(offset: number, signal?: AbortSignal) {
@@ -118,14 +103,14 @@ export async function notifications(offset: number, signal?: AbortSignal) {
     !Number.isSafeInteger(offset) ||
     offset < 0 ||
     offset > 250000 ||
-    offset % 25 !== 0
+    offset % NOTIFICATION_PAGE !== 0
   )
     throw new AppError("BAD_REQUEST", "Invalid notification page.", 400);
   return notificationPage(
     await oracle(
       "getNotificationsNotifications",
       { token: session.token },
-      new URLSearchParams({ offset: String(offset), limit: "25" }),
+      pageQuery(offset, NOTIFICATION_PAGE),
       signal,
     ),
     offset,
@@ -135,7 +120,17 @@ export const chartSchema = z.array(
   z.object({
     infolet_id: z.union([z.string(), z.number()]),
     name: z.string(),
-    chart: z.enum(["PIE", "DONUT", "LINE", "LA", "BAR", "AREA"]),
+    // Legacy getCorrectMappingForChart draws any other code, or none, as a pie.
+    chart: z
+      .string()
+      .nullish()
+      .transform((c) =>
+        ["PIE", "DONUT", "LINE", "LA", "BAR", "AREA"].includes(
+          c?.toUpperCase() ?? "",
+        )
+          ? c!.toUpperCase()
+          : "PIE",
+      ),
     ModuleName: z.string(),
     "report-url": z.string().optional(),
     colspan: z.coerce.number().int().min(1).max(12).optional(),
@@ -145,7 +140,11 @@ export const chartSchema = z.array(
       z.object({
         series: z.union([z.string(), z.number()]).nullish(),
         group: z.union([z.string(), z.number()]),
-        value: z.coerce.number().finite(),
+        // A missing value is a gap, not a zero.
+        value: z.preprocess(
+          (v) => (v === null || v === undefined || v === "" ? null : v),
+          z.coerce.number().finite().nullable(),
+        ),
       }),
     ),
   }),

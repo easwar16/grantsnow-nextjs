@@ -4,11 +4,14 @@ import {
   browserSessionMode,
 } from "@/server/configuration/environment";
 import { safeReturn } from "@/lib/security";
+import { Icon } from "@/components/ui/icon";
 const messages: Record<string, string> = {
   EXPIRED: "Your session has expired. Sign in again to continue.",
   UNAUTHENTICATED: "Please sign in to continue.",
   LOGIN_FAILED:
     "Sign-in or GrantsNow session setup failed. Check your account and contact the identity/API administrator.",
+  TOKEN_REJECTED:
+    "That session token was not accepted. Copy the current token from the signed-in GrantsNow DEV app and try again.",
   SIGNED_OUT: "You have signed out of GrantsNow.",
   BACKEND_LOGOUT_FAILED:
     "Local sign-out is complete. Oracle session cleanup failed; the backend session must expire or be revoked by an administrator.",
@@ -56,25 +59,42 @@ export default async function Login({
         )}
         {browserSession && (
           <div className="fixture-banner">
-            LOCAL DEV — uses your captured GrantsNow browser session
+            LOCAL DEV — connects with your GrantsNow DEV session token
           </div>
         )}
         <form action="/api/auth/login" method="post">
           <input type="hidden" name="returnTo" value={safeReturn(p.returnTo)} />
+          {browserSession && (
+            <label className="token-field">
+              GrantsNow session token
+              <textarea
+                name="token"
+                rows={3}
+                autoComplete="off"
+                spellCheck={false}
+                aria-describedby="token-hint"
+              />
+              <small id="token-hint">
+                Paste the whole <code>token</code> cookie from the signed-in
+                GrantsNow DEV app, so its expiry comes with it. Leave blank to
+                use the captured session file.
+              </small>
+            </label>
+          )}
           <button className="primary" type="submit">
             {fixture
               ? "Enter fixture workspace"
               : browserSession
                 ? "Open connected DEV workspace"
                 : "Continue with Oracle IDCS"}{" "}
-            <span aria-hidden="true">→</span>
+            <Icon name="arrow-right" />
           </button>
         </form>
         <small>
           {fixture
             ? "No Oracle connection is made in this mode."
             : browserSession
-              ? "The protected server validates your captured DEV token. No local IDCS login is attempted."
+              ? "The server validates the token with GrantsNow and keeps it server-side. No local IDCS login is attempted."
               : "Use your existing institutional account."}
         </small>
       </section>

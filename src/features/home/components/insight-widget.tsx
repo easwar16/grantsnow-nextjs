@@ -1,20 +1,25 @@
 "use client";
 import { useRef } from "react";
 import type { HomeFilters, WidgetData } from "../types";
+import { chartIsEmpty } from "@/lib/chart-options";
 import { useRemote } from "@/lib/use-remote";
 import { ChartSkeleton } from "@/components/feedback/skeleton";
 import { State } from "@/components/feedback/state";
 import { InsightChart } from "./insight-chart";
+import { Icon } from "@/components/ui/icon";
+import type { FormatSettings } from "@/lib/format";
 export function InsightWidget({
   id,
   title,
   filters,
   columns,
+  format,
 }: {
   id: string;
   title: string;
   filters: HomeFilters;
   columns: number;
+  format?: FormatSettings;
 }) {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(filters))
@@ -23,7 +28,7 @@ export function InsightWidget({
       `/api/home/${encodeURIComponent(id)}?${query}`,
     ),
     dialog = useRef<HTMLDialogElement>(null);
-  const empty = data && !data.statistics.length && !data.gauge;
+  const empty = data && chartIsEmpty(data);
   return (
     <article
       className="widget insight-widget"
@@ -37,15 +42,14 @@ export function InsightWidget({
           aria-label={`Expand ${title}`}
           onClick={() => dialog.current?.showModal()}
         >
-          <span className="ux-icon" aria-hidden="true">
-            {"\uf24c"}
-          </span>
+          <Icon name="expand" />
         </button>
       </div>
       {error ? (
         <State
           title="Chart unavailable"
           message={error.message}
+          action={error.action}
           code={error.code}
           retry={retry}
         />
@@ -53,10 +57,10 @@ export function InsightWidget({
         <ChartSkeleton label={`Loading ${title}`} />
       ) : empty ? (
         <div className="chart-empty" role="status">
-          No data to display
+          No data to display.
         </div>
       ) : (
-        <InsightChart title={title} data={data} />
+        <InsightChart title={title} data={data} format={format} />
       )}
       <dialog
         ref={dialog}
@@ -69,10 +73,12 @@ export function InsightWidget({
             aria-label="Close expanded chart"
             onClick={() => dialog.current?.close()}
           >
-            ×
+            <Icon name="close" />
           </button>
         </div>
-        {data && <InsightChart title={title} data={data} expanded />}
+        {data && !empty && (
+          <InsightChart title={title} data={data} format={format} expanded />
+        )}
       </dialog>
     </article>
   );

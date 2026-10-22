@@ -6,7 +6,10 @@ vi.mock("@/server/session/service", () => ({
     user: { personId: "12", modules: { "opportunities-finder": true } },
   }),
 }));
-vi.mock("@/server/configuration/resources", () => ({
+vi.mock("@/server/configuration/resources", async (importOriginal) => ({
+  resourceVisible: (
+    await importOriginal<typeof import("@/server/configuration/resources")>()
+  ).resourceVisible,
   resources: mocks.resources,
   label: () => "",
 }));
@@ -17,7 +20,10 @@ vi.mock("@/server/api/transport", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   oracle: mocks.oracle,
 }));
-vi.mock("@/server/configuration/environment", () => ({
+vi.mock("@/server/configuration/environment", async (importOriginal) => ({
+  assertWritesEnabled: (
+    await importOriginal<typeof import("@/server/configuration/environment")>()
+  ).assertWritesEnabled,
   fixtureMode: () => false,
   oracleSettings: () => ({ apps: new URL("https://oracle.example/ords/dev/") }),
 }));
@@ -38,8 +44,19 @@ beforeEach(() => {
     accessibility: {},
   });
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}")));
+  vi.stubEnv("WRITES_ENABLED", "true");
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
+it("sends no live settings write while writes are off", async () => {
+  vi.stubEnv("WRITES_ENABLED", "false");
+  await expect(
+    saveAccount("dashboard", { theme: "theme-dark" }),
+  ).rejects.toMatchObject({ code: "WRITES_DISABLED" });
+  expect(fetch).not.toHaveBeenCalled();
+});
 it("rejects unknown widget keys before any Oracle write", async () => {
   await expect(
     saveAccount("dashboard", { needAttention: { unknown: true } }),
@@ -111,4 +128,36 @@ it("returning to Active clears stale proxies without directory access", async ()
     "getPre_awardGetPersonList",
     expect.anything(),
   );
+});
+it("posts only the contracted dashboard keys and keeps unedited switches", async () => {
+  mocks.oracle.mockResolvedValue({
+    theme: "theme-default",
+    opportunity: true,
+    needAttentionSwitch: false,
+    insightsSwitch: true,
+    needAttention: { known: { isVisible: true, ColSpan: 4 } },
+    insights: {},
+    accessibility: { accFontSize: { value: 25 } },
+    token: "private-test-token",
+    person_id: "99",
+    response_msg: "SUCCESS",
+  });
+  await saveAccount("dashboard", { theme: "theme-dark" });
+  const [, init] = vi.mocked(fetch).mock.calls[0];
+  const body = JSON.parse(String(init?.body));
+  expect(Object.keys(body).sort()).toEqual(
+    [
+      "accessibility",
+      "insights",
+      "insightsSwitch",
+      "needAttention",
+      "needAttentionSwitch",
+      "opportunity",
+      "theme",
+    ].sort(),
+  );
+  expect(body.theme).toBe("theme-dark");
+  expect(body.needAttention).toEqual({ known: true });
+  expect(body.needAttentionSwitch).toBe(false);
+  expect(body.accessibility.accFontSize).toBe("25");
 });

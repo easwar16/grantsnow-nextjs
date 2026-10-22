@@ -1,23 +1,31 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import type { WidgetData } from "../types";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ChartSkeleton } from "@/components/feedback/skeleton";
-import { insightOptions } from "@/lib/chart-options";
-import { moneyDisplay } from "@/lib/format";
+import { insightOptions, legendTextWidth, pointRow } from "@/lib/chart-options";
+import type { WidgetData } from "../types";
+import { moneyDisplay, type FormatSettings } from "@/lib/format";
+// Drill targets are server-built listing paths; anything else is not navigated to.
+const internal = (href?: string) =>
+  href?.startsWith("/") && !href.startsWith("//") ? href : undefined;
 export function InsightChart({
   title,
   data,
   expanded = false,
   showData = false,
   height,
+  format,
 }: {
   title: string;
   data: WidgetData;
   expanded?: boolean;
   showData?: boolean;
   height?: number;
+  format?: FormatSettings;
 }) {
   const host = useRef<HTMLDivElement>(null),
+    router = useRouter(),
     [ready, setReady] = useState(false),
     [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -26,26 +34,49 @@ export function InsightChart({
     let disposed = false,
       loading = false,
       instance: import("echarts/core").ECharts | undefined;
+    const options = insightOptions(
+      data,
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+      !!element.closest(".dark"),
+      format,
+    );
+    options.aria = {
+      enabled: true,
+      label: { description: `${title}: values listed below` },
+    };
+    const fitLegend = () => {
+      const width = legendTextWidth(options, element.clientWidth);
+      if (width)
+        instance?.setOption({
+          legend: {
+            textStyle: { width, overflow: "truncate" },
+            tooltip: { show: true },
+          },
+        });
+    };
     async function render() {
       if (disposed || loading || !element!.clientWidth) return;
       if (instance) {
         instance.resize();
+        fitLegend();
         return;
       }
       loading = true;
       try {
         const { renderChart } = await import("./chart-engine");
         if (disposed) return;
-        const options = insightOptions(
-          data,
-          window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-          !!element!.closest(".dark"),
-        );
-        options.aria = {
-          enabled: true,
-          label: { description: `${title}: values listed below` },
-        };
         instance = renderChart(element!, options);
+        fitLegend();
+        instance.on("click", (point) => {
+          const href = internal(
+            pointRow(
+              data,
+              String(point.name ?? ""),
+              String(point.seriesName ?? ""),
+            )?.href,
+          );
+          if (href) router.push(href);
+        });
         setReady(true);
       } catch {
         if (!disposed) setFailed(true);
@@ -53,6 +84,7 @@ export function InsightChart({
         loading = false;
       }
     }
+    // ECharts only listens for window resizes; the tile and dialog change size on their own.
     const resize = new ResizeObserver(() => {
       void render();
     });
@@ -63,7 +95,15 @@ export function InsightChart({
       resize.disconnect();
       instance?.dispose();
     };
-  }, [data, expanded, title, showData]);
+  }, [data, expanded, title, format, router]);
+  const currency = data.presentation?.currency;
+  const value = (v: number, money = !!currency) =>
+    money
+      ? moneyDisplay(String(v), currency, format)
+      : new Intl.NumberFormat("en-GB", {
+          maximumFractionDigits: format?.decimals || 2,
+        }).format(v);
+  const g = data.gauge;
   return (
     <div className={`insight-chart${expanded ? " expanded" : ""}`}>
       {!ready && !failed && (
@@ -82,33 +122,8 @@ export function InsightChart({
         className="insight-chart-host"
         style={height ? { height } : undefined}
         role="img"
-        aria-label={`${title}: ${data.statistics.length} data points; accessible values below`}
+        aria-label={`${title}: ${g ? "gauge" : `${data.statistics.length} data points`}; accessible values below`}
       />
-      {data.gauge && (
-        <div className="gauge-objectives">
-          <strong>
-            {moneyDisplay(
-              String(data.gauge.value),
-              data.presentation?.currency,
-            )}
-          </strong>
-          <p>Organizational Objective</p>
-          <span>
-            Low:{" "}
-            {moneyDisplay(String(data.gauge.low), data.presentation?.currency)}{" "}
-            · Medium:{" "}
-            {moneyDisplay(
-              String(data.gauge.medium),
-              data.presentation?.currency,
-            )}{" "}
-            · Target:{" "}
-            {moneyDisplay(
-              String(data.gauge.target),
-              data.presentation?.currency,
-            )}
-          </span>
-        </div>
-      )}
       {(expanded || showData || failed) && (
         <details className="insight-data" open={expanded}>
           <summary>View chart data</summary>
@@ -121,20 +136,45 @@ export function InsightChart({
               </tr>
             </thead>
             <tbody>
-              {data.statistics.map((r) => (
-                <tr key={r.id}>
-                  <td>{r.label}</td>
-                  <td>{r.series || "—"}</td>
-                  <td>
-                    {data.presentation?.currency
-                      ? moneyDisplay(
-                          String(r.value),
-                          data.presentation.currency,
-                        )
-                      : new Intl.NumberFormat("en-GB").format(r.value)}
-                  </td>
-                </tr>
-              ))}
+              {g
+                ? (
+                    [
+                      ["Total Awarded Funding", g.value],
+                      ["Low", g.low],
+                      ["Medium", g.medium],
+                      ["Target", g.target],
+                    ] as const
+                  ).map(([name, v]) => (
+                    <tr key={name}>
+                      <td>{name}</td>
+                      <td>
+                        {name === "Total Awarded Funding"
+                          ? "—"
+                          : "Organizational Objective"}
+                      </td>
+                      <td>{value(v, true)}</td>
+                    </tr>
+                  ))
+                : data.statistics.map((r) => {
+                    const href = internal(r.href);
+                    return (
+                      <tr key={r.id}>
+                        <td>
+                          {href ? <Link href={href}>{r.label}</Link> : r.label}
+                        </td>
+                        <td>{r.series || "—"}</td>
+                        <td>
+                          {value(
+                            r.value,
+                            // The combo's count series is not money (legacy y converter is decimal).
+                            data.presentation?.type === "combo"
+                              ? r.series === "Awarded Amount"
+                              : undefined,
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
             </tbody>
           </table>
         </details>

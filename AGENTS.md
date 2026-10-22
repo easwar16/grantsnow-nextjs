@@ -1,10 +1,15 @@
 # GrantsNow foundation conventions
 
-Before project work read the existing context note at `/Users/easwar/Developer/Obsidian Storage/Easwar-Claude/Projects/GrantsNow.md`, concentrating on the Next.js foundation/migration sections and relevant verified business rules. Check current source against historical notes. Update the existing note; never create a duplicate.
+This is the third GrantsNow UI: the Oracle VBCS app is being replaced, and an Angular rebuild (`GN-Angular`, frozen 2026-10-15) preceded this one. **Read [docs/grantsnow-foundations.md](docs/grantsnow-foundations.md) before project work.** It holds the backend contract, resource-bundle rules, behaviour proven in the Angular build, look-and-feel brief, engineering rules and open conflicts carried from both. Check current source against historical notes.
 
-The project lives in this repository/worktree. The user's current folder instruction supersedes the original proposed `/Users/easwar/Developer/GrantsNow-Next` destination. Preserve work. Do not initialize nested repositories, commit/push, deploy or provision without separate instruction.
+Context notes, per machine. Read the one that exists, update it in place and never create a duplicate:
 
-Legacy `/Users/easwar/Developer/GrantsNow` is read-only for this increment. Never change its branches, files, credentials or integrations.
+- Titiksh: `~/Documents/Projects/Obsidian/GrantsNow/KB-Meta.md` (old-app behaviour, backend contract, RB/RBAC, failure signatures) and `~/Documents/Projects/Obsidian/GN-Rebuild/GN-Rebuild-Meta.md` (rebuild decisions and status). Old-app findings go to the first; build decisions go to the second or to `docs/`.
+- Easwar: `/Users/easwar/Developer/Obsidian Storage/Easwar-Claude/Projects/GrantsNow.md` (Next.js foundation/migration sections).
+
+The project lives in this repository. Preserve work. Do not initialize nested repositories, commit/push, deploy or provision without separate instruction. Apply changes and stop; the owner reviews and commits.
+
+The legacy VBCS checkout (`~/Documents/Projects/GrantsNow` or `/Users/easwar/Developer/GrantsNow`) is read-only. Read `origin/development` only. Never change its branches, files, credentials or integrations. GN-Angular (`~/Documents/Projects/GN-Angular`) is reference only: carry its behaviour, not its code.
 
 - Node 24 LTS; App Router, TypeScript; use npm and the lockfile. Check official documentation before adopting APIs. Keep files formatted with Prettier.
 - Oracle/session/OIDC modules must import `server-only`. Never pass raw API/session bodies to client components; map an allowlisted display model.
@@ -16,6 +21,17 @@ Legacy `/Users/easwar/Developer/GrantsNow` is read-only for this increment. Neve
 - URL query state is validated and serialized through the feature schema. Do not locally filter a single remote page or equate page rows with API totals.
 - Add meaningful failure-mode tests alongside substantial changes; run typecheck, lint, unit/integration tests, production build and relevant Playwright journeys. Record mocks versus live evidence separately.
 - The user approved docs/vbcs-parity-implementation-plan.md on 2026-10-14: IDCS, VBCS dashboard/listing fidelity and full Proposal module implementation. Preserve existing backend contracts. Browser access does not authorize live test-data mutations, workflow approvals, ERP handoffs or destructive actions; obtain a designated DEV dataset and side-effect policy for those tests.
+
+## Carried rules (VBCS + GN-Angular; full list in docs/grantsnow-foundations.md)
+
+- The legacy code and the KBs are the source of truth. Prompt packs, `docs/migration/*` and OpenAPI examples are input only; build from the code and real payloads.
+- No VBCS concepts (chains, scopes, SDP/ADP, `oj-*`) and no Angular mechanisms in this code. Carry business behaviour and the backend contract only.
+- Every write payload is an explicit pick per entity, never a posted view model. Identity, scope and approval actor come from the server session.
+- Resource visibility fails closed (`is_visible === 'Y'`). A new field gets a seeded default with `'N'`, a literal fallback, visible and required gates, and More Info for editable fields. Anything promoted to `uat` or higher arrives with `'N'`.
+- Every user-triggered write disables its control until the request settles. Never throttle or debounce a save.
+- Match the live DEV VBCS app by measurement, not by eye. Add no new dependency until the owner agrees to it.
+- Minimal diffs at the true cause. Add state or helpers only when needed. Invent nothing: no new checks, toasts or payload changes without an identified defect. Comments are one line of _why_. Test emptiness explicitly (`0`/`false` are values). Bound every wait. Use try/catch only where something can throw and the catch does something useful.
+- Diagnose before editing: get the full stack or a decisive diff before changing code; say what a failed fix rules out.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

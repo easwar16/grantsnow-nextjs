@@ -20,6 +20,8 @@ import { HomeFilterControls } from "@/features/home/components/filters";
 import { Widget } from "@/features/home/components/widget";
 import type { HomeFilters } from "@/features/home/types";
 import { AppError } from "@/lib/errors";
+import type { FormatSettings } from "@/lib/format";
+import { displayFormat } from "@/server/configuration/formatting";
 import { RecordSkeleton, KpiSkeleton } from "@/components/feedback/skeleton";
 import { State } from "@/components/feedback/state";
 export const metadata = { title: "Home" };
@@ -30,14 +32,12 @@ async function LoadedWidget({
   id,
   title,
   filters,
-  insight,
-  columns,
+  format,
 }: {
   id: string;
   title: string;
   filters: HomeFilters;
-  insight: boolean;
-  columns: number;
+  format?: FormatSettings;
 }) {
   return (
     <Widget
@@ -45,8 +45,7 @@ async function LoadedWidget({
       title={title}
       initial={await widgetResult(id, filters)}
       filters={filters}
-      insight={insight}
-      columns={columns}
+      format={format}
     />
   );
 }
@@ -63,7 +62,7 @@ export default async function Home({
       return (
         <State
           title="Access denied"
-          message="Home read access has not been granted."
+          message="Your session does not permit access to Home."
           code="FORBIDDEN"
         />
       );
@@ -89,6 +88,7 @@ export default async function Home({
   const enabled = await enabledWidgets();
   const orgs = await organizations();
   const additionalTabs = await dashboardTabs();
+  const format = await displayFormat();
   const panels = (["needAttention", "insights"] as const).map((section) => (
     <div
       key={section}
@@ -106,6 +106,7 @@ export default async function Home({
               title={w.title}
               filters={filters}
               columns={w.columns || 6}
+              format={format}
             />
           ) : (
             <Suspense
@@ -121,8 +122,7 @@ export default async function Home({
                 id={w.id}
                 title={w.title}
                 filters={filters}
-                insight={false}
-                columns={6}
+                format={format}
               />
             </Suspense>
           ),
@@ -152,6 +152,7 @@ export default async function Home({
       <DashboardTabs
         additional={additionalTabs}
         organization={filters.organization}
+        format={format}
         attention={panels[0]}
         insights={
           <>

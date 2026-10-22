@@ -4,7 +4,9 @@ import { z } from "zod";
 import { authenticate } from "@/server/session/service";
 import { requireModule } from "@/server/permissions/policy";
 import { oracle } from "@/server/api/transport";
-import { oracleQuery, type ProposalQuery } from "@/features/proposals/schemas";
+import type { ProposalQuery } from "@/features/proposals/schemas";
+import { oracleQuery } from "./where-clause";
+import { sortChoices } from "./lookups";
 import type {
   Column,
   ProposalPage,
@@ -41,7 +43,6 @@ const envelope = z.object({
   total_count: z.number().int().nonnegative().optional(),
   offset: z.number().int().nonnegative().optional(),
   size: z.number().optional(),
-  hasMore: z.union([z.boolean(), z.enum(["true", "false"])]).optional(),
 });
 export function mapProposals(
   raw: unknown,
@@ -93,15 +94,14 @@ export function mapProposals(
   });
   if (new Set(rows.map((r) => r.id)).size !== rows.length)
     throw new AppError("CONTRACT", "Oracle returned duplicate row identities.");
-  if (b.hasMore === undefined && b.total_count === undefined)
-    throw new AppError("CONTRACT", "Oracle listing omitted paging metadata.");
   return {
     rows,
     total: b.total_count,
+    // This backend's `hasMore` is unreliable (true on a short last page, false mid-list), so it is ignored.
     hasMore:
-      b.hasMore === undefined
-        ? offset + rows.length < (b.total_count ?? 0)
-        : b.hasMore === true || b.hasMore === "true",
+      b.total_count === undefined
+        ? rows.length === q.pageSize
+        : offset + rows.length < b.total_count,
     offset,
     query: q,
   };
@@ -113,6 +113,8 @@ export async function listProposals(
 ) {
   const { user, session } = await authenticate();
   requireModule(user, "PROPOSALS");
+  if (q.sort !== "" && !(await sortChoices()).some((c) => c.value === q.sort))
+    throw new AppError("BAD_REQUEST", "Unsupported listing sort.", 400);
   const formatting = await formattingConfiguration();
   // Token defines row scope in the existing listing. Never accept a browser identity/org header.
   const page = mapProposals(

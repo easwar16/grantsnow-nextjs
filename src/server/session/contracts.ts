@@ -2,11 +2,21 @@ import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { assertBusiness } from "@/server/api/transport";
 const id = z.union([z.string().min(1), z.number().int()]).transform(String);
+// D45: later writes send `legal_id`; a blank or missing one degrades to absent instead of failing sign-in.
+const optionalId = z
+  .union([z.string(), z.number().int()])
+  .nullish()
+  .transform((v) =>
+    v === null || v === undefined || String(v).trim() === ""
+      ? undefined
+      : String(v),
+  );
 const loginSchema = z.object({
   token: z.string().min(1).max(1600),
   expiry_datetime: z.string(),
   pid: id,
   org_id: id,
+  legal_id: optionalId,
   full_name: z.string().min(1),
   org_name: z.string(),
   landing_module: z.string().nullish(),
@@ -19,16 +29,20 @@ export function mapValidatedIdentity(raw: unknown) {
   const b = loginSchema.omit({ expiry_datetime: true }).parse(raw);
   return {
     token: b.token,
-    user: {
-      name: b.full_name,
-      organization: b.org_name,
-      organizationId: b.org_id,
-      personId: b.pid,
-      modules: Object.fromEntries(
-        b.module_access.map((m) => [m.module_name, m.is_accessible === "Y"]),
-      ),
-      landing: b.landing_module || "",
-    },
+    user: toUser(b),
+  };
+}
+function toUser(b: Omit<z.infer<typeof loginSchema>, "expiry_datetime">) {
+  return {
+    name: b.full_name,
+    organization: b.org_name,
+    organizationId: b.org_id,
+    personId: b.pid,
+    ...(b.legal_id === undefined ? {} : { legalId: b.legal_id }),
+    modules: Object.fromEntries(
+      b.module_access.map((m) => [m.module_name, m.is_accessible === "Y"]),
+    ),
+    landing: b.landing_module || "",
   };
 }
 export function expiry(value: unknown) {
@@ -59,15 +73,6 @@ export function mapBootstrap(raw: unknown) {
   return {
     token: b.token,
     expiresAt: expiry(b.expiry_datetime),
-    user: {
-      name: b.full_name,
-      organization: b.org_name,
-      organizationId: b.org_id,
-      personId: b.pid,
-      modules: Object.fromEntries(
-        b.module_access.map((m) => [m.module_name, m.is_accessible === "Y"]),
-      ),
-      landing: b.landing_module || "",
-    },
+    user: toUser(b),
   };
 }

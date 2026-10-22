@@ -1,4 +1,6 @@
 import type { Kpi } from "@/server/home/kpis";
+import { sparklineSegments } from "../sparkline";
+import { Icon } from "@/components/ui/icon";
 export function KpiStrip({ items, error }: { items: Kpi[]; error?: string }) {
   if (error)
     return (
@@ -15,35 +17,38 @@ export function KpiStrip({ items, error }: { items: Kpi[]; error?: string }) {
   return (
     <section className="kpi-strip" aria-label="Key performance indicators">
       {items.map((k) => {
-        const values =
-          k.trendChart?.data.map((r) => Number(r.value) || 0) || [];
-        const min = Math.min(...values),
-          max = Math.max(...values),
-          range = max - min;
-        const points = values
-          .map(
-            (v, i) =>
-              `${values.length === 1 ? 30 : (i / (values.length - 1)) * 60},${range === 0 ? 8 : 12 - ((v - min) / range) * 8}`,
-          )
-          .join(" ");
+        const segments = sparklineSegments(
+          k.trendChart?.data.map((r) => r.value) ?? [],
+        );
         return (
           <article key={k.id}>
             <div className="kpi-title">
               <strong>{k.title}</strong>
-              {values.length > 0 && (
+              {segments.length > 0 && (
                 <svg
                   width="60"
                   height="16"
                   viewBox="0 0 60 16"
                   aria-hidden="true"
                 >
-                  <polygon points={`0,12 ${points} 60,12`} fill="#e0e4ec" />
-                  <polyline
-                    points={points}
-                    stroke="#245dbb"
-                    strokeWidth="1.2"
-                    fill="none"
-                  />
+                  {segments.map((s) => (
+                    // Legacy redwood-overrides .kpi-spark-line / .kpi-spark-area.
+                    <g key={s.from}>
+                      <polygon
+                        points={`${s.from},12 ${s.points} ${s.to},12`}
+                        style={{ fill: "var(--spark)" }}
+                        fillOpacity="0.15"
+                      />
+                      <polyline
+                        points={s.points}
+                        style={{ stroke: "var(--spark)" }}
+                        strokeWidth="1.5"
+                        strokeLinejoin="round"
+                        strokeLinecap="round"
+                        fill="none"
+                      />
+                    </g>
+                  ))}
                 </svg>
               )}
             </div>
@@ -60,7 +65,15 @@ export function KpiStrip({ items, error }: { items: Kpi[]; error?: string }) {
                       : "success-text"
                   }
                 >
-                  {k.periodChangeIndicator.value < 0 ? "↓" : "↑"}{" "}
+                  <Icon
+                    name={
+                      k.periodChangeIndicator.value < 0
+                        ? "arrow-down"
+                        : "arrow-up"
+                    }
+                    label={k.periodChangeIndicator.value < 0 ? "Down" : "Up"}
+                    size={12}
+                  />{" "}
                   {Math.abs(k.periodChangeIndicator.value)}%{" "}
                   {k.periodChangeIndicator.comparisonPeriod}
                 </span>

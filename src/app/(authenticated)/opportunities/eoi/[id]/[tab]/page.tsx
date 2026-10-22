@@ -1,3 +1,4 @@
+import { displayFormat } from "@/server/configuration/formatting";
 import {
   eoiRecordIdentity,
   eoiRecordForms,
@@ -32,6 +33,7 @@ export default async function EoiSection({
 }: {
   params: Promise<{ id: string; tab: string }>;
 }) {
+  const format = await displayFormat();
   const input = eoiRecordIdentity.safeParse(await params);
   if (!input.success)
     return <State title="Invalid application page" code="BAD_REQUEST" />;
@@ -49,6 +51,7 @@ export default async function EoiSection({
             : "Application page unavailable"
         }
         message={e.message}
+        action={e.action}
         code={e.code}
       />
     );
@@ -65,12 +68,12 @@ export default async function EoiSection({
         <dl className="record-metadata">
           <div>
             <dt>Created On</dt>
-            <dd>{dateDisplay(b.created)}</dd>
+            <dd>{dateDisplay(b.created, format)}</dd>
           </div>
           {b.updated && (
             <div>
               <dt>Updated On</dt>
-              <dd>{dateDisplay(b.updated)}</dd>
+              <dd>{dateDisplay(b.updated, format)}</dd>
             </div>
           )}
         </dl>
@@ -151,7 +154,7 @@ export default async function EoiSection({
                   {table.columns.map((c) => (
                     <td key={c.key}>
                       {c.key.endsWith("date")
-                        ? dateDisplay(row.values[c.key])
+                        ? dateDisplay(row.values[c.key], format)
                         : row.values[c.key]}
                     </td>
                   ))}

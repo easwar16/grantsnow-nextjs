@@ -1,12 +1,20 @@
 "use client";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { InsightChart } from "./insight-chart";
+import { chartIsEmpty, dynamicChartData } from "@/lib/chart-options";
 import Link from "next/link";
 import { State } from "@/components/feedback/state";
 import { RecordSkeleton, ChartSkeleton } from "@/components/feedback/skeleton";
-import { dateDisplay, moneyDisplay } from "@/lib/format";
+import { dateDisplay } from "@/lib/format";
 import type { OpportunityPage } from "@/features/opportunities/types";
+import {
+  OpportunityCard,
+  OpportunityInformation,
+} from "@/features/opportunities/components/opportunity-card";
+import { countText } from "@/features/opportunities/display";
 import { useRemote } from "@/lib/use-remote";
+import type { FormatSettings } from "@/lib/format";
+import { useInFlight } from "@/lib/use-in-flight";
 type NotificationPage = {
   rows: { id: string; html: string; read: boolean; date: string }[];
   offset: number;
@@ -21,9 +29,9 @@ export type ChartData = {
   rows: number;
   dimensions?: boolean;
   reportUrl?: string;
-  points: { series: string; group: string; value: number }[];
+  points: { series: string; group: string; value: number | null }[];
 };
-export function NotificationsPanel() {
+export function NotificationsPanel({ format }: { format?: FormatSettings }) {
   const [offset, setOffset] = useState(0);
   const { data, error, retry } = useRemote<NotificationPage>(
     `/api/home/tabs/notifications?offset=${offset}`,
@@ -32,14 +40,12 @@ export function NotificationsPanel() {
     <article className="widget notification-panel">
       <div className="widget-heading">
         <h3>Notifications</h3>
-        <button aria-label="Refresh notifications" onClick={retry}>
-          ↻
-        </button>
       </div>
       {error ? (
         <State
           title="Notifications unavailable"
           message={error.message}
+          action={error.action}
           code={error.code}
           retry={retry}
         />
@@ -59,7 +65,7 @@ export function NotificationsPanel() {
               </span>
               <div dangerouslySetInnerHTML={{ __html: row.html }} />
               <time dateTime={row.date}>
-                {dateDisplay(row.date)}{" "}
+                {dateDisplay(row.date, format)}{" "}
                 {new Intl.DateTimeFormat("en-GB", {
                   hour: "2-digit",
                   minute: "2-digit",
@@ -78,9 +84,7 @@ export function NotificationsPanel() {
         >
           Previous
         </button>
-        <span>
-          {data ? `${data.rows.length} rows on this page` : "Fetching page"}
-        </span>
+        <span>{data ? `${data.rows.length} rows on this page` : null}</span>
         <button
           disabled={!data?.hasMore}
           onClick={() => setOffset(offset + 25)}
@@ -91,7 +95,7 @@ export function NotificationsPanel() {
     </article>
   );
 }
-export function FeaturedPanel() {
+export function FeaturedPanel({ format }: { format?: FormatSettings }) {
   const [page, setPage] = useState(1),
     [preview, setPreview] = useState<OpportunityPage["rows"][number]>();
   const dialog = useRef<HTMLDialogElement>(null);
@@ -102,14 +106,12 @@ export function FeaturedPanel() {
     <article className="widget">
       <div className="widget-heading">
         <h3>Featured Opportunities</h3>
-        <button aria-label="Refresh featured opportunities" onClick={retry}>
-          ↻
-        </button>
       </div>
       {error ? (
         <State
           title="Opportunities unavailable"
           message={error.message}
+          action={error.action}
           code={error.code}
           retry={retry}
         />
@@ -122,50 +124,22 @@ export function FeaturedPanel() {
         <State title="Nothing to show" />
       ) : (
         <ul className="featured-opportunities">
+          {data.countsUnavailable && (
+            <li role="status">
+              Application and proposal counts could not be loaded.
+            </li>
+          )}
           {data.rows.map((row) => (
             <li key={row.id}>
-              <div className="featured-heading">
-                <h3>
-                  {row.url ? (
-                    <a href={row.url} target="_blank" rel="noopener noreferrer">
-                      {row.title}
-                    </a>
-                  ) : (
-                    row.title
-                  )}
-                </h3>
-                <span className="status-chip">{row.status}</span>
-              </div>
-              <div className="record-metadata">
-                <div>
-                  <strong>Funder</strong>
-                  <span>{row.funders || "—"}</span>
-                </div>
-                <div>
-                  <strong>Funding Type</strong>
-                  <span>{row.fundingType || "—"}</span>
-                </div>
-                {row.totalFund !== undefined && (
-                  <div>
-                    <strong>Total Fund</strong>
-                    <span>{moneyDisplay(row.totalFund, row.currency)}</span>
-                  </div>
-                )}
-                {row.closing && (
-                  <div>
-                    <strong>Closing Date</strong>
-                    <span>{dateDisplay(row.closing)}</span>
-                  </div>
-                )}
-              </div>
-              <button
-                onClick={() => {
-                  setPreview(row);
+              <OpportunityCard
+                format={format}
+                row={row}
+                card={data.card}
+                onMoreInfo={(next) => {
+                  setPreview(next);
                   dialog.current?.showModal();
                 }}
-              >
-                More information
-              </button>
+              />
             </li>
           ))}
         </ul>
@@ -177,64 +151,32 @@ export function FeaturedPanel() {
         >
           Previous
         </button>
-        <span>
-          {data
-            ? `${data.rows.length} rows · ${data.total} API total`
-            : "Fetching page"}
-        </span>
+        <span>{data ? countText(data) : "Fetching page"}</span>
         <button disabled={!data?.hasMore} onClick={() => setPage((p) => p + 1)}>
           Next
         </button>
         <Link href="/opportunities">View all opportunities</Link>
       </div>
-      <dialog
-        ref={dialog}
-        className="opportunity-preview"
-        aria-label="Opportunity information"
-      >
-        <h2>{preview?.title}</h2>
-        {preview?.summary ? (
-          <div dangerouslySetInnerHTML={{ __html: preview.summary }} />
-        ) : (
-          <p>No summary available.</p>
-        )}
-        <form method="dialog">
-          <button>Close</button>
-        </form>
-      </dialog>
+      <OpportunityInformation ref={dialog} row={preview} />
     </article>
   );
 }
-export function ChartGraphic({ chart }: { chart: ChartData }) {
-  const types: Record<string, "pie" | "line" | "area" | "bar"> = {
-    PIE: "pie",
-    DONUT: "pie",
-    LINE: "line",
-    LA: "area",
-    AREA: "area",
-    BAR: "bar",
-  };
-  return (
-    <InsightChart
-      title={chart.name}
-      height={250}
-      showData
-      data={{
-        attention: [],
-        statistics: chart.points.map((p, i) => ({
-          id: String(i),
-          label: p.group,
-          series: p.series,
-          value: p.value,
-        })),
-        hasMore: false,
-        offset: 0,
-        presentation: {
-          type: types[chart.type] || "pie",
-          columns: chart.columns,
-        },
-      }}
-    />
+export function ChartGraphic({
+  chart,
+  rows,
+}: {
+  chart: ChartData;
+  rows: number;
+}) {
+  // A stable object, so a re-render does not rebuild the chart.
+  const data = useMemo(() => dynamicChartData(chart), [chart]);
+  return chartIsEmpty(data) ? (
+    <div className="chart-empty" role="status">
+      No data to display.
+    </div>
+  ) : (
+    // Legacy .height-N: N × 150 px.
+    <InsightChart title={chart.name} height={150 * rows} showData data={data} />
   );
 }
 function RemoteChart({
@@ -252,46 +194,49 @@ function RemoteChart({
       columns: number;
       rows: number;
     }>(),
-    [saving, setSaving] = useState(false),
-    [saveError, setSaveError] = useState<{ code: string; message: string }>();
+    [saveError, setSaveError] = useState<{
+      code: string;
+      message: string;
+      action?: string;
+    }>(),
+    { run, isActive } = useInFlight(),
+    saving = isActive("dimensions");
   const chart = data?.[0];
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const fields = new FormData(event.currentTarget);
-    setSaving(true);
     setSaveError(undefined);
-    try {
-      const response = await fetch("/api/home/tabs/charts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          infolet_id: Number(descriptor.id),
-          colspan: Number(fields.get("columns")),
-          rowspan: Number(fields.get("rows")),
-        }),
-      });
-      const body = await response.json();
-      if (!response.ok) {
-        setSaveError(body.error);
-        return;
+    await run(async () => {
+      try {
+        const response = await fetch("/api/home/tabs/charts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            infolet_id: Number(descriptor.id),
+            colspan: Number(fields.get("columns")),
+            rowspan: Number(fields.get("rows")),
+          }),
+        });
+        const body = await response.json();
+        if (!response.ok) {
+          setSaveError(body.error);
+          return;
+        }
+        setDimensions(body);
+        dialog.current?.close();
+      } catch {
+        setSaveError({
+          code: "UPSTREAM",
+          message: "Dimensions could not be saved. Please retry.",
+        });
       }
-      setDimensions(body);
-      dialog.current?.close();
-    } catch {
-      setSaveError({
-        code: "UPSTREAM",
-        message: "Dimensions could not be saved. Please retry.",
-      });
-    } finally {
-      setSaving(false);
-    }
+    }, "dimensions");
   }
   return (
     <article
       className="widget dynamic-chart-card"
       style={{
         gridColumn: `span ${dimensions?.columns || chart?.columns || 6}`,
-        minHeight: (dimensions?.rows || chart?.rows || 3) * 80,
       }}
     >
       <div className="widget-heading">
@@ -316,29 +261,35 @@ function RemoteChart({
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Open report
+                  Link
                 </a>
               )}
             </details>
           )}
-          <button aria-label={`Refresh ${descriptor.name}`} onClick={retry}>
-            ↻
-          </button>
         </div>
       </div>
       {error ? (
         <State
           title="Chart unavailable"
           message={error.message}
+          action={error.action}
           code={error.code}
           retry={retry}
         />
       ) : !data ? (
         <ChartSkeleton label={`Loading ${descriptor.name}`} />
-      ) : !data.length || data.every((c) => !c.points.length) ? (
-        <State title="Nothing to show" />
+      ) : !data.length ? (
+        <div className="chart-empty" role="status">
+          No data to display.
+        </div>
       ) : (
-        data.map((chart) => <ChartGraphic key={chart.id} chart={chart} />)
+        data.map((chart) => (
+          <ChartGraphic
+            key={chart.id}
+            chart={chart}
+            rows={dimensions?.rows || chart.rows}
+          />
+        ))
       )}
       <dialog
         ref={dialog}
@@ -368,7 +319,7 @@ function RemoteChart({
                 name="rows"
                 type="number"
                 min="1"
-                max="12"
+                max="3"
                 required
                 defaultValue={dimensions?.rows || chart?.rows || 3}
               />
@@ -378,6 +329,7 @@ function RemoteChart({
             <State
               title="Save failed"
               message={saveError.message}
+              action={saveError.action}
               code={saveError.code}
             />
           )}

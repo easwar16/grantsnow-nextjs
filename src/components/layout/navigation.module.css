@@ -1,0 +1,11 @@
+/* The deep links (Administration onwards) sit below a divider, as the VBCS drawer. */
+:global(.navigation-drawer) nav a.deepLinks {
+  border-top: 1px solid #ffffff30;
+  margin-top: 6px;
+  padding-top: 16px;
+}
+.externalMark {
+  flex-shrink: 0;
+  margin-left: auto;
+  opacity: 0.8;
+}

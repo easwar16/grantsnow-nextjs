@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { AppError } from "@/lib/errors";
 export function fixtureMode(
   env: Record<string, string | undefined> = process.env,
 ) {
@@ -30,6 +31,17 @@ export function browserSessionMode(
       "Browser session mode requires a loopback application origin.",
     );
   return true;
+}
+/** Live Oracle writes stay off until a named test turns them on (GN-Angular D27). */
+export function assertWritesEnabled(
+  env: Record<string, string | undefined> = process.env,
+) {
+  if (env.WRITES_ENABLED !== "true")
+    throw new AppError(
+      "WRITES_DISABLED",
+      "Saving isn't enabled in this build yet.",
+      409,
+    );
 }
 function required(name: string) {
   const value = process.env[name];

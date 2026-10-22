@@ -1,5 +1,8 @@
 import { expect, it, beforeEach, afterEach, vi } from "vitest";
-vi.mock("@/server/configuration/environment", () => ({
+vi.mock("@/server/configuration/environment", async (importOriginal) => ({
+  assertWritesEnabled: (
+    await importOriginal<typeof import("@/server/configuration/environment")>()
+  ).assertWritesEnabled,
   fixtureMode: () => false,
   oracleSettings: () => ({
     apps: new URL("https://oracle.example/ords/dev/"),
@@ -11,8 +14,25 @@ import {
   safeChartReport,
   saveChartPreference,
 } from "@/server/api/chart-preferences";
-beforeEach(() => vi.stubGlobal("fetch", vi.fn()));
-afterEach(() => vi.unstubAllGlobals());
+beforeEach(() => {
+  vi.stubGlobal("fetch", vi.fn());
+  vi.stubEnv("WRITES_ENABLED", "true");
+});
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
+it("sends no live chart preference while writes are off", async () => {
+  vi.stubEnv("WRITES_ENABLED", "false");
+  await expect(
+    saveChartPreference("isolated-token", {
+      infolet_id: 201,
+      colspan: 6,
+      rowspan: 3,
+    }),
+  ).rejects.toMatchObject({ code: "WRITES_DISABLED" });
+  expect(fetch).not.toHaveBeenCalled();
+});
 it("validates dimension bounds and forbids browser identities", () => {
   expect(
     chartDimensions.safeParse({ infolet_id: 201, colspan: 6, rowspan: 3 })
@@ -21,6 +41,8 @@ it("validates dimension bounds and forbids browser identities", () => {
   for (const body of [
     { infolet_id: 201, colspan: 13, rowspan: 3 },
     { infolet_id: 201, colspan: 6, rowspan: 0 },
+    // Legacy dimension dialog: rows 1–3.
+    { infolet_id: 201, colspan: 6, rowspan: 4 },
     { infolet_id: 201, colspan: 6, rowspan: 3, username: "other" },
   ])
     expect(chartDimensions.safeParse(body).success).toBe(false);
@@ -84,4 +106,14 @@ it("distinguishes expired and forbidden writes", async () => {
       }),
     ).rejects.toMatchObject({ code });
   }
+});
+it("treats a plain-text dead-session reply as an expired session", async () => {
+  vi.mocked(fetch).mockResolvedValue(new Response("Context Not Set: N"));
+  await expect(
+    saveChartPreference("isolated-token", {
+      infolet_id: 201,
+      colspan: 6,
+      rowspan: 3,
+    }),
+  ).rejects.toMatchObject({ code: "EXPIRED" });
 });

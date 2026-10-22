@@ -11,29 +11,48 @@ const schema = z.object({
     }),
   ),
 });
-export const formattingConfiguration = cache(async () => {
-  const { session } = await authenticate();
-  const b = schema.parse(
-    await oracle("getPre_award_costingGetGlobalVar", { token: session.token }),
-  );
-  const values = Object.fromEntries(
-    b.items.map((r) => [r.var_key, r.var_value]),
-  );
+export function formattingSettings(items: z.infer<typeof schema>["items"]) {
+  const values = Object.fromEntries(items.map((r) => [r.var_key, r.var_value]));
   const currency =
     typeof values.DEFAULT_CURRENCY_CODE === "string" &&
     /^[A-Z]{3}$/.test(values.DEFAULT_CURRENCY_CODE)
       ? values.DEFAULT_CURRENCY_CODE
       : undefined;
-  const rawDecimals = Number(values.DECIMAL_PLACES_COUNT);
+  const raw = values.DECIMAL_PLACES_COUNT,
+    rawDecimals =
+      raw === null || raw === undefined || raw === "" ? NaN : Number(raw);
   return {
     currency,
+    // null = not configured; display applies legacy's `|| 2` / `|| 0` defaults.
     decimals:
       Number.isInteger(rawDecimals) && rawDecimals >= 0 && rawDecimals <= 6
         ? rawDecimals
-        : 2,
+        : null,
     dateFormat:
-      typeof values.DEFAULT_DATE_FORMAT === "string"
+      typeof values.DEFAULT_DATE_FORMAT === "string" &&
+      values.DEFAULT_DATE_FORMAT.trim() !== ""
         ? values.DEFAULT_DATE_FORMAT
         : "DD-MMM-YYYY",
   };
+}
+export type FormattingConfiguration = ReturnType<typeof formattingSettings>;
+export const formattingConfiguration = cache(async () => {
+  const { session } = await authenticate();
+  return formattingSettings(
+    schema.parse(
+      await oracle("getPre_award_costingGetGlobalVar", {
+        token: session.token,
+      }),
+    ).items,
+  );
 });
+/** Configured display formats; legacy falls back to its defaults when global variables are unavailable. */
+export async function displayFormat(): Promise<
+  FormattingConfiguration | undefined
+> {
+  try {
+    return await formattingConfiguration();
+  } catch {
+    return undefined;
+  }
+}

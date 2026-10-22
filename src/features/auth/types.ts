@@ -11,6 +11,8 @@ export interface UserContext {
   organization: string;
   organizationId: string;
   personId: string;
+  /** Server-side only (D45): a header some writes need; never mapped into client props. */
+  legalId?: string;
   modules: Record<string, boolean>;
   landing: string;
 }

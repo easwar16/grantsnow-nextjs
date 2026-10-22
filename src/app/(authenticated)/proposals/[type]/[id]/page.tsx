@@ -1,8 +1,10 @@
+import { displayFormat } from "@/server/configuration/formatting";
 import Link from "next/link";
 import { pageIdentity } from "@/server/auth/page";
 import { loadSummary } from "@/server/proposals/record";
 import { recordIdentity } from "@/features/proposals/record";
 import { State } from "@/components/feedback/state";
+import { Icon } from "@/components/ui/icon";
 import { publicError } from "@/lib/errors";
 import { dateDisplay } from "@/lib/format";
 export const metadata = { title: "Proposal Summary" };
@@ -11,6 +13,7 @@ export default async function Summary({
 }: {
   params: Promise<{ type: string; id: string }>;
 }) {
+  const format = await displayFormat();
   const input = recordIdentity.safeParse(await params);
   if (!input.success)
     return <State title="Invalid proposal identity" code="BAD_REQUEST" />;
@@ -26,6 +29,7 @@ export default async function Summary({
           error.code === "FORBIDDEN" ? "Access denied" : "Proposal unavailable"
         }
         message={error.message}
+        action={error.action}
         code={error.code}
       />
     );
@@ -34,7 +38,7 @@ export default async function Summary({
     <section className="record-workspace">
       <header className="record-header">
         <Link href="/proposals" prefetch={false}>
-          ← Proposals
+          <Icon name="arrow-left" /> Proposals
         </Link>
         <div>
           <strong>{summary.reference}</strong>
@@ -65,7 +69,9 @@ export default async function Summary({
               >
                 <strong>{f.label}</strong>
                 <p>
-                  {f.kind === "date" ? dateDisplay(f.value) : f.value || "—"}
+                  {f.kind === "date"
+                    ? dateDisplay(f.value, format)
+                    : f.value || "—"}
                 </p>
               </div>
             ))}

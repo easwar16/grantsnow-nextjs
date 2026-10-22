@@ -90,6 +90,24 @@ describe("access policy", () => {
     ).toThrow());
   it("denies missing read configuration", () =>
     expect(() => requireRead([], "home")).toThrow());
+  it("denies object read when any duplicate role row withholds it", () => {
+    const page = "opportunities-eoi-summary";
+    expect(() =>
+      requireRead([{ page_name: page, read_access: "Y" }], page),
+    ).not.toThrow();
+    expect(() =>
+      requireRead(
+        [
+          { page_name: page, read_access: "Y" },
+          { page_name: page, read_access: "N" },
+        ],
+        page,
+      ),
+    ).toThrow();
+    expect(() =>
+      requireRead([{ page_name: page, read_access: null }], page),
+    ).toThrow();
+  });
   it("denies widening org filters", () =>
     expect(() =>
       scopeOrganization("admin-org", [{ id: "own-org" }]),

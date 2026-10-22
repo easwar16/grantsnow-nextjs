@@ -3,30 +3,21 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Navigation } from "./navigation";
+import { Icon } from "@/components/ui/icon";
 import { UserMenu } from "./user-menu";
+import { SessionKeepAlive } from "./session-keepalive";
 export function AppShell({
   children,
   accessibility,
   name,
   organization,
-  proposals,
-  opportunities,
-  opportunityApplications,
-  opportunityAnalytics,
-  homeLabel,
-  proposalsLabel,
+  navigation,
 }: {
   children: React.ReactNode;
   accessibility: Record<string, number>;
   name: string;
   organization: string;
-  proposals: boolean;
-  opportunities: boolean;
-  opportunityApplications: boolean;
-  opportunityAnalytics: boolean;
-  homeLabel: string;
-  proposalsLabel: string;
+  navigation: React.ReactNode;
 }) {
   const drawer = useRef<HTMLDialogElement>(null),
     trigger = useRef<HTMLButtonElement>(null);
@@ -55,21 +46,14 @@ export function AppShell({
             setDrawerOpen(true);
           }}
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="M3 5h18M3 12h18M3 19h18"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            />
-          </svg>
+          <Icon name="menu" size={24} />
         </button>
         <Link className="brand" href="/home" prefetch={false}>
           <Image
             src="/brand/grantsnow.svg"
             alt="Grants Now Logo"
-            width={125}
-            height={36}
+            width={120}
+            height={34}
             priority
           />
         </Link>
@@ -79,6 +63,7 @@ export function AppShell({
           accessibility={accessibility}
         />
       </header>
+      <SessionKeepAlive />
       <dialog
         ref={drawer}
         className="navigation-drawer"
@@ -103,17 +88,10 @@ export function AppShell({
             aria-label="Close navigation"
             onClick={() => drawer.current?.close()}
           >
-            ×
+            <Icon name="close" />
           </button>
         </div>
-        <Navigation
-          proposals={proposals}
-          opportunities={opportunities}
-          opportunityApplications={opportunityApplications}
-          opportunityAnalytics={opportunityAnalytics}
-          homeLabel={homeLabel}
-          proposalsLabel={proposalsLabel}
-        />
+        {navigation}
       </dialog>
       <main
         id="main"

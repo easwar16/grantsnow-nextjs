@@ -1,0 +1,15 @@
+.query {
+  border: 0;
+  padding: 0;
+  margin: 12px 6px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.query legend {
+  padding: 0;
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-weight: 600;
+}

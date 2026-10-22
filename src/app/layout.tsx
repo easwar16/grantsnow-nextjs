@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   description: "Research administration workspace",
   robots: { index: false, follow: false },
 };
+// Oracle Sans + oj-ux-ico glyphs (D13, D14): the same gallery bundle the VBCS app loads.
+const oracleGallery =
+  "https://static.oracle.com/cdn/fnd/gallery/2307.0.0/images/iconfont/ojuxgallerybundle.min.css";
 export default function RootLayout({
   children,
 }: {
@@ -12,6 +15,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://static.oracle.com" />
+        <link rel="stylesheet" href={oracleGallery} />
+      </head>
       <body>
         <a className="skip-link" href="#main">
           Skip to content

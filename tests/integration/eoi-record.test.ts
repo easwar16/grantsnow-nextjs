@@ -3,7 +3,7 @@ const state = vi.hoisted(() => ({ calls: vi.fn() }));
 vi.mock("@/server/session/service", () => ({
   authenticate: async () => ({
     session: { token: "isolated-token" },
-    user: { modules: { "opportunities-eoi": true } },
+    user: { modules: { "opportunities-group": true } },
   }),
 }));
 vi.mock("@/server/api/transport", () => ({ oracle: state.calls }));

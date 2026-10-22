@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Icon } from "@/components/ui/icon";
 export function HomeFilterControls({ currentYear }: { currentYear: number }) {
   const formRef = useRef<HTMLFormElement>(null),
     focusAfterNavigation = useRef<string | undefined>(undefined);
@@ -141,7 +142,7 @@ export function HomeFilterControls({ currentYear }: { currentYear: number }) {
             router.push(`/home?${next}`, { scroll: false });
           }}
         >
-          ×
+          <Icon name="close" />
         </button>
       )}
     </form>

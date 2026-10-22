@@ -4,7 +4,16 @@ import {
   serializeOpportunityQuery,
 } from "@/features/opportunities/schemas";
 import { opportunityOracleQuery } from "@/server/opportunities/query";
-import { mapOpportunities } from "@/server/opportunities/service";
+import {
+  mapOpportunities,
+  opportunityCard,
+} from "@/server/opportunities/service";
+import { countText, splitFunders } from "@/features/opportunities/display";
+const none = () => false;
+const only =
+  (...keys: string[]) =>
+  (key: string) =>
+    keys.includes(key);
 const query = parseOpportunityQuery(new URLSearchParams());
 it("maps verified Finder filters and pagination with escaped server literals", () => {
   const q = parseOpportunityQuery(
@@ -52,7 +61,7 @@ const raw = {
   hasMore: "true",
 };
 it("strips hidden money/counts and untrusted URLs before client serialization", () => {
-  const b = mapOpportunities(raw, query, new Set());
+  const b = mapOpportunities(raw, query, none);
   expect(b.total).toBe(50);
   expect(b.hasMore).toBe(true);
   expect(b.rows[0].totalFund).toBeUndefined();
@@ -64,7 +73,7 @@ it("requires both configured visibility and actual count capability", () => {
   const b = mapOpportunities(
     raw,
     query,
-    new Set(["aoi-count", "total-fund", "summary"]),
+    only("aoi-count", "total-fund", "summary"),
     "GBP",
     new Set(["opportunities-eoi-count"]),
   );
@@ -74,14 +83,94 @@ it("requires both configured visibility and actual count capability", () => {
   expect(b.rows[0].summary).toBe("<p>Details</p>");
 });
 it("fails on mismatched pages and duplicate identities", () => {
-  expect(() =>
-    mapOpportunities({ ...raw, offset: 25 }, query, new Set()),
-  ).toThrow();
+  expect(() => mapOpportunities({ ...raw, offset: 25 }, query, none)).toThrow();
   expect(() =>
     mapOpportunities(
       { ...raw, items: [raw.items[0], raw.items[0]] },
       query,
-      new Set(),
+      none,
     ),
   ).toThrow();
+});
+it("splits funder tags only on commas outside parentheses", () => {
+  expect(splitFunders("UKRI (EPSRC, MRC), Wellcome Trust ,")).toEqual([
+    "UKRI (EPSRC, MRC)",
+    "Wellcome Trust",
+  ]);
+  expect(splitFunders("A), B")).toEqual(["A)", "B"]);
+  expect(splitFunders("")).toEqual([]);
+  expect(splitFunders(null)).toEqual([]);
+});
+it("gates funder tags on the VBCS finder keys and splits them", () => {
+  const row = {
+    ...raw.items[0],
+    funders: "UKRI (EPSRC, MRC),Wellcome",
+    co_funders: "NIH",
+  };
+  const b = mapOpportunities(
+    { ...raw, items: [row] },
+    query,
+    only("funder", "cofunders"),
+  );
+  expect(b.rows[0].funders).toEqual(["UKRI (EPSRC, MRC)", "Wellcome"]);
+  expect(b.rows[0].coFunders).toEqual(["NIH"]);
+  expect(
+    mapOpportunities({ ...raw, items: [row] }, query, none).rows[0].funders,
+  ).toBeUndefined();
+});
+it("hides counts and flags a degraded state when the access read failed", () => {
+  const b = mapOpportunities(raw, query, only("aoi-count"), "GBP", null);
+  expect(b.rows[0].applications).toBeUndefined();
+  expect(b.countsUnavailable).toBe(true);
+  // Nothing to degrade when the bundle hides every count anyway.
+  expect(
+    mapOpportunities(raw, query, none, "GBP", null).countsUnavailable,
+  ).toBeUndefined();
+});
+it("shows the true position in the API total, not the page size", () => {
+  const page2 = parseOpportunityQuery(new URLSearchParams("page=2"));
+  expect(
+    countText({ rows: [{}, {}] as never, total: 4780, query: page2 }),
+  ).toBe("26–27 of 4780");
+  expect(countText({ rows: [], total: 0, query })).toBe("0 of 0");
+});
+it("matches funding type as a contains, as the VBCS filterCriterion", () => {
+  const p = opportunityOracleQuery(
+    parseOpportunityQuery(new URLSearchParams("fundingType=Gr%27ant")),
+  );
+  expect(p.get("p_where_clause")).toContain(
+    `LOWER("funding_type") LIKE LOWER('%Gr''ant%')`,
+  );
+});
+it("labels the card from the opener's bundle and gates date columns", () => {
+  const rows = [
+    {
+      module_name: "DASHBOARD",
+      label_type: "labels",
+      label_name: "total-fund",
+      label_value: "Award value",
+      is_visible: "Y" as const,
+    },
+    {
+      module_name: "OPPORTUNITIES-EOI",
+      label_type: "labels",
+      label_name: "publication-date",
+      label_value: "Published",
+      is_visible: "Y" as const,
+    },
+    {
+      module_name: "OPPORTUNITIES-EOI",
+      label_type: "labels",
+      label_name: "opening-date",
+      label_value: "Opens",
+      is_visible: "N" as const,
+    },
+  ];
+  const home = opportunityCard(rows, "dashboard");
+  expect(home.labels["total-fund"]).toBe("Award value");
+  expect(home.labels["publication-date"]).toBe("Publication Date");
+  expect(home.dates).toEqual(["publication-date"]);
+  expect(
+    opportunityCard(rows, "opportunities-eoi").labels["publication-date"],
+  ).toBe("Published");
 });

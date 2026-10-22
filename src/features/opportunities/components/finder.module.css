@@ -1,0 +1,33 @@
+.filters > button {
+  margin: 0 0 18px;
+}
+.filters form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.filters fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.filters legend {
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.filters fieldset label {
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 12px;
+  font-weight: 400;
+  color: var(--text);
+}
+@media (max-width: 600px) {
+  .filters form {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .filters form > * {
+    flex: 0 0 calc(50% - 10px);
+  }
+}

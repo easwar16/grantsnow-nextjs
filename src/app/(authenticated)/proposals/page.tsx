@@ -1,3 +1,4 @@
+import { displayFormat } from "@/server/configuration/formatting";
 import { listingChoices } from "@/server/proposals/lookups";
 import { pageIdentity } from "@/server/auth/page";
 import { resources, proposalColumns } from "@/server/configuration/resources";
@@ -48,7 +49,7 @@ export default async function Proposals({
     const error = publicError(e);
     initial = {
       ok: false as const,
-      error: { code: error.code, message: error.message },
+      error: { code: error.code, message: error.message, action: error.action },
     };
   }
   return (
@@ -58,6 +59,7 @@ export default async function Proposals({
         columns={columns}
         initialQuery={query}
         choices={await listingChoices()}
+        format={await displayFormat()}
       />
     </>
   );

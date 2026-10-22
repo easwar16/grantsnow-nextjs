@@ -5,7 +5,7 @@ import { authenticate } from "@/server/session/service";
 import { requireModule, requireRead } from "@/server/permissions/policy";
 import { oracle } from "@/server/api/transport";
 import { AppError } from "@/lib/errors";
-import { cleanAnnouncement } from "@/server/home/announcements";
+import { sanitizeHtml } from "@/server/html/sanitize";
 export const eoiTabs = [
   "summary",
   "application",
@@ -47,7 +47,8 @@ export const eoiRecordContext = cache(async (id: string) => {
   if (!/^[1-9]\d{0,14}$/.test(id))
     throw new AppError("BAD_REQUEST", "Invalid application identity.", 400);
   const { session, user } = await authenticate();
-  requireModule(user, "opportunities-eoi");
+  // "opportunities-eoi" is an RB bundle, not a module_access id: VBCS findModuleAccess derives it from the group.
+  requireModule(user, "opportunities-group");
   const roles = roleSchema.parse(
     await oracle("getSecurityUser_roles", {
       token: session.token,
@@ -317,9 +318,7 @@ export async function eoiSummary(id: string) {
       opportunity = {
         title: r.opp_heading,
         summary:
-          typeof r.summary === "string"
-            ? cleanAnnouncement(r.summary)
-            : undefined,
+          typeof r.summary === "string" ? sanitizeHtml(r.summary) : undefined,
       };
   }
   return {

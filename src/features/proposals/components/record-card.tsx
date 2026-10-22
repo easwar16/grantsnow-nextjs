@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { recordIdentity } from "../record";
 import { RecordMetadata } from "@/components/ui/record-metadata";
-import { dateDisplay, moneyDisplay } from "@/lib/format";
+import { dateDisplay, moneyDisplay, type FormatSettings } from "@/lib/format";
 import type { Column, ProposalRow } from "../types";
 function tone(code?: string) {
   if (["REJ", "ABANDON", "HIGH", "CRITICAL"].includes(code || ""))
@@ -14,9 +14,11 @@ function tone(code?: string) {
 export function RecordCard({
   row,
   columns,
+  format,
 }: {
   row: ProposalRow;
   columns: Column[];
+  format?: FormatSettings;
 }) {
   const identity = recordIdentity.safeParse({
     type: row.type,
@@ -30,12 +32,12 @@ export function RecordCard({
       label: c.label,
       value:
         c.key === "value"
-          ? moneyDisplay(row.value, row.currency).replace(
+          ? moneyDisplay(row.value, row.currency, format).replace(
               /([£$€])0\.00$/,
               "$10",
             )
           : ["created", "updated", "start", "end"].includes(c.key)
-            ? dateDisplay(row[c.key])
+            ? dateDisplay(row[c.key], format)
             : row[c.key],
     }));
   return (

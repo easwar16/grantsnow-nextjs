@@ -20,16 +20,26 @@ export interface AttentionRow {
   date?: string;
   overdue?: boolean;
   stage?: string;
-  href?: string;
+  href: string;
 }
 export interface StatisticRow {
   id: string;
   label: string;
   series?: string;
   value: number;
+  /** The listing a click on this row opens. */
+  href?: string;
+}
+/** Axis titles, stacking and legend of a legacy oj-chart. */
+export interface ChartLayout {
+  xTitle?: string;
+  yTitle?: string;
+  y2Title?: string;
+  stack?: boolean;
+  legend?: boolean;
 }
 export interface WidgetData {
-  presentation?: {
+  presentation?: ChartLayout & {
     type:
       | "bar"
       | "pie"
@@ -50,4 +60,4 @@ export interface WidgetData {
 }
 export type WidgetResult =
   | { ok: true; data: WidgetData }
-  | { ok: false; error: { code: string; message: string } };
+  | { ok: false; error: { code: string; message: string; action?: string } };

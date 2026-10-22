@@ -16,6 +16,7 @@ import {
   authenticate,
   renewSession,
   clearSession,
+  forgetValidation,
 } from "@/server/session/service";
 import { GET as proposalsGet } from "@/app/api/proposals/route";
 import { GET as callback } from "@/app/api/auth/callback/route";
@@ -34,6 +35,7 @@ const valid = () => ({
   expiry_datetime: new Date(Date.now() + 600000).toISOString(),
 });
 beforeEach(() => {
+  forgetValidation("isolated-test-token");
   vi.stubEnv("APP_ORIGIN", "http://127.0.0.1:3000");
   vi.stubEnv("FIXTURE_MODE", "false");
   state.app = app();
@@ -217,4 +219,13 @@ it("summary direct boundary denies absent session before any Oracle request", as
     loadSummary({ type: "PROPOSAL", id: "123" }),
   ).rejects.toMatchObject({ code: "UNAUTHENTICATED" });
   expect(state.calls).not.toHaveBeenCalled();
+});
+it("shares one Oracle validate per token across a page's parallel requests (D24)", async () => {
+  await Promise.all(
+    [authenticate(), authenticate(), authenticate()].map(async (p) => p),
+  );
+  const validates = state.calls.mock.calls.filter(
+    ([op]) => op === "getSessionValidate",
+  );
+  expect(validates.length).toBeLessThanOrEqual(1);
 });

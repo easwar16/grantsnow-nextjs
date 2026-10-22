@@ -8,7 +8,11 @@ import {
 } from "@/server/configuration/environment";
 import type { StoredSession } from "@/server/session/storage";
 import { safeReturn } from "@/lib/security";
+import { legacyDeepLink } from "@/features/auth/legacy-link";
 export async function proxy(request: NextRequest) {
+  // H26: old notification/report emails; the target route authenticates and keeps the deep link through login.
+  const legacy = legacyDeepLink(request.nextUrl.search);
+  if (legacy) return NextResponse.redirect(new URL(legacy, appOrigin()));
   const response = NextResponse.next();
   const session = await getIronSession<StoredSession>(
     nextProxyCookies(request, response),
@@ -38,5 +42,14 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 export const config = {
-  matcher: ["/home", "/proposals/:path*", "/opportunities/:path*"],
+  matcher: [
+    "/",
+    "/home",
+    "/proposals/:path*",
+    "/opportunities/:path*",
+    {
+      source: "/((?!api/|_next/).*)",
+      has: [{ type: "query", key: "page", value: "shell" }],
+    },
+  ],
 };

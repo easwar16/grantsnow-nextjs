@@ -8,6 +8,12 @@ The ignored `.env.local` selects `DEV_BROWSER_SESSION=true`, `FIXTURE_MODE=false
 
 Click **Open connected DEV workspace** at `/login`. The server validates the captured token with `/session/validate`, maps the returned identity/module access and creates an encrypted HttpOnly session. Browser-supplied usernames cannot establish identity. This mode cannot call `/session/login` to impersonate another user. Protected reads validate again; widgets and records enforce their own module/organization/object scope.
 
+## Paste a token (as in GN-Angular)
+
+On `/login`, paste the `token` cookie from the signed-in GrantsNow DEV app (DevTools → Application → Cookies → `token`) and choose **Open connected DEV workspace**. The raw token or the whole cookie value (URL-encoded `{token, expiry_datetime}`) is accepted. The server validates it with `/session/validate` before sealing it into the HttpOnly session cookie; the token never reaches browser storage. Validate decides whether the token lives, because the VBCS cookie's expiry can be stale; a future expiry only bounds the local lease. A rejected token returns to `/login` with a message. Leave the field blank to use the capture file below.
+
+Live Oracle writes stay off (`WRITES_ENABLED=false`): saves answer "Saving isn't enabled in this build yet." Turn them on only for a named test against a designated DEV record, then off again.
+
 ## Refresh an expired capture
 
 1. Select the already authenticated GrantsNow DEV Playwright tab and refresh it. Let VBCS perform its existing login/validation flow.

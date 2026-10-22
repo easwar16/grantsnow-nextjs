@@ -11,5 +11,6 @@ export interface ListingChoices {
   sponsors: Choice[];
   activities: Choice[];
   proposalTypes: Choice[];
+  sorts: Choice[];
   errors: string[];
 }

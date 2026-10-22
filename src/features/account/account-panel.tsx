@@ -2,7 +2,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useRemote } from "@/lib/use-remote";
-import { DetailSkeleton } from "@/components/feedback/skeleton";
+import { DetailSkeleton, RecordSkeleton } from "@/components/feedback/skeleton";
+import { useInFlight } from "@/lib/use-in-flight";
+import { Icon } from "@/components/ui/icon";
 import {
   accessibilityKeys,
   accessibilityLabels,
@@ -73,50 +75,54 @@ function AccountForm({
   const [settings, setSettings] = useState(initial.settings);
   const [research, setResearch] = useState(initial.research);
   const [status, setStatus] = useState(initial.status);
-  const [busy, setBusy] = useState(false);
+  const { run, busy } = useInFlight();
   const [error, setError] = useState("");
   async function save(event: React.FormEvent) {
     event.preventDefault();
-    setBusy(true);
-    setError("");
-    try {
-      const response = await fetch("/api/account", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          kind:
-            panel === "profile"
-              ? tab === "manage"
-                ? "status"
-                : "research"
-              : "dashboard",
-          changes:
-            panel === "profile"
-              ? tab === "manage"
-                ? status
-                : research
-              : panel === "accessibility"
-                ? { accessibility: settings.accessibility }
-                : Object.fromEntries(
-                    Object.entries(settings).filter(
-                      ([k]) => k !== "accessibility",
+    // Blocks Save and Cancel from click to settle, success or failure (D44).
+    await run(async () => {
+      setError("");
+      try {
+        const response = await fetch("/api/account", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            kind:
+              panel === "profile"
+                ? tab === "manage"
+                  ? "status"
+                  : "research"
+                : "dashboard",
+            changes:
+              panel === "profile"
+                ? tab === "manage"
+                  ? status
+                  : research
+                : panel === "accessibility"
+                  ? { accessibility: settings.accessibility }
+                  : Object.fromEntries(
+                      Object.entries(settings).filter(
+                        ([k]) => k !== "accessibility",
+                      ),
                     ),
-                  ),
-        }),
-      });
-      const body = await response.json();
-      if (!response.ok)
-        throw new Error(body.error?.message || "Settings could not be saved.");
-      if (panel !== "profile")
-        applyAccountSettings(settings.theme, settings.accessibility);
-      committed.current = true;
-      close();
-      router.refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Settings could not be saved.");
-    } finally {
-      setBusy(false);
-    }
+          }),
+        });
+        const body = await response.json();
+        if (!response.ok)
+          throw new Error(
+            body.error?.message || "Settings could not be saved.",
+          );
+        if (panel !== "profile")
+          applyAccountSettings(settings.theme, settings.accessibility);
+        committed.current = true;
+        close();
+        router.refresh();
+      } catch (e) {
+        setError(
+          e instanceof Error ? e.message : "Settings could not be saved.",
+        );
+      }
+    });
   }
   function visibility(
     group: "needAttention" | "insights",
@@ -190,9 +196,7 @@ function AccountForm({
           </div>
           {tab === "profile" ? (
             <div className="profile-grid">
-              <span className="profile-avatar ux-icon" aria-hidden="true">
-                {"\uf87b"}
-              </span>
+              <Icon name="employee" className="profile-avatar" />
               <dl>
                 {initial.fields.map((f, i) => (
                   <div key={i}>
@@ -428,7 +432,7 @@ function ResearchSelection({
             aria-label={`Remove ${value}`}
             onClick={() => onChange(values.filter((v) => v !== value))}
           >
-            {value} ×
+            {value} <Icon name="close" size={12} />
           </button>
         ))}
       </div>
@@ -536,6 +540,8 @@ function StatusEditor({
                 Retry
               </button>
             </div>
+          ) : org && !people.data ? (
+            <RecordSkeleton label="Loading proxy directory" rows={1} />
           ) : (
             <label>
               Select Proxy
@@ -558,9 +564,7 @@ function StatusEditor({
                     });
                 }}
               >
-                <option value="">
-                  {org && !people.data ? "Loading directory…" : "Select proxy"}
-                </option>
+                <option value="">Select proxy</option>
                 {people.data?.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}

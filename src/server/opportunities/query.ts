@@ -35,8 +35,9 @@ export function opportunityOracleQuery(query: OpportunityQuery) {
     parts.push(
       `(${contains("funders", query.funder)} OR ${contains("co_funders", query.funder)})`,
     );
+  // VBCS filterCriterion matches funding type as a contains ($co), not equality.
   if (query.fundingType)
-    parts.push(`"funding_type"=${literal(query.fundingType)}`);
+    parts.push(contains("funding_type", query.fundingType));
   return new URLSearchParams({
     p_where_clause: `(${parts.join(" AND ")})`,
     p_offset: String((query.page - 1) * query.pageSize),

@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
 const text = z.string().max(200).default("");
+// Lookup codes and employee numbers; values are also quote-escaped server-side.
+const code = z
+  .string()
+  .regex(/^[\w./-]*$/)
+  .max(100)
+  .default("");
 const date = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -16,14 +22,14 @@ export const querySchema = z
   .object({
     search: text,
     reference: text,
-    status: text,
+    status: code,
     faculty: text,
     sponsor: text,
-    investigator: text,
+    investigator: code,
     department: z.string().regex(/^\d*$/).max(20).default(""),
     assignedTo: z.string().regex(/^\d*$/).max(20).default(""),
-    activityType: text,
-    proposalCategory: text,
+    activityType: code,
+    proposalCategory: code,
     tags: text,
     type: z
       .enum([
@@ -36,9 +42,11 @@ export const querySchema = z
       .default(""),
     from: date,
     to: date,
+    // A configured date column (getObjectDates PROPOSAL), checked against that list on the server; "" = backend order.
     sort: z
-      .enum(["creation_date", "proposal_id", "full_name", "proposal_title"])
-      .default("creation_date"),
+      .string()
+      .regex(/^([A-Za-z][A-Za-z0-9_]{0,62})?$/)
+      .default(""),
     direction: z.enum(["ASC", "DESC"]).default("DESC"),
     page: z.coerce.number().int().min(1).max(100000).default(1),
     pageSize: z.coerce
@@ -68,63 +76,8 @@ export function serializeQuery(q: ProposalQuery) {
       value !== "" &&
       !(key === "page" && value === 1) &&
       !(key === "pageSize" && value === 10) &&
-      !(key === "sort" && value === "creation_date") &&
       !(key === "direction" && value === "DESC")
     )
       p.set(key, String(value));
   return p.toString();
-}
-export function oracleQuery(q: ProposalQuery) {
-  const criteria: Record<string, unknown>[] = [];
-  for (const [key, attribute] of [
-    ["search", "proposal_title"],
-    ["reference", "proposal_number"],
-    ["faculty", "faculty_name"],
-    ["sponsor", "primary_sponsorer"],
-  ] as const)
-    if (q[key]) criteria.push({ [attribute]: { $instr: q[key] } });
-  for (const [key, attribute] of [
-    ["status", "proposal_status_code"],
-    ["type", "proposal_type"],
-    ["investigator", "pi_employee_number"],
-  ] as const)
-    if (q[key])
-      criteria.push({
-        [attribute]: {
-          $eq:
-            key === "investigator" && /^\d+$/.test(q[key])
-              ? Number(q[key])
-              : q[key],
-        },
-      });
-  for (const [key, attribute] of [
-    ["activityType", "activity_type_lkp_code"],
-    ["proposalCategory", "proposal_type_lkp_code"],
-  ] as const)
-    if (q[key]) criteria.push({ [attribute]: { $eq: q[key] } });
-  for (const [key, attribute] of [
-    ["department", "pi_dept_code"],
-    ["assignedTo", "assigned_to"],
-  ] as const)
-    if (q[key]) criteria.push({ [attribute]: { $eq: Number(q[key]) } });
-  const tags = q.tags
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (tags.length)
-    criteria.push({ $or: tags.map((tag) => ({ tags: { $instr: tag } })) });
-  if (q.from)
-    criteria.push({
-      creation_date: { $gte: { $date: `${q.from}T00:00:00Z` } },
-    });
-  if (q.to)
-    criteria.push({ creation_date: { $lte: { $date: `${q.to}T23:59:59Z` } } });
-  return new URLSearchParams({
-    q: JSON.stringify({
-      ...(criteria.length ? { $and: criteria } : {}),
-      $orderby: { [q.sort]: q.direction },
-    }),
-    p_offset: String((q.page - 1) * q.pageSize),
-    p_limit: String(q.pageSize),
-  });
 }

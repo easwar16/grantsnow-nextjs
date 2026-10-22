@@ -1,4 +1,5 @@
 "use client";
+import type { FormatSettings } from "@/lib/format";
 import { RecordSkeleton } from "@/components/feedback/skeleton";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -8,19 +9,23 @@ import { State } from "@/components/feedback/state";
 import { RecordCard } from "./record-card";
 import type { ListingChoices } from "../lookups";
 import { LatestRequest } from "@/lib/latest-request";
+import { FilterPanel } from "@/components/ui/filter-panel";
+import styles from "./listing.module.css";
 type Result =
   | { ok: true; data: ProposalPage }
-  | { ok: false; error: { code: string; message: string } };
+  | { ok: false; error: { code: string; message: string; action?: string } };
 export function Listing({
   initial,
   columns,
   initialQuery,
   choices,
+  format,
 }: {
   initial: Result;
   columns: Column[];
   initialQuery: ProposalQuery;
   choices: ListingChoices;
+  format?: FormatSettings;
 }) {
   const router = useRouter(),
     path = usePathname(),
@@ -31,7 +36,6 @@ export function Listing({
     [loadingMore, setLoadingMore] = useState(false),
     [moreError, setMoreError] = useState(""),
     [retry, setRetry] = useState(0),
-    [open, setOpen] = useState(true),
     [formError, setFormError] = useState("");
   const leftInitialQuery = useRef(false),
     latest = useRef(new LatestRequest()),
@@ -170,233 +174,198 @@ export function Listing({
     }
   }
   return (
-    <section aria-label="Proposal listing">
-      <div className="proposal-layout">
-        <aside
-          className="proposal-filters"
-          id="proposal-filters"
-          hidden={!open}
-          aria-label="Proposal filters"
-        >
-          <div
-            role="tablist"
-            aria-label="Filter by Proposal Status"
-            className="status-tabs"
-          >
-            {[
-              { value: "", label: "All" },
-              ...choices.statuses.filter((c) => c.value),
-            ].map((c) => (
-              <button
-                type="button"
-                role="tab"
-                key={c.value}
-                aria-selected={query.status === c.value}
-                onClick={() => update({ status: c.value, page: 1 }, true)}
-              >
-                {c.label}
-              </button>
-            ))}
-          </div>
-          <form
-            onSubmit={submit}
-            onKeyDown={(event) => {
-              if (
-                event.key === "Enter" &&
-                event.target instanceof HTMLInputElement &&
-                event.target.type !== "radio"
-              ) {
-                event.preventDefault();
-                event.currentTarget.requestSubmit();
-              }
-            }}
-            onChange={(event) => {
-              if (event.target instanceof HTMLSelectElement) submit(event);
-            }}
-            onBlur={(event) => {
-              if (
-                event.target instanceof HTMLInputElement &&
-                event.target.type !== "radio"
-              )
-                submit(event);
-            }}
-            key={queryKey}
-            className="filter-panel"
-          >
-            <label className="inside-field">
-              <span className="floating-label">Investigator</span>
-              <select name="investigator" defaultValue={query.investigator}>
-                <option value=""></option>
-                {choices.investigators.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <fieldset className="category-options">
-              <legend>Category</legend>
+    <section className="page-fill" aria-label="Proposal listing">
+      <FilterPanel
+        id="proposal-filters"
+        label="Proposal filters"
+        page="proposals"
+        filters={
+          <>
+            <div
+              role="tablist"
+              aria-label="Filter by Proposal Status"
+              className="status-tabs"
+            >
               {[
                 { value: "", label: "All" },
-                ...choices.categories.filter((c) =>
-                  [
-                    "PROPOSAL",
-                    "OUTLINE_PROPOSAL",
-                    "SUB_PROPOSAL",
-                    "EXTENSION_PROPOSAL",
-                  ].includes(c.value),
-                ),
+                ...choices.statuses.filter((c) => c.value),
               ].map((c) => (
-                <label key={c.value}>
-                  <input
-                    type="radio"
-                    name="type"
-                    value={c.value}
-                    defaultChecked={query.type === c.value}
-                    onChange={() =>
-                      update(
-                        { type: c.value as ProposalQuery["type"], page: 1 },
-                        true,
-                      )
-                    }
-                  />
+                <button
+                  type="button"
+                  role="tab"
+                  key={c.value}
+                  aria-selected={query.status === c.value}
+                  onClick={() => update({ status: c.value, page: 1 }, true)}
+                >
                   {c.label}
-                </label>
+                </button>
               ))}
-            </fieldset>
-            <label className="inside-field">
-              <span className="floating-label">Proposal Number</span>
-              <input
-                name="reference"
-                aria-label="Reference"
-                defaultValue={query.reference}
-                placeholder=" "
-                maxLength={200}
-              />
-            </label>
-            <label className="inside-field">
-              <span className="floating-label">Title</span>
-              <input
-                name="search"
-                aria-label="Search proposal titles"
-                type="search"
-                defaultValue={query.search}
-                placeholder=" "
-                maxLength={200}
-              />
-            </label>
-            <label className="inside-field">
-              <span className="floating-label">Department</span>
-              <select name="department" defaultValue={query.department}>
-                <option value=""></option>
-                {choices.departments.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="inside-field">
-              <span className="floating-label">Primary Sponsor</span>
-              <select name="sponsor" defaultValue={query.sponsor}>
-                <option value=""></option>
-                {choices.sponsors.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="inside-field">
-              <span className="floating-label">Assigned to</span>
-              <select name="assignedTo" defaultValue={query.assignedTo}>
-                <option value=""></option>
-                {choices.assignees.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="inside-field">
-              <span className="floating-label">Activity Type</span>
-              <select name="activityType" defaultValue={query.activityType}>
-                <option value=""></option>
-                {choices.activities.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="inside-field">
-              <span className="floating-label">Proposal Type</span>
-              <select
-                name="proposalCategory"
-                defaultValue={query.proposalCategory}
-              >
-                <option value=""></option>
-                {choices.proposalTypes.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="inside-field">
-              <span className="floating-label">Tags</span>
-              <input name="tags" defaultValue={query.tags} maxLength={200} />
-            </label>
-            <label className="inside-field">
-              <span className="floating-label">Created from</span>
-              <input name="from" type="date" defaultValue={query.from} />
-            </label>
-            <label className="inside-field">
-              <span className="floating-label">Created through</span>
-              <input name="to" type="date" defaultValue={query.to} />
-            </label>
-            <div className="filter-actions">
-              <button
-                type="button"
-                onClick={() => router.push(path, { scroll: false })}
-              >
-                Clear filters
-              </button>
             </div>
-          </form>
-          {choices.errors.map((error) => (
-            <p className="notice" role="status" key={error}>
-              {error}
-            </p>
-          ))}
-        </aside>
-        <div className="proposal-results">
-          <div className="proposal-list-actions">
-            <button
-              type="button"
-              aria-expanded={open}
-              aria-controls="proposal-filters"
-              onClick={() => setOpen(!open)}
+            <form
+              onSubmit={submit}
+              onKeyDown={(event) => {
+                if (
+                  event.key === "Enter" &&
+                  event.target instanceof HTMLInputElement &&
+                  event.target.type !== "radio"
+                ) {
+                  event.preventDefault();
+                  event.currentTarget.requestSubmit();
+                }
+              }}
+              onChange={(event) => {
+                if (event.target instanceof HTMLSelectElement) submit(event);
+              }}
+              onBlur={(event) => {
+                if (
+                  event.target instanceof HTMLInputElement &&
+                  event.target.type !== "radio"
+                )
+                  submit(event);
+              }}
+              key={queryKey}
+              className="filter-panel"
             >
-              Filters
-            </button>
-            <h1 className="sr-only">Proposals</h1>
-          </div>
-          {formError && (
-            <p className="notice" role="alert">
-              {formError}
-            </p>
-          )}
-          <details className="listing-query-controls">
-            <summary>Advanced Query</summary>
-            <div className="table-toolbar">
-              <p aria-live="polite">
-                {loading || stale
-                  ? "Loading proposals…"
-                  : current
-                    ? `${current.rows.length} rows on this page${current.total === undefined ? "" : ` · ${current.total} API total`}`
-                    : "Listing unavailable"}
+              <label className="inside-field">
+                <span className="floating-label">Investigator</span>
+                <select name="investigator" defaultValue={query.investigator}>
+                  <option value=""></option>
+                  {choices.investigators.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <fieldset className="category-options">
+                <legend>Category</legend>
+                {[
+                  { value: "", label: "All" },
+                  ...choices.categories.filter((c) =>
+                    [
+                      "PROPOSAL",
+                      "OUTLINE_PROPOSAL",
+                      "SUB_PROPOSAL",
+                      "EXTENSION_PROPOSAL",
+                    ].includes(c.value),
+                  ),
+                ].map((c) => (
+                  <label key={c.value}>
+                    <input
+                      type="radio"
+                      name="type"
+                      value={c.value}
+                      defaultChecked={query.type === c.value}
+                      onChange={() =>
+                        update(
+                          { type: c.value as ProposalQuery["type"], page: 1 },
+                          true,
+                        )
+                      }
+                    />
+                    {c.label}
+                  </label>
+                ))}
+              </fieldset>
+              <label className="inside-field">
+                <span className="floating-label">Proposal Number</span>
+                <input
+                  name="reference"
+                  aria-label="Reference"
+                  defaultValue={query.reference}
+                  placeholder=" "
+                  maxLength={200}
+                />
+              </label>
+              <label className="inside-field">
+                <span className="floating-label">Title</span>
+                <input
+                  name="search"
+                  aria-label="Search proposal titles"
+                  type="search"
+                  defaultValue={query.search}
+                  placeholder=" "
+                  maxLength={200}
+                />
+              </label>
+              <label className="inside-field">
+                <span className="floating-label">Department</span>
+                <select name="department" defaultValue={query.department}>
+                  <option value=""></option>
+                  {choices.departments.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="inside-field">
+                <span className="floating-label">Primary Sponsor</span>
+                <select name="sponsor" defaultValue={query.sponsor}>
+                  <option value=""></option>
+                  {choices.sponsors.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="inside-field">
+                <span className="floating-label">Assigned to</span>
+                <select name="assignedTo" defaultValue={query.assignedTo}>
+                  <option value=""></option>
+                  {choices.assignees.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="inside-field">
+                <span className="floating-label">Activity Type</span>
+                <select name="activityType" defaultValue={query.activityType}>
+                  <option value=""></option>
+                  {choices.activities.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="inside-field">
+                <span className="floating-label">Proposal Type</span>
+                <select
+                  name="proposalCategory"
+                  defaultValue={query.proposalCategory}
+                >
+                  <option value=""></option>
+                  {choices.proposalTypes.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="inside-field">
+                <span className="floating-label">Tags</span>
+                <input name="tags" defaultValue={query.tags} maxLength={200} />
+              </label>
+              <label className="inside-field">
+                <span className="floating-label">Created from</span>
+                <input name="from" type="date" defaultValue={query.from} />
+              </label>
+              <label className="inside-field">
+                <span className="floating-label">Created through</span>
+                <input name="to" type="date" defaultValue={query.to} />
+              </label>
+            </form>
+            {formError && (
+              <p className="notice" role="alert">
+                {formError}
               </p>
+            )}
+            <fieldset className={styles.query}>
+              <legend>Advanced Query</legend>
               <label>
                 Sort by
                 <select
@@ -411,16 +380,19 @@ export function Listing({
                     )
                   }
                 >
-                  <option value="creation_date">Creation date</option>
-                  <option value="proposal_id">Reference sequence</option>
-                  <option value="proposal_title">Title</option>
-                  <option value="full_name">Investigator</option>
+                  <option value="">Default order</option>
+                  {choices.sorts.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label>
                 Direction
                 <select
                   value={query.direction}
+                  disabled={query.sort === ""}
                   onChange={(e) =>
                     update(
                       { direction: e.target.value as "ASC" | "DESC", page: 1 },
@@ -432,8 +404,25 @@ export function Listing({
                   <option value="ASC">Ascending</option>
                 </select>
               </label>
+            </fieldset>
+            <div className="filter-actions">
+              <button
+                type="button"
+                onClick={() => router.push(path, { scroll: false })}
+              >
+                Clear filters
+              </button>
             </div>
-          </details>
+            {choices.errors.map((error) => (
+              <p className="notice" role="status" key={error}>
+                {error}
+              </p>
+            ))}
+          </>
+        }
+      >
+        <div className="proposal-results">
+          <h1 className="sr-only">Proposals</h1>
           {invalid ? (
             <State
               title="Invalid listing filters"
@@ -451,6 +440,7 @@ export function Listing({
               }
               code={result.error.code}
               message={result.error.message}
+              action={result.error.action}
               retry={() => setRetry((n) => n + 1)}
             />
           ) : current?.rows.length === 0 ? (
@@ -485,7 +475,12 @@ export function Listing({
                 }}
               >
                 {current.rows.map((row) => (
-                  <RecordCard key={row.id} row={row} columns={columns} />
+                  <RecordCard
+                    key={row.id}
+                    row={row}
+                    columns={columns}
+                    format={format}
+                  />
                 ))}
                 {loadingMore && (
                   <RecordSkeleton label="Loading more proposals" rows={1} />
@@ -505,7 +500,7 @@ export function Listing({
             {current
               ? `${current.rows.length} of ${current.total ?? "unknown total"}`
               : loading || stale
-                ? "Loading proposals…"
+                ? null
                 : "Listing unavailable"}
           </p>
           <div className="pagination">
@@ -537,7 +532,7 @@ export function Listing({
             </button>
           </div>
         </div>
-      </div>
+      </FilterPanel>
     </section>
   );
 }

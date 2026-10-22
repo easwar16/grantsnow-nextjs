@@ -10,12 +10,16 @@ import {
 import { requireModule, scopeOrganization } from "@/server/permissions/policy";
 import { oracle } from "@/server/api/transport";
 import { widgets, type WidgetDefinition } from "./widgets";
+import { pageQuery, QUEUE_CAP, QUEUE_PAGE } from "./paging";
 import type {
   HomeFilters,
   WidgetData,
   WidgetResult,
 } from "@/features/home/types";
+import { calendarDaysUntil } from "@/features/home/deadline";
+import { recordIdentity } from "@/features/proposals/record";
 import { AppError, publicError } from "@/lib/errors";
+const CHART_PAGE = 100;
 const envelope = z.object({
   items: z.array(z.record(z.string(), z.unknown())),
   hasMore: z.union([z.boolean(), z.enum(["true", "false"])]).optional(),
@@ -26,10 +30,53 @@ function str(row: Record<string, unknown>, key: string) {
   const v = row[key];
   return typeof v === "string" || typeof v === "number" ? String(v) : undefined;
 }
+const link = (path: string, params: Record<string, string | undefined>) => {
+  const query = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) if (v) query.set(k, v);
+  return query.size ? `${path}?${query}` : path;
+};
+/** Legacy objectHyperlinkNumberClickChain targets: built routes where they exist, else the module placeholder with the record params. */
+export function rowHref(
+  kind: WidgetDefinition["kind"],
+  r: Record<string, unknown>,
+  reference: string,
+) {
+  if (kind === "proposal") {
+    const identity = recordIdentity.safeParse({
+      type: str(r, "proposal_type"),
+      id: str(r, "proposal_id"),
+    });
+    return identity.success
+      ? `/proposals/${identity.data.type}/${identity.data.id}`
+      : link("/proposals", { reference });
+  }
+  if (kind === "eoi") {
+    const id = str(r, "request_id");
+    return id && /^[1-9]\d{0,14}$/.test(id)
+      ? `/opportunities/eoi/${id}`
+      : "/opportunities/eoi";
+  }
+  if (kind === "contract")
+    return link("/modules/contracts", {
+      contract_id: str(r, "contract_id"),
+      mode: "view",
+    });
+  if (kind === "ethics")
+    // ponytail: legacy also checks getDynamicFormsCheckApplApprAccess before opening; enforce it when the Ethics record route is built.
+    return link("/modules/ethics", {
+      access_type: str(r, "access_type"),
+      setup_flow_id: str(r, "setup_flow_id"),
+    });
+  return link("/modules/awards", {
+    award_id: str(r, "award_id"),
+    mode: "view",
+  });
+}
 export function mapWidget(
   raw: unknown,
   w: WidgetDefinition,
   filters: HomeFilters,
+  today = new Date(),
 ): WidgetData {
   if (w.renderType === "gauge") {
     const gauge = fundingEfficiency(raw);
@@ -52,7 +99,7 @@ export function mapWidget(
     return {
       attention: [],
       statistics: insightRows(b.items, w.mapping),
-      hasMore: b.hasMore === true || b.hasMore === "true",
+      hasMore: false,
       offset: filters.offset,
     };
   }
@@ -91,16 +138,10 @@ export function mapWidget(
         str(r, keys[2]) ||
         (w.kind === "award" ? str(r, "proposal_title") : undefined) ||
         reference;
-      const date =
-        str(r, "deadline_date") ||
-        str(r, "appr_deadline_date") ||
-        str(r, "last_approval_date") ||
-        str(r, "proposal_creation_date") ||
-        str(r, "contract_start_date") ||
-        str(r, "award_creation_date") ||
-        str(r, "eoi_creation_date");
+      // ponytail: server-local calendar day; the user's timezone is not known server-side.
+      const due = w.dueBy ? calendarDaysUntil(str(r, w.dueBy), today) : null;
       return {
-        id: `${str(r, keys[0]) || reference}:${str(r, "deadline_id") || str(r, "stage_id") || i}`,
+        id: `${str(r, keys[0]) || reference}:${str(r, "deadline_id") || str(r, "stage_id") || filters.offset + i}`,
         reference,
         title,
         context: str(r, keys[3]),
@@ -109,21 +150,21 @@ export function mapWidget(
         deadlineType: str(r, "deadline_type_descr") || str(r, "deadline_type"),
         deadlineDescription:
           str(r, "deadline_description") || str(r, "description"),
-        age: str(r, "deadline_days") || str(r, "pending_approval_days"),
+        age:
+          w.overdueNote && due !== null && due < 0
+            ? `Overdue by ${Math.abs(due)} Days`
+            : str(r, "deadline_days") || str(r, "pending_approval_days"),
         value: str(r, "total_cost"),
         currency: str(r, "currency_code"),
-        date,
-        overdue: date
-          ? Math.trunc((new Date(date).getTime() - Date.now()) / 86400000) <= 0
-          : false,
+        date: w.date ? str(r, w.date) : undefined,
+        overdue: due !== null && due <= 0,
         stage: str(r, "stage_name"),
-        href:
-          w.kind === "proposal"
-            ? `/proposals?reference=${encodeURIComponent(reference)}`
-            : undefined,
+        href: rowHref(w.kind, r, reference),
       };
     }),
-    hasMore: b.hasMore === true || b.hasMore === "true",
+    // hasMore is unreliable on these endpoints: a full page means there may be more.
+    hasMore:
+      b.items.length >= QUEUE_PAGE && filters.offset + QUEUE_PAGE < QUEUE_CAP,
     offset: filters.offset,
   };
 }
@@ -142,6 +183,32 @@ export async function enabledWidgets() {
       config[w.section][w.id]?.isVisible === true,
   );
 }
+/** Every chart page, p_offset-paged until a short page; repeated pages or the bound are errors, never a partial chart. */
+async function chartRows(
+  w: WidgetDefinition,
+  headers: Record<string, string>,
+  signal?: AbortSignal,
+) {
+  const all: Record<string, unknown>[] = [],
+    seen = new Set<string>();
+  for (let offset = 0; ;) {
+    const page = envelope.parse(
+      await oracle(w.operation, headers, pageQuery(offset, CHART_PAGE), signal),
+    );
+    const signature = JSON.stringify(page.items);
+    if (page.items.length && seen.has(signature))
+      throw new AppError("CONTRACT", "Oracle repeated a chart page.");
+    seen.add(signature);
+    all.push(...page.items);
+    if (page.items.length !== CHART_PAGE) return { items: all };
+    if (all.length >= 10000)
+      throw new AppError(
+        "CONTRACT",
+        "A complete chart result could not be loaded.",
+      );
+    offset += CHART_PAGE;
+  }
+}
 export async function loadWidget(
   id: string,
   filters: HomeFilters,
@@ -151,6 +218,11 @@ export async function loadWidget(
     w = widgets.find((w) => w.id === id);
   if (!w) throw new AppError("BAD_REQUEST", "Unknown dashboard widget.", 400);
   requireModule(user, w.module);
+  if (
+    w.kind !== "statistics" &&
+    (filters.offset % QUEUE_PAGE !== 0 || filters.offset >= QUEUE_CAP)
+  )
+    throw new AppError("BAD_REQUEST", "Invalid queue page.", 400);
   const config = await dashboardConfiguration();
   if (config[w.section][w.id]?.isVisible !== true)
     throw new AppError("FORBIDDEN", "This widget is disabled.", 403);
@@ -167,45 +239,17 @@ export async function loadWidget(
     for (const key of ["year", "quarter", "month"] as const)
       if (filters[key]) headers[key] = filters[key]!;
   }
-  const query = new URLSearchParams({
-    offset: String(filters.offset),
-    limit: w.kind === "statistics" ? "100" : "5",
-  });
-  let raw = await oracle(w.operation, headers, query, signal);
-  if (w.kind === "statistics" && w.renderType !== "gauge") {
-    const first = envelope.parse(raw),
-      all = [...first.items];
-    let page = first,
-      offset = 0;
-    const seen = new Set([JSON.stringify(first.items)]);
-    while (page.hasMore === true || page.hasMore === "true") {
-      if (!page.items.length || all.length >= 10000)
-        throw new AppError(
-          "CONTRACT",
-          "A complete chart result could not be loaded.",
-        );
-      offset += page.items.length;
-      page = envelope.parse(
-        await oracle(
-          w.operation,
-          headers,
-          new URLSearchParams({ offset: String(offset), limit: "100" }),
-          signal,
-        ),
-      );
-      if (page.offset !== undefined && page.offset !== offset)
-        throw new AppError(
-          "CONTRACT",
-          "Oracle returned an inconsistent chart page.",
-        );
-      const signature = JSON.stringify(page.items);
-      if (seen.has(signature) && page.items.length)
-        throw new AppError("CONTRACT", "Oracle repeated a chart page.");
-      seen.add(signature);
-      all.push(...page.items);
-    }
-    raw = { ...first, items: all, hasMore: false };
-  }
+  const raw =
+    w.renderType === "gauge"
+      ? await oracle(w.operation, headers, undefined, signal)
+      : w.kind === "statistics"
+        ? await chartRows(w, headers, signal)
+        : await oracle(
+            w.operation,
+            headers,
+            pageQuery(filters.offset, QUEUE_PAGE),
+            signal,
+          );
   const mapped = mapWidget(raw, w, filters);
   const formatting = await formattingConfiguration();
   if (w.renderType)

@@ -5,7 +5,7 @@ export function useRemote<T>(url: string | undefined) {
   const [result, setResult] = useState<{
     url: string;
     data?: T;
-    error?: { message: string; code: string };
+    error?: { message: string; code: string; action?: string };
   }>();
   const [attempt, setAttempt] = useState(0),
     requests = useRef(new LatestRequest());

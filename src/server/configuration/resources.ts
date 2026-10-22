@@ -1,4 +1,5 @@
 import "server-only";
+import { AppError } from "@/lib/errors";
 import { cache } from "react";
 import { z } from "zod";
 import { oracle } from "@/server/api/transport";
@@ -27,13 +28,18 @@ export function mergeResourceDefaults(raw: unknown) {
 }
 export const resources = cache(async () => {
   const { session } = await authenticate();
-  return mergeResourceDefaults(
-    await oracle("getSharedLabels", {
+  let rows: unknown = [];
+  try {
+    rows = await oracle("getSharedLabels", {
       token: session.token,
       module_name:
         "DASHBOARD,PROPOSAL,OUTLINE_PROPOSAL,SUB_PROPOSAL,EXTENSION_PROPOSAL,OPPORTUNITIES-EOI",
-    }),
-  );
+    });
+  } catch (e) {
+    // Legacy merges backend rows over the seeds; with the labels call unreachable the seeds alone render.
+    if (!(e instanceof AppError && e.code === "UPSTREAM")) throw e;
+  }
+  return mergeResourceDefaults(rows);
 });
 export type Resources = Awaited<ReturnType<typeof resources>>;
 export function label(
@@ -50,6 +56,21 @@ export function label(
         r.label_type === group &&
         r.label_name === key,
     )?.label_value || fallback
+  );
+}
+/** The one resource-visibility rule: shown only on an explicit 'Y'; a missing bundle, key or flag hides it. */
+export function resourceVisible(
+  rows: Resources,
+  module: string,
+  group: string,
+  key: string,
+) {
+  return rows.some(
+    (r) =>
+      r.module_name.toLowerCase() === module.toLowerCase() &&
+      r.label_type === group &&
+      r.label_name === key &&
+      r.is_visible === "Y",
   );
 }
 export function proposalColumns(rows: Resources): Column[] {
@@ -77,15 +98,7 @@ export function proposalColumns(rows: Resources): Column[] {
   return [
     ...mandatory,
     ...optional
-      .filter(([, key]) =>
-        rows.some(
-          (r) =>
-            r.module_name.toLowerCase() === "proposal" &&
-            r.label_type === "labels" &&
-            r.label_name === key &&
-            r.is_visible === "Y",
-        ),
-      )
+      .filter(([, key]) => resourceVisible(rows, "proposal", "labels", key))
       .map(([key, rkey, fallback]) => ({
         key,
         label: label(rows, "proposal", "labels", rkey, fallback),

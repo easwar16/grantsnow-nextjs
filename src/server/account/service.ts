@@ -1,11 +1,19 @@
 import "server-only";
+import type { z } from "zod";
 import { organizations } from "@/server/configuration/service";
 import { dateDisplay } from "@/lib/format";
+import { displayFormat } from "@/server/configuration/formatting";
 import { widgets } from "@/server/home/widgets";
 import { authenticate } from "@/server/session/service";
-import { oracle, assertBusiness } from "@/server/api/transport";
-import { resources, label } from "@/server/configuration/resources";
+import { oracle, assertBusiness, businessError } from "@/server/api/transport";
 import {
+  resources,
+  resourceVisible,
+  label,
+  type Resources,
+} from "@/server/configuration/resources";
+import {
+  assertWritesEnabled,
   fixtureMode,
   oracleSettings,
 } from "@/server/configuration/environment";
@@ -17,22 +25,17 @@ import {
   personStatusSchema,
   type AccountData,
 } from "@/features/account/contracts";
-const visible = (rows: Awaited<ReturnType<typeof resources>>, key: string) =>
-  rows.some(
-    (r) =>
-      r.module_name.toLowerCase() === "dashboard" &&
-      r.label_type === "labels" &&
-      r.label_name === key &&
-      r.is_visible === "Y",
-  );
+const visible = (rows: Resources, key: string) =>
+  resourceVisible(rows, "dashboard", "labels", key);
 export async function accountData(panel = "profile"): Promise<AccountData> {
   const { session, user } = await authenticate();
-  const [raw, identity, rows] = await Promise.all([
+  const [raw, identity, rows, format] = await Promise.all([
     oracle("getSharedDashboardPreferences", { token: session.token }),
     panel === "profile"
       ? oracle("getSessionValidate", { token: session.token })
       : Promise.resolve({}),
     resources(),
+    displayFormat(),
   ]);
   const config = assertBusiness(raw),
     person = assertBusiness(identity);
@@ -47,7 +50,7 @@ export async function accountData(panel = "profile"): Promise<AccountData> {
     if (typeof value === "string" && value && visible(rows, key))
       fields.push({
         label: label(rows, "dashboard", "labels", key, fallback),
-        value: key === "dob" ? dateDisplay(value) : value,
+        value: key === "dob" ? dateDisplay(value, format) : value,
       });
   for (const [key, source, fallback] of [
     ["institutional-roles", "institutional_roles", "Institutional roles"],
@@ -185,6 +188,7 @@ async function write(path: string, token: string, body: unknown) {
     fixtureSettings(path, body as Record<string, unknown>);
     return;
   }
+  assertWritesEnabled();
   const config = oracleSettings();
   let response: Response;
   try {
@@ -224,7 +228,11 @@ async function write(path: string, token: string, body: unknown) {
     try {
       parsed = JSON.parse(text);
     } catch {
-      throw new AppError("CONTRACT", "Invalid settings response.");
+      // A dead session can answer in plain text ("Context Not Set: N").
+      throw (
+        businessError(text) ??
+        new AppError("CONTRACT", "Invalid settings response.")
+      );
     }
     assertBusiness(parsed);
     if (parsed && typeof parsed === "object" && parsed.error)
@@ -313,8 +321,28 @@ export async function saveAccount(kind: string, body: unknown) {
   for (const key of ["opportunity", "notifications"] as const)
     if (input[key] !== undefined && !Object.hasOwn(current, key))
       throw new AppError("FORBIDDEN", "Unknown dashboard preference.", 403);
-  // Preserve server-owned metadata and all settings not edited in this form.
-  const merged: Record<string, unknown> = { ...current, ...input };
+  await write(
+    "shared/dashboardPreferences",
+    session.token,
+    dashboardPayload(current, input),
+  );
+}
+/**
+ * H1: the contracted keys only (VBCS type getSharedDashboardPreferences). Unedited settings, including the
+ * two section switches the drawer edits and the old transformPayload posts, keep their stored values.
+ */
+export function dashboardPayload(
+  current: Record<string, unknown>,
+  input: z.infer<typeof dashboardChange>,
+) {
+  // Undefined values drop out of the JSON body, as absent keys.
+  const merged: Record<string, unknown> = {
+    theme: input.theme ?? current.theme,
+    opportunity: input.opportunity ?? current.opportunity,
+    notifications: input.notifications ?? current.notifications,
+    needAttentionSwitch: current.needAttentionSwitch,
+    insightsSwitch: current.insightsSwitch,
+  };
   for (const group of ["needAttention", "insights"] as const)
     merged[group] = {
       ...Object.fromEntries(
@@ -337,7 +365,7 @@ export async function saveAccount(kind: string, body: unknown) {
           ),
     ]),
   );
-  await write("shared/dashboardPreferences", session.token, merged);
+  return merged;
 }
 
 export async function proxyPeople(orgId: string) {

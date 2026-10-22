@@ -1,5 +1,8 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { browserSessionMode } from "@/server/configuration/environment";
+import {
+  assertWritesEnabled,
+  browserSessionMode,
+} from "@/server/configuration/environment";
 import {
   mergeResourceDefaults,
   proposalColumns,
@@ -46,14 +49,16 @@ it("inherits current VBCS resource defaults but honors explicit visibility overr
   expect(proposalColumns(rows).some((c) => c.key === "value")).toBe(false);
   expect(() => mergeResourceDefaults({ response_msg: "ERROR" })).toThrow();
 });
-it("maps the actual ORDS string paging flags without coercing false to true", () => {
+it("ignores the unreliable ORDS hasMore flag: total_count, else a full page, decides", () => {
   const q = parseQuery(new URLSearchParams());
-  expect(mapProposals({ items: [], hasMore: "false" }, q, []).hasMore).toBe(
+  // DEV says "true" on a short last page and "false" mid-list (GN-Dashboard paging note).
+  expect(mapProposals({ items: [], hasMore: "true" }, q, []).hasMore).toBe(
     false,
   );
-  expect(mapProposals({ items: [], hasMore: "true" }, q, []).hasMore).toBe(
-    true,
-  );
+  expect(
+    mapProposals({ items: [], hasMore: "false", total_count: 25 }, q, [])
+      .hasMore,
+  ).toBe(true);
 });
 it("preserves a null statistics category without inventing a label or losing other groups", () => {
   const w = widgets.find((w) => w.id === "pByStatusChart")!;
@@ -71,4 +76,11 @@ it("preserves a null statistics category without inventing a label or losing oth
     ["", 2],
     ["Draft", 3],
   ]);
+});
+it("keeps live Oracle writes off unless explicitly enabled", () => {
+  for (const env of [{}, { WRITES_ENABLED: "false" }, { WRITES_ENABLED: "1" }])
+    expect(() => assertWritesEnabled(env)).toThrow(
+      expect.objectContaining({ code: "WRITES_DISABLED" }),
+    );
+  expect(() => assertWritesEnabled({ WRITES_ENABLED: "true" })).not.toThrow();
 });

@@ -7,15 +7,13 @@ export const fixtureUser = {
   landing_module: "HOME",
   module_access: [
     "PROPOSALS",
+    "opportunities-group",
     "opportunities-finder",
     "opportunities-eoi-list",
-    "opportunities-eoi",
     "opportunities-analytics",
     "CONTRACTS",
     "ETHICS",
     "AWARDS",
-    "opportunities-eoi-list",
-    "opportunities-eoi",
   ].map((module_name) => ({ module_name, is_accessible: "Y" })),
 };
 export const proposals = Array.from({ length: 37 }, (_, i) => ({

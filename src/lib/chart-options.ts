@@ -5,6 +5,39 @@ import type {
   ScatterSeriesOption,
 } from "echarts/charts";
 import type { StatisticRow, WidgetData } from "@/features/home/types";
+import { moneyDisplay, type FormatSettings } from "@/lib/format";
+// Legacy getCorrectMappingForChart: LA is lineWithArea; anything unknown is a pie.
+const dynamicTypes: Record<string, "pie" | "line" | "area" | "bar"> = {
+  PIE: "pie",
+  DONUT: "pie",
+  LINE: "line",
+  LA: "area",
+  AREA: "area",
+  BAR: "bar",
+};
+/** Pies slice by the row's group; the rest group by it and split series by `series` (legacy item template). */
+export function dynamicChartData(chart: {
+  type: string;
+  columns: number;
+  points: { series: string; group: string; value: number | null }[];
+}): WidgetData {
+  return {
+    attention: [],
+    // A null point is a gap: it gets no row, so no mark.
+    statistics: chart.points.flatMap((p, i) =>
+      p.value === null
+        ? []
+        : [{ id: String(i), label: p.group, series: p.series, value: p.value }],
+    ),
+    hasMore: false,
+    offset: 0,
+    presentation: {
+      type: dynamicTypes[chart.type] || "pie",
+      columns: chart.columns,
+    },
+  };
+}
+// Redwood --oj-palette-dvt-rgb-1…12, in series order.
 export const oracleChartColors = [
   "#245d63",
   "#d7790f",
@@ -19,68 +52,139 @@ export const oracleChartColors = [
   "#5999b5",
   "#317a45",
 ];
-export function piePercentages(rows: StatisticRow[]) {
-  const total = rows.reduce((sum, r) => sum + Math.max(0, r.value), 0);
-  if (!total) return rows.map(() => 0);
-  const raw = rows.map((r) => (Math.max(0, r.value) / total) * 100),
-    values = raw.map(Math.floor),
-    order = raw
-      .map((v, i) => ({ i, remainder: v - values[i] }))
-      .sort((a, b) => b.remainder - a.remainder);
-  const remaining = 100 - values.reduce((sum, v) => sum + v, 0);
-  for (let i = 0; i < remaining; i++) values[order[i].i]++;
-  return values;
+// Redwood --oj-dvt-danger/warning/success-color: the FEI gauge thresholds.
+const thresholds = ["#d63b25", "#cf7c00", "#508223"];
+// Redwood pie labels use two significant digits: 13%, 8.0%, 1.0%.
+const percent = new Intl.NumberFormat("en-US", {
+  minimumSignificantDigits: 2,
+  maximumSignificantDigits: 2,
+});
+export const pieLabel = (share = 0) => `${percent.format(share)}%`;
+/** Nothing to draw: no gauge, or no value other than null or 0 (a chart of zeros has no marks). */
+export function chartIsEmpty(
+  data: Pick<WidgetData, "statistics" | "gauge" | "presentation">,
+) {
+  return data.presentation?.type === "gauge"
+    ? !data.gauge
+    : !data.statistics.some((r) => r.value !== null && r.value !== 0);
+}
+/** The row a clicked point stands for: its slice name, or its category and series. */
+export function pointRow(
+  data: WidgetData,
+  name: string,
+  seriesName: string,
+): StatisticRow | undefined {
+  const sliced = ["pie", "funnel"].includes(data.presentation?.type || "");
+  return data.statistics.find(
+    (r) => r.label === name && (sliced || (r.series || r.label) === seriesName),
+  );
+}
+/**
+ * ECharts never truncates legend text, so a long name runs over the plot. A legend with a percentage width gets
+ * its text cut to that column (less icon, gap and air); hovering an item shows the full name.
+ */
+export function legendTextWidth(option: EChartsOption, hostWidth: number) {
+  const legend = option.legend as { width?: unknown; show?: boolean };
+  if (
+    legend?.show === false ||
+    typeof legend?.width !== "string" ||
+    !legend.width.endsWith("%")
+  )
+    return undefined;
+  return Math.max(
+    40,
+    Math.floor((hostWidth * parseFloat(legend.width)) / 100 - 24),
+  );
 }
 export function insightOptions(
   data: WidgetData,
   reducedMotion = false,
   dark = false,
+  format?: FormatSettings,
 ): EChartsOption {
-  const type = data.presentation?.type || "bar",
-    currency = data.presentation?.currency;
-  const compact = (value: number) =>
-    new Intl.NumberFormat("en-GB", {
+  const p = data.presentation,
+    type = p?.type || "bar",
+    currency = p?.currency;
+  const text = dark ? "#e2e6e7" : "rgba(22,21,19,0.7)",
+    strong = dark ? "#fff" : "#161513",
+    gridline = {
+      lineStyle: { color: dark ? "#4a5659" : "rgba(22,21,19,0.12)" },
+    };
+  const font = {
+    fontFamily: '"Oracle Sans", "Open Sans", Arial, sans-serif',
+    fontSize: 12,
+    color: text,
+  };
+  // en-US compact gives Redwood's capital suffixes (£2M, 1.2K).
+  const count = new Intl.NumberFormat("en-US", {
       notation: "compact",
-      maximumFractionDigits: 0,
-      ...(currency ? { style: "currency", currency } : {}),
-    })
-      .format(value)
-      .replace(/[kmb]$/i, (unit) => unit.toUpperCase());
+      maximumFractionDigits: 1,
+    }),
+    amount = currency
+      ? new Intl.NumberFormat("en-US", {
+          notation: "compact",
+          maximumFractionDigits: 0,
+          style: "currency",
+          currency,
+        })
+      : count;
+  // Tooltips and labels use the legacy value converters: configured currency, else decimal.
+  const full = (v: unknown, money = !!currency) =>
+    v === null || v === undefined
+      ? "—"
+      : money
+        ? moneyDisplay(String(v), currency, format)
+        : new Intl.NumberFormat("en-GB", {
+            maximumFractionDigits: format?.decimals || 2,
+          }).format(Number(v));
+  const drills = data.statistics.some((r) => r.href);
+  const cursor = drills ? "pointer" : "default";
+  const legend = {
+    show: p?.legend !== false,
+    type: "scroll" as const,
+    orient: "vertical" as const,
+    right: 0,
+    top: "middle",
+    icon: "rect",
+    itemWidth: 10,
+    itemHeight: 10,
+    pageIconSize: 10,
+    textStyle: { ...font, color: strong },
+  };
   const base: EChartsOption = {
     color: oracleChartColors,
     animation: !reducedMotion,
-    textStyle: {
-      fontFamily: "OracleSans, Arial, sans-serif",
-      fontSize: 12,
-      color: dark ? "#e2e6e7" : "#514f4d",
-    },
+    animationDuration: 400,
+    textStyle: font,
     tooltip: {
-      trigger:
-        type === "pie" || type === "funnel" || type === "scatter"
-          ? "item"
-          : "axis",
+      trigger: ["pie", "funnel", "scatter", "gauge"].includes(type)
+        ? "item"
+        : "axis",
+      // Plain text: labels come from the backend and are never parsed as HTML.
       renderMode: "richText",
       confine: true,
-    },
-    legend: {
-      type: "scroll",
-      orient: "vertical",
-      right: 0,
-      top: "middle",
-      icon: "rect",
-      itemWidth: 9,
-      itemHeight: 9,
-      textStyle: { fontSize: 12, color: dark ? "#e2e6e7" : "#161513" },
+      valueFormatter: (v) => full(v),
     },
     aria: { enabled: true },
-    grid: { left: 45, right: 170, top: 16, bottom: 34 },
   };
   if (type === "gauge") {
     const g = data.gauge;
     if (!g) return base;
+    const stop = (v: number) => Math.min(1, Math.max(0, v / g.target));
     return {
       ...base,
-      legend: { show: false },
+      // The legacy status-meter tooltip: awarded funding against the organisational objective.
+      tooltip: {
+        ...base.tooltip,
+        formatter: () =>
+          [
+            `Total Awarded Funding: ${full(g.value, true)}`,
+            "Organizational Objective",
+            `Low: ${full(g.low, true)}`,
+            `Medium: ${full(g.medium, true)}`,
+            `Target: ${full(g.target, true)}`,
+          ].join("\n"),
+      },
       series: [
         {
           type: "gauge",
@@ -88,166 +192,176 @@ export function insightOptions(
           endAngle: 0,
           min: 0,
           max: g.target,
-          radius: "100%",
-          center: ["50%", "88%"],
+          radius: "160%",
+          center: ["50%", "90%"],
           axisLine: {
             lineStyle: {
-              width: 18,
+              width: 10,
               color: [
-                [g.low / g.target, "#c94b3e"],
-                [g.medium / g.target, "#e4a347"],
-                [1, "#75a844"],
+                [stop(g.low), thresholds[0]],
+                [stop(g.medium), thresholds[1]],
+                [1, thresholds[2]],
               ],
             },
           },
-          progress: { show: true, width: 9 },
+          progress: { show: true, width: 22, itemStyle: { color: "#245d63" } },
           pointer: { show: false },
           axisTick: { show: false },
           splitLine: { show: false },
           axisLabel: { show: false },
           detail: {
-            offsetCenter: [0, "-35%"],
+            offsetCenter: [0, "-20%"],
+            fontSize: 18,
+            fontWeight: 700,
+            color: strong,
             formatter: () => `${Math.round((g.value / g.target) * 100)}%`,
-            fontSize: 22,
-            color: dark ? "#fff" : "#161513",
           },
-          data: [{ value: g.value }],
+          data: [{ value: g.value, name: "Funding Efficiency Index" }],
         },
       ],
     };
   }
-  if (type === "pie") {
-    const percentages = piePercentages(data.statistics);
+  if (type === "pie" || type === "funnel") {
+    const slices = data.statistics.map((r) => ({
+      name: r.label,
+      value: r.value,
+    }));
     return {
       ...base,
+      legend: { ...legend, width: "35%" },
       series: [
-        {
-          type: "pie",
-          radius: "72%",
-          center: ["35%", "50%"],
-          avoidLabelOverlap: true,
-          label: {
-            show: true,
-            position: "inside",
-            formatter: "{d}%",
-            fontSize: 11,
-            color: "#fff",
-          },
-          labelLine: { show: false },
-          emphasis: { focus: "self", scale: false },
-          data: data.statistics.map((r, i) => ({
-            name: r.label || " ",
-            value: percentages[i],
-            rawCount: r.value,
-          })),
-        },
+        type === "pie"
+          ? {
+              type: "pie",
+              radius: "72%",
+              center: ["32%", "50%"],
+              cursor,
+              data: slices,
+              label: {
+                ...font,
+                color: strong,
+                formatter: (s) => pieLabel(s.percent),
+              },
+              labelLine: { length: 8, length2: 8 },
+              // Count and share, as the legacy short-desc (label: count) with the slice percentage.
+              tooltip: {
+                formatter: (s) =>
+                  `${s.name}: ${full(s.value, false)} (${pieLabel(s.percent)})`,
+              },
+            }
+          : {
+              type: "funnel",
+              left: "5%",
+              width: "55%",
+              gap: 4,
+              sort: "none",
+              cursor,
+              data: slices,
+              // Legacy funnel labels each stage with its amount.
+              label: {
+                ...font,
+                color: "#fff",
+                position: "inside",
+                formatter: (s) => full(s.value),
+              },
+            },
       ],
     };
   }
-  if (type === "funnel")
-    return {
-      ...base,
-      legend: { orient: "horizontal", bottom: 0, top: undefined },
-      series: [
-        {
-          type: "funnel",
-          left: "10%",
-          top: 10,
-          bottom: 40,
-          width: "80%",
-          sort: "none",
-          gap: 8,
-          label: {
-            position: "inside",
-            formatter: (params) =>
-              `${params.name}: ${compact(Number(params.value))}`,
-          },
-          data: data.statistics.map((r) => ({ name: r.label, value: r.value })),
-        },
-      ],
-    };
+  // Cartesian: scatter, bar, line, area and the combo.
+  const scatter = type === "scatter",
+    combo = type === "combo";
   const groups = [...new Set(data.statistics.map((r) => r.label))],
     names = [...new Set(data.statistics.map((r) => r.series || r.label))];
   const series: (BarSeriesOption | LineSeriesOption | ScatterSeriesOption)[] =
-    names.map((name) => {
-      const points = groups.map(
+    names.map((name, si) => {
+      // One value per group; a missing point stays a gap, never a zero.
+      const values = groups.map(
         (group) =>
           data.statistics.find(
             (r) => r.label === group && (r.series || r.label) === name,
           )?.value ?? null,
       );
-      if (type === "scatter")
-        return {
-          type: "scatter",
-          name,
-          symbolSize: 8,
-          data: data.statistics
-            .filter((r) => (r.series || r.label) === name)
-            .map((r) => [r.label, r.value]),
-          emphasis: { focus: "series" },
-        };
-      if (
-        type === "line" ||
-        type === "area" ||
-        (type === "combo" && name === "Awarded Amount")
-      )
+      if (scatter)
+        return { type: "scatter", name, data: values, symbolSize: 8, cursor };
+      if (type === "line" || type === "area")
         return {
           type: "line",
           name,
-          data: points,
-          showSymbol: true,
-          symbolSize: 6,
+          cursor,
           connectNulls: false,
-          lineStyle: { width: 2 },
+          lineStyle: { width: 3 },
+          itemStyle: {
+            color: oracleChartColors[si % oracleChartColors.length],
+          },
           areaStyle: type === "area" ? { opacity: 0.2 } : undefined,
-          emphasis: { focus: "series" },
+          // A marker only on a point with no neighbour, which a line alone would leave invisible.
+          data: values.map((v, i) => ({
+            value: v,
+            symbol:
+              v !== null && values[i - 1] == null && values[i + 1] == null
+                ? "circle"
+                : "none",
+            symbolSize: 7,
+          })),
         };
+      // The combo's amount series sits on the second axis (legacy assigned-to-y2).
+      const y2 = combo && name === "Awarded Amount";
       return {
         type: "bar",
         name,
-        data: points,
-        barMaxWidth: 90,
-        emphasis: { focus: "series" },
+        cursor,
+        data: values,
+        barMaxWidth: 96,
+        stack: p?.stack ? "total" : undefined,
+        yAxisIndex: y2 ? 1 : 0,
+        tooltip: { valueFormatter: (v) => full(v, combo ? y2 : !!currency) },
       };
     });
+  const valueAxis = (name?: string, money = !!currency) => ({
+    type: "value" as const,
+    name,
+    nameLocation: "middle" as const,
+    nameGap: 44,
+    nameTextStyle: font,
+    axisLabel: {
+      ...font,
+      formatter: (v: number) => (money ? amount : count).format(v),
+    },
+    splitLine: gridline,
+  });
   return {
     ...base,
-    legend: { ...base.legend, show: type !== "scatter" },
+    legend: scatter ? { show: false } : { ...legend, width: "30%" },
     grid: {
-      ...base.grid,
-      right: type === "scatter" ? 16 : 170,
-      bottom: type === "scatter" ? 42 : 34,
+      left: p?.yTitle ? 56 : 44,
+      right: scatter || p?.legend === false ? (combo ? 56 : 16) : "32%",
+      top: 10,
+      bottom: p?.xTitle || scatter ? 44 : 24,
+      containLabel: false,
     },
     xAxis: {
       type: "category",
       data: groups,
-      axisLine: { lineStyle: { color: "#aaa7a4" } },
-      axisTick: { show: false },
+      name: p?.xTitle,
+      nameLocation: "middle",
+      nameGap: 30,
+      nameTextStyle: font,
       axisLabel: {
-        interval: type === "scatter" ? 0 : "auto",
-        rotate: type === "scatter" ? 90 : 0,
-        formatter:
-          type === "scatter"
-            ? (v: string) => (v.length > 5 ? `${v.slice(0, 4)}…` : v)
-            : undefined,
+        ...font,
+        rotate: scatter ? 90 : 0,
+        width: scatter ? 30 : undefined,
+        overflow: "truncate",
       },
+      axisLine: gridline,
+      axisTick: { show: false },
     },
-    yAxis:
-      type === "combo"
-        ? [
-            { type: "value", name: "No. of applications awarded" },
-            {
-              type: "value",
-              name: "Total awarded amount",
-              axisLabel: { formatter: compact },
-            },
-          ]
-        : {
-            type: "value",
-            axisLine: { show: false },
-            axisLabel: { formatter: compact },
-            splitLine: { lineStyle: { color: dark ? "#4a5659" : "#e3e6eb" } },
-          },
+    yAxis: combo
+      ? [
+          valueAxis(p?.yTitle, false),
+          { ...valueAxis(p?.y2Title), splitLine: { show: false } },
+        ]
+      : valueAxis(p?.yTitle),
     series,
   };
 }

@@ -1,5 +1,6 @@
+import { displayFormat } from "@/server/configuration/formatting";
 import { pageIdentity } from "@/server/auth/page";
-import { requireModule } from "@/server/permissions/policy";
+import { requireDrawerAccess } from "@/server/permissions/policy";
 import { parseOpportunityQuery } from "@/features/opportunities/schemas";
 import { listOpportunities } from "@/server/opportunities/service";
 import { Finder } from "@/features/opportunities/components/finder";
@@ -13,7 +14,7 @@ export default async function Opportunities({
 }) {
   const { user } = await pageIdentity("/opportunities");
   try {
-    requireModule(user, "opportunities-finder");
+    requireDrawerAccess(user, "opportunities-finder");
   } catch {
     return (
       <State
@@ -39,8 +40,14 @@ export default async function Opportunities({
     const e = publicError(error);
     initial = {
       ok: false as const,
-      error: { code: e.code, message: e.message },
+      error: { code: e.code, message: e.message, action: e.action },
     };
   }
-  return <Finder initial={initial} initialQuery={query} />;
+  return (
+    <Finder
+      initial={initial}
+      initialQuery={query}
+      format={await displayFormat()}
+    />
+  );
 }

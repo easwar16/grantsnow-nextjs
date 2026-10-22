@@ -1,4 +1,5 @@
 import { AppError } from "./errors";
+import { placeholderModules } from "./unavailable-modules";
 export function safeReturn(value: unknown) {
   if (typeof value !== "string" || /[\\\r\n]/.test(value)) return "/home";
   try {
@@ -15,6 +16,7 @@ export function safeReturn(value: unknown) {
           "/opportunities/analytics",
           "/opportunities/register",
         ].includes(url.pathname) ||
+        placeholderModules.some((m) => url.pathname === `/modules/${m.id}`) ||
         /^\/opportunities\/eoi\/[1-9]\d{0,14}\/(summary|application|attachments|approvals|delegation|history|dynamic-form-[1-5])$/.test(
           url.pathname,
         ) ||
