@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync, symlinkSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { spawnSync } from "node:child_process";
 // Two Next dev processes cannot share next-env.d.ts, even with separate distDir.
@@ -46,4 +46,8 @@ for (const entry of ["test-results", "playwright-report"]) {
     if (error.code !== "ENOENT") throw error;
   }
 }
+// Each run's copy (~470 MB once Next builds in it) is scratch: removed once its results are back, unless kept for
+// debugging. rmSync removes the node_modules symlink itself and never follows it into the real dependencies.
+if (process.env.GRANTSNOW_KEEP_E2E !== "1")
+  rmSync(workspace, { recursive: true, force: true });
 process.exitCode = result.status ?? 1;
