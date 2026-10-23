@@ -85,3 +85,14 @@ it("surfaces a business error reply to a write", async () => {
     oracleWrite("postSharedOppAddlDetails", { token: "t" }, { notes: "x" }),
   ).rejects.toMatchObject({ code: "BUSINESS", message: "GN-7 : Not allowed" });
 });
+it("never sends a write twice, even when its connection timed out", async () => {
+  fetchMock.mockRejectedValue(
+    Object.assign(new TypeError("fetch failed"), {
+      cause: { code: "UND_ERR_CONNECT_TIMEOUT" },
+    }),
+  );
+  await expect(
+    oracleWrite("deleteSharedBookmarkOpp", { token: "t", p_opp_id: "42" }),
+  ).rejects.toMatchObject({ code: "UPSTREAM" });
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});

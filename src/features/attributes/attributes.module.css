@@ -1,0 +1,31 @@
+/* Legacy object-attributes: one bordered panel above the host's form, fields in up to 6 columns by colspan. */
+.panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  min-width: 0;
+  margin: 0 0 8px;
+  padding: 12px 16px;
+  background: var(--gn-surface);
+  border: 1px solid var(--gn-divider);
+}
+.cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: none;
+  min-width: 200px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.row > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+.error {
+  font-size: 12px;
+  color: var(--gn-danger);
+}

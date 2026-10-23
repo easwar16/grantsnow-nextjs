@@ -28,7 +28,6 @@ import {
   eoiRecordContext,
   eoiRecordIdentity,
   eoiRecordRead,
-  eoiRecordTable,
   eoiSetFinalized,
   newApplicationContext,
 } from "@/server/opportunities/record";
@@ -380,23 +379,4 @@ describe("new application", () => {
       number: null,
     });
   });
-});
-it("strips private attachment locations and tokens from read tables", async () => {
-  state.calls.mockImplementation(
-    reads({
-      getPre_awardAttachmentsProposal_id: {
-        items: [
-          {
-            document_id: 1,
-            file_name: "Application.pdf",
-            file_location: "private/object/path",
-            token: "secret",
-          },
-        ],
-      },
-    }),
-  );
-  const b = await eoiRecordTable(next(), "attachments");
-  expect(JSON.stringify(b)).toContain("Application.pdf");
-  expect(JSON.stringify(b)).not.toMatch(/private\/object|secret|file_location/);
 });

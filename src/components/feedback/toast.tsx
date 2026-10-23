@@ -16,7 +16,13 @@ interface Toast {
   summary: string;
   detail?: string;
 }
-type Show = (severity: ToastSeverity, summary: string, detail?: string) => void;
+/** `persist` defaults to errors only; validation messages pass false (legacy `displayMode: 'transient'`). */
+type Show = (
+  severity: ToastSeverity,
+  summary: string,
+  detail?: string,
+  persist?: boolean,
+) => void;
 const ToastContext = createContext<Show>(() => {});
 const AUTO_DISMISS_MS = 5000;
 /** GN-Angular's toast stack: errors stay until dismissed (the original's persistent error toast), others close after 5 s. */
@@ -28,10 +34,20 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     [],
   );
   const show = useCallback<Show>(
-    (severity, summary, detail) => {
+    (severity, summary, detail, persist = severity === "error") => {
       const id = ++seq.current;
-      setToasts((all) => [...all, { id, severity, summary, detail }]);
-      if (severity !== "error") setTimeout(() => dismiss(id), AUTO_DISMISS_MS);
+      // The same message already on screen is not stacked again (repeated failures were seen piling up on live).
+      setToasts((all) =>
+        all.some(
+          (t) =>
+            t.severity === severity &&
+            t.summary === summary &&
+            t.detail === detail,
+        )
+          ? all
+          : [...all, { id, severity, summary, detail }],
+      );
+      if (!persist) setTimeout(() => dismiss(id), AUTO_DISMISS_MS);
     },
     [dismiss],
   );

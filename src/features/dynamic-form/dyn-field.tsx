@@ -174,6 +174,7 @@ export function DynFieldView({
       case "RADIO":
         return (
           <div
+            id={id}
             className={styles.choices}
             role="radiogroup"
             aria-labelledby={`${id}-label`}
@@ -199,6 +200,7 @@ export function DynFieldView({
       case "CHECKLIST":
         return (
           <div
+            id={id}
             className={styles.choices}
             role="group"
             aria-labelledby={`${id}-label`}

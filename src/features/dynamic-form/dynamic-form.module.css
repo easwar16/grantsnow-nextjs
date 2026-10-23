@@ -53,6 +53,10 @@
   align-items: center;
   gap: 4px;
 }
+/* The global label rule stacks its children; here the " *" must stay on the label's line. */
+.labelRow > label {
+  display: block;
+}
 .choices {
   display: flex;
   flex-wrap: wrap;

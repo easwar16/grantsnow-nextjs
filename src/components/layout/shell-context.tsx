@@ -14,7 +14,11 @@ export function useShell() {
   if (!shell) throw new Error("useShell outside the authenticated shell");
   return shell;
 }
+/** The shell, or null outside it (tests and the public pages). */
+export function useShellOptional() {
+  return useContext(ShellContext);
+}
 /** The configured display format, or undefined outside the shell (its default formats then apply). */
 export function useFormat() {
-  return useContext(ShellContext)?.format;
+  return useShellOptional()?.format;
 }

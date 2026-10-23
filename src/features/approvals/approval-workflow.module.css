@@ -1,0 +1,189 @@
+/* Legacy approval-workflow fragment, list view: a collapsible route and history, the route actions beneath. */
+.workflow {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 0 40px;
+}
+
+.panel {
+  display: block;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.head::-webkit-details-marker {
+  display: none;
+}
+
+.head h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.stages {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* oj-list-item-layout in an oj-panel: the stage level leads, actions trail; the start edge shows the status. */
+.stage {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid var(--gn-divider);
+  border-inline-start: 4px solid var(--gn-border-input);
+  transition: border-color var(--dur) var(--ease);
+}
+
+.stage[data-status="Approved"] {
+  border-inline-start-color: var(--gn-success);
+}
+
+.stage[data-status="Pending"] {
+  border-inline-start-color: var(--gn-brand);
+}
+
+.stage[data-status="Rework"] {
+  border-inline-start-color: var(--gn-warning);
+}
+
+.stage[data-status="Rejected"] {
+  border-inline-start-color: var(--gn-danger);
+}
+
+.level {
+  align-self: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.title,
+.remarks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  word-break: break-word;
+}
+
+.remarks {
+  font-size: 12px;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+  list-style: none;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.links,
+.verdicts,
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.danger {
+  color: var(--gn-danger);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.comment {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.addApprover {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.addApprover > * {
+  width: min(320px, 100%);
+}
+
+.form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.fieldLabel {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: var(--gn-text-secondary);
+}
+
+@media (max-width: 640px) {
+  .stage {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    align-items: flex-start;
+  }
+
+  .form {
+    grid-template-columns: 1fr;
+  }
+}

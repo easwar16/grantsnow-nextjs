@@ -8,9 +8,14 @@ import {
   useTransition,
 } from "react";
 import Link from "next/link";
-import { useRouter, useSelectedLayoutSegment } from "next/navigation";
+import {
+  useRouter,
+  useSearchParams,
+  useSelectedLayoutSegment,
+} from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { useInFlight } from "@/lib/use-in-flight";
+import { useToast } from "@/components/feedback/toast";
 import { useConfirm } from "../components/actions/action-dialog";
 import {
   ConvertDialog,
@@ -60,10 +65,15 @@ export function RecordShell({
     { run, isActive } = useInFlight(),
     { ask, element: confirmation } = useConfirm("eoi-record-discard"),
     fail = useActionFailure(),
+    toast = useToast(),
     [, startTransition] = useTransition(),
     [editing, setEditing] = useState(model.mode === "new"),
     [lockState, setLockState] = useState<{ tab: EoiTab; lock: PageLock }>(),
-    [drawer, setDrawer] = useState<"comments" | "audit" | null>(null),
+    // A mention notification links with `comment-id`: the comments drawer opens on it (legacy HandleMentionDeepLinkChain).
+    commentLink = useSearchParams().has("comment-id"),
+    [drawer, setDrawer] = useState<"comments" | "audit" | null>(
+      commentLink ? "comments" : null,
+    ),
     [converting, setConverting] = useState<
       "OUTLINE_PROPOSAL" | "PROPOSAL" | null
     >(null),
@@ -161,6 +171,13 @@ export function RecordShell({
         )
       : null;
   const setFinalized = (on: boolean) => {
+    // Legacy FinalizeValueChangeChain: unsaved answers must be saved first; the switch stays as it was.
+    if (on && mustAsk(guard.current))
+      return toast.show(
+        "error",
+        "Can't Finalize",
+        "Save your changes before Finalizing",
+      );
     setPendingFinalize(on);
     void run(async () => {
       const result = await postRecord(`${model.base}/lock`, {

@@ -104,6 +104,37 @@ describe("oracle response parsing", () => {
   });
   const reply = (body: string, status = 200) =>
     fetchMock.mockResolvedValue(new Response(body, { status }));
+  const connectTimeout = () =>
+    Object.assign(new TypeError("fetch failed"), {
+      cause: { code: "UND_ERR_CONNECT_TIMEOUT" },
+    });
+  it("retries a read once when its connection timed out, and goes through the Oracle pool", async () => {
+    fetchMock
+      .mockRejectedValueOnce(connectTimeout())
+      .mockResolvedValueOnce(new Response(JSON.stringify({ items: [] })));
+    await expect(oracle("getSessionValidate", { token: "t" })).resolves.toEqual(
+      { items: [] },
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][1]).toHaveProperty("dispatcher");
+  });
+  it("gives up after the one retry, and never retries other network failures", async () => {
+    fetchMock.mockRejectedValue(connectTimeout());
+    await expect(
+      oracle("getSessionValidate", { token: "t" }),
+    ).rejects.toMatchObject({ code: "UPSTREAM" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    fetchMock.mockReset();
+    fetchMock.mockRejectedValue(
+      Object.assign(new TypeError("fetch failed"), {
+        cause: { code: "ECONNRESET" },
+      }),
+    );
+    await expect(
+      oracle("getSessionValidate", { token: "t" }),
+    ).rejects.toMatchObject({ code: "UPSTREAM" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
   it("maps a plain-text Context Not Set body to EXPIRED, not CONTRACT", async () => {
     reply("Context Not Set: 4");
     await expect(

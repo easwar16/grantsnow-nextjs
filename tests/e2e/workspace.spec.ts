@@ -371,7 +371,7 @@ test("preview-style desktop drawer, user menu and Opportunities routes", async (
   expect(after - before).toBe(240);
   await page.keyboard.press("Escape");
   await expect(
-    page.getByRole("dialog", { name: "Application navigation" }),
+    page.getByRole("dialog", { name: "Application Navigation Drawer" }),
   ).not.toBeVisible();
   await page.locator(".user-menu summary").click();
   await expect(
@@ -462,11 +462,15 @@ test("preview-style desktop drawer, user menu and Opportunities routes", async (
   await expect(
     page.getByRole("button", { name: "Edit Application", exact: true }),
   ).toBeVisible();
-  for (const tab of ["Attachments", "Workflow", "Delegation", "History"]) {
+  // The shared panels, as legacy, carry no heading named after the tab; each renders its own root.
+  for (const [tab, panel] of [
+    ["Attachments", "eoi-attachments"],
+    ["Workflow", "eoi-record-approvals"],
+    ["Delegation", "opportunities-eoi-delegation"],
+    ["History", "opportunities-eoi-history"],
+  ]) {
     await page.getByRole("link", { name: tab, exact: true }).click();
-    await expect(
-      page.getByRole("heading", { name: tab, exact: true }),
-    ).toBeVisible();
+    await expect(page.locator(`#${panel}`)).toBeVisible();
   }
   for (const tab of [1, 2, 3, 4, 5].map((n) => `Dynamic Form ${n}`)) {
     const link = page.getByRole("link", { name: tab, exact: true });
@@ -490,8 +494,11 @@ test("record skeletons remain visible during delayed refresh and honor reduced m
 }) => {
   await login(page);
   await page.emulateMedia({ reducedMotion: "reduce" });
+  // The next page is held until the skeleton has been checked, so a fast fixture cannot race the assertions.
+  let release = () => {};
+  const held = new Promise<void>((resolve) => (release = resolve));
   await page.route("**/api/home/*?*", async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    await held;
     await route.continue();
   });
   const loading = page.getByRole("status", {
@@ -514,6 +521,7 @@ test("record skeletons remain visible during delayed refresh and honor reduced m
     "animation-name",
     "none",
   );
+  release();
   await expect(loading).toBeHidden();
   await page
     .getByRole("button", { name: "Application Navigation Drawer" })
@@ -712,4 +720,97 @@ test("account dialogs, research save, preferences and accessible preview cancell
     .getByRole("button", { name: "Close", exact: true })
     .click();
   await expect(page.locator("html")).toHaveClass(/accFontSize-0/);
+});
+test("EOI create, finalize with the unsaved-changes refusal, and an attachment upload and delete", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/opportunities");
+  await page
+    .getByRole("link", { name: /More Info:/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/opportunities\/\d+$/);
+  await page.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(page).toHaveURL(/\/opportunities\/eoi\/new\/\d+\/application$/);
+  const create = page.getByRole("button", { name: "Create", exact: true });
+  // Create waits for the form, so a record is never inserted without its answers.
+  await expect(
+    page.getByRole("textbox", { name: "Project title" }),
+  ).toBeVisible();
+  await expect(create).toBeEnabled();
+  // A failed validation creates nothing; its message closes on its own (legacy `transient`).
+  await create.click();
+  const required = page
+    .locator("#toast-stack")
+    .getByText("Please fill all the required fields");
+  await expect(required).toBeVisible();
+  await expect(page).toHaveURL(/\/eoi\/new\//);
+  await expect(required).toBeHidden({ timeout: 8000 });
+  await page
+    .getByRole("textbox", { name: "Project title" })
+    .fill("Fixture E2E application");
+  await page.getByRole("spinbutton", { name: "Amount" }).fill("1200");
+  await create.click();
+  await expect(page).toHaveURL(/\/opportunities\/eoi\/1005\/application$/);
+  // Workflow shows only once every finalizable page is finalized.
+  const pages = page.getByRole("navigation", { name: "Application pages" });
+  const workflow = pages.getByRole("link", { name: "Workflow", exact: true });
+  const finalize = page.locator("#eoi-record-finalize");
+  // The track covers the transparent input, as a user sees it; the click lands on the switch's label.
+  const toggle = () => finalize.locator("..").click();
+  await expect(finalize).not.toBeChecked();
+  await expect(workflow).toHaveCount(0);
+  // Unsaved answers refuse Finalize and leave the switch off.
+  await page
+    .getByRole("button", { name: "Edit Application", exact: true })
+    .click();
+  await page
+    .getByRole("textbox", { name: "Project title" })
+    .fill("Fixture E2E application, edited");
+  await toggle();
+  await expect(
+    page.locator("#toast-stack").getByText("Can't Finalize"),
+  ).toBeVisible();
+  await expect(finalize).not.toBeChecked();
+  await page.getByRole("button", { name: /^Save as draft$/i }).click();
+  await expect(
+    page.getByRole("button", { name: "Edit Application", exact: true }),
+  ).toBeVisible();
+  await toggle();
+  await expect(finalize).toBeChecked();
+  await expect(workflow).toHaveCount(1);
+  await toggle();
+  await expect(finalize).not.toBeChecked();
+  await expect(workflow).toHaveCount(0);
+  // Attachments: upload into the first folder, then delete it after confirming.
+  await pages.getByRole("link", { name: "Attachments", exact: true }).click();
+  const panel = page.locator("#eoi-attachments");
+  await panel.locator('button[id$="-add"]').first().click();
+  await page
+    .locator('input[type="file"]')
+    .last()
+    .setInputFiles({
+      name: "fixture-e2e.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from("fixture e2e"),
+    });
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Add", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const file = panel.getByText("fixture-e2e", { exact: false }).first();
+  await expect(file).toBeVisible();
+  await file.click();
+  await panel
+    .getByRole("button", { name: /^Delete/ })
+    .first()
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: /Yes|Delete|Confirm/ })
+    .first()
+    .click();
+  await expect(panel.getByText("fixture-e2e", { exact: false })).toHaveCount(0);
 });

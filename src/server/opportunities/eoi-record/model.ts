@@ -4,6 +4,8 @@ import type { ObjectAccess } from "@/server/permissions/policy";
 export const EOI_MODULE = "OPPORTUNITIES-EOI";
 /** `$application.variables.editableStatuses`: only a draft can be edited or finalized. */
 export const EDITABLE_STATUSES = ["DRFT"];
+/** Attachments may also change while the application is sent back for rework (owner, 2026-10-23). */
+export const ATTACHMENT_STATUSES = ["DRFT", "REWORK"];
 /** getTabs' order (GN-Angular EOI_TABS); the URL segment is the page name without its `opportunities-eoi-` prefix. */
 export const eoiTabs = [
   "summary",

@@ -6,11 +6,14 @@ export const ADVANCE_MS = 5000;
 /** The next slide index, wrapping at both ends like the legacy film strip's looping="page". */
 export const stepSlide = (index: number, delta: number, count: number) =>
   count < 1 ? 0 : (((index + delta) % count) + count) % count;
+/** `id` comes from the page (Home, the finder); its parts take `${id}-toggle`, `${id}-strip` and so on. */
 export function Announcements({
+  id,
   title,
   messages,
   error,
 }: {
+  id: string;
   /** RB `labels.announcements`. */
   title: string;
   messages: string[];
@@ -32,20 +35,16 @@ export function Announcements({
   }, [expanded, paused, count]);
   if (error)
     return (
-      <p id="home-announcements-error" className="notice" role="status">
+      <p id={`${id}-error`} className="notice" role="status">
         Announcements unavailable. {error}
       </p>
     );
   if (!count) return null;
   return (
-    <section
-      id="home-announcements"
-      className="announcements"
-      aria-label={title}
-    >
+    <section id={id} className="announcements" aria-label={title}>
       <h2 className="announcements-toggle">
         <button
-          id="home-announcements-toggle"
+          id={`${id}-toggle`}
           type="button"
           aria-expanded={expanded}
           onClick={() => setExpanded((e) => !e)}
@@ -56,7 +55,7 @@ export function Announcements({
       </h2>
       {expanded && (
         <div
-          id="home-announcements-strip"
+          id={`${id}-strip`}
           className="announcement-strip enter-expand"
           role="region"
           aria-roledescription="carousel"
@@ -67,7 +66,7 @@ export function Announcements({
           onBlur={() => setPaused(false)}
         >
           <button
-            id="home-announcements-previous"
+            id={`${id}-previous`}
             type="button"
             aria-label="Previous announcement"
             onClick={() => setIndex(stepSlide(current, -1, count))}
@@ -95,7 +94,7 @@ export function Announcements({
             </div>
           </div>
           <button
-            id="home-announcements-next"
+            id={`${id}-next`}
             type="button"
             aria-label="Next announcement"
             onClick={() => setIndex(stepSlide(current, 1, count))}

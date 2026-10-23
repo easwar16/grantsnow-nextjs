@@ -70,6 +70,29 @@ export const dashboardChange = z
     notifications: z.boolean().optional(),
   })
   .strict();
+/**
+ * The drawer's save body: Accessibility sends its levels; Preferences sends the theme, plus the infolets only where
+ * they were shown (legacy shows them on Home alone), so a save elsewhere leaves them as stored.
+ */
+export function preferencesChanges(
+  mode: "preferences" | "accessibility",
+  draft: AccountData["settings"],
+  withInfolets: boolean,
+): z.infer<typeof dashboardChange> {
+  if (mode === "accessibility") return { accessibility: draft.accessibility };
+  if (!withInfolets) return { theme: draft.theme };
+  return {
+    theme: draft.theme,
+    needAttention: draft.needAttention,
+    insights: draft.insights,
+    ...(draft.opportunity === undefined
+      ? {}
+      : { opportunity: draft.opportunity }),
+    ...(draft.notifications === undefined
+      ? {}
+      : { notifications: draft.notifications }),
+  };
+}
 export function nextAccessibility(key: string, value: number) {
   return (
     (value +

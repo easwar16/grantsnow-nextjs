@@ -19,6 +19,7 @@ import {
   yearOptions,
 } from "@/features/home/insight-filters";
 import { stepSlide } from "@/features/home/components/announcements";
+import { announcementMessages } from "@/server/home/announcements";
 import { indent } from "@/features/home/components/organization-heading";
 beforeEach(() => {
   oracle.mockReset();
@@ -96,4 +97,13 @@ it("refuses the Ethics check without the Ethics module", async () => {
   user.modules.ETHICS = false;
   await expect(ethicsAccess()).rejects.toMatchObject({ code: "FORBIDDEN" });
   expect(oracle).not.toHaveBeenCalled();
+});
+
+it("drops a bad announcement row instead of blanking the strip", async () => {
+  oracle.mockResolvedValueOnce({
+    items: [{ msg: "<p>First</p>" }, { msg: null }, {}, { msg: "  " }],
+  });
+  expect(await announcementMessages("token-bad-row", "DASHBOARD")).toEqual({
+    messages: ["<p>First</p>"],
+  });
 });

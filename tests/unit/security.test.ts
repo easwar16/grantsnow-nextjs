@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { trustedUsername, safeReturn, sameOrigin } from "@/lib/security";
+import {
+  trustedUsername,
+  safeImageUrl,
+  safeReturn,
+  sameOrigin,
+} from "@/lib/security";
 import { fixtureMode } from "@/server/configuration/environment";
 import { mapBootstrap, expiry } from "@/server/session/contracts";
 import { LatestRequest } from "@/lib/latest-request";
@@ -143,4 +148,22 @@ it("aborts and rejects out-of-order responses", () => {
   expect(b.current()).toBe(true);
   latest.cancel();
   expect(b.current()).toBe(false);
+});
+
+it("accepts only https or same-origin paths as a configured image", () => {
+  expect(safeImageUrl("https://cdn.example/a.png")).toBe(
+    "https://cdn.example/a.png",
+  );
+  expect(safeImageUrl("/brand/logo.svg")).toBe("/brand/logo.svg");
+  for (const bad of [
+    "http://cdn.example/a.png",
+    "//evil.example/a.png",
+    "/\\evil.example",
+    "data:image/svg+xml,<svg/>",
+    "javascript:alert(1)",
+    "",
+    null,
+    42,
+  ])
+    expect(safeImageUrl(bad)).toBeUndefined();
 });

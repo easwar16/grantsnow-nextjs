@@ -2,6 +2,8 @@ import "server-only";
 export const fixtureUser = {
   pid: 101,
   org_id: 202,
+  // Live sessions carry one; file storage paths need it (INSTANCE/legal_id/…).
+  legal_id: "1",
   full_name: "Alex Morgan",
   org_name: "Example Research University",
   landing_module: "HOME",

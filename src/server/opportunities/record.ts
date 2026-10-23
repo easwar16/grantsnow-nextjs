@@ -8,6 +8,7 @@ import {
   requireModule,
 } from "@/server/permissions/policy";
 import { oracle, oracleWrite } from "@/server/api/transport";
+import { fixtureMode } from "@/server/configuration/environment";
 import { dashboardRoles } from "@/server/configuration/service";
 import { canCreate } from "@/features/opportunities/display";
 import { AppError } from "@/lib/errors";
@@ -19,6 +20,7 @@ import { afterCheck, opportunityGlobals, pageAccess } from "./gates";
 import { referenceRead } from "./reference";
 import {
   EDITABLE_STATUSES,
+  ATTACHMENT_STATUSES,
   EOI_MODULE,
   eoiTabs,
   headerConverts,
@@ -35,6 +37,7 @@ import {
 } from "./eoi-record/opportunity";
 import { cachedRead } from "@/server/cache/reads";
 import { TTL } from "@/server/cache/memo";
+import type { AttachmentHost } from "@/server/files/attachments";
 export { eoiTabs, type EoiTab };
 const recordId = z.string().regex(/^[1-9]\d{0,14}$/);
 export const eoiRecordIdentity = z.object({
@@ -216,18 +219,59 @@ async function lockStatus(token: string, id: string, page: number) {
  * The tab's lock (getLockStatus, `lock_level` = the page id). A tab that is not one of the record's pages has none;
  * a lock that could not be read is unknown and treated as locked (read-only), never as open.
  */
-export async function eoiPageLock(
-  context: EoiRecordContext,
-  tab: EoiTab,
-): Promise<PageLock> {
-  const page = context.access.pages.find((p) => p.name === pageOf(tab));
-  if (!page) return { known: false, locked: false };
-  const lock = await orNull(
-    lockStatus(context.session.token, context.id, page.id),
-  );
-  return lock
-    ? { known: true, locked: lock.locked }
-    : { known: false, locked: true };
+// Per request: the tab and the attachments panel it hosts read the same lock once.
+export const eoiPageLock = cache(
+  async (context: EoiRecordContext, tab: EoiTab): Promise<PageLock> => {
+    const page = context.access.pages.find((p) => p.name === pageOf(tab));
+    if (!page) return { known: false, locked: false };
+    const lock = await orNull(
+      lockStatus(context.session.token, context.id, page.id),
+    );
+    return lock
+      ? { known: true, locked: lock.locked }
+      : { known: false, locked: true };
+  },
+);
+/**
+ * The Attachments tab as an attachments host. Legacy passes `true` for every EOI edit flag (no RBAC gate, any status);
+ * here a change needs the page's edit right, an open lock (finalized or unreadable refuses) and a draft or rework status.
+ * `read` checks only the tab; `view` and `edit` also settle `canEdit`, and `edit` refuses without it.
+ */
+export async function eoiAttachmentHost(
+  id: string,
+  mode: "read" | "view" | "edit",
+): Promise<AttachmentHost> {
+  const context = await eoiRecordRead(id, "attachments");
+  const page = pageOf("attachments");
+  let canEdit = false;
+  if (mode !== "read") {
+    const lock = await eoiPageLock(context, "attachments");
+    const finalized = lock.locked || context.finalized.has(page),
+      open = ATTACHMENT_STATUSES.includes(context.request.status_code ?? "");
+    canEdit =
+      context.access.roles.get(page)?.edit === true && !finalized && open;
+    if (mode === "edit" && !canEdit)
+      throw new AppError(
+        "FORBIDDEN",
+        finalized
+          ? "This page is finalized, so its attachments cannot be changed."
+          : !open
+            ? "Attachments can be changed only while the application is a draft or in rework."
+            : "You do not have access to change these attachments.",
+        403,
+      );
+  }
+  return {
+    objectType: EOI_MODULE,
+    objectId: id,
+    // Legacy files EOI documents under the request id, not its number.
+    objectNumber: id,
+    pathSegment: EOI_MODULE,
+    bundle: "opportunities-eoi",
+    token: context.session.token,
+    user: context.user,
+    canEdit,
+  };
 }
 export const finalizeInput = z
   .object({ tab: z.enum(eoiTabs), finalize: z.boolean() })
@@ -248,22 +292,26 @@ export async function eoiSetFinalized(id: string, raw: unknown) {
     throw new AppError("FORBIDDEN", "This page cannot be finalized.", 403);
   const token = context.session.token;
   const { lockId } = await lockStatus(token, id, page.id);
-  await oracleWrite(
-    "postProposalInsertModuleLock",
-    {
-      token,
-      legal_id: context.user.legalId ?? "",
-      org_id: context.user.organizationId,
-    },
-    {
-      proposal_id: Number(id),
-      created_by: token,
-      status: input.finalize ? "FINALIZE" : "UNLOCK",
-      page_id: page.id,
-      id: lockId,
-      module_name: EOI_MODULE,
-    },
-  );
+  const body = {
+    proposal_id: Number(id),
+    created_by: token,
+    status: input.finalize ? "FINALIZE" : "UNLOCK",
+    page_id: page.id,
+    id: lockId,
+    module_name: EOI_MODULE,
+  };
+  if (fixtureMode())
+    (await import("@/test-support/eoi-writes")).fixtureModuleLock(body);
+  else
+    await oracleWrite(
+      "postProposalInsertModuleLock",
+      {
+        token,
+        legal_id: context.user.legalId ?? "",
+        org_id: context.user.organizationId,
+      },
+      body,
+    );
   return { finalized: input.finalize };
 }
 /** The header's converts: an approved application and the record role for the kind; its opportunity id. */
@@ -385,118 +433,19 @@ export async function createEoiApplication(raw: unknown) {
   const created = z
     .object({ request_id: z.coerce.number().int().positive().optional() })
     .parse(
-      await oracleWrite("getDynamicFormsInsertRequest", {
-        token: session.token,
-        P_REF_OBJECT_ID: String(opportunityId),
-        P_REF_OBJECT_TYPE: "OPPORTUNITIES",
-        P_REQUEST_TYPE: EOI_MODULE,
-      }),
+      // Fixture writes answer `{}`; the labelled development store stands in for the created request there.
+      fixtureMode()
+        ? (await import("@/test-support/eoi-writes")).fixtureInsertRequest()
+        : await oracleWrite("getDynamicFormsInsertRequest", {
+            token: session.token,
+            P_REF_OBJECT_ID: String(opportunityId),
+            P_REF_OBJECT_TYPE: "OPPORTUNITIES",
+            P_REQUEST_TYPE: EOI_MODULE,
+          }),
     );
   if (created.request_id === undefined)
     throw new AppError("CONTRACT", "The application was not created.");
   const requestId = String(created.request_id);
   const details = await orNull(requestDetails(session.token, requestId));
   return { requestId, number: details?.request_number ?? null };
-}
-const rowsSchema = z.object({
-  items: z.array(z.record(z.string(), z.unknown())),
-});
-export interface EoiReadTable {
-  columns: { key: string; label: string }[];
-  rows: { id: string; values: Record<string, string> }[];
-}
-function table(
-  raw: unknown,
-  columns: EoiReadTable["columns"],
-  identity: string,
-): EoiReadTable {
-  const b = rowsSchema.parse(raw);
-  return {
-    columns,
-    rows: b.items.map((row, i) => ({
-      id: `${row[identity] ?? i}:${i}`,
-      values: Object.fromEntries(
-        columns.map((c) => [
-          c.key,
-          typeof row[c.key] === "string" || typeof row[c.key] === "number"
-            ? String(row[c.key])
-            : "—",
-        ]),
-      ),
-    })),
-  };
-}
-export type TableTab = "attachments" | "approvals" | "delegation" | "history";
-export async function eoiRecordTable(id: string, tab: TableTab) {
-  const { session, request } = await eoiRecordRead(id, tab);
-  const headers = { token: session.token };
-  if (tab === "attachments")
-    return table(
-      await oracle(
-        "getPre_awardAttachmentsProposal_id",
-        headers,
-        new URLSearchParams({ p_obj_id: id, p_obj_type: EOI_MODULE }),
-      ),
-      [
-        { key: "file_name", label: "File Name" },
-        { key: "description", label: "Description" },
-        { key: "document_type", label: "Document Type" },
-        { key: "file_size", label: "File Size" },
-        { key: "created_by_name", label: "Uploaded By" },
-        { key: "creation_date", label: "Uploaded On" },
-      ],
-      "document_id",
-    );
-  if (tab === "approvals")
-    return table(
-      await oracle(
-        "getApproval_setupApproval_stages",
-        headers,
-        new URLSearchParams({
-          doc_num: request.request_number,
-          doc_type: EOI_MODULE,
-        }),
-      ),
-      [
-        { key: "level_name", label: "Stage" },
-        { key: "level_desc", label: "Description" },
-        { key: "approval_type", label: "Approval Type" },
-        { key: "no_of_approval_req", label: "Required Approvals" },
-        { key: "status", label: "Status" },
-        { key: "remarks", label: "Remarks" },
-      ],
-      "stage_id",
-    );
-  if (tab === "delegation")
-    return table(
-      await oracle("getProposalDelegationsProposal_id", {
-        ...headers,
-        object_id: id,
-        object_type: EOI_MODULE,
-      }),
-      [
-        { key: "pid", label: "Person ID" },
-        { key: "page_desc", label: "Page" },
-        { key: "read_access", label: "Read Access" },
-        { key: "edit_access", label: "Edit Access" },
-        { key: "start_date", label: "Start Date" },
-        { key: "end_date", label: "End Date" },
-      ],
-      "id",
-    );
-  return table(
-    await oracle("getSharedObjectStatus", {
-      ...headers,
-      p_obj_id: id,
-      p_obj_type: EOI_MODULE,
-    }),
-    [
-      { key: "object_status", label: "Status" },
-      { key: "status_process_mode", label: "Process Mode" },
-      { key: "comments", label: "Comments" },
-      { key: "created_by_name", label: "Created By" },
-      { key: "creation_date", label: "Created On" },
-    ],
-    "creation_date",
-  );
 }

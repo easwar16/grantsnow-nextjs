@@ -1,4 +1,5 @@
 // app-flow.js diffInMonthsDecimal / calculateEndDate, as GN-Angular ported them: calendar months, end date inclusive.
+import { calendarDaysUntil } from "@/features/home/deadline";
 const DAY_MS = 86_400_000;
 /** `t` (UTC ms) plus `n` calendar months, the day clamped to the target month (31 Jan + 1 → 28/29 Feb). */
 function plusMonths(t: number, n: number) {
@@ -45,13 +46,14 @@ export function endDateAfter(start: string, months: number, decimals: number) {
   if (fraction > 0) end += Math.round(fraction * daysInMonthOf(end)) * DAY_MS;
   return new Date(end - DAY_MS).toISOString().slice(0, 10);
 }
-/** The deadline warning (8203): fractional days to the closing time, so it stops once that has passed. */
+/** The deadline warning (8203): the closing date is today or within `days` calendar days. */
 export function nearDeadline(
   closing: string | undefined,
   days: number | null,
-  now = Date.now(),
+  today = new Date(),
 ) {
-  if (days === null || !closing) return false;
-  const left = (Date.parse(closing) - now) / DAY_MS;
-  return left >= 0 && left <= days;
+  if (days === null) return false;
+  // Calendar days, so the closing day itself still warns (legacy compared instants, skipping it).
+  const left = calendarDaysUntil(closing, today);
+  return left !== null && left >= 0 && left <= days;
 }

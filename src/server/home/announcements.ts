@@ -9,7 +9,7 @@ import { TTL } from "@/server/cache/memo";
 export async function announcementMessages(token: string, module: string) {
   try {
     const body = z
-      .object({ items: z.array(z.object({ msg: z.string().max(100000) })) })
+      .object({ items: z.array(z.object({ msg: z.unknown() })) })
       .parse(
         // Home and the finder both show them; held briefly per module.
         await cachedRead(
@@ -18,7 +18,14 @@ export async function announcementMessages(token: string, module: string) {
           TTL.access,
         ),
       );
-    return { messages: body.items.map((r) => sanitizeHtml(r.msg)) };
+    // A bad row is dropped on its own; it does not blank the whole strip.
+    return {
+      messages: body.items.flatMap(({ msg }) =>
+        typeof msg === "string" && msg.trim() !== "" && msg.length <= 100000
+          ? [sanitizeHtml(msg)]
+          : [],
+      ),
+    };
   } catch (e) {
     return { messages: [] as string[], error: publicError(e).message };
   }

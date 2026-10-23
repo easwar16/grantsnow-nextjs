@@ -58,6 +58,13 @@
   {
     "module_name": "DASHBOARD",
     "label_type": "button-labels",
+    "label_name": "more_info",
+    "label_value": "More Info",
+    "is_visible": "N"
+  },
+  {
+    "module_name": "DASHBOARD",
+    "label_type": "button-labels",
     "label_name": "calendar-view-contract",
     "label_value": "View Contract",
     "is_visible": "N"

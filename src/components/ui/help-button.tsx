@@ -2,6 +2,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import { usePresence } from "@/lib/use-presence";
+import { useShellOptional } from "@/components/layout/shell-context";
 import styles from "./help-button.module.css";
 /**
  * GN-Angular's More Info button: rendered only when there is a text (the RB key's `label_description`, sanitised
@@ -11,12 +12,15 @@ import styles from "./help-button.module.css";
 export function HelpButton({
   id,
   html,
-  label = "More Info",
+  label: given,
 }: {
   id?: string;
   html?: string | null;
+  /** Defaults to RB `dashboard` `button-labels.more_info`, as legacy's shell and Home buttons. */
   label?: string;
 }) {
+  const shell = useShellOptional();
+  const label = given ?? shell?.labels.moreInfo ?? "More Info";
   const [open, setOpen] = useState(false),
     [above, setAbove] = useState(false),
     host = useRef<HTMLSpanElement>(null),

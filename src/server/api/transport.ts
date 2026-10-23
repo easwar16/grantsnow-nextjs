@@ -7,7 +7,23 @@ import {
   browserSessionMode,
 } from "@/server/configuration/environment";
 import { AppError } from "@/lib/errors";
+import { Agent, fetch as poolFetch, type Response } from "undici";
 export type Operation = keyof typeof operations;
+/**
+ * One connection pool for Oracle. Node's default drops an idle connection after 4 s, so most clicks opened new ones,
+ * and new connects from a local machine occasionally stall past the 10 s connect limit. Idle connections are kept
+ * for 30 s (ORDS's own Keep-Alive hint still caps it), as the browser keeps its own. fetch comes from the same undici
+ * so the pool matches it on any Node version.
+ */
+const pool = new Agent({
+  keepAliveTimeout: 30_000,
+  keepAliveMaxTimeout: 60_000,
+});
+/** A connect that timed out never reached Oracle, so a read may be sent again once; writes never are. */
+const connectTimedOut = (e: unknown) =>
+  e instanceof Error &&
+  (e.cause as { code?: string } | undefined)?.code ===
+    "UND_ERR_CONNECT_TIMEOUT";
 export function resolveOperationPath(
   operation: Operation,
   params: Record<string, string> = {},
@@ -117,12 +133,16 @@ export async function oracleWrite(
   headers: Record<string, string> = {},
   body?: unknown,
   signal?: AbortSignal,
+  // deletePre_awardLinks takes its id as a query parameter.
+  query?: URLSearchParams,
+  // postProposalDelegationsDelegation_id takes its id in the path.
+  pathParams?: Record<string, string>,
 ): Promise<unknown> {
   if (!writes(operation))
     throw new AppError("BAD_REQUEST", "Unapproved Oracle write.", 400);
   if (fixtureMode()) return {};
   assertWritesEnabled();
-  return send(operation, headers, undefined, signal, undefined, body);
+  return send(operation, headers, query, signal, pathParams, body);
 }
 async function send(
   operation: Operation,
@@ -174,23 +194,36 @@ async function send(
   const timeout = aggregates.includes(operation) ? 90000 : 60000;
   const started = performance.now();
   try {
-    response = await fetch(url, {
-      method: op.method ?? "GET",
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-      headers: {
-        ...headers,
-        ...(body === undefined ? {} : { "Content-Type": "application/json" }),
-        ...(config.authorization
-          ? { Authorization: config.authorization }
-          : {}),
-        Accept: "application/json",
-      },
-      cache: "no-store",
-      redirect: "error",
-      signal: signal
+    // One deadline for both attempts; undici's fetch has no HTTP cache, so nothing here is ever stored (no-store).
+    const read = !writes(operation),
+      deadline = signal
         ? AbortSignal.any([signal, AbortSignal.timeout(timeout)])
         : AbortSignal.timeout(timeout),
-    });
+      fetchOnce = () =>
+        poolFetch(url, {
+          method: op.method ?? "GET",
+          ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+          headers: {
+            ...headers,
+            ...(body === undefined
+              ? {}
+              : { "Content-Type": "application/json" }),
+            ...(config.authorization
+              ? { Authorization: config.authorization }
+              : {}),
+            Accept: "application/json",
+          },
+          redirect: "error",
+          signal: deadline,
+          dispatcher: pool,
+        });
+    try {
+      response = await fetchOnce();
+    } catch (e) {
+      if (!read || !connectTimedOut(e)) throw e;
+      devTrace(operation, "connect timed out; retrying the read once");
+      response = await fetchOnce();
+    }
   } catch (e) {
     devTrace(
       operation,

@@ -1,10 +1,14 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/components/feedback/toast";
 import {
   DynamicForm,
   type DynamicFormHandle,
 } from "@/features/dynamic-form/dynamic-form";
+import {
+  ObjectAttributes,
+  type AttributesHandle,
+} from "@/features/attributes/object-attributes";
 import {
   canSaveApplication,
   formOf,
@@ -41,6 +45,8 @@ export function ApplicationTab({
     toast = useToast(),
     fail = useActionFailure(),
     form = useRef<DynamicFormHandle>(null),
+    attributes = useRef<AttributesHandle>(null),
+    [formReady, setFormReady] = useState(false),
     // A request created whose answers then failed: a retry saves into it instead of inserting another one.
     created = useRef<{ requestId: string; number: string } | null>(null);
   const { setApplication, setGuard, setEditing, run, navigate } = record;
@@ -49,9 +55,13 @@ export function ApplicationTab({
   const save = () =>
     void run(async () => {
       const f = form.current;
-      if (!f || lock.locked || !f.check()) return;
+      if (!f || lock.locked) return;
+      // Attributes before the form, as legacy saveAOI; both show their errors.
+      const attributesOk = attributes.current?.check() ?? true;
+      if (!f.check() || !attributesOk) return;
       if (!isNew) {
         if (!(await f.save())) return;
+        attributes.current?.reload();
         setEditing(false);
         toast.show("success", texts.updated);
         return;
@@ -107,7 +117,14 @@ export function ApplicationTab({
   const { objectType, slot } = formOf("application");
   return (
     <div id="eoi-record-application" className={styles.tab}>
-      {/* ponytail: object-attributes (labels.show-attributes, seeded N) is not rebuilt; it is hidden on dev. */}
+      <ObjectAttributes
+        ref={attributes}
+        id="eoi-record-attributes"
+        host="opportunities-eoi-application"
+        parentId={opportunityId}
+        objectId={requestId}
+        editable={editable}
+      />
       <DynamicForm
         ref={form}
         objectType={objectType}
@@ -116,6 +133,7 @@ export function ApplicationTab({
         objectId={requestId}
         objectNumber={number}
         editable={editable}
+        onReadyChange={setFormReady}
       />
       {canSaveApplication(requestId, record.editing, statusCode) && (
         <div className={styles.formActions}>
@@ -123,7 +141,7 @@ export function ApplicationTab({
             type="button"
             id="eoi-record-application-save"
             className="gn-btn gn-btn--primary"
-            disabled={lock.locked || record.isActive(RECORD_SAVE)}
+            disabled={!formReady || lock.locked || record.isActive(RECORD_SAVE)}
             onClick={save}
           >
             {isNew ? texts.create : texts.save}

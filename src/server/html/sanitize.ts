@@ -34,6 +34,15 @@ purify.addHook("afterSanitizeAttributes", (node) => {
     node.setAttribute("rel", "noopener noreferrer");
   }
 });
+/** Backend rich text as plain text (legacy `stripMarkup`): tags dropped, entities decoded. */
+export function plainText(html: string) {
+  if (!html.includes("<") && !html.includes("&")) return html;
+  return (
+    purify
+      .sanitize(html, { ALLOWED_TAGS: [], RETURN_DOM: true })
+      .textContent?.trim() ?? ""
+  );
+}
 export function sanitizeHtml(html: string) {
   return purify.sanitize(html.replace(/\\r\\n/g, ""), {
     FORBID_TAGS: ["style", "form", "input", "button", "select", "textarea"],
