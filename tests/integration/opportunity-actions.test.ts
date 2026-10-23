@@ -54,6 +54,7 @@ import {
 import {
   cardActions,
   convertGates,
+  deadlineWarningDays,
   pageAccess,
 } from "@/server/opportunities/gates";
 import {
@@ -652,12 +653,28 @@ describe("client helpers", () => {
     expect(monthsBetween("2026-01-01", "2026-12-31", 2)).toBe(12);
     expect(endDateAfter("2026-01-01", 12, 2)).toBe("2026-12-31");
   });
-  it("warns only inside the configured window before the closing time", () => {
-    const now = Date.parse("2026-11-29T00:00:00Z");
-    expect(nearDeadline("2026-12-01T00:00:00Z", 3, now)).toBe(true);
-    expect(nearDeadline("2026-12-01T00:00:00Z", null, now)).toBe(false);
-    expect(nearDeadline("2026-11-28T00:00:00Z", 3, now)).toBe(false);
-    expect(nearDeadline(undefined, 3, now)).toBe(false);
+  it("warns from the configured window up to and including the closing day", () => {
+    const today = new Date(2026, 10, 29, 15, 30);
+    expect(nearDeadline("2026-12-01T00:00:00Z", 3, today)).toBe(true);
+    expect(nearDeadline("2026-12-03", 3, today)).toBe(false);
+    expect(nearDeadline("2026-11-29T00:00:00Z", 3, today)).toBe(true);
+    expect(nearDeadline("2026-11-29", 0, today)).toBe(true);
+    expect(nearDeadline("2026-12-01T00:00:00Z", null, today)).toBe(false);
+    expect(nearDeadline("2026-11-28T00:00:00Z", 3, today)).toBe(false);
+    expect(nearDeadline(undefined, 3, today)).toBe(false);
+  });
+  it("keeps a configured zero-day warning window", () => {
+    const on = { var_key: "OPP_DEADLINE_WARNING_ENABLED", var_value: "Y" };
+    const days = (value: string | number | null) =>
+      deadlineWarningDays([
+        on,
+        { var_key: "OPP_DEADLINE_WARNING_DAYS", var_value: value },
+      ]);
+    expect(days(0)).toBe(0);
+    expect(days("5")).toBe(5);
+    expect(days(null)).toBe(3);
+    expect(days("soon")).toBe(3);
+    expect(deadlineWarningDays([])).toBeNull();
   });
   it("validates a share in the original order", () => {
     const texts = {

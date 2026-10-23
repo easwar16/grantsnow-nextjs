@@ -1,8 +1,10 @@
 import "server-only";
 import { cache } from "react";
-import { z } from "zod";
 import { authenticate } from "@/server/session/service";
-import { referenceRead } from "./reference";
+import {
+  globalVariables,
+  type GlobalVariable,
+} from "@/server/configuration/formatting";
 import { AppError } from "@/lib/errors";
 import {
   label,
@@ -241,33 +243,23 @@ export function convertGates(
     { show: boolean; required: boolean; label: string }
   >;
 }
-const globals = z.object({
-  items: z.array(
-    z.object({
-      var_key: z.string(),
-      var_value: z.union([z.string(), z.number()]).nullish(),
-    }),
-  ),
-});
-/** The deadline warning (8203): OPP_DEADLINE_WARNING_DAYS (default 3) when OPP_DEADLINE_WARNING_ENABLED is 'Y'. */
-export function deadlineWarningDays(
-  items: z.infer<typeof globals>["items"],
-): number | null {
+/**
+ * The deadline warning (8203): OPP_DEADLINE_WARNING_DAYS when OPP_DEADLINE_WARNING_ENABLED is 'Y'. Unset or invalid
+ * is 3, as legacy; a configured 0 stays 0 (legacy's `|| 3` turned it into 3).
+ */
+export function deadlineWarningDays(items: GlobalVariable[]): number | null {
   const value = (key: string) =>
     items.find((r) => r.var_key === key)?.var_value;
   if (value("OPP_DEADLINE_WARNING_ENABLED") !== "Y") return null;
-  return Number(value("OPP_DEADLINE_WARNING_DAYS") ?? 3) || 3;
+  const raw = value("OPP_DEADLINE_WARNING_DAYS"),
+    days = raw === null || raw === undefined || raw === "" ? NaN : Number(raw);
+  return Number.isInteger(days) && days >= 0 ? days : 3;
 }
 export const opportunityGlobals = cache(async () => {
   const { session } = await authenticate();
   try {
-    return deadlineWarningDays(
-      globals.parse(
-        await referenceRead("getPre_award_costingGetGlobalVar", {
-          token: session.token,
-        }),
-      ).items,
-    );
+    // The one held copy of the global variables, shared with the display formats.
+    return deadlineWarningDays(await globalVariables(session.token));
   } catch (e) {
     if (e instanceof AppError && e.code === "EXPIRED") throw e;
     // The warning is advisory; without the globals the actions proceed as with the flag off.

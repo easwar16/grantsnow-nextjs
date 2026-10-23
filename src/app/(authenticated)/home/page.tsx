@@ -211,6 +211,7 @@ export default async function Home({
   return (
     <>
       <Announcements
+        id="home-announcements"
         title={dashboardLabel(rb, "labels.announcements", "Announcements")}
         {...announcements}
       />

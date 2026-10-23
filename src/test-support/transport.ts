@@ -106,6 +106,15 @@ export async function mockOracle(
         ["REJ", "Rejected"],
         ["AWARD", "Awarded"],
       ],
+      // The approval workflow's Add Stage choices.
+      APPROVAL_TYPE: [
+        ["APPROVAL", "Approval"],
+        ["PEERREVIEW", "Peer Review"],
+      ],
+      APPR_GRP_DETAIL_TYPE: [
+        ["GROUP", "Group"],
+        ["INDIVIDUAL", "Individual"],
+      ],
     };
     return {
       items: Object.entries(types).flatMap(([lookup_type_code, rows]) =>
@@ -128,8 +137,14 @@ export async function mockOracle(
           org_unit_id: 202,
           org_unit_name: "Example Research University",
           is_pi_flag: "true",
+          email_address: "alex.morgan@example.org",
         },
-        { person_id: 102, employee_number: "EMP102", full_name: "Sam Taylor" },
+        {
+          person_id: 102,
+          employee_number: "EMP102",
+          full_name: "Sam Taylor",
+          email_address: "sam.taylor@example.org",
+        },
       ],
     };
   if (op === "GetSponsorList")
@@ -399,24 +414,215 @@ export async function mockOracle(
         "dynamic-form-3",
         "dynamic-form-4",
         "dynamic-form-5",
-      ].map((tab, i) => ({
-        page_id: i + 1,
-        page_name: `opportunities-eoi-${tab}`,
-        read_access: "Y",
-        // Form tabs are editable on the fixture draft (dynamic-form saves need edit).
-        ...(tab === "application" || tab.startsWith("dynamic-form-")
-          ? { edit_access: "Y" }
-          : {}),
-      })),
+      ]
+        .map((tab, i) => ({
+          page_id: i + 1,
+          page_name: `opportunities-eoi-${tab}`,
+          component_type: "PAGE",
+          read_access: "Y",
+          // Form tabs, Attachments and Delegation are editable on the fixture draft (their writes need edit).
+          ...(tab === "application" ||
+          tab === "attachments" ||
+          tab === "delegation" ||
+          tab === "approvals" ||
+          tab.startsWith("dynamic-form-")
+            ? { edit_access: "Y" }
+            : {}),
+          ...(tab === "delegation" ? { delete_access: "Y" } : {}),
+        }))
+        // History's Add Status and Abandon button keys (edit grants them).
+        .concat(
+          ["history-add-status", "history-abandon-button"].map((key, i) => ({
+            page_id: 20 + i,
+            page_name: `opportunities-eoi-${key}`,
+            component_type: "BUTTON",
+            read_access: "Y",
+            edit_access: "Y",
+          })),
+        )
+        // The approval workflow's keys: add / delete stage, add approver, change / remove approver.
+        .concat(
+          [
+            "eoi-add-stage",
+            "eoi-add-approver",
+            "opportunities-eoi-change-approver",
+          ].map((key, i) => ({
+            page_id: 30 + i,
+            page_name: key,
+            component_type: "BUTTON",
+            read_access: "Y",
+            edit_access: "Y",
+            delete_access: "Y",
+          })),
+        ),
     };
   // The EOI record's finalize state: nothing to finalize, nothing locked.
-  if (
-    op === "getSharedFinalizablePages" ||
-    op === "getProposalGetLockedModules"
-  )
-    return { items: [] };
+  // Finalize state lives in the labelled EOI writes store; only its created record has a finalizable page.
+  if (op === "getSharedFinalizablePages")
+    return (await import("./eoi-writes")).fixtureFinalizablePages(
+      headers.p_obj_id,
+    );
+  if (op === "getProposalGetLockedModules")
+    return (await import("./eoi-writes")).fixtureLockedModules(
+      query?.get("prop_id"),
+    );
   if (op === "getProposalGetLockStatus")
-    return { status: "UNLOCK", lock_module_id: null };
+    return (await import("./eoi-writes")).fixtureLockStatus(
+      headers.prop_id,
+      headers.lock_level,
+    );
+  // Fixture comment thread for any record page: one from a colleague, one of the fixture user's own with a mention.
+  if (op === "getProposalComments") {
+    const thread = {
+      object_id: Number(query?.get("object_id")),
+      module: query?.get("module"),
+    };
+    return {
+      items: [
+        {
+          ...thread,
+          comment_id: 1,
+          comments: "<p>Please confirm the funder deadline.</p>",
+          created_by: 102,
+          creation_date: "2026-10-01T09:30:00Z",
+          full_name: "Sam Taylor",
+        },
+        {
+          ...thread,
+          comment_id: 2,
+          comments:
+            '<p>Confirmed with <a class="mention oj-link-standalone oj-link-subtle-primary" data-mention="@Sam Taylor" data-person-id="102" data-first-name="Sam Taylor" data-mention-type="person">@Sam Taylor</a>.</p>',
+          created_by: fixtureUser.pid,
+          creation_date: "2026-10-02T14:05:00Z",
+          full_name: fixtureUser.full_name,
+        },
+      ],
+    };
+  }
+  // Fixture audit trail for any record page, filtered by p_event as the backend does (empty is ALL).
+  if (op === "getSharedGetObjectAudits2") {
+    const trail = [
+      {
+        event: "UPDATED",
+        date_time: "2026-10-02T14:10",
+        field_values: [
+          { field_name: "Project title", field_value: "New", old_value: "Old" },
+        ],
+      },
+      {
+        event: "INSERTED",
+        date_time: "2026-10-01T09:00",
+        field_values: [
+          { field_name: "Project title", field_value: "Old", old_value: null },
+        ],
+      },
+    ].map((a) => ({
+      ...a,
+      object_type: headers.p_obj_type,
+      object_id: Number(headers.p_obj_id),
+      page_name: headers.p_page_name,
+      name: fixtureUser.full_name,
+    }));
+    return {
+      items: headers.p_event
+        ? trail.filter((a) => a.event === headers.p_event)
+        : trail,
+    };
+  }
+  // Object attributes (shape as services/apps/examples/getSharedGetObjectAttributes): a dependent LOV pair, a
+  // required text with a regex, a number, a date, rich text, a read-only text and a hidden field.
+  if (op === "getSharedGetObjectAttributes")
+    return {
+      fields: [
+        {
+          fieldId: 1,
+          description: "Attribute 1",
+          fieldType: "LOV",
+          isVisible: "Y",
+          isRequired: "Y",
+          colspan: 6,
+          attributeName: "attribute_1",
+          helperText: "<p>Choose the programme.</p>",
+          options: ["P1", "P2"].map((v) => ({ optionId: v, optionValue: v })),
+        },
+        {
+          fieldId: 2,
+          description: "Attribute 2",
+          fieldType: "LOV",
+          isVisible: "Y",
+          isRequired: "N",
+          colspan: 6,
+          attributeName: "attribute_2",
+          parent_header_attr: "attribute_1",
+          options: [
+            ["SP1", "P1"],
+            ["SP2", "P1"],
+            ["SP3", "P2"],
+          ].map(([v, p]) => ({
+            optionId: v,
+            optionValue: v,
+            parent_lkp_code: p,
+          })),
+        },
+        {
+          fieldId: 3,
+          description: "Reference code",
+          fieldType: "TEXTBOX",
+          isVisible: "Y",
+          isRequired: "Y",
+          colspan: 4,
+          attributeName: "attribute_3",
+          regexValidation: "[A-Z]{2}\\d{3}",
+          regexDesc: "Two capitals and three digits, e.g. AB123",
+        },
+        {
+          fieldId: 4,
+          description: "Amount",
+          fieldType: "NUMERIC",
+          isVisible: "Y",
+          isRequired: "N",
+          colspan: 4,
+          attributeName: "attribute_4",
+        },
+        {
+          fieldId: 5,
+          description: "Review date",
+          fieldType: "DATE",
+          isVisible: "Y",
+          isRequired: "N",
+          colspan: 4,
+          attributeName: "attribute_5",
+        },
+        {
+          fieldId: 6,
+          description: "Notes",
+          fieldType: "RICHTEXTEDITOR",
+          isVisible: "Y",
+          isRequired: "N",
+          colspan: 12,
+          attributeName: "attribute_6",
+        },
+        {
+          fieldId: 7,
+          description: "Set by the office",
+          fieldType: "TEXTBOX",
+          isVisible: "Y",
+          isRequired: "N",
+          isReadonly: "Y",
+          colspan: 6,
+          attributeName: "attribute_7",
+        },
+        {
+          fieldId: 8,
+          description: "Hidden",
+          fieldType: "TEXTBOX",
+          isVisible: "N",
+          isRequired: "Y",
+          colspan: 6,
+          attributeName: "attribute_8",
+        },
+      ],
+    };
   if (op === "getDynamicFormsGetRequestDetails") {
     const id = Number(headers.request_id);
     return {
@@ -425,8 +631,10 @@ export async function mockOracle(
           request_id: id,
           request_number: `EOI_${id - 999}`,
           request_type: "OPPORTUNITIES-EOI",
-          status: "Draft",
-          status_code: "DRFT",
+          // EOI_2 is in approval (as the list shows it), so its Workflow tab can approve and withdraw.
+          ...(id === 1001
+            ? { status: "Awaiting Internal Approval", status_code: "AIA" }
+            : { status: "Draft", status_code: "DRFT" }),
           creation_date: "2026-10-01",
           ref_object_id: 1,
           ref_object_type: "OPPORTUNITIES",
@@ -434,15 +642,63 @@ export async function mockOracle(
       ],
     };
   }
-  // Form file fields list by secondary type; the in-memory fixture table holds what the file flow stored.
-  if (
-    op === "getPre_awardAttachmentsProposal_id" &&
-    query?.has("p_sec_obj_type")
-  )
+  // Form file fields list by secondary type, the Attachments tab by object; the in-memory fixture table holds both.
+  if (op === "getPre_awardAttachmentsProposal_id")
     return (await import("./attachments")).fixtureAttachments(query);
+  if (op === "getPre_awardLinks")
+    return (await import("./attachments")).fixtureLinks(query);
+  // The EOI record's History and Delegation panels (shapes as getSharedObjectStatus / GetSharedDelegations).
   if (
-    op === "getPre_awardAttachmentsProposal_id" ||
+    op === "getSharedObjectStatus" &&
+    headers.p_obj_type === "OPPORTUNITIES-EOI"
+  )
+    return {
+      items: [
+        {
+          object_status_lkp_code: "DRFT",
+          object_status: "Draft",
+          status_process_mode_lkp_code: "AUTO",
+          status_process_mode: "Auto",
+          comments: "Application created from the opportunity finder",
+          created_by: 101,
+          created_by_name: "Alex Morgan",
+          creation_date: "2026-10-01T09:30:00",
+        },
+      ],
+    };
+  if (op === "getSharedGetNextObjectStatus")
+    return {
+      items: [{ STATUS: "Awaiting Internal Approval", STATUS_CODE: "AIA" }],
+    };
+  if (op === "getPre_awardGetApprovalHistory")
+    return (await import("./approvals")).fixtureApprovals(op, headers, query);
+  if (
+    op === "getProposalDelegationsProposal_id" &&
+    headers.object_type === "OPPORTUNITIES-EOI"
+  )
+    return {
+      items: ["summary", "history"].map((tab, i) => ({
+        id: 501 + i,
+        pid: 102,
+        object_id: Number(headers.object_id),
+        page_id: i === 0 ? 1 : 6,
+        page_name: `opportunities-eoi-${tab}`,
+        page_desc: tab === "summary" ? "Summary" : "History",
+        component_type: "PAGE",
+        read_access: "Y",
+        edit_access: i === 0 ? "N" : "Y",
+        delete_access: "N",
+        start_date: "2026-10-01T00:00:00Z",
+        end_date: null,
+      })),
+    };
+  if (
     op === "getApproval_setupApproval_stages" ||
+    op === "getApproval_setupGet_stage_users" ||
+    op === "getApproval_groupApproval_group_m"
+  )
+    return (await import("./approvals")).fixtureApprovals(op, headers, query);
+  if (
     op === "getProposalDelegationsProposal_id" ||
     op === "getSharedObjectStatus"
   )
@@ -628,6 +884,47 @@ export async function mockOracle(
           employee_number: "EMP102",
         },
       ],
+    };
+  // A proposal's roles: the summary, plus FX rates editable from its Budget and Pricing tabs.
+  if (
+    op === "getSecurityUser_roles" &&
+    headers.p_obj_id &&
+    headers.p_obj_type?.endsWith("PROPOSAL")
+  )
+    return {
+      items: [
+        { page_name: "proposals-summary", read_access: "Y" },
+        ...["proposals-budget", "proposals-pricing", "proposal-fx-rates"].map(
+          (page_name, i) => ({
+            page_id: 40 + i,
+            page_name,
+            read_access: "Y",
+            edit_access: "Y",
+          }),
+        ),
+      ],
+    };
+  // FX rates of any proposal version (shape as legacy fx-rates-fragment.json fxRatesData).
+  if (op === "getProposalFxRates")
+    return {
+      can_edit: "Y",
+      is_active_version: "Y",
+      proposal_id: Number(headers.proposal_id),
+      proposal_period_version_id: Number(headers.version_id),
+      fx_rates: [
+        ["USD", "US Dollars", 1.34, 1.3, "OVERRIDDEN"],
+        ["EUR", "Euros", 1.17, 1.17, "ADMIN_DEFAULT"],
+        ["NZD", "New Zealand Dollars", 2.26, 2.26, "ADMIN_DEFAULT"],
+      ].map(([code, name, rate, base, status], i) => ({
+        proposal_fx_rate_id: 900 + i,
+        currency_code: code,
+        currency_name: name,
+        costing_fx_rate: rate,
+        pricing_fx_rate: base,
+        default_costing_fx_rate: base,
+        default_pricing_fx_rate: base,
+        rate_status: status,
+      })),
     };
   if (op === "getSecurityUser_roles")
     return {

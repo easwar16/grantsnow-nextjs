@@ -407,6 +407,7 @@ export function Finder({
             context.announcements.error) && (
             <div id="finder-announcements" className={styles.announcements}>
               <Announcements
+                id="finder-announcements-banner"
                 title={t.announcements}
                 messages={context.announcements.messages}
                 error={context.announcements.error}

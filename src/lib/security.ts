@@ -35,6 +35,16 @@ export function safeReturn(value: unknown) {
     return "/home";
   }
 }
+/** A configured image address (legacy `APPLICATION_LOGO_URL`): https, or a path on this origin; anything else is dropped. */
+export function safeImageUrl(value: unknown) {
+  if (typeof value !== "string" || value.trim() === "") return undefined;
+  if (/^\/(?![/\\])/.test(value)) return value;
+  try {
+    return new URL(value).protocol === "https:" ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
 export function trustedUsername(
   claims: Record<string, unknown>,
   claim: string,

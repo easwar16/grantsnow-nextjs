@@ -114,7 +114,7 @@ async function listAttachments(
       location: a.file_location,
     }));
 }
-function requireStorage() {
+export function requireStorage() {
   if (!oicConnected())
     throw new AppError(
       "UPSTREAM",
@@ -134,7 +134,7 @@ const recorded = z.object({
   attachment_id: z.coerce.number().int().positive().nullish(),
 });
 /** Fixture writes answer `{}`; the labelled development store stands in for the attachments table there. */
-async function recordAttachment(
+export async function recordAttachment(
   headers: Record<string, string>,
   body: Record<string, unknown>,
 ) {
@@ -144,7 +144,7 @@ async function recordAttachment(
     );
   return oracleWrite("postPre_awardAttachments", headers, body);
 }
-async function removeAttachment(headers: Record<string, string>) {
+export async function removeAttachment(headers: Record<string, string>) {
   if (fixtureMode())
     return (await import("@/test-support/attachments")).removeFixtureAttachment(
       headers.id,

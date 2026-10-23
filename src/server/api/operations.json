@@ -174,10 +174,114 @@
     "path": "/approval_setup/approval_stages",
     "headers": ["token"]
   },
+  "getApproval_setupGet_stage_users": {
+    "service": "apps",
+    "path": "/approval_setup/get_stage_users",
+    "headers": ["token", "p_approval_number", "stage_id", "doc_type"]
+  },
+  "getPre_awardGetApprovalHistory": {
+    "service": "apps",
+    "path": "/pre_award/getApprovalHistory",
+    "headers": ["token", "transaction_number", "approval_type"]
+  },
+  "getApproval_groupApproval_group_m": {
+    "service": "apps",
+    "path": "/approval_setup/getApprovers",
+    "headers": ["token", "approver_type"]
+  },
+  "getApproval_setupGenerate_stages": {
+    "service": "apps",
+    "path": "/approval_setup/generate_stages",
+    "headers": ["token"],
+    "write": true
+  },
+  "postApproval_setupPost_approval": {
+    "service": "apps",
+    "path": "/approval_setup/post_approval",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "postApproval_setupAdd_stage": {
+    "service": "apps",
+    "path": "/approval_setup/add_stage",
+    "headers": ["token", "legal_id", "org_id"],
+    "method": "POST",
+    "write": true
+  },
+  "deleteApproval_setupApproval_stages": {
+    "service": "apps",
+    "path": "/approval_setup/approval_stages",
+    "headers": ["token", "approval_number", "approval_stage_id"],
+    "method": "DELETE",
+    "write": true
+  },
+  "postApproval_setupApproval_stages_users": {
+    "service": "apps",
+    "path": "/approval_setup/approval_stages_users",
+    "headers": ["token", "p_new_appr", "p_stage_id"],
+    "method": "POST",
+    "write": true
+  },
+  "postApproval_setupReassign_stage": {
+    "service": "apps",
+    "path": "/approval_setup/reassign_stage",
+    "headers": ["token", "p_current_appr", "p_new_appr", "p_stage_id"],
+    "method": "POST",
+    "write": true
+  },
+  "deleteApproval_setupApproval_stages_users": {
+    "service": "apps",
+    "path": "/approval_setup/approval_stages_users",
+    "headers": ["token", "p_appr", "p_stage_id"],
+    "method": "DELETE",
+    "write": true
+  },
   "getSharedObjectStatus": {
     "service": "apps",
     "path": "/shared/objectStatus",
     "headers": ["token", "p_obj_type", "p_obj_id"]
+  },
+  "getProposalComments": {
+    "service": "apps",
+    "path": "/shared/comments/",
+    "headers": ["token"]
+  },
+  "postProposalComments": {
+    "service": "apps",
+    "path": "/shared/comments/",
+    "headers": ["token", "legal_id", "org_id", "user_id"],
+    "method": "POST",
+    "write": true
+  },
+  "deleteSharedComments": {
+    "service": "apps",
+    "path": "/shared/comments/",
+    "headers": ["token", "legal_id", "org_id", "user_id"],
+    "method": "DELETE",
+    "write": true
+  },
+  "getSharedGetObjectAudits2": {
+    "service": "apps",
+    "path": "/shared/getObjectAudits",
+    "headers": ["token", "p_obj_id", "p_obj_type", "p_page_name", "p_event"]
+  },
+  "getSharedGetObjectAttributes": {
+    "service": "apps",
+    "path": "/shared/getObjectAttributes",
+    "headers": ["token", "p_obj_type", "p_obj_id"]
+  },
+  "getProposalFxRates": {
+    "service": "apps",
+    "path": "/pre_awards_costing/proposalFxRates",
+    "headers": ["token", "proposal_id", "version_id"]
+  },
+  "postProposalFxRates": {
+    "service": "apps",
+    "path": "/pre_awards_costing/proposalFxRates",
+    "headers": ["token", "proposal_id", "version_id", "mode"],
+    "method": "POST",
+    "write": true
   },
   "getProposalEthical_dynFormsP_ref_module": {
     "service": "apps",
@@ -206,6 +310,45 @@
     "service": "apps",
     "path": "/shared/delegations/",
     "headers": ["token", "object_id", "object_type"]
+  },
+  "postProposalDelegations": {
+    "service": "apps",
+    "path": "/shared/delegations/",
+    "headers": ["token", "legal_id", "org_id"],
+    "method": "POST",
+    "write": true
+  },
+  "postProposalDelegationsDelegation_id": {
+    "service": "apps",
+    "path": "/shared/delegations/{delegation_id}",
+    "headers": ["token", "legal_id", "org_id"],
+    "method": "POST",
+    "write": true
+  },
+  "deleteProposalDelegations": {
+    "service": "apps",
+    "path": "/shared/delegations/",
+    "headers": [
+      "token",
+      "object_id",
+      "object_type",
+      "person_id",
+      "delegation_id"
+    ],
+    "method": "DELETE",
+    "write": true
+  },
+  "getSharedGetNextObjectStatus": {
+    "service": "apps",
+    "path": "/shared/getNextObjectStatus",
+    "headers": ["token", "p_object_id", "p_object_type"]
+  },
+  "postSharedObjectStatus": {
+    "service": "apps",
+    "path": "/shared/objectStatus",
+    "headers": ["token", "legal_id", "org_id", "user_id"],
+    "method": "POST",
+    "write": true
   },
   "getNotificationsNotifications": {
     "service": "apps",
@@ -419,6 +562,25 @@
     "service": "apps",
     "path": "/pre_award/attachments/",
     "headers": ["token", "id", "org_id", "legal_id"],
+    "method": "DELETE",
+    "write": true
+  },
+  "getPre_awardLinks": {
+    "service": "apps",
+    "path": "/pre_award/links",
+    "headers": ["token"]
+  },
+  "postPre_awardLinks": {
+    "service": "apps",
+    "path": "/pre_award/links",
+    "headers": ["token", "org_id", "legal_id"],
+    "method": "POST",
+    "write": true
+  },
+  "deletePre_awardLinks": {
+    "service": "apps",
+    "path": "/pre_award/links",
+    "headers": ["token"],
     "method": "DELETE",
     "write": true
   }

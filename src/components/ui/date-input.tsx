@@ -100,6 +100,7 @@ export function DateInput({
       {/* The native picker, opened by the button; it stays out of the tab order and the accessibility tree. */}
       <input
         ref={picker}
+        id={`${id}-picker`}
         className={styles.picker}
         type="date"
         tabIndex={-1}

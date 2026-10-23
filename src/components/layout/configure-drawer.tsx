@@ -1,7 +1,7 @@
 "use client";
 import { idPart } from "@/lib/ids";
 import { useEffect, useId, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useRemote } from "@/lib/use-remote";
 import { useInFlight } from "@/lib/use-in-flight";
 import { Skeleton } from "@/components/feedback/skeleton";
@@ -12,6 +12,7 @@ import {
   accessibilityKeys,
   accessibilityLabels,
   nextAccessibility,
+  preferencesChanges,
   type AccountData,
 } from "@/features/account/contracts";
 import { findTheme, DEFAULT_THEME } from "@/features/account/themes";
@@ -115,6 +116,8 @@ function Settings({
   const { labels } = useShell();
   const toast = useToast();
   const router = useRouter();
+  // Legacy shows the infolet switches on Home only (`currentPage.id === 'home-start'`).
+  const onHome = usePathname() === "/home";
   const { run, busy } = useInFlight();
   const [draft, setDraft] = useState(initial.settings);
   const saved = useRef(false);
@@ -150,22 +153,7 @@ function Settings({
     // Blocks Save from click to settle (D44).
     await run(async () => {
       try {
-        await postAccount(
-          "dashboard",
-          mode === "accessibility"
-            ? { accessibility: draft.accessibility }
-            : {
-                theme: draft.theme,
-                needAttention: draft.needAttention,
-                insights: draft.insights,
-                ...(draft.opportunity === undefined
-                  ? {}
-                  : { opportunity: draft.opportunity }),
-                ...(draft.notifications === undefined
-                  ? {}
-                  : { notifications: draft.notifications }),
-              },
-        );
+        await postAccount("dashboard", preferencesChanges(mode, draft, onHome));
         saved.current = true;
         toast.show("success", "Preferences saved");
         onClose();
@@ -256,69 +244,74 @@ function Settings({
                 </button>
               </div>
             </section>
-            <section id="configure-infolets">
-              <h3 className={styles.heading}>
-                {labels.infolets}{" "}
-                <HelpButton
-                  id="configure-infolets-help"
-                  html={labels.infoletsHelp}
-                />
-              </h3>
-              {(["needAttention", "insights"] as const).map((group) => (
-                <div key={group} id={`configure-group-${idPart(group)}`}>
-                  <label className={styles.switch}>
-                    <span>{labels[group]}</span>
-                    <input
-                      id={`configure-group-${idPart(group)}-switch`}
-                      type="checkbox"
-                      role="switch"
-                      checked={Object.values(draft[group]).some(Boolean)}
-                      onChange={(e) => setGroup(group, e.target.checked)}
-                    />
-                  </label>
-                  <div className={styles.children}>
-                    {Object.entries(draft[group]).map(([key, on]) => (
+            {onHome && (
+              <section id="configure-infolets">
+                <h3 className={styles.heading}>
+                  {labels.infolets}{" "}
+                  <HelpButton
+                    id="configure-infolets-help"
+                    html={labels.infoletsHelp}
+                  />
+                </h3>
+                {(["needAttention", "insights"] as const).map((group) => (
+                  <div key={group} id={`configure-group-${idPart(group)}`}>
+                    <label className={styles.switch}>
+                      <span>{labels[group]}</span>
+                      <input
+                        id={`configure-group-${idPart(group)}-switch`}
+                        type="checkbox"
+                        role="switch"
+                        checked={Object.values(draft[group]).some(Boolean)}
+                        onChange={(e) => setGroup(group, e.target.checked)}
+                      />
+                    </label>
+                    <div className={styles.children}>
+                      {Object.entries(draft[group]).map(([key, on]) => (
+                        <label className={styles.switch} key={key}>
+                          <span>{initial.labels[key]}</span>
+                          <input
+                            id={`configure-infolet-${idPart(key)}`}
+                            type="checkbox"
+                            role="switch"
+                            checked={on}
+                            onChange={(e) =>
+                              setDraft((d) => ({
+                                ...d,
+                                [group]: {
+                                  ...d[group],
+                                  [key]: e.target.checked,
+                                },
+                              }))
+                            }
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {(["opportunity", "notifications"] as const).map(
+                  (key) =>
+                    draft[key] !== undefined && (
                       <label className={styles.switch} key={key}>
-                        <span>{initial.labels[key] || friendlyName(key)}</span>
+                        <span>
+                          {key === "opportunity"
+                            ? labels.opportunities
+                            : labels.notifications}
+                        </span>
                         <input
-                          id={`configure-infolet-${idPart(key)}`}
+                          id={`configure-${key}`}
                           type="checkbox"
                           role="switch"
-                          checked={on}
+                          checked={draft[key] === true}
                           onChange={(e) =>
-                            setDraft((d) => ({
-                              ...d,
-                              [group]: { ...d[group], [key]: e.target.checked },
-                            }))
+                            setDraft((d) => ({ ...d, [key]: e.target.checked }))
                           }
                         />
                       </label>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              {(["opportunity", "notifications"] as const).map(
-                (key) =>
-                  draft[key] !== undefined && (
-                    <label className={styles.switch} key={key}>
-                      <span>
-                        {key === "opportunity"
-                          ? labels.opportunities
-                          : labels.notifications}
-                      </span>
-                      <input
-                        id={`configure-${key}`}
-                        type="checkbox"
-                        role="switch"
-                        checked={draft[key] === true}
-                        onChange={(e) =>
-                          setDraft((d) => ({ ...d, [key]: e.target.checked }))
-                        }
-                      />
-                    </label>
-                  ),
-              )}
-            </section>
+                    ),
+                )}
+              </section>
+            )}
           </>
         )}
       </div>
@@ -335,13 +328,4 @@ function Settings({
       </div>
     </>
   );
-}
-// An infolet the widget catalogue does not name: its key split into words.
-function friendlyName(key: string) {
-  return key
-    .replace(/Chart$/, "")
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/^pBy/, "Proposals by ")
-    .replace(/^eBy/, "Ethics by ")
-    .replace(/^aBy/, "Awards by ");
 }

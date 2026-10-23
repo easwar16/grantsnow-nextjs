@@ -1,14 +1,14 @@
-import { idPart } from "@/lib/ids";
 import "server-only";
 import { State } from "@/components/feedback/state";
 import { resources, label } from "@/server/configuration/resources";
 import { displayFormat } from "@/server/configuration/formatting";
 import {
   eoiPageLock,
-  eoiRecordTable,
   type EoiRecordContext,
-  type TableTab,
 } from "@/server/opportunities/record";
+import { workflowView } from "@/server/approvals/workflow";
+import { eoiApprovalHost } from "@/server/opportunities/eoi-record/workflow";
+import { ApprovalWorkflow } from "@/features/approvals/approval-workflow";
 import {
   isFormTab,
   type EoiTab,
@@ -21,11 +21,12 @@ import {
 } from "@/server/opportunities/eoi-record/opportunity";
 import { tabName } from "@/server/opportunities/eoi-record/shell";
 import { publicError } from "@/lib/errors";
-import { dateDisplay } from "@/lib/format";
 import { ApplicationTab } from "./application-tab";
 import { FormTab } from "./form-tab";
 import { TabLock } from "./record-context";
 import { Summary } from "./summary";
+import { EoiObjectTab } from "./object-tabs";
+import { AttachmentsTab } from "@/features/attachments/attachments-tab";
 import styles from "./record.module.css";
 const BUNDLE = "opportunities-eoi";
 async function applicationTexts() {
@@ -73,22 +74,22 @@ export async function SummaryTab({
     />
   );
 }
-async function TableContent({ id, tab }: { id: string; tab: TableTab }) {
-  // The table read starts with the labels; its failure is settled here so it is never unhandled.
-  const read = eoiRecordTable(id, tab).then(
-    (table) => ({ table }),
-    (error: unknown) => ({ error }),
-  );
-  const [rows, format, result] = await Promise.all([
-    resources(),
-    displayFormat(),
-    read,
-  ]);
-  const name = tabName(rows, tab);
+/** The Workflow tab: the shared approval workflow with the record as its host. */
+async function WorkflowContent({ id }: { id: string }) {
+  // The route read starts with the labels; its failure is settled here so it is never unhandled.
+  const read = eoiApprovalHost(id)
+    .then(workflowView)
+    .then(
+      (view) => ({ view }),
+      (error: unknown) => ({ error }),
+    );
+  const [rows, result] = await Promise.all([resources(), read]);
+  const name = tabName(rows, "approvals");
   if ("error" in result) {
     const e = publicError(result.error);
     return (
       <State
+        id="eoi-workflow-error"
         title={`${name} unavailable`}
         message={e.message}
         action={e.action}
@@ -96,48 +97,14 @@ async function TableContent({ id, tab }: { id: string; tab: TableTab }) {
       />
     );
   }
-  const { table } = result;
   return (
-    <div id={`eoi-record-${tab}`} className={styles.tab}>
-      <h2 id={`eoi-record-${tab}-heading`}>{name}</h2>
-      {table.rows.length ? (
-        <div className={styles.tableWrap}>
-          <table id={`eoi-record-${tab}-table`}>
-            <thead>
-              <tr>
-                {table.columns.map((c) => (
-                  <th key={c.key} scope="col">
-                    {c.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {table.rows.map((row) => (
-                <tr key={row.id} id={`eoi-record-${tab}-${idPart(row.id)}`}>
-                  {table.columns.map((c) => (
-                    <td key={c.key}>
-                      {c.key.endsWith("date")
-                        ? dateDisplay(row.values[c.key], format)
-                        : row.values[c.key]}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <State
-          title={label(
-            rows,
-            BUNDLE,
-            "helper-texts",
-            "no-data",
-            "No data to display.",
-          )}
-        />
-      )}
+    <div id="eoi-record-approvals" className={styles.tab}>
+      <h2 id="eoi-record-approvals-heading">{name}</h2>
+      <ApprovalWorkflow
+        id="eoi-workflow"
+        api={`/opportunities/eoi/${id}/workflow`}
+        view={result.view}
+      />
     </div>
   );
 }
@@ -203,7 +170,13 @@ export async function RecordTabContent({
         />
       </>
     );
-  } else content = <TableContent id={context.id} tab={tab} />;
+  } else if (tab === "attachments")
+    content = (
+      <AttachmentsTab host="eoi" record={context.id} id="eoi-attachments" />
+    );
+  else if (tab === "history" || tab === "delegation")
+    content = <EoiObjectTab id={context.id} tab={tab} />;
+  else content = <WorkflowContent id={context.id} />;
   return (
     <>
       <TabLock tab={tab} lock={lock} />

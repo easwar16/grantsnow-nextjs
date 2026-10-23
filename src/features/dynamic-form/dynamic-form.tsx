@@ -70,6 +70,8 @@ export interface DynamicFormProps {
   editable: boolean;
   /** Called whenever the dirty state changes, for the host's unsaved-changes guard. */
   onDirtyChange?: (dirty: boolean) => void;
+  /** Called when the form becomes ready or stops being ready, so the host can hold its save until then. */
+  onReadyChange?: (ready: boolean) => void;
   ref?: React.Ref<DynamicFormHandle>;
 }
 /** What was loaded, for which target (`key`); another key means the current target is still loading. */
@@ -124,6 +126,7 @@ export function DynamicForm({
   objectId,
   editable,
   onDirtyChange,
+  onReadyChange,
   ref,
 }: DynamicFormProps) {
   const toast = useToast(),
@@ -136,7 +139,8 @@ export function DynamicForm({
     request = useRef<AbortController | null>(null),
     editableRef = useRef(editable),
     dirtyRef = useRef(false),
-    onDirty = useRef(onDirtyChange);
+    onDirty = useRef(onDirtyChange),
+    onReady = useRef(onReadyChange);
   const id = objectId ?? savedId;
   // The target's identity as a string, so effects and callbacks follow its values, not a new object per render.
   const targetKey = JSON.stringify({
@@ -187,7 +191,10 @@ export function DynamicForm({
   }, [model, editable]);
   useEffect(() => {
     onDirty.current = onDirtyChange;
-  }, [onDirtyChange]);
+    onReady.current = onReadyChange;
+  }, [onDirtyChange, onReadyChange]);
+  const ready = loaded.status === "ready";
+  useEffect(() => onReady.current?.(ready), [ready]);
   const dirty = model?.hasChanges() ?? false;
   useEffect(() => {
     if (dirtyRef.current === dirty) return;
@@ -203,19 +210,30 @@ export function DynamicForm({
     [toast],
   );
   const check = useCallback(() => {
-    if (!model || model.validate()) return true;
+    // Not loaded (or failed) is not valid: a host must not create a record whose answers cannot be saved.
+    if (!model) {
+      if (loaded.status === "failed")
+        toast.show(
+          "error",
+          "The form could not be loaded, so it can't be saved.",
+        );
+      return false;
+    }
+    if (model.validate()) return true;
     // The required message when something is missing; otherwise the fields are filled but a rule failed.
     toast.show(
       "error",
       model.hasMissing()
         ? (texts?.requiredFields ?? "Please fill all the required fields")
         : "Please correct the fields marked in red",
+      undefined,
+      false,
     );
     requestAnimationFrame(() =>
       host.current?.querySelector<HTMLElement>(INVALID)?.focus(),
     );
     return false;
-  }, [model, texts, toast]);
+  }, [loaded.status, model, texts, toast]);
   const save = useCallback(
     async (overrideId?: string): Promise<boolean> => {
       if (loaded.status === "failed") {

@@ -134,14 +134,22 @@ const RAW_FORMS = [
     ],
   },
 ];
-const ROLES = (edit = "Y", read = "Y") => ({
+type RoleRow = {
+  page_id?: number;
+  page_name: string;
+  read_access: string;
+  edit_access: string;
+};
+const ROLES = (edit = "Y", read = "Y"): { items: RoleRow[] } => ({
   items: [
     {
+      page_id: 101,
       page_name: "opportunities-eoi-application",
       read_access: read,
       edit_access: edit,
     },
     {
+      page_id: 100,
       page_name: "opportunities-eoi-summary",
       read_access: "Y",
       edit_access: "N",
@@ -149,6 +157,8 @@ const ROLES = (edit = "Y", read = "Y") => ({
   ],
 });
 let roles = ROLES();
+// The application page's finalize lock (getLockStatus); "LOCK" means finalized, a thrown read means unknown.
+let lock: string | Error = "UNLOCK";
 let status = "DRFT";
 let forms: unknown = RAW_FORMS;
 let attachments: Record<string, unknown>[] = [];
@@ -156,6 +166,7 @@ beforeEach(() => {
   vi.stubEnv("APP_ORIGIN", origin);
   roles = ROLES();
   forget(""); // roles are held per record (60 s); a changed grant is a fresh read here
+  lock = "UNLOCK";
   status = "DRFT";
   forms = RAW_FORMS;
   attachments = [];
@@ -176,6 +187,9 @@ beforeEach(() => {
       switch (op) {
         case "getSecurityUser_roles":
           return roles;
+        case "getProposalGetLockStatus":
+          if (lock instanceof Error) throw lock;
+          return { status: lock };
         case "getDynamicFormsGetRequestDetails":
           return {
             items: [
@@ -421,6 +435,7 @@ describe("POST /api/dynamic-form", () => {
             ? RAW_FORMS
             : [{ formId: 67, sections: [] }];
         if (op === "getSecurityUser_roles") return roles;
+        if (op === "getProposalGetLockStatus") return { status: "UNLOCK" };
         if (op === "getDynamicFormsGetRequestDetails")
           return {
             items: [
@@ -475,6 +490,21 @@ describe("POST /api/dynamic-form", () => {
   ])("refuses %s without writing", async (_name, body, code) => {
     expect((await postReq({ target, answers: body })).status).toBe(code);
     expect(state.oracleWrite).not.toHaveBeenCalled();
+  });
+  it("refuses a save to a finalized page, and when its lock cannot be read, without writing", async () => {
+    const ok = answers([{ field_id: "1574", value: "x" }]);
+    lock = "LOCK";
+    expect((await postReq({ target, answers: ok })).status).toBe(403);
+    lock = new Error("lock read failed");
+    expect((await postReq({ target, answers: ok })).status).toBe(403);
+    expect(state.oracleWrite).not.toHaveBeenCalled();
+    lock = "UNLOCK";
+    expect((await postReq({ target, answers: ok })).status).toBe(200);
+    expect(calls("getProposalGetLockStatus").at(-1)?.[1]).toMatchObject({
+      prop_id: "3934",
+      lock_level: "101",
+      module_name: "OPPORTUNITIES-EOI",
+    });
   });
   it("fails closed without edit, outside a draft, without a record, or cross-origin", async () => {
     const ok = answers([{ field_id: "1574", value: "x" }]);
@@ -603,6 +633,12 @@ describe("POST /api/files", () => {
     expect((await uploadReq(new File(["x"], "cv.pdf"))).status).toBe(409);
     expect(state.oicUpload).not.toHaveBeenCalled();
     expect(state.oracleWrite).not.toHaveBeenCalled();
+  });
+  it("refuses a file upload to a finalized page", async () => {
+    lock = "LOCK";
+    const res = await uploadReq(new File(["x"], "cv.pdf"));
+    expect(res.status).toBe(403);
+    expect(state.oicUpload).not.toHaveBeenCalled();
   });
   it("fails closed: read-only page, a submitted record, no record, storage off, cross-origin", async () => {
     const file = new File(["x"], "cv.pdf");

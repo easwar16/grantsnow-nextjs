@@ -5,7 +5,11 @@ import {
   label,
   resourceDescription,
 } from "@/server/configuration/resources";
-import { displayFormat } from "@/server/configuration/formatting";
+import {
+  displayFormat,
+  globalVariables,
+} from "@/server/configuration/formatting";
+import { safeImageUrl } from "@/lib/security";
 import { availableThemes } from "@/server/account/themes";
 import { AppShell } from "@/components/layout/app-shell";
 import { Navigation } from "@/components/layout/navigation";
@@ -24,6 +28,7 @@ import { externalToolUrls } from "./modules/external-tools";
 import { ChatbotMount } from "@/components/chatbot/chatbot-mount";
 import { cachedRead } from "@/server/cache/reads";
 import { TTL } from "@/server/cache/memo";
+import { AppError } from "@/lib/errors";
 type Labels = Awaited<ReturnType<typeof resources>>;
 // GN-Angular marks the Opportunities group and the finder when getOpportunitiesNewFlags reports anything new.
 const flagged = new Set(["opportunities-group", "opportunities-finder"]);
@@ -99,11 +104,25 @@ export default async function AuthLayout({
   const isNew = items.some((i) => i.id === "opportunities-group")
     ? opportunitiesNew(session.token)
     : Promise.resolve(false);
-  const preferences = dashboardConfiguration();
-  const [config, labels, format, themes] = await Promise.all([
+  // The shell only takes the theme and accessibility from these, so a failed read shows the defaults, not an error page.
+  const preferences = dashboardConfiguration().catch(
+    (e): Awaited<ReturnType<typeof dashboardConfiguration>> => {
+      if (e instanceof AppError && e.status === 401) throw e;
+      return { needAttention: {}, insights: {} };
+    },
+  );
+  const [config, labels, format, logo, themes] = await Promise.all([
     preferences,
     resources(),
     displayFormat(),
+    // Legacy header: the configured APPLICATION_LOGO_URL, else the GrantsNow logo; the logo is decoration, so a failure shows ours.
+    globalVariables(session.token).then(
+      (items) =>
+        safeImageUrl(
+          items.find((v) => v.var_key === "APPLICATION_LOGO_URL")?.var_value,
+        ),
+      () => undefined,
+    ),
     // Only an organisation theme needs getCustomTheme; the presets are known.
     preferences.then((c) =>
       c.theme?.startsWith("apitheme:") ? availableThemes() : presetThemes,
@@ -129,6 +148,7 @@ export default async function AuthLayout({
       )}
       <AppShell
         name={user.name}
+        logo={logo}
         labels={shellLabels(labels)}
         format={format && { dateFormat: format.dateFormat }}
         accessibility={Object.fromEntries(

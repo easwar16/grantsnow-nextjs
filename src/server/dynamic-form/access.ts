@@ -60,6 +60,10 @@ export function pageOf(t: Pick<FormTarget, "objectType" | "slot">) {
 const rolesSchema = z.object({
   items: z.array(
     z.object({
+      page_id: z
+        .union([z.number(), z.string().regex(/^\d+$/)])
+        .nullish()
+        .transform((v) => (v === null || v === undefined ? null : Number(v))),
       page_name: z.string(),
       read_access: z
         .string()
@@ -126,6 +130,30 @@ export interface FormRecord {
  * Read: the record's role rows grant the page. Edit: every row also grants edit and the application is a draft.
  * Without a record only a new application's form can be read, under the Apply rules.
  */
+const lockSchema = z.object({ status: z.string().nullish() });
+/** Whether the page is locked (finalized). A page without an id, or a lock that cannot be read, counts as locked. */
+async function pageLocked(
+  token: string,
+  requestId: string,
+  roles: z.infer<typeof rolesSchema>["items"],
+  page: string,
+) {
+  const pageRow = roles.find((r) => r.page_name === page && r.page_id !== null);
+  if (!pageRow) return true;
+  try {
+    const b = lockSchema.parse(
+      await oracle("getProposalGetLockStatus", {
+        token,
+        prop_id: requestId,
+        lock_level: String(pageRow.page_id),
+        module_name: "OPPORTUNITIES-EOI",
+      }),
+    );
+    return b.status !== "UNLOCK";
+  } catch {
+    return true;
+  }
+}
 export async function authorizeForm(t: FormTarget, mode: "read" | "edit") {
   const { session, user } = await authenticate();
   const page = pageOf(t);
@@ -156,6 +184,9 @@ export async function authorizeForm(t: FormTarget, mode: "read" | "edit") {
   ).items;
   const access = pageAccess(roles, page);
   if (!access.read || (mode === "edit" && !access.edit)) throw denied();
+  // A finalized page is read-only on the server too, not only on screen (VBCS getLockStatus, lock_level = page id).
+  const lock =
+    mode === "edit" ? early(pageLocked(token, t.objectId, roles, page)) : null;
   const details = detailsSchema.parse(await requestDetails).items;
   const r = details[0];
   if (
@@ -177,6 +208,8 @@ export async function authorizeForm(t: FormTarget, mode: "read" | "edit") {
     );
   if (mode === "edit" && r.status_code !== "DRFT")
     throw denied("Only a draft application can be changed.");
+  if (lock && (await lock))
+    throw denied("This page is finalized; unlock it to make changes.");
   const record: FormRecord = { id: t.objectId, number: r.request_number };
   return { token, user, page, record };
 }

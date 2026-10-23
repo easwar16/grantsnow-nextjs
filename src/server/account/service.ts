@@ -6,7 +6,7 @@ import {
 } from "@/server/configuration/service";
 import { dateDisplay } from "@/lib/format";
 import { displayFormat } from "@/server/configuration/formatting";
-import { widgets } from "@/server/home/widgets";
+import { infoletSettings, infoletSwitches } from "@/features/account/infolets";
 import { authenticate, validatedIdentity } from "@/server/session/service";
 import { early } from "@/server/async";
 import { memo, memoKey, TTL } from "@/server/cache/memo";
@@ -104,12 +104,6 @@ export async function accountData(panel = "profile"): Promise<AccountData> {
               role.role_name +
               (typeof role.org_name === "string" ? ` (${role.org_name})` : ""),
           });
-  const maps = (group: string) =>
-    Object.fromEntries(
-      Object.entries(
-        (config[group] || {}) as Record<string, { isVisible?: boolean }>,
-      ).map(([k, v]) => [k, v.isVisible === true]),
-    );
   const accessibility = Object.fromEntries(
     accessibilityKeys.map((key) => [
       key,
@@ -209,14 +203,28 @@ export async function accountData(panel = "profile"): Promise<AccountData> {
     research,
     researchAllowed,
     options,
-    labels: Object.fromEntries(widgets.map((w) => [w.id, w.title])),
+    // Switch labels from RB, as legacy's drawer (not the widget titles).
+    labels: Object.fromEntries(
+      Object.values(infoletSwitches)
+        .flat()
+        .map(([key, group, name, seed]) => [
+          key,
+          label(rows, "dashboard", group, name, seed),
+        ]),
+    ),
     themes: await themes,
     presenceAllowed: visible(rows, "digital-presence"),
     settings: {
       theme: typeof config.theme === "string" ? config.theme : "theme-default",
       accessibility,
-      needAttention: maps("needAttention"),
-      insights: maps("insights"),
+      needAttention: infoletSettings(
+        "needAttention",
+        config.needAttention as Parameters<typeof infoletSettings>[1],
+      ),
+      insights: infoletSettings(
+        "insights",
+        config.insights as Parameters<typeof infoletSettings>[1],
+      ),
       ...(typeof config.opportunity === "boolean"
         ? { opportunity: config.opportunity }
         : {}),
@@ -225,6 +233,13 @@ export async function accountData(panel = "profile"): Promise<AccountData> {
         : {}),
     },
   };
+}
+function jsonOrText(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
 }
 async function write(path: string, token: string, body: unknown) {
   if (fixtureMode()) {
@@ -261,12 +276,13 @@ async function write(path: string, token: string, body: unknown) {
     throw new AppError("EXPIRED", "Your session has expired.", 401);
   if (response.status === 403)
     throw new AppError("FORBIDDEN", "This settings change was denied.", 403);
-  if (!response.ok)
-    throw new AppError(
-      "UPSTREAM",
-      "Settings could not be saved. Please retry.",
-    );
   const text = await response.text();
+  if (!response.ok)
+    // Legacy's failure toast shows the body's error_code : error_description and preventive_action.
+    throw (
+      businessError(jsonOrText(text)) ??
+      new AppError("UPSTREAM", "Settings could not be saved. Please retry.")
+    );
   if (text.trim()) {
     let parsed;
     try {

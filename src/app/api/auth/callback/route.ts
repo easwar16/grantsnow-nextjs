@@ -41,6 +41,7 @@ export async function GET(request: Request) {
       token: b.token,
       expiresAt: Math.min(b.expiresAt, claims.exp * 1000),
       subject: claims.sub,
+      username,
       identityExpiresAt: claims.exp * 1000,
       fixture: false,
     };

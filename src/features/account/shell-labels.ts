@@ -21,6 +21,7 @@ export const shellLabelKeys = {
   ],
   login: ["button-labels", "login", "Login"],
   close: ["button-labels", "close", "Close"],
+  moreInfo: ["button-labels", "more_info", "More Info"],
   save: ["button-labels", "save", "Save"],
   userPreferences: ["header-labels", "user-preferences", "Preferences"],
   accessibilityTitle: ["header-labels", "accessibility", "Accessibility"],

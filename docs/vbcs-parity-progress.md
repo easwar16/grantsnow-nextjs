@@ -95,3 +95,70 @@ The finder, the EOI list, the EOI record and the finder's dialogs were ported fr
 - **Client:** an app store (`src/lib/app-store.tsx`, `useReducer` + Context) backs `useRemote` and the dialog reads. It shares one request per key and keeps the latest answer.
 - **Setup:** `.env.example` carries every DEV URL, so a teammate supplies only the credentials (see the README).
 - **Checks:** 563 unit/integration tests, typecheck and lint passed.
+
+## EOI record fragments — 2026-10-23
+
+The remaining Opportunities work is built as shared, host-agnostic panels, with the EOI record as the first host. Each one's legacy evidence is in the code comments and the GN-Rebuild KB.
+
+- **Built:**
+  - Comments (with @mentions; edit and delete limited to the user's own comments) and the Audit trail (`src/features/objects/`, `src/server/objects/`).
+  - Attachments: folders, upload, download, delete, preview and links (`src/features/attachments/`, `src/server/files/attachments.ts`).
+  - Approval workflow: stages, approvers, the Add Stage dialog, Generate/Submit/Withdraw and the approver's verdicts (`src/features/approvals/`, `src/server/approvals/`).
+  - History (Add Status, Abandon) and Delegation (`src/features/objects/object-*.tsx`).
+  - Object attributes on the Application tab, behind `labels.show-attributes`, which is seeded `N`.
+  - FX rates, built but not mounted (Proposals belongs to Easwar).
+  - Shell audit fixes and the app-wide KB improvements.
+- **Write gates:** every write is checked on the server against the page's role, its lock, the RB row, and the record's own rows.
+- **Approval actor:** `action_by` is the session's verified username. DEV browser sessions carry none, because `session/validate` returns no username, so approval actions can't be tested through the DEV bridge.
+- **Dynamic-form defects from the live run, fixed:**
+  - The `*` in labels wrapped onto its own line.
+  - Checkbox and radio groups had no id.
+  - Create could be pressed before the form loaded. It now waits, and `check()` fails closed until the form is ready, so no request is inserted without its answers.
+  - Validation toasts now auto-close, as legacy's `transient` ones do.
+- **Deep links:** a `?comment-id=` link opens the comments drawer.
+- **Decision:** the deadline warning counts calendar days, so it still warns on the closing day, and a configured `0` stays `0`. This supersedes GN-Angular's "fractional days" (KB Audit 2026-10-16 L).
+
+**Dependencies (owner-approved 2026-10-23):** `next` and `eslint-config-next` went to 16.4.2 and `quill` to 2.0.2 for npm advisories; `npm audit --omit=dev` now reports 0.
+
+**Evidence:** 662 unit/integration tests, typecheck, lint, Prettier, the isolated production build and 13 fixture Chromium journeys all pass. The new journey covers:
+
+- Create waits for the form;
+- the validation toast closes on its own;
+- create, then Finalize refused with unsaved changes;
+- Save as draft, then Finalize on and off, with the Workflow tab appearing and disappearing;
+- an attachment upload and delete.
+
+Its fixtures are in `src/test-support/eoi-writes.ts`. That lock store is held on `globalThis`, because the route handler and the record layout can load separate module instances. The fixture user now carries a `legal_id`, as live users do.
+
+**Mocks only:** none of these panels has been run against live DEV yet.
+
+**Owner decisions (2026-10-23):** attachments change only in `DRFT` or `REWORK` (`ATTACHMENT_STATUSES`; the server refuses anything else, and the panel hides its edit controls). Attributes persistence waits on the backend; the frontend stands as built.
+
+**Live DEV run on application 3954 (AOI_514), 2026-10-23:**
+
+- Last session's Create answers persisted.
+- Edit, then Save as Draft, saved and re-read the edited answer.
+- Finalize was refused with unsaved changes; no lock request was sent.
+- Finalize on: lock 200, the Workflow tab appeared, Edit was disabled, and the state persisted across a reload.
+- Finalize off: 200, Workflow hidden, Edit enabled again.
+- Attachments upload was refused by OIC with **401**: the `.env.local` OIC credentials were rejected. Nothing was recorded, because storage is written first.
+- Not testable on this record: the Dynamic Form tabs (none on 3954) and the Workflow actions (DEV browser sessions have no username).
+- **Network:** connects to the ORDS host intermittently stall from this machine after idle (up to 10 s on connect, 48 s on one validate). DNS was measured fast, and each IP connects in about 0.15 s once warm. Failed calls were all reads before any write, so no write was half-applied. Retrying idempotent reads on a connect timeout is left to the owner, as a transport-framework decision.
+- **The dev 503 pairs are not server responses:** the server logged only 200s for both routes. They are StrictMode-aborted first fetches.
+
+**Oracle transport (owner-approved 2026-10-23):**
+
+- **What happens:** the VBCS app reaches ORDS through VB's proxy inside Oracle's cloud. This app calls ORDS from the machine it runs on, which occasionally stalls new connections after idle.
+- **Why the app felt it:** Node's default fetch drops idle connections after 4 s, so most clicks needed new ones.
+- **Change:** `src/server/api/transport.ts` now fetches through one `undici` pool. `undici` 8.12.3 is now a pinned direct dependency; it was already in the lockfile through jsdom. The pool keeps idle connections for 30 s (60 s max, capped by ORDS's own Keep-Alive hint).
+- **Retry rule:** a read whose connection timed out is retried once, inside the same deadline. Writes are never re-sent.
+- **Live soak:** 12 of 12 requests passed with gaps of 0–120 s, with no connect timeouts. The retry path itself is proven by unit tests only, because no stall occurred during the soak.
+- **Debugging:** `npm run dev:inspect` shows these calls in Node DevTools' Network tab (see the README).
+- **Delegation:** stays as legacy (owner).
+- **OIC:** after the owner updated the credentials, upload, preview read-back and delete all passed live.
+
+**Outstanding:**
+
+- Owner: confirm whether a `validate` field (for example `emp_num`) equals the IDCS username, or register localhost with IDCS, so approvals can be tested locally.
+- The live files run (upload, download, delete) once OIC accepts the credentials.
+- Delete test application 3954 on DEV when finished.

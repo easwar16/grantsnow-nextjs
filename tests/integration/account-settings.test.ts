@@ -72,6 +72,31 @@ it("handles business failure inside HTTP 200 as a failed save", async () => {
     saveAccount("dashboard", { theme: "theme-dark" }),
   ).rejects.toMatchObject({ code: "BUSINESS" });
 });
+it("shows the backend's error, not a generic one, when the save fails over HTTP", async () => {
+  vi.mocked(fetch).mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        error_code: "ORA-20001",
+        error_description: "Preferences locked",
+        preventive_action: "Try again later",
+      }),
+      { status: 500 },
+    ),
+  );
+  await expect(
+    saveAccount("dashboard", { theme: "theme-dark" }),
+  ).rejects.toMatchObject({
+    code: "BUSINESS",
+    message: "ORA-20001 : Preferences locked",
+    action: "Try again later",
+  });
+  vi.mocked(fetch).mockResolvedValue(
+    new Response("<html>Bad gateway</html>", { status: 502 }),
+  );
+  await expect(
+    saveAccount("dashboard", { theme: "theme-dark" }),
+  ).rejects.toMatchObject({ code: "UPSTREAM" });
+});
 it("uses token-bound research write and deduplicated source CSV without browser identity", async () => {
   await saveAccount("research", {
     research_areas: ["Medicine", "Medicine"],

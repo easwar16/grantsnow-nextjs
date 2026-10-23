@@ -62,6 +62,7 @@ export async function POST(request: Request) {
         token: b.token,
         expiresAt: b.expiresAt,
         subject: "fixture-subject",
+        username: "fixture.researcher",
         identityExpiresAt: Date.now() + 8 * 3600000,
         fixture: true,
       };

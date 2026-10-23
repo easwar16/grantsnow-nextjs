@@ -5,7 +5,9 @@ import {
   nextAccessibility,
   researchSchema,
   dashboardChange,
+  preferencesChanges,
 } from "@/features/account/contracts";
+import { infoletSettings } from "@/features/account/infolets";
 it("cycles multi-step accessibility controls and toggles binary controls", () => {
   expect(
     [0, 25, 50, 75, 100].map((v) => nextAccessibility("accFontSize", v)),
@@ -74,4 +76,36 @@ it("rejects incomplete Out of Office and unknown status identity", async () => {
       pid: "other",
     }).success,
   ).toBe(false);
+});
+
+const draft = {
+  theme: "theme-dark",
+  accessibility: { accFontSize: 25 },
+  needAttention: { pPendingApprovals: false },
+  insights: { pByYearChart: true },
+  opportunity: true,
+};
+it("saves the infolets only where the drawer showed them (legacy: Home)", () => {
+  expect(preferencesChanges("preferences", draft, false)).toEqual({
+    theme: "theme-dark",
+  });
+  expect(preferencesChanges("preferences", draft, true)).toEqual({
+    theme: "theme-dark",
+    needAttention: { pPendingApprovals: false },
+    insights: { pByYearChart: true },
+    opportunity: true,
+  });
+  expect(preferencesChanges("accessibility", draft, true)).toEqual({
+    accessibility: { accFontSize: 25 },
+  });
+});
+it("lists only the stored legacy infolet switches, in legacy order", () => {
+  expect(
+    infoletSettings("needAttention", {
+      ePendingApprovals: { isVisible: true },
+      unknownWidget: { isVisible: true },
+      pApproachingDeadlines: { isVisible: "Y" },
+    }),
+  ).toEqual({ pApproachingDeadlines: false, ePendingApprovals: true });
+  expect(Object.keys(infoletSettings("insights", undefined))).toEqual([]);
 });

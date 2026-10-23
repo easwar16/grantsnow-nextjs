@@ -2,6 +2,8 @@ export interface AppSession {
   token: string;
   expiresAt: number;
   subject: string;
+  /** The verified IDCS username (legacy `$application.user.username`): the approval actor; absent for DEV browser sessions. */
+  username?: string;
   identityExpiresAt: number;
   fixture: boolean;
   source?: "browser-session";

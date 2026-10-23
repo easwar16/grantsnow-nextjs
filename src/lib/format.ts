@@ -102,6 +102,37 @@ export function dateDisplay(value?: string, settings?: FormatSettings) {
     renderPattern(DEFAULT_DATE_FORMAT, parts)!
   );
 }
+const pad = (n: number) => String(n).padStart(2, "0");
+/**
+ * A timestamp as legacy `formatDate(value, DEFAULT_DATE_FORMAT.toUpperCase() + ' hh:mm a')`: an instant (Z or an
+ * offset) in the viewer's time zone, a wall-clock value as written; anything else is shown verbatim.
+ */
+export function dateTimeDisplay(
+  value?: string | null,
+  settings?: FormatSettings,
+) {
+  if (!value) return "—";
+  let parts: DateParts | undefined, hours: number, minutes: number;
+  if (/(?:Z|[+-]\d{2}:?\d{2})$/i.test(value)) {
+    const at = new Date(value);
+    if (Number.isNaN(at.getTime())) return value;
+    parts = {
+      year: at.getFullYear(),
+      month: at.getMonth() + 1,
+      day: at.getDate(),
+    };
+    [hours, minutes] = [at.getHours(), at.getMinutes()];
+  } else {
+    const time = value.match(/^\d{4}-\d{2}-\d{2}[T ](\d{2}):(\d{2})/);
+    parts = time ? calendarDate(value) : undefined;
+    if (!time || !parts) return value;
+    [hours, minutes] = [Number(time[1]), Number(time[2])];
+  }
+  const date =
+    renderPattern(settings?.dateFormat || DEFAULT_DATE_FORMAT, parts) ??
+    renderPattern(DEFAULT_DATE_FORMAT, parts)!;
+  return `${date} ${pad(hours % 12 || 12)}:${pad(minutes)} ${hours < 12 ? "am" : "pm"}`;
+}
 export function moneyDisplay(
   value?: string,
   currency?: string,

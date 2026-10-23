@@ -33,6 +33,18 @@ Set `FIXTURE_MODE=false`. Obtain the inputs/actions in [authentication.md](docs/
 
 Register `APP_ORIGIN/api/auth/callback` and `APP_ORIGIN/login` with IDCS; the application discovers login/token/JWKS/logout endpoints from the actual issuer. Missing runtime settings stop startup clearly. Do not fill placeholders with fabricated real tenant endpoints.
 
+## Seeing the Oracle calls while debugging
+
+The browser never calls Oracle. Pages are rendered on the server, and client components call this app's own `/api/*` routes. So Chrome's Network tab shows only those routes and the page's RSC requests (`?_rsc=`). The ORDS and OIC calls run in Node, where the session token stays, and they never reach the browser.
+
+To watch them:
+
+1. Run `npm run dev:inspect` instead of `npm run dev`.
+2. Open `chrome://inspect` in Chrome and choose **Open dedicated DevTools for Node**.
+3. That window's **Network** tab lists every Oracle and OIC request the server makes, with its status and timing. **Sources** lets you set breakpoints in `src/server/**`.
+
+The terminal also prints `[oracle] <operation>` for every call that fails or takes over a second.
+
 ## Checks
 
 ```sh

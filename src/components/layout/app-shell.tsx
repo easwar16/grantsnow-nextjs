@@ -19,6 +19,7 @@ export function AppShell({
   children,
   accessibility,
   name,
+  logo,
   navigation,
   labels,
   format,
@@ -26,6 +27,8 @@ export function AppShell({
   children: React.ReactNode;
   accessibility: Record<string, number>;
   name: string;
+  /** The configured logo (already checked on the server); the GrantsNow logo when absent. */
+  logo?: string;
   navigation: React.ReactNode;
   labels: ShellLabels;
   format?: FormatSettings;
@@ -76,13 +79,25 @@ export function AppShell({
                 href="/home"
                 prefetch={false}
               >
-                <Image
-                  src="/brand/grantsnow.svg"
-                  alt={labels.logo}
-                  width={120}
-                  height={34}
-                  priority
-                />
+                {logo ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- an admin-configured address on any host.
+                  <img
+                    src={logo}
+                    alt={labels.logo}
+                    title={labels.logo}
+                    width={120}
+                    height={34}
+                  />
+                ) : (
+                  <Image
+                    src="/brand/grantsnow.svg"
+                    alt={labels.logo}
+                    title={labels.logo}
+                    width={120}
+                    height={34}
+                    priority
+                  />
+                )}
               </Link>
               <div className="header-end">
                 <Link
@@ -104,7 +119,7 @@ export function AppShell({
               ref={drawer}
               id="navigation-drawer"
               className="navigation-drawer"
-              aria-label="Application navigation"
+              aria-label={labels.navigation}
               onKeyDown={(event) => {
                 if (event.key === "Escape") {
                   event.preventDefault();
@@ -123,7 +138,7 @@ export function AppShell({
                 <span className="sr-only">GrantsNow navigation</span>
                 <button
                   id="navigation-drawer-close"
-                  aria-label="Close navigation"
+                  aria-label={labels.close}
                   onClick={() => drawer.current?.close()}
                 >
                   <Icon name="close" />

@@ -5,6 +5,7 @@ import { AppError } from "@/lib/errors";
 import { targetFromQuery } from "@/server/dynamic-form/access";
 import { formGlobals } from "@/server/dynamic-form/globals";
 import { uploadFile } from "@/server/files/service";
+import { listAttachments, uploadAttachment } from "@/server/files/attachments";
 // Multipart framing around the one file.
 const OVERHEAD = 64 * 1024;
 const tooLarge = (maxMb: number) =>
@@ -30,11 +31,24 @@ async function readCapped(request: Request, cap: number, maxMb: number) {
   }
   return Buffer.concat(chunks);
 }
-/** WRITES a form's file: POST ?objectType&slot&objectId[&parentId], multipart with one `file`. → { attachmentId }. */
+/** A host record's documents and links (the Attachments panel): GET ?host&record. */
+export async function GET(request: Request) {
+  try {
+    return json(await listAttachments(new URL(request.url).searchParams));
+  } catch (e) {
+    return failure(e);
+  }
+}
+/**
+ * WRITES a file, multipart with one `file`: a form's (?objectType&slot&objectId[&parentId]) → { attachmentId }, or a
+ * host record's Attachments panel (?host&record, plus `folder`, `newFolder`, `description`, `confidential`).
+ */
 export async function POST(request: Request) {
   try {
     sameOrigin(request, appOrigin());
-    const target = targetFromQuery(new URL(request.url).searchParams);
+    const query = new URL(request.url).searchParams;
+    const panel = query.has("host");
+    const target = panel ? null : targetFromQuery(query);
     const { maxMb } = await formGlobals();
     const type = request.headers.get("content-type") ?? "";
     if (!/^multipart\/form-data;/i.test(type))
@@ -44,25 +58,29 @@ export async function POST(request: Request) {
       maxMb * 1024 * 1024 + OVERHEAD,
       maxMb,
     );
-    let file: FormDataEntryValue | null;
+    let form: FormData;
     try {
-      file = (
-        await new Response(body, {
-          headers: { "content-type": type },
-        }).formData()
-      ).get("file");
+      form = await new Response(body, {
+        headers: { "content-type": type },
+      }).formData();
     } catch {
       throw new AppError("BAD_REQUEST", "No file was sent.", 400);
     }
+    const file = form.get("file");
     if (!(file instanceof Blob) || !("name" in file))
       throw new AppError("BAD_REQUEST", "No file was sent.", 400);
-    return json(
-      await uploadFile(target, {
-        name: String(file.name),
-        type: file.type,
-        bytes: new Uint8Array(await file.arrayBuffer()),
-      }),
+    const sent = {
+      name: String(file.name),
+      type: file.type,
+      bytes: new Uint8Array(await file.arrayBuffer()),
+    };
+    if (target) return json(await uploadFile(target, sent));
+    const fields = Object.fromEntries(
+      [...form.entries()].filter(
+        ([key, value]) => key !== "file" && typeof value === "string",
+      ),
     );
+    return json(await uploadAttachment(query, fields, sent));
   } catch (e) {
     return failure(e);
   }
