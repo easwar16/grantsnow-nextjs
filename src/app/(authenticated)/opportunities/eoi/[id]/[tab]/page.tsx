@@ -1,10 +1,10 @@
 import {
   eoiRecordContext,
   eoiRecordIdentity,
-} from "@/server/opportunities/record";
+} from "@/server/modules/opportunities/record";
 import { State } from "@/components/feedback/state";
-import { DeniedRedirect } from "@/features/opportunities/eoi/denied-redirect";
-import { RecordTabContent } from "@/features/opportunities/eoi/tab-content";
+import { DeniedRedirect } from "@/features/modules/opportunities/eoi/denied-redirect";
+import { RecordTabContent } from "@/features/modules/opportunities/eoi/tab-content";
 /** One tab of a saved application; a tab the record does not show toasts and goes to Summary (subFlowAccessGuard). */
 export default async function EoiTabPage({
   params,

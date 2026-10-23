@@ -1,8 +1,8 @@
-import { displayFormat } from "@/server/configuration/formatting";
+import { displayFormat } from "@/server/platform/configuration/formatting";
 import Link from "next/link";
-import { pageIdentity } from "@/server/auth/page";
-import { loadSummary } from "@/server/proposals/record";
-import { recordIdentity } from "@/features/proposals/record";
+import { pageIdentity } from "@/server/identity/auth/page";
+import { loadSummary } from "@/server/modules/proposals/record";
+import { recordIdentity } from "@/features/modules/proposals/record";
 import { State } from "@/components/feedback/state";
 import { Icon } from "@/components/ui/icon";
 import { publicError } from "@/lib/errors";

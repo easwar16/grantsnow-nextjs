@@ -1,8 +1,8 @@
 import "server-only";
-import { fixtureMode } from "@/server/configuration/environment";
-import type { Operation } from "@/server/api/transport";
+import { fixtureMode } from "@/server/platform/configuration/environment";
+import type { Operation } from "@/server/oracle/connection";
 import { fixtureUser, proposals } from "./fixtures";
-import { widgets } from "@/server/home/widgets";
+import { widgets } from "@/server/modules/home/widgets";
 /**
  * Evaluates the p_where_clause grammar that src/server/proposals/where-clause.ts emits:
  * `( atom (AND|OR atom)* )`, atoms `LOWER("c") LIKE LOWER('%v%')`, `"c"='v'`, `"c">='v'`, `"c"<='v'`.

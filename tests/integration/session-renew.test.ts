@@ -5,14 +5,16 @@ const state = vi.hoisted(() => ({
   destroy: vi.fn(),
   calls: vi.fn(),
 }));
-vi.mock("@/server/session/storage", () => ({ storage: async () => state }));
-vi.mock("@/server/api/transport", async (importOriginal) => ({
+vi.mock("@/server/identity/session/storage", () => ({
+  storage: async () => state,
+}));
+vi.mock("@/server/oracle/connection", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   oracle: state.calls,
 }));
-import { authenticate, renewSession } from "@/server/session/service";
-import { mapValidatedIdentity } from "@/server/session/contracts";
-import { DEV_SESSION_LEASE_MS } from "@/server/session/browser-session";
+import { authenticate, renewSession } from "@/server/identity/session/service";
+import { mapValidatedIdentity } from "@/server/identity/session/contracts";
+import { DEV_SESSION_LEASE_MS } from "@/server/identity/session/browser-session";
 import { POST as renewRoute } from "@/app/api/auth/renew/route";
 import { GET as sessionRoute } from "@/app/api/auth/session/route";
 import { fixtureUser } from "@/test-support/fixtures";
@@ -164,7 +166,9 @@ describe("session expiry endpoint", () => {
       identityExpiresAt: Date.now() + 3600000,
       fixture: false,
     };
-    const response = await sessionRoute();
+    const response = await sessionRoute(
+      new Request(`${origin}/api/auth/session`),
+    );
     const body = await response.json();
     expect(body).toEqual({ expiresAt: state.app.expiresAt });
     expect(JSON.stringify(body)).not.toContain("secret-token");
@@ -172,7 +176,9 @@ describe("session expiry endpoint", () => {
   });
   it("answers 401 without a session", async () => {
     state.app = undefined;
-    expect((await sessionRoute()).status).toBe(401);
+    expect(
+      (await sessionRoute(new Request(`${origin}/api/auth/session`))).status,
+    ).toBe(401);
   });
 });
 describe("D45 legal_id", () => {

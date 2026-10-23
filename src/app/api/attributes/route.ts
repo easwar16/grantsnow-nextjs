@@ -1,12 +1,9 @@
-import { json, failure } from "@/server/api/http";
-import { attributesQuery, loadAttributes } from "@/server/attributes/service";
+import {
+  attributesQuery,
+  loadAttributes,
+} from "@/server/record/attributes/service";
+import { route, searchOf } from "@/server/http/route";
 /** A host's object attributes: ?host&parentId&objectId (the panel's values travel in the host's own save). */
-export async function GET(request: Request) {
-  try {
-    return json(
-      await loadAttributes(attributesQuery(new URL(request.url).searchParams)),
-    );
-  } catch (e) {
-    return failure(e);
-  }
-}
+export const GET = route((request) =>
+  loadAttributes(attributesQuery(searchOf(request))),
+);

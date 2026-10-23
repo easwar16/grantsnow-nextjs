@@ -1,5 +1,5 @@
 import "server-only";
-import { fixtureMode } from "@/server/configuration/environment";
+import { fixtureMode } from "@/server/platform/configuration/environment";
 /**
  * DEVELOPMENT FIXTURE ONLY: an in-memory attachments table for the file flow in fixture mode, where writes never
  * reach Oracle. The OIC fixture store (src/server/api/oic.ts) holds the bytes.

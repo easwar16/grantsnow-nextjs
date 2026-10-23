@@ -12,7 +12,7 @@ const state = vi.hoisted(() => ({
   labels: null as unknown[] | null,
   forget: vi.fn(),
 }));
-vi.mock("@/server/opportunities/record", () => ({
+vi.mock("@/server/modules/opportunities/record", () => ({
   eoiRecordRead: async () => ({
     id: "12",
     session: { token: "isolated-token", username: state.username },
@@ -27,20 +27,35 @@ vi.mock("@/server/opportunities/record", () => ({
   }),
   eoiPageLock: async () => ({ known: true, locked: state.locked }),
 }));
-vi.mock("@/server/api/transport", () => ({
-  oracle: state.oracle,
+// Reference reads (people, groups, lookups) answer from `state.reference`, record reads from `state.oracle`.
+const REFERENCE = [
+  "getPre_awardGetPersonList",
+  "getApproval_groupApproval_group_m",
+  "getPre_awardGetLookupTypesCodes",
+];
+vi.mock("@/server/oracle/connection", () => ({
+  oracle: (op: string, ...rest: unknown[]) =>
+    (REFERENCE.includes(op) ? state.reference : state.oracle)(op, ...rest),
   oracleWrite: state.oracleWrite,
 }));
-vi.mock("@/server/opportunities/reference", () => ({
-  referenceRead: state.reference,
+vi.mock("@/server/oracle/context", () => ({
+  oracleContext: async () => ({
+    token: "isolated-token",
+    identity: { legal_id: "77", org_id: "202", user_id: "101" },
+  }),
 }));
-vi.mock("@/server/cache/reads", () => ({ forgetRead: state.forget }));
-vi.mock("@/server/configuration/formatting", () => ({
+vi.mock("@/server/oracle/cache", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/server/oracle/cache")>()),
+  forgetOperation: state.forget,
+}));
+vi.mock("@/server/platform/configuration/formatting", () => ({
   displayFormat: async () => ({ dateFormat: "DD-MMM-YYYY" }),
 }));
-vi.mock("@/server/configuration/resources", async (importOriginal) => {
+vi.mock("@/server/platform/configuration/resources", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("@/server/configuration/resources")>();
+    await importOriginal<
+      typeof import("@/server/platform/configuration/resources")
+    >();
   return {
     ...actual,
     // The seeds as the backend would merge them; a test may replace them.
@@ -48,8 +63,11 @@ vi.mock("@/server/configuration/resources", async (importOriginal) => {
   };
 });
 import { GET, POST } from "@/app/api/opportunities/eoi/[id]/workflow/route";
-import { workflowView } from "@/server/approvals/workflow";
-import { eoiApprovalHost } from "@/server/opportunities/eoi-record/workflow";
+// The client also passes its optional signal / query / path arguments; assertions compare the leading ones.
+const lead = (mock: { mock: { calls: unknown[][] } }, n = 3) =>
+  mock.mock.calls.map((c) => c.slice(0, n));
+import { workflowView } from "@/server/record/approvals/workflow";
+import { eoiApprovalHost } from "@/server/modules/opportunities/eoi-record/workflow";
 
 const origin = "http://127.0.0.1:3000";
 const url = (query = "") =>
@@ -210,8 +228,8 @@ describe("route gates", () => {
     ).toBe(false);
     state.locked = false;
     const { mergeResourceDefaults } = await vi.importActual<
-      typeof import("@/server/configuration/resources")
-    >("@/server/configuration/resources");
+      typeof import("@/server/platform/configuration/resources")
+    >("@/server/platform/configuration/resources");
     state.labels = mergeResourceDefaults([
       {
         module_name: "OPPORTUNITIES-EOI",
@@ -253,7 +271,7 @@ describe("actor and payloads", () => {
       ).status,
     ).toBe(400);
     await post({ op: "act", action: "Submitted", comments: " Please review " });
-    expect(state.oracleWrite).toHaveBeenCalledWith(
+    expect(lead(state.oracleWrite)).toContainEqual([
       "postApproval_setupPost_approval",
       { token: "isolated-token" },
       {
@@ -264,7 +282,7 @@ describe("actor and payloads", () => {
         doc_num: "EOI_12",
         doc_type: "OPPORTUNITIES-EOI",
       },
-    );
+    ]);
   });
   it("refuses every actor-named action without a verified username", async () => {
     grantAll();
@@ -285,7 +303,7 @@ describe("actor and payloads", () => {
       (await post({ op: "act", action: "Rejected", stageId: "602" })).status,
     ).toBe(400);
     await post({ op: "act", action: "Approved", stageId: "602" });
-    expect(state.oracleWrite).toHaveBeenCalledWith(
+    expect(lead(state.oracleWrite)).toContainEqual([
       "postApproval_setupPost_approval",
       { token: "isolated-token" },
       {
@@ -296,7 +314,7 @@ describe("actor and payloads", () => {
         doc_type: "OPPORTUNITIES-EOI",
         stage_id: 602,
       },
-    );
+    ]);
   });
   it("generates the route with its document and the session's user in the query", async () => {
     grantAll();
@@ -360,14 +378,14 @@ describe("actor and payloads", () => {
   it("deletes a stage with its route number and id", async () => {
     grantAll();
     await post({ op: "delete-stage", stageId: "501" });
-    expect(state.oracleWrite).toHaveBeenCalledWith(
+    expect(lead(state.oracleWrite, 2)).toContainEqual([
       "deleteApproval_setupApproval_stages",
       {
         token: "isolated-token",
         approval_number: "9001",
         approval_stage_id: "501",
       },
-    );
+    ]);
   });
 });
 
@@ -422,7 +440,7 @@ describe("approvers", () => {
     expect(String(calls[0][4])).toBe(
       "doc_type=OPPORTUNITIES-EOI&doc_num=EOI_12",
     );
-    expect(calls[1]).toEqual([
+    expect(calls[1].slice(0, 2)).toEqual([
       "postApproval_setupReassign_stage",
       {
         token: "isolated-token",

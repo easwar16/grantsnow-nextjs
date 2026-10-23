@@ -25,12 +25,12 @@ import {
   toFieldValue,
   toPayload,
   withDependentConditions,
-} from "@/features/dynamic-form/engine";
+} from "@/features/record/dynamic-form/engine";
 import type {
   DynField,
   DynForm,
   DynSection,
-} from "@/features/dynamic-form/models";
+} from "@/features/record/dynamic-form/models";
 // Port of GN-Angular dynamic-form.engine.spec.ts and dyn-field.spec.ts, plus the validation rules.
 const field = (fieldId: number, patch: Partial<DynField> = {}): DynField => ({
   fieldId,

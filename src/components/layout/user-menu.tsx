@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { ProfileDialog } from "@/features/account/profile-dialog";
+import { ProfileDialog } from "@/features/modules/account/profile-dialog";
 import { Icon } from "@/components/ui/icon";
 import type { ConfigureMode } from "./configure-drawer";
 import { useShell } from "./shell-context";

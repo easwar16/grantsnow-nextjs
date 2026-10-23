@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { oracle, oracleWrite } from "@/server/api/transport";
+import { oracle, oracleWrite } from "@/server/oracle/connection";
 const fetchMock = vi.fn();
 beforeEach(() => {
   for (const [key, value] of Object.entries({

@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { sanitizeHtml } from "@/server/html/sanitize";
+import { sanitizeHtml } from "@/server/platform/sanitize";
 it("removes scripts, handler attributes and unsafe URLs, keeping formatting", () => {
   const html = sanitizeHtml(
     '<p><strong>Notice</strong><script>alert(1)</script><img src=x onerror=alert(1)><a href="javascript:alert(1)" onclick="bad()">Link</a></p>',

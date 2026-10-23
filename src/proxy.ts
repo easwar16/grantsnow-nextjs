@@ -5,10 +5,10 @@ import {
   sessionPassword,
   fixtureMode,
   browserSessionMode,
-} from "@/server/configuration/environment";
-import type { StoredSession } from "@/server/session/storage";
+} from "@/server/platform/configuration/environment";
+import type { StoredSession } from "@/server/identity/session/storage";
 import { safeReturn } from "@/lib/security";
-import { legacyDeepLink } from "@/features/auth/legacy-link";
+import { legacyDeepLink } from "@/shared/auth/legacy-link";
 export async function proxy(request: NextRequest) {
   // H26: old notification/report emails; the target route authenticates and keeps the deep link through login.
   const legacy = legacyDeepLink(request.nextUrl.search);

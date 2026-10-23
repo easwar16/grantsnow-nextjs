@@ -1,10 +1,10 @@
 import { expect, it } from "vitest";
-import { calendarDaysUntil, isOverdue } from "@/features/home/deadline";
-import { sparklineSegments } from "@/features/home/sparkline";
+import { calendarDaysUntil, isOverdue } from "@/features/modules/home/deadline";
+import { sparklineSegments } from "@/features/modules/home/sparkline";
 import { dateDisplay, moneyDisplay } from "@/lib/format";
-import { formattingSettings } from "@/server/configuration/formatting";
-import { mapWidget } from "@/server/home/service";
-import { widgets } from "@/server/home/widgets";
+import { formattingSettings } from "@/server/platform/configuration/formatting";
+import { mapWidget } from "@/server/modules/home/service";
+import { widgets } from "@/server/modules/home/widgets";
 // 22 Oct 2026, 23:30 local: late in the day, where the old millisecond diff misjudged tomorrow.
 const today = new Date(2026, 9, 22, 23, 30);
 const widget = (id: string) => widgets.find((w) => w.id === id)!;

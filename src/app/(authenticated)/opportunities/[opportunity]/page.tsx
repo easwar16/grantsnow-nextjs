@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { pageIdentity } from "@/server/auth/page";
-import { opportunityDetail } from "@/server/opportunities/record";
-import { openingShell } from "@/server/opportunities/eoi-record/shell";
-import { resources } from "@/server/configuration/resources";
+import { pageIdentity } from "@/server/identity/auth/page";
+import { opportunityDetail } from "@/server/modules/opportunities/record";
+import { openingShell } from "@/server/modules/opportunities/eoi-record/shell";
+import { resources } from "@/server/platform/configuration/resources";
 import { State } from "@/components/feedback/state";
-import { RecordShell } from "@/features/opportunities/eoi/record-shell";
-import { Summary } from "@/features/opportunities/eoi/summary";
+import { RecordShell } from "@/features/modules/opportunities/eoi/record-shell";
+import { Summary } from "@/features/modules/opportunities/eoi/summary";
 import { publicError } from "@/lib/errors";
 /** More Info: the opportunity's summary alone, read-only, with Apply / Convert / Convert to Proposal. */
 export default async function OpportunityDetailPage({

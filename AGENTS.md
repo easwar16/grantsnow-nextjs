@@ -20,7 +20,7 @@ The legacy VBCS checkout (`~/Documents/Projects/GrantsNow` or `/Users/easwar/Dev
 - Build accessible native controls with explicit labels, keyboard access and distinct loading/error/empty states. Only implemented routes appear in navigation.
 - URL query state is validated and serialized through the feature schema. Do not locally filter a single remote page or equate page rows with API totals.
 - Add meaningful failure-mode tests alongside substantial changes; run typecheck, lint, unit/integration tests, production build and relevant Playwright journeys. Record mocks versus live evidence separately.
-- The user approved docs/vbcs-parity-implementation-plan.md on 2026-10-14: IDCS, VBCS dashboard/listing fidelity and full Proposal module implementation. Preserve existing backend contracts. Browser access does not authorize live test-data mutations, workflow approvals, ERP handoffs or destructive actions; obtain a designated DEV dataset and side-effect policy for those tests.
+- The user approved the parity plan (docs/progress.md § 2) on 2026-10-14: IDCS, VBCS dashboard/listing fidelity and full Proposal module implementation. Preserve existing backend contracts. Browser access does not authorize live test-data mutations, workflow approvals, ERP handoffs or destructive actions; obtain a designated DEV dataset and side-effect policy for those tests.
 
 ## Carried rules (VBCS + GN-Angular; full list in docs/grantsnow-foundations.md)
 
@@ -28,10 +28,12 @@ The legacy VBCS checkout (`~/Documents/Projects/GrantsNow` or `/Users/easwar/Dev
 - No VBCS concepts (chains, scopes, SDP/ADP, `oj-*`) and no Angular mechanisms in this code. Carry business behaviour and the backend contract only.
 - Every write payload is an explicit pick per entity, never a posted view model. Identity, scope and approval actor come from the server session.
 - Resource visibility fails closed (`is_visible === 'Y'`). A new field gets a seeded default with `'N'`, a literal fallback, visible and required gates, and More Info for editable fields. Anything promoted to `uat` or higher arrives with `'N'`.
+- All backend access goes through the API layer (docs/api-layer.md): Oracle only via `@/server/oracle/api` functions (`read`/`write`; identity, caching, paging and invalidation in the client), the browser only via `@/lib/api` endpoints and `useApi`/`usePagedApi`. Nothing else calls `oracle()`/`oracleWrite()` or builds `/api` URLs. Modules arriving from other branches (Easwar's Proposals/Contracts) are moved onto it when they land.
+- Every dropdown is the searchable `Select` / `MultiSelect` (type-to-filter in the field, pick from the list); no native `<select>`.
 - Every user-triggered write disables its control until the request settles. Never throttle or debounce a save.
 - Match the live DEV VBCS app by measurement, not by eye. Add no new dependency until the owner agrees to it.
 - Every section and element carries a unique, stable, kebab-case `id` (`<area>-<element>`, record key for repeats; shared components take theirs from the page). Ids, variables and functions get sensible, short names. Details in the foundations doc.
-- Performance: independent awaits run in parallel; dependent steps and writes stay ordered; slow reference data goes through `memo` (session-keyed, TTL, shared in-flight); client fetches keep latest-wins guards. Details in the foundations doc.
+- Performance: independent awaits run in parallel; dependent steps and writes stay ordered; only data the live VBCS app caches gets a `ttl` on its API function (session-keyed, shared in-flight; KB cache inventory); client fetches keep latest-wins guards. Details in the foundations doc.
 - Minimal diffs at the true cause. Add state or helpers only when needed. Invent nothing: no new checks, toasts or payload changes without an identified defect. Comments are one line of _why_. Test emptiness explicitly (`0`/`false` are values). Bound every wait. Use try/catch only where something can throw and the catch does something useful.
 - Diagnose before editing: get the full stack or a decisive diff before changing code; say what a failed fix rules out.
 

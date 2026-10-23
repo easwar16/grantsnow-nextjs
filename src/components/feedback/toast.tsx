@@ -7,7 +7,9 @@ import {
   useRef,
   useState,
 } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { Icon } from "@/components/ui/icon";
+import { rise } from "@/lib/motion";
 import styles from "./toast.module.css";
 export type ToastSeverity = "success" | "error" | "warning" | "info";
 interface Toast {
@@ -55,29 +57,32 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={show}>
       {children}
       <div id="toast-stack" className={styles.stack} aria-live="polite">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            id={`toast-${t.id}`}
-            className={`${styles.toast} ${styles[t.severity]} enter-rise`}
-            role={t.severity === "error" ? "alert" : "status"}
-          >
-            <span className={styles.dot} aria-hidden="true" />
-            <div className={styles.text}>
-              <div className={styles.summary}>{t.summary}</div>
-              {t.detail && <div className={styles.detail}>{t.detail}</div>}
-            </div>
-            <button
-              id={`toast-${t.id}-close`}
-              type="button"
-              className={styles.close}
-              aria-label="Close"
-              onClick={() => dismiss(t.id)}
+        <AnimatePresence>
+          {toasts.map((t) => (
+            <motion.div
+              key={t.id}
+              {...rise}
+              id={`toast-${t.id}`}
+              className={`${styles.toast} ${styles[t.severity]}`}
+              role={t.severity === "error" ? "alert" : "status"}
             >
-              <Icon name="close" size={14} />
-            </button>
-          </div>
-        ))}
+              <span className={styles.dot} aria-hidden="true" />
+              <div className={styles.text}>
+                <div className={styles.summary}>{t.summary}</div>
+                {t.detail && <div className={styles.detail}>{t.detail}</div>}
+              </div>
+              <button
+                id={`toast-${t.id}-close`}
+                type="button"
+                className={styles.close}
+                aria-label="Close"
+                onClick={() => dismiss(t.id)}
+              >
+                <Icon name="close" size={14} />
+              </button>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
     </ToastContext.Provider>
   );

@@ -4,7 +4,7 @@ import {
   oicDownload,
   oicUpload,
   storageSafeName,
-} from "@/server/api/oic";
+} from "@/server/oic/connection";
 const fetchMock = vi.fn();
 beforeEach(() => {
   for (const [key, value] of Object.entries({

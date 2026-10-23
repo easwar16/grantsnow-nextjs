@@ -1,22 +1,17 @@
-import { json, failure } from "@/server/api/http";
-import { sameOrigin } from "@/lib/security";
-import { appOrigin } from "@/server/configuration/environment";
 import { AppError } from "@/lib/errors";
-import { fxQuery, loadFxRates, saveFxRates } from "@/server/fx-rates/service";
+import {
+  fxQuery,
+  loadFxRates,
+  saveFxRates,
+} from "@/server/record/fx-rates/service";
+import { route, searchOf } from "@/server/http/route";
 // One row per currency; far below this in practice.
 const MAX_BODY = 65_536;
 /** A proposal version's FX rates: ?type&id&versionId&mode. */
-export async function GET(request: Request) {
-  try {
-    return json(await loadFxRates(fxQuery(new URL(request.url).searchParams)));
-  } catch (e) {
-    return failure(e);
-  }
-}
+export const GET = route((request) => loadFxRates(fxQuery(searchOf(request))));
 /** WRITES the rates: { target: { type, id, versionId, mode }, edits: [{ currency, reset, rate? }] }. */
-export async function POST(request: Request) {
-  try {
-    sameOrigin(request, appOrigin());
+export const POST = route(
+  async (request) => {
     const text = await request.text();
     if (text.length > MAX_BODY)
       throw new AppError("BAD_REQUEST", "Request is too large.", 413);
@@ -26,8 +21,7 @@ export async function POST(request: Request) {
     } catch {
       throw new AppError("BAD_REQUEST", "Invalid FX rates request.", 400);
     }
-    return json(await saveFxRates(body));
-  } catch (e) {
-    return failure(e);
-  }
-}
+    return saveFxRates(body);
+  },
+  { write: true },
+);

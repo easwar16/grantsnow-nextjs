@@ -1,11 +1,20 @@
 "use client";
 import { idPart } from "@/lib/ids";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useId, useMemo, useState } from "react";
+import { useCombobox, useMultipleSelection } from "downshift";
 import { Icon } from "@/components/ui/icon";
 import { highlight } from "@/components/ui/highlight";
-import { usePresence } from "@/lib/use-presence";
-import { useAnchor } from "@/lib/use-anchor";
+import { AnimatePresence } from "motion/react";
+import { Pop } from "@/components/ui/pop";
+import {
+  comboChanges,
+  keepNativeKeys,
+  useDropdownPanel,
+  useOptionWindow,
+} from "@/components/ui/dropdown";
 import styles from "./multi-select.module.css";
+const T = useCombobox.stateChangeTypes,
+  M = useMultipleSelection.stateChangeTypes;
 export interface MultiSelectOption {
   value: string;
   label: string;
@@ -18,8 +27,8 @@ export interface MultiSelectOption {
  * You type in the field itself to narrow the checkbox list, so opening it never adds a row to the form. Arrow keys
  * move, Enter ticks or unticks, Backspace on an empty field drops the last chip, Escape or an outside click closes.
  * The chips variant has no label of its own, for an `InsideField` box (live's oj-select-many). `limit` caps the
- * rows drawn, with live's "More results available" note; `closeOnPick` closes the list after each pick, as live.
- * `id` names the root; its parts take `${id}-<part>` (the field is `${id}-field`).
+ * rows offered, with live's "More results available" note; `closeOnPick` closes the list after each pick, as live.
+ * Only the visible rows are drawn. `id` names the root; its parts take `${id}-<part>` (the field is `${id}-field`).
  */
 export function MultiSelect({
   id,
@@ -44,31 +53,18 @@ export function MultiSelect({
   closeOnPick?: boolean;
   disabled?: boolean;
 }) {
-  const [open, setOpen] = useState(false),
-    // null while not typing: the control variant then shows its summary and the list is unfiltered.
-    [query, setQuery] = useState<string | null>(null),
-    [active, setActive] = useState(0),
-    host = useRef<HTMLDivElement>(null),
-    box = useRef<HTMLDivElement>(null),
-    input = useRef<HTMLInputElement>(null),
-    list = useRef<HTMLUListElement>(null),
+  // null while not typing: the control variant then shows its summary and the list is unfiltered.
+  const [query, setQuery] = useState<string | null>(null),
+    // Elements are state, not refs: the overlay and the window read them while rendering.
+    [input, setInput] = useState<HTMLInputElement | null>(null),
+    [box, setBox] = useState<HTMLDivElement | null>(null),
+    [pop, setPop] = useState<HTMLDivElement | null>(null),
+    [list, setList] = useState<HTMLUListElement | null>(null),
     autoId = useId(),
     base = id ?? autoId,
     panel = `${base}-panel`;
-  const popup = usePresence(open);
-  const placement = useAnchor(popup.mounted, box, 280);
-  const close = () => {
-    setOpen(false);
-    setQuery(null);
-  };
-  useEffect(() => {
-    if (!open) return;
-    const outside = (e: PointerEvent) => {
-      if (!host.current?.contains(e.target as Node)) close();
-    };
-    document.addEventListener("pointerdown", outside);
-    return () => document.removeEventListener("pointerdown", outside);
-  }, [open]);
+  const control = variant === "control",
+    chips = variant === "chips";
   const labelOf = (v: string) => options.find((o) => o.value === v)?.label ?? v,
     summary = value.map(labelOf).join(", "),
     needle = (query ?? "").trim().toLowerCase(),
@@ -83,45 +79,121 @@ export function MultiSelect({
       [options, needle],
     ),
     rows = limit === undefined ? matches : matches.slice(0, limit),
-    current = Math.min(active, rows.length - 1),
+    // The cap note is the window's first line when shown.
+    lead = matches.length > rows.length ? 1 : 0,
     optionId = (v: string) => `${base}-option-${idPart(v)}`;
-  useEffect(() => {
-    if (!open || current < 0) return;
-    list.current
-      ?.querySelector(`[data-index="${current}"]`)
-      ?.scrollIntoView({ block: "nearest" });
-  }, [open, current]);
-  const toggle = (v: string) => {
-    onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
-    if (closeOnPick) close();
-  };
-  const openList = () => {
-    setActive(0);
-    setOpen(true);
-  };
-  const control = variant === "control",
-    chips = variant === "chips";
+  const view = useOptionWindow(rows.length + lead, list);
+  const { getDropdownProps, addSelectedItem, removeSelectedItem } =
+    useMultipleSelection<string>({
+      selectedItems: value,
+      onSelectedItemsChange: ({ selectedItems }) =>
+        onChange(selectedItems ?? []),
+      stateReducer: (state, { type, changes }) => {
+        // Chips are a pointer shortcut, not keyboard stops; keyboard users untick the option or press Backspace.
+        if (type === M.DropdownKeyDownNavigationPrevious) return state;
+        // Backspace drops the last chip only from an empty field that shows chips.
+        if (
+          type === M.DropdownKeyDownBackspace &&
+          (control || query || state.selectedItems.length === 0)
+        )
+          return state;
+        return changes;
+      },
+    });
+  const {
+    isOpen: open,
+    highlightedIndex,
+    getToggleButtonProps,
+    getInputProps,
+    getMenuProps,
+    getItemProps,
+  } = useCombobox({
+    items: rows,
+    itemToString: (o) => o?.label ?? "",
+    itemToKey: (o) => o?.value,
+    inputId: `${base}-field`,
+    menuId: `${base}-list`,
+    getItemId: (i) => (rows[i] ? optionId(rows[i].value) : ""),
+    // Ticks live in `value`; Downshift's own selection stays empty so each pick is reported.
+    selectedItem: null,
+    inputValue: query ?? (control ? summary : ""),
+    defaultHighlightedIndex: 0,
+    // The list is windowed, so the highlighted row is scrolled to by index instead.
+    scrollIntoView: () => {},
+    stateReducer: (state, action) => {
+      const changes = comboChanges(state, action, disabled || query !== null);
+      if (action.type !== T.ItemClick && action.type !== T.InputKeyDownEnter)
+        return changes;
+      // A pick ticks or unticks and, unless it closes on pick, keeps the list, its filter and its highlight.
+      return closeOnPick
+        ? changes
+        : {
+            ...changes,
+            isOpen: state.isOpen,
+            highlightedIndex: state.highlightedIndex,
+            inputValue: state.inputValue,
+          };
+    },
+    onInputValueChange: ({ type, inputValue }) => {
+      if (type === T.InputChange) setQuery(inputValue);
+    },
+    onIsOpenChange: ({ isOpen }) => {
+      if (!isOpen) setQuery(null);
+    },
+    onHighlightedIndexChange: ({ type, highlightedIndex: i }) => {
+      if (type !== T.ItemMouseMove && i >= 0) view.scrollTo(i + lead);
+    },
+    onSelectedItemChange: ({ selectedItem: o }) => {
+      if (!o) return;
+      if (value.includes(o.value)) removeSelectedItem(o.value);
+      else addSelectedItem(o.value);
+    },
+  });
+  const placement = useDropdownPanel(open, box, pop);
+  const field = getInputProps(
+      getDropdownProps({
+        ref: setInput,
+        className: styles.input,
+        type: "text",
+        spellCheck: false,
+        "aria-label": label,
+        "aria-controls": panel,
+        disabled,
+        placeholder:
+          variant === "inside" && value.length === 0 ? label : undefined,
+        onFocus: () => control && input?.select(),
+        onKeyDown: (e) => keepNativeKeys(e, open),
+      }),
+    ),
+    menu = getMenuProps(
+      { ref: setList, "aria-label": label },
+      { suppressRefError: true },
+    );
   return (
     <div
-      ref={host}
       id={id}
       className={`${styles.host} ${className ?? ""}`}
       data-variant={variant}
     >
       <div
-        ref={box}
+        {...getToggleButtonProps({
+          ref: setBox,
+          // A plain box around the input, which stays the one combobox and tab stop.
+          id: undefined,
+          tabIndex: undefined,
+          "aria-controls": undefined,
+          "aria-expanded": undefined,
+          // A click that toggles the list closed leaves focus; any other keeps it in the field (comboChanges).
+          onClick: () => {
+            if (disabled || (open && query === null)) return;
+            input?.focus();
+          },
+        })}
         className={styles.field}
         data-part="field"
         data-multi={chips || undefined}
         data-open={open || undefined}
         aria-disabled={disabled || undefined}
-        onClick={() => {
-          if (disabled) return;
-          // A click while typing places the caret; otherwise it toggles the list.
-          if (open && query === null) return close();
-          if (!open) openList();
-          input.current?.focus();
-        }}
       >
         {variant === "inside" && value.length > 0 && (
           <span className={styles.label}>{label}</span>
@@ -139,7 +211,7 @@ export function MultiSelect({
                   aria-label={`Remove ${labelOf(v)}`}
                   onClick={(e) => {
                     e.stopPropagation();
-                    onChange(value.filter((x) => x !== v));
+                    removeSelectedItem(v);
                   }}
                 >
                   <Icon name="close" size={10} />
@@ -147,59 +219,9 @@ export function MultiSelect({
               </span>
             ))}
           <input
-            ref={input}
-            id={`${base}-field`}
-            className={styles.input}
-            type="text"
-            role="combobox"
-            autoComplete="off"
-            spellCheck={false}
-            aria-label={label}
-            aria-autocomplete="list"
-            aria-expanded={open}
-            aria-controls={panel}
-            aria-activedescendant={
-              open && current >= 0 ? optionId(rows[current].value) : undefined
-            }
+            {...field}
             title={summary || undefined}
-            disabled={disabled}
-            placeholder={
-              variant === "inside" && value.length === 0 ? label : undefined
-            }
-            value={query ?? (control ? summary : "")}
-            onFocus={(e) => control && e.currentTarget.select()}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setActive(0);
-              setOpen(true);
-            }}
-            onBlur={(e) => {
-              if (!host.current?.contains(e.relatedTarget as Node)) close();
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-                e.preventDefault();
-                if (!open) return openList();
-                const step = e.key === "ArrowDown" ? 1 : -1;
-                setActive(
-                  Math.max(0, Math.min(rows.length - 1, current + step)),
-                );
-              } else if (e.key === "Enter" && open && current >= 0) {
-                e.preventDefault();
-                toggle(rows[current].value);
-              } else if (e.key === "Escape" && open) {
-                e.preventDefault();
-                // preventDefault marks it handled: a popup the field sits in leaves it alone.
-                close();
-              } else if (
-                e.key === "Backspace" &&
-                !control &&
-                (query ?? "") === "" &&
-                value.length > 0
-              ) {
-                onChange(value.slice(0, -1));
-              }
-            }}
+            aria-activedescendant={field["aria-activedescendant"] || undefined}
           />
           {control && value.length > 1 && query === null && (
             <span className={styles.count}>{value.length}</span>
@@ -207,64 +229,70 @@ export function MultiSelect({
         </span>
         <Icon className={styles.caret} name="chevron-down" size={12} />
       </div>
-      {popup.mounted && (
-        <div
-          id={panel}
-          className={`${styles.panel} ${popup.motion.className}`}
-          style={placement}
-          inert={popup.leaving}
-          onAnimationEnd={popup.motion.onAnimationEnd}
-        >
-          <ul
-            ref={list}
-            id={`${base}-list`}
-            role="listbox"
-            aria-multiselectable="true"
-            aria-label={label}
+      <AnimatePresence>
+        {open && (
+          <Pop
+            ref={setPop}
+            id={panel}
+            className={styles.panel}
+            style={placement}
           >
-            {matches.length > rows.length && (
-              <li className={styles.note}>
-                More results available, please filter further.
-              </li>
-            )}
-            {rows.map((o, i) => (
-              <li
-                key={o.value}
-                id={optionId(o.value)}
-                role="option"
-                data-index={i}
-                aria-selected={value.includes(o.value)}
-                data-active={i === current || undefined}
-                // Toggle on press so the field keeps focus (and, unless it closes on pick, the list stays open).
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  toggle(o.value);
-                }}
-                onMouseEnter={() => setActive(i)}
-              >
-                {!chips && (
-                  <input
-                    type="checkbox"
-                    tabIndex={-1}
-                    aria-hidden="true"
-                    checked={value.includes(o.value)}
-                    readOnly
-                  />
-                )}
-                <span className={styles.text}>
-                  <span>{highlight(o.label, needle)}</span>
-                  {o.detail && (
-                    <span className={styles.detail}>
-                      {highlight(o.detail, needle)}
+            <ul
+              {...menu}
+              role="listbox"
+              aria-multiselectable="true"
+              style={view.style}
+            >
+              {view.lines.map(({ index }) => {
+                if (index < lead)
+                  return (
+                    <li
+                      key="note"
+                      ref={view.measure}
+                      data-index={index}
+                      className={styles.note}
+                    >
+                      More results available, please filter further.
+                    </li>
+                  );
+                const i = index - lead,
+                  o = rows[i],
+                  ticked = value.includes(o.value);
+                return (
+                  <li
+                    key={o.value}
+                    {...getItemProps({ item: o, index: i, ref: view.measure })}
+                    role="option"
+                    data-index={index}
+                    aria-selected={ticked}
+                    aria-disabled={undefined}
+                    data-active={i === highlightedIndex || undefined}
+                  >
+                    {!chips && (
+                      <input
+                        type="checkbox"
+                        tabIndex={-1}
+                        aria-hidden="true"
+                        checked={ticked}
+                        readOnly
+                      />
+                    )}
+                    <span className={styles.text}>
+                      <span>{highlight(o.label, needle)}</span>
+                      {o.detail && (
+                        <span className={styles.detail}>
+                          {highlight(o.detail, needle)}
+                        </span>
+                      )}
                     </span>
-                  )}
-                </span>
-              </li>
-            ))}
-            {rows.length === 0 && <li className={styles.none}>No matches</li>}
-          </ul>
-        </div>
-      )}
+                  </li>
+                );
+              })}
+              {rows.length === 0 && <li className={styles.none}>No matches</li>}
+            </ul>
+          </Pop>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

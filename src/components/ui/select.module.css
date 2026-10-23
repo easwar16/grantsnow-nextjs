@@ -19,8 +19,8 @@
     border-color var(--dur-fast) var(--ease),
     box-shadow var(--dur-fast) var(--ease);
 }
-.field:focus-within,
-.field[data-open] {
+:global(:where(:root:not([data-input="pointer"]))) .field:focus-within,
+:global(:where(:root:not([data-input="pointer"]))) .field[data-open] {
   border-color: var(--gn-brand);
   box-shadow: 0 0 0 1px var(--gn-brand);
 }
@@ -58,9 +58,11 @@
   pointer-events: none;
   transform: translateY(-50%);
 }
-/* A fixed overlay placed by useAnchor (position, width and height), above any popup it opens from. */
+/* A fixed overlay placed by useDropdownPanel (position, width and the room for it), above any popup it opens from.
+   280px tall at most, so Floating UI flips it on that height. */
 .panel {
   z-index: 30;
+  max-height: min(280px, var(--panel-room, 280px));
   display: flex;
   flex-direction: column;
   color: var(--gn-text);

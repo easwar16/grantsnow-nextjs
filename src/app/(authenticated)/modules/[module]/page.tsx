@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { pageIdentity } from "@/server/auth/page";
-import { drawerAccess } from "@/server/permissions/policy";
-import { label, resources } from "@/server/configuration/resources";
+import { pageIdentity } from "@/server/identity/auth/page";
+import { drawerAccess } from "@/server/platform/permissions";
+import { label, resources } from "@/server/platform/configuration/resources";
 import { placeholderModules } from "@/lib/unavailable-modules";
 
 export default async function UnavailableModule({

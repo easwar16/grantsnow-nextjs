@@ -1,5 +1,5 @@
 import "server-only";
-import { fixtureMode } from "@/server/configuration/environment";
+import { fixtureMode } from "@/server/platform/configuration/environment";
 /**
  * DEVELOPMENT FIXTURE ONLY: the EOI create and finalize writes in fixture mode, where writes never reach Oracle.
  * Create always yields request 1005; only that record has a finalizable page (Application, page 2), so the other

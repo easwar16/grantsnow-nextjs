@@ -9,7 +9,6 @@
   align-self: flex-start;
   margin: 0 6px 8px;
 }
-/* Must stay display: block for .gn-collapsible to animate (see globals.css). */
 .section > summary {
   display: flex;
   align-items: center;
@@ -27,8 +26,17 @@
   transform: rotate(-90deg);
   transition: transform var(--dur-fast) var(--ease);
 }
-.section[open] > summary .chevron {
+.section[data-open="true"] > summary .chevron {
   transform: none;
+}
+/* Motion slides the body (filter-section.tsx); the native details-content fade would run on top of it. */
+@supports selector(::details-content) {
+  .section::details-content {
+    transition: none;
+  }
+}
+.panel {
+  overflow: hidden;
 }
 .body {
   padding-bottom: 6px;
@@ -73,7 +81,7 @@
   align-items: center;
   gap: 8px;
 }
-.sort select {
+.sortField {
   flex: 1;
   min-width: 0;
 }

@@ -1,13 +1,13 @@
 import { beforeEach, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({ oracle: vi.fn() }));
-vi.mock("@/server/session/service", () => ({
+vi.mock("@/server/identity/session/service", () => ({
   authenticate: async () => ({
     session: { token: "isolated-token" },
     user: { modules: { PROPOSALS: true }, organizationId: "202" },
   }),
 }));
-vi.mock("@/server/api/transport", () => ({ oracle: state.oracle }));
-import { loadWidget } from "@/server/home/service";
+vi.mock("@/server/oracle/connection", () => ({ oracle: state.oracle }));
+import { loadWidget } from "@/server/modules/home/service";
 const queueRow = (i: number) => ({
   proposal_id: i + 1,
   proposal_number: `P_${i + 1}`,

@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 import {
   summaryView,
   type OpportunityRecord,
-} from "@/server/opportunities/eoi-record/opportunity";
+} from "@/server/modules/opportunities/eoi-record/opportunity";
 const record = {
   opportunities_id: 1,
   opp_heading: "Synthetic call",

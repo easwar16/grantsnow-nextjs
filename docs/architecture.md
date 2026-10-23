@@ -11,13 +11,47 @@ flowchart LR
   Oracle -->|validated allowlisted display models| Next
 ```
 
-Server Components load initial data through shared services directly. Browser refresh calls authenticated route handlers that invoke the same services. There are no loopback fetches. Transport operations are allowlisted, have a 15-second timeout, reject redirects, and keep credentials/tokens in headers server-side. Oracle errors are mapped to safe messages; raw upstream bodies/errors are not logged or returned.
+## Project structure
+
+```
+src/
+  app/                    pages, layouts and thin route files only
+  server/                 server-only (every module imports "server-only")
+    oracle/               connection · context · client · cache · operations.json · api/<area> · api/catalogue (generated)
+    oic/                  connection (object storage) · flows · operations.json · api/catalogue (generated)
+    http/                 route() wrapper · JSON responses
+    identity/             session (sealed cookie, validate, DEV bridge) · auth (OIDC, IDCS metadata)
+    platform/             configuration (environment, resource bundles, formatting) · sanitize · permissions · async
+    modules/<module>/     account · home · notifications · opportunities · proposals · chatbot
+    record/<panel>/       objects (comments, audit, history, delegations) · approvals · attachments · attributes ·
+                          fx-rates · dynamic-form: the record panels any module can host
+  features/               browser UI, named as on the server
+    modules/<module>/     account · home · opportunities · proposals
+    record/<panel>/       objects · approvals · attachments · attributes · fx-rates · dynamic-form
+  components/             ui · feedback · layout · dialog (ActionDialog, useConfirm, useActionFailure) · chatbot
+  lib/                    api (http · hooks · endpoints/<area>) · store (app store, latest-request) · hooks · format ·
+                          errors · ids · security · mentions
+  shared/                 pure models both sides use (auth types, the EOI record model)
+  test-support/           development fixtures only
+scripts/                  oracle-catalogue.mjs (API catalogues) · resource-seed.mjs (fallback translations) · e2e · clean
+```
+
+**Layering rules**
+
+- **`server/`.** Server-only. Nothing in it is imported by browser code except `import type`.
+- **`features/` and `components/`.** Client components (`"use client"`) never import runtime code from `server/` (`import type` is fine) and reach the backend only through `@/lib/api`. Server components there, such as a record tab that renders on the server, may call `server/` services directly.
+- **`shared/`.** Neither `"use client"` nor `server-only`. Types, schemas and pure functions only.
+- **Module boundaries.** A module never imports another module's internals. What several modules need lives in `record/`, `components/`, `lib/` or `shared/`.
+- **Oracle.** Only `server/oracle/api` functions call Oracle, and only `server/oic` calls OIC. The session module, which runs before a session exists, is the one exception that uses the connection directly.
+- **Generated files.** `oracle/api/catalogue/**`, `oic/api/catalogue.ts`, both `operations.json` catalogue entries and `platform/configuration/resource-defaults.json` are generated from the legacy repo. Regenerate them, never edit them. Rebuild-owned seeds go in `resource-additions.json`.
+
+Server Components load initial data through shared services directly. Browser refresh calls authenticated route handlers that invoke the same services. There are no loopback fetches. Transport operations are allowlisted. They time out after 60 s (90 s for aggregates) on one pooled keep-alive connection per host, and retry a read once when its connection timed out (never a write). They reject redirects and keep credentials and tokens in server-side headers. All backend access goes through the API layer ([api-layer.md](api-layer.md)). Oracle errors are mapped to safe messages; raw upstream bodies/errors are not logged or returned.
 
 Protected encrypted-cookie storage holds only backend token, subject, fixture/environment marker and expiries (plus short-lived login transaction or logout notice). User details, roles, configuration and resources are reloaded with token-bound validation, rather than inflating the cookie or shipping raw role/session bodies to clients. All instances need the same key. `iron-session` size limits reject oversized payloads; no chunking or new cloud database is silently introduced. See authentication for revocation/concurrent renewal limits.
 
 `proxy.ts` performs a local sealed-session/lifetime check to preserve deep links during login. Protected pages and every API service separately validate Oracle session/module access. Home has no page grant (as legacy); each widget requires its module grant and configured visibility. Proposal listing mirrors the verified module gate and relies on the existing token-scoped listing operation for row scope. No record-detail permission claims are made. Administrator must verify token scoping independently of VBCS before enabling live use.
 
-All personalized requests use no-store/private response headers and request-local React `cache` deduplication only. Cache Components are not enabled; there is no persistent/public data cache. Configuration loads are request-local. Landing is Home, except approved legacy `PROPOSALS` landing when no specific return route is present; other unbuilt landing modules fall back to Home.
+All personalized requests use no-store/private response headers. Oracle reads are held once per request, and reference data per session with a short TTL, keyed by session and parameters; writes clear what they change ([api-layer.md](api-layer.md)). Cache Components are not enabled, and there is no persistent or public data cache. Configuration loads are request-local. Landing is Home, except approved legacy `PROPOSALS` landing when no specific return route is present; other unbuilt landing modules fall back to Home.
 
 UI stack: semantic HTML, native form fields/selects, table and buttons; responsive CSS with shared color/spacing tokens; default/dark preference handling. No additional form/state/chart system. The bar visualizations include full textual values and accessible descriptions. The legacy custom theme catalogue/accessibility preferences are deferred; app supports native keyboard/focus/skip-link and narrow-screen controls.
 

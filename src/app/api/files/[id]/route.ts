@@ -1,13 +1,12 @@
-import { json, failure } from "@/server/api/http";
-import { sameOrigin } from "@/lib/security";
-import { appOrigin } from "@/server/configuration/environment";
+import { failure } from "@/server/http/response";
+import { route, searchOf } from "@/server/http/route";
 import { AppError } from "@/lib/errors";
-import { targetFromQuery } from "@/server/dynamic-form/access";
-import { deleteFile, downloadFile } from "@/server/files/service";
+import { targetFromQuery } from "@/server/record/dynamic-form/access";
+import { deleteFile, downloadFile } from "@/server/record/attachments/service";
 import {
   deleteAttachment,
   downloadAttachment,
-} from "@/server/files/attachments";
+} from "@/server/record/attachments/attachments";
 type Context = { params: Promise<{ id: string }> };
 async function attachmentId(context: Context) {
   const { id } = await context.params;
@@ -22,7 +21,8 @@ function disposition(name: string) {
 }
 /**
  * A stored file's bytes: GET /api/files/{attachmentId}?objectType&slot&objectId (a form's) or ?host&record (an
- * Attachments panel's). Always a download, never rendered; the panel's preview builds its own typed blob.
+ * Attachments panel's). Always a download, never rendered; the panel's preview builds its own typed blob. It streams
+ * bytes, so it keeps its own handler.
  */
 export async function GET(request: Request, context: Context) {
   try {
@@ -45,17 +45,13 @@ export async function GET(request: Request, context: Context) {
   }
 }
 /** WRITES: deletes a stored file and its record. */
-export async function DELETE(request: Request, context: Context) {
-  try {
-    sameOrigin(request, appOrigin());
+export const DELETE = route<Context>(
+  async (request, context) => {
     const id = await attachmentId(context);
-    const query = new URL(request.url).searchParams;
-    return json(
-      query.has("host")
-        ? await deleteAttachment(query, id)
-        : await deleteFile(targetFromQuery(query), id),
-    );
-  } catch (e) {
-    return failure(e);
-  }
-}
+    const query = searchOf(request);
+    return query.has("host")
+      ? deleteAttachment(query, id)
+      : deleteFile(targetFromQuery(query), id);
+  },
+  { write: true },
+);

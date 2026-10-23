@@ -1,14 +1,14 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { validateRuntime } =
-      await import("./server/configuration/environment");
+      await import("./server/platform/configuration/environment");
     validateRuntime();
     if (
       process.env.APP_ENV === "development" &&
       process.env.NODE_ENV !== "production"
     ) {
       const { preferIpv4Lookup } =
-        await import("./server/configuration/dev-dns");
+        await import("./server/platform/configuration/dev-dns");
       preferIpv4Lookup(
         [
           process.env.ORDS_BASE_URL,

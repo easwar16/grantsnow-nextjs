@@ -64,8 +64,9 @@
   transition: background-color var(--dur-fast) var(--ease);
 }
 .handle:hover::after,
-.handle:focus-visible::after,
-.handle:active::after {
+.handle:active::after,
+/* The focus highlight is for keyboard users; after a drag the handle keeps focus but shows no ring. */
+:global(:where(:root:not([data-input="pointer"]))) .handle:focus-visible::after {
   background: var(--accent);
 }
 .handle:focus-visible {

@@ -1,12 +1,12 @@
-import { displayFormat } from "@/server/configuration/formatting";
-import { pageIdentity } from "@/server/auth/page";
-import { requireDrawerAccess } from "@/server/permissions/policy";
-import { eoiListView, listEois } from "@/server/opportunities/eoi";
-import { DEFAULT_EOI_FILTERS } from "@/features/opportunities/eoi-list/schema";
+import { displayFormat } from "@/server/platform/configuration/formatting";
+import { pageIdentity } from "@/server/identity/auth/page";
+import { requireDrawerAccess } from "@/server/platform/permissions";
+import { eoiListView, listEois } from "@/server/modules/opportunities/eoi";
+import { DEFAULT_EOI_FILTERS } from "@/features/modules/opportunities/eoi-list/schema";
 import {
   EoiList,
   type EoiListResult,
-} from "@/features/opportunities/eoi-list/eoi-list";
+} from "@/features/modules/opportunities/eoi-list/eoi-list";
 import { State } from "@/components/feedback/state";
 import { publicError } from "@/lib/errors";
 export const metadata = { title: "EOI Application" };

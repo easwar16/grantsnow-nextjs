@@ -4,7 +4,7 @@
 
 Verified legacy checkout: `/Users/easwar/Developer/GrantsNow` at `6f1c81f0cc70d11b1ad0f1881e3a2f5db0c3675e`. Inventory baseline: branch 9248, `3acfe9e272e2db076d92942ebbf86776ae583077`. Current files were read without changing legacy state. The supplied three artifacts are copied into `docs/migration`. No catalogue credential identifiers/secret values were copied.
 
-Machine-readable operation/required-header allowlist: `src/server/api/operations.json`, derived from the two current OpenAPI files. Response schemas are backed by current VBCS page models/chains, because OpenAPI declares responses under `default`, often with incomplete checked-in examples. Runtime/live payload compatibility is unverified.
+Machine-readable operation/required-header allowlist: `src/server/oracle/operations.json`, derived from the two current OpenAPI files. Response schemas are backed by current VBCS page models/chains, because OpenAPI declares responses under `default`, often with incomplete checked-in examples. Runtime/live payload compatibility is unverified.
 
 ## Session
 
@@ -42,7 +42,7 @@ Query contract (verified 2026-10-22 against legacy `origin/development` and the 
 - Initial load (live): `GET /pre_award/getProposalsList/?p_offset=0&p_limit=10`, with no where clause and no sort.
 - Title filter "test" (live): `GET /pre_award/getProposalsList/?p_where_clause=(LOWER("proposal_title") LIKE LOWER('%test%'))&p_offset=0&p_limit=10`.
 
-The server builds the clause in `src/server/proposals/where-clause.ts`; the browser sends only the validated feature query (`src/features/proposals/schemas.ts`) and never SQL, `q` or `p_*` parameters. The criteria follow legacy `fetchFilterCriteria` order, joined with `AND` inside one pair of parentheses:
+The server builds the clause in `src/server/modules/proposals/where-clause.ts`; the browser sends only the validated feature query (`src/features/modules/proposals/schemas.ts`) and never SQL, `q` or `p_*` parameters. The criteria follow legacy `fetchFilterCriteria` order, joined with `AND` inside one pair of parentheses:
 
 | Query param        | Column                   | Clause                                                     |
 | ------------------ | ------------------------ | ---------------------------------------------------------- |
@@ -74,12 +74,12 @@ Fixture transport (`src/test-support/transport.ts`) still evaluates `q` JSON, so
 - `/shared/dashboardPreferences`: needAttention/insights `isVisible` + theme; missing configuration fails rather than granting widgets.
 - `/shared/labels`, module_name DASHBOARD,PROPOSAL: current shell restructures array rows `module_name,label_type,label_name,label_value,is_visible`; new adapter uses these directly. Text labels fall back to documented source equivalents; optional visibility requires Y.
 - `/security/user_roles`, p_obj_type DASHBOARD: page_name/read_access, used for DASHBOARD widget rights and object roles (every row for a page must grant read); Home itself has no page grant. Listing requires PROPOSALS module and existing token row scope (legacy listing checkAccess gates module, not an invented page grant; legacy denied only an explicit `false`, the rebuild fails closed).
-- `/security/user_roles`, p_obj_type = proposal type, p_obj_id = proposal id: the Summary needs `proposals-summary` read. `objectAccess` (`src/server/proposals/record.ts`) grants a right only when every row for the page grants it, so no rows, a missing page or any `N` denies (legacy: last duplicate row wins for `access`, while its entry gate denies on any `proposals-summary` read `N`).
+- `/security/user_roles`, p_obj_type = proposal type, p_obj_id = proposal id: the Summary needs `proposals-summary` read. `objectAccess` (`src/server/modules/proposals/record.ts`) grants a right only when every row for the page grants it, so no rows, a missing page or any `N` denies (legacy: last duplicate row wins for `access`, while its entry gate denies on any `proposals-summary` read `N`).
 - `/pre_award/getLkpOrgUnitType` with trusted person_id: permitted Home organizations; field names normalized case-insensitively just as legacy prepareOrgUnitData does. Submitted org IDs must be in that returned set. No browser person_id accepted. Partial lookup paging cannot widen scope; administrator must verify complete lookup delivery before exposing every permitted organization.
 
 ## Home
 
-Detailed widgets/paths/charts in `home-coverage.md` and typed registry `src/server/home/widgets.ts`. Common queue envelope: items plus hasMore/offset when supplied. Default ORDS pagination `offset/limit` mirrors generic legacy transform, not Proposal p_offset/p_limit. Rendered rows are labelled page rows. No chart/list reconciliation claim without live records.
+Detailed widgets/paths/charts in `home-coverage.md` and typed registry `src/server/modules/home/widgets.ts`. Common queue envelope: items plus hasMore/offset when supplied. Default ORDS pagination `offset/limit` mirrors generic legacy transform, not Proposal p_offset/p_limit. Rendered rows are labelled page rows. No chart/list reconciliation claim without live records.
 
 Proposal queue fields: proposal_id/number/title, faculty_name, deadline_date/appr_deadline_date/stage_name. Contract: contract_id/number/title/org_unit_name. Ethics: setup_flow_id/application_number/setup_description/org_unit_name. Awards: award_id/number/name (proposal_title fallback present in approved-award source)/faculty_name. EOI: request_id/number/opp_heading/org_unit_name. Dates/stage shown only if present. Keys include deadline/stage to preserve multiple queue entries for a record.
 

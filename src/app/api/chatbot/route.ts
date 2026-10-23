@@ -1,8 +1,6 @@
 import { z } from "zod";
-import { askChatbot, question } from "@/server/chatbot/service";
-import { json, failure } from "@/server/api/http";
-import { sameOrigin } from "@/lib/security";
-import { appOrigin } from "@/server/configuration/environment";
+import { askChatbot, question } from "@/server/modules/chatbot/service";
+import { route } from "@/server/http/route";
 import { AppError } from "@/lib/errors";
 const MAX_BODY = 16384;
 const body = z.object({ question }).strict();
@@ -22,9 +20,8 @@ async function readBounded(request: Request) {
   }
   return new TextDecoder().decode(Buffer.concat(chunks));
 }
-export async function POST(request: Request) {
-  try {
-    sameOrigin(request, appOrigin());
+export const POST = route(
+  async (request) => {
     let parsed: z.infer<typeof body>;
     try {
       parsed = body.parse(JSON.parse(await readBounded(request)));
@@ -38,8 +35,7 @@ export async function POST(request: Request) {
         400,
       );
     }
-    return json(await askChatbot(parsed.question));
-  } catch (e) {
-    return failure(e);
-  }
-}
+    return askChatbot(parsed.question);
+  },
+  { write: true },
+);

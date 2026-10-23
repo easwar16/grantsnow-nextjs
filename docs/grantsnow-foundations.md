@@ -32,7 +32,7 @@ These rules belong in `src/server/api/*` and nowhere else.
   an array is contracted, so `!response.ok` never fires. Validate the shape and do not cast it.
 - **Errors carry `error_code : error_description` plus `preventive_action`.** The legacy app shows these
   verbatim in a transient toast. The rebuild passes only those three fields to the client (`businessError` in
-  `src/server/api/transport.ts`); `State` shows the preventive action under the message.
+  `src/server/oracle/connection.ts`); `State` shows the preventive action under the message.
 - **Dead-session replies are not uniform.** One of them is the literal text `Context Not Set: N`. Match
   it to "session expired", not to a generic failure.
 - **Paging is `p_offset` / `p_limit`** everywhere except the claims `unit-funds-list` / `fund-inquiry`
@@ -42,7 +42,7 @@ These rules belong in `src/server/api/*` and nowhere else.
 - **List filters are a SQL `p_where_clause`, built on the server.** Live DEV, 2026-10-22, title filter:
   `p_where_clause=(LOWER("proposal_title") LIKE LOWER('%test%'))`. Sort is `p_order_by="col"` +
   `p_sort_order`. Columns come from a fixed allowlist and values are quoted literals with `'` doubled
-  (`src/server/proposals/where-clause.ts`); the browser never sends SQL. `services/apps/transforms.js` (ORDS
+  (`src/server/modules/proposals/where-clause.ts`); the browser never sends SQL. `services/apps/transforms.js` (ORDS
   `q` JSON) is unused by the legacy app.
 - **Header names vary by operation** (`token` vs `p_token`, `org_id` / `org-id` / `p_org_id`, header
   casing). Copy them from the legacy call site into `operations.json`. Never normalise them.
@@ -86,7 +86,15 @@ These rules belong in `src/server/api/*` and nowhere else.
 
 - **Merge direction:** local seed defaults first, backend rows on top, so the backend wins and seeds fill
   the gaps (`_.merge(strings, backendRows)` in legacy `shell-page.js`). Keys are lower-cased per module.
-  Here, the seeds are `src/server/configuration/resource-defaults.json`.
+  Here, the seeds are `src/server/platform/configuration/resource-defaults.json`, generated from legacy's runtime seed
+  `webApps/app/resources/js/strings.js`, covering all 11 bundles with their label, visibility, mandatory flag,
+  description and preferences. Run `node scripts/resource-seed.mjs` after legacy changes, and `--check` to verify.
+  Seeds the rebuild owns, each arriving with `'N'`, go in `resource-additions.json` and never into the generated file.
+- **Field by field, as `_.merge`:**
+  - A field the backend omits keeps the seed's.
+  - An empty description or absent preferences also keeps the seed's.
+  - Any other backend value wins, `null` included. A null label then shows the use site's literal fallback, as
+    legacy's `translations[m][g][k] || 'literal'` does.
 - **Fail closed:** a control shows only when its entry has `is_visible === 'Y'`. A missing bundle, key or
   flag hides it. The helpers never throw on a missing module, group or key. Re-confirmed by the user on
   2026-10-22 for everything RB-driven: gate it with `resourceVisible`, and never use a code default of visible or
@@ -156,7 +164,7 @@ These rules belong in `src/server/api/*` and nowhere else.
   page load. Applied: `<main>` is the one scroll container; a full-height page takes `.page-fill`.
 - **Form fields are one size, 28 px,** set in rows of equal cells, with related fields sharing a row (D36).
 - **Use one loading placeholder,** the skeleton with `role="status"`, not "Loading…" text (D30).
-- **Use one motion system,** CSS tokens only. Honour `prefers-reduced-motion`, and give dialogs exit
+- **Use one motion system,** driven by the CSS tokens. Honour `prefers-reduced-motion`, and give dialogs exit
   animations too (D29).
 - **Colours, fonts and radii come only from tokens.** Oracle Sans comes from Oracle's CDN, with Open Sans as
   the fallback.
@@ -196,7 +204,10 @@ These rules belong in `src/server/api/*` and nowhere else.
     while busy, and list rows rising in.
   - Collapsibles use `.gn-collapsible` / `.gn-collapse`. A `<details>` must stay `display: block`, or it jumps
     instead of animating.
-  - Popups leave through `usePresence` (`src/lib/use-presence.ts`).
+  - Anything that animates out before unmounting uses Motion (`motion@13.5.1`, `motion/react`): `AnimatePresence`
+    with the presets in `src/lib/motion.ts`, which copy the CSS tokens, and `Pop` (`src/components/ui/pop.tsx`)
+    for popups. The app shell's `MotionConfig reducedMotion="user"` honours reduced motion. Enter-only
+    animations stay CSS.
 - **Listing filters share one look:**
   - `FilterPanel` holds the column. `FilterStack`, `FilterClear`, `FilterSection`, `FilterChoices` and
     `SortControl` (`src/components/ui/filter-section.tsx`) build its contents.
@@ -212,7 +223,7 @@ These rules belong in `src/server/api/*` and nowhere else.
     start the promise early and await it late). Only a step that needs an earlier result waits for it.
   - Paged reads fetch the first page, then the remaining pages together once the total is known.
   - Reference data Oracle answers slowly and the app never writes (labels, global variables, lookups, roles,
-    org and person lists) goes through `memo` (`src/server/cache/memo.ts`). It is keyed by session, shares one
+    org and person lists) goes through `memo` (`src/server/oracle/cache.ts`). It is keyed by session, shares one
     request between concurrent callers, never reuses a failure, and expires after a TTL. A write that changes
     memoised data calls `forget` for it.
   - **Cache by habit** (owner, 2026-10-22). Hold everything the VBCS app holds app-wide:
@@ -221,7 +232,7 @@ These rules belong in `src/server/api/*` and nowhere else.
     - person status, the opportunity "new" flags, notifications.
       Also hold anything this app reads in more than one place (announcements, record roles, dialog setups,
       recipient lists, org units per PI). Server side this uses `memo` / `cachedRead` (`src/server/cache/`);
-      client side, the app store (`src/lib/app-store.tsx`, `useReducer` + Context, behind `useRemote` and the
+      client side, the app store (`src/lib/store/app-store.tsx`, `useReducer` + Context, behind `useRemote` and the
       dialogs' reads). Every write that changes held data clears it (`forgetRead` / `forget`, in `finally`).
   - No races: writes stay ordered, a request's own steps that depend on each other stay sequential, and
     client fetches keep their latest-wins guards (`LatestRequest` / aborts), so a slow earlier response never
@@ -240,6 +251,18 @@ These rules belong in `src/server/api/*` and nowhere else.
   of vendor or source code, first. When a fix fails, say what that rules out before trying the next one.
 - **When a result doesn't match the source, suspect a stale cache first.** Next's `.next/dev` produced an
   HMR loop here. Angular's `node_modules/.vitest-cache` served old compiles.
+
+## API layer (owner, 2026-10-23)
+
+- **Single entry points.** All Oracle access goes through `@/server/oracle/api`, made of functions defined with `read` and `write`. All browser access goes through `@/lib/api`, made of endpoints, write functions, `useApi` and `usePagedApi`. The full rules are in [api-layer.md](api-layer.md).
+- **Identity is never passed by hand.** It comes from the request's verified session. Each function names the identity headers it sends.
+- **Caching follows the parameters.** The same operation with the same parameters is answered from the held copy: once per request by default, or per session with a TTL for reference data. Writes clear what they change. Listings are paged and cached per page, and whole reference lists are read across their pages.
+- **Libraries** (owner, 2026-10-23): use lodash and moment where they simplify. Legacy relies on both (`_.merge` for translations; moment for date formats and month arithmetic), so they also keep behaviour identical. Any other new dependency still needs the owner's agreement.
+- **Caching** (owner, 2026-10-23): what the live app caches, plus the owner-approved performance holds listed in [api-layer.md](api-layer.md). Writes always read fresh.
+- **Every dropdown searches** (owner, 2026-10-22 and 2026-10-23): a dropdown is `Select` / `MultiSelect`, which takes type-to-filter in the field itself and still requires a pick from the list, as legacy's `oj-select-single` does. There is no native `<select>` anywhere, and the search never sits in a separate box that can break the layout.
+- **No focus ring on click** (owner, 2026-10-23): `InputModality` marks `<html data-input>`; after a mouse, touch or pen press nothing draws an outline, border ring or switch ring, fields included. Keyboard navigation keeps every ring (WCAG 2.4.7). A ring drawn on a wrapper or sibling (`:focus-within`, `+ .track`, an open `Select`) is gated where it is set with `:where(:root:not([data-input="pointer"]))`, which adds no specificity.
+- **Data libraries** (owner, 2026-10-23): TanStack Query under the app store; lru-cache for the server cache; Downshift and TanStack Virtual for comboboxes; Floating UI for overlay positioning; Motion for enter and exit animations.
+- **Code arriving from other branches** (Easwar's Proposals and Contracts) is moved onto this layer when it lands.
 
 ## What not to carry
 
@@ -286,7 +309,7 @@ and improvement choices stay with the owner (§ _Open for the owner_).
 
 | Owner instruction               | Done                                                                                                                                                                                                                                                                                                                             |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| DOMPurify if better             | Yes: legacy `renderAsHTML` uses it, it parses like a browser and keeps authored styles/tables (D15). Server-side with jsdom (`src/server/html/sanitize.ts`), hardened: no `<style>`/form controls, no positioning or `url()` in styles, links new-tab, http(s)/mailto/relative only. `sanitize-html` removed                     |
+| DOMPurify if better             | Yes: legacy `renderAsHTML` uses it, it parses like a browser and keeps authored styles/tables (D15). Server-side with jsdom (`src/server/platform/sanitize.ts`), hardened: no `<style>`/form controls, no positioning or `url()` in styles, links new-tab, http(s)/mailto/relative only. `sanitize-html` removed                 |
 | FullCalendar                    | 6.1.22 via `@fullcalendar/react` (D17), loaded on first Calendar View (D19), ported legacy/GN-Angular calendar                                                                                                                                                                                                                   |
 | Dependencies                    | `sanitize-html` and its types removed; everything left in `dependencies` runs in production (zod validates every Oracle reply); test/tooling packages are dev-only                                                                                                                                                               |
 | Agreed fonts and styles         | Oracle gallery bundle linked as VB/GN-Angular do (Oracle Sans + `oj-ux-ico` glyphs, D13/D14), Open Sans listed as fallback, `<Icon>` component, GN tokens and component styles                                                                                                                                                   |
@@ -298,7 +321,7 @@ and improvement choices stay with the owner (§ _Open for the owner_).
 Later the same day: the hover-only "Refresh" buttons on Home widgets (Need Attention, Notifications, Featured,
 Dynamic Charts) were removed at the owner's request, to be re-added if needed; the error-state "Retry" stays. The dev
 origin is `http://localhost:3000` (as GN-Angular's `localhost:4200`), still loopback-only and exact for the Origin
-check and the host-only cookie. Development servers resolve the ORDS hosts over IPv4 first (`src/server/configuration/dev-dns.ts`),
+check and the host-only cookie. Development servers resolve the ORDS hosts over IPv4 first (`src/server/platform/configuration/dev-dns.ts`),
 because this machine's router stalls on AAAA lookups (Node waited ~6 s per lookup; DEV round trip now ~1 s).
 
 ## Dashboard and chatbot parity with GN-Angular (2026-10-23)

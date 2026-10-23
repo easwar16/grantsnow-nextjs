@@ -3,7 +3,7 @@ import {
   drawerAccess,
   requireDrawerAccess,
   visibleNavigation,
-} from "@/server/permissions/policy";
+} from "@/server/platform/permissions";
 import { externalToolUrls } from "@/app/(authenticated)/modules/external-tools";
 const ids = (modules: Record<string, boolean>) =>
   visibleNavigation(modules).map((i) =>

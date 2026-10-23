@@ -6,10 +6,10 @@ import {
   providersOf,
   toCalendarEvents,
   viewLabel,
-} from "@/features/home/components/calendar/model";
-import type { AttentionRow } from "@/features/home/types";
-import { mapWidget } from "@/server/home/service";
-import { widgets } from "@/server/home/widgets";
+} from "@/features/modules/home/components/calendar/model";
+import type { AttentionRow } from "@/features/modules/home/types";
+import { mapWidget } from "@/server/modules/home/service";
+import { widgets } from "@/server/modules/home/widgets";
 
 const row = (over: Partial<AttentionRow>): AttentionRow => ({
   id: "1:1",

@@ -1,10 +1,10 @@
 import { expect, it } from "vitest";
-import { resolveOperationPath } from "@/server/api/transport";
+import { resolveOperationPath } from "@/server/oracle/connection";
 import {
   mapSummary,
   objectAccess,
   proposalBundle,
-} from "@/server/proposals/record";
+} from "@/server/modules/proposals/record";
 import { safeReturn } from "@/lib/security";
 const identity = { type: "PROPOSAL" as const, id: "123" };
 const record = {

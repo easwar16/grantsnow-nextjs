@@ -8,14 +8,14 @@ import {
   eoiWhereClause,
   gatedFilters,
   mapEoiPage,
-} from "@/server/opportunities/eoi";
+} from "@/server/modules/opportunities/eoi";
 import {
   DEFAULT_EOI_FILTERS,
   clearedEoiFilters,
   parseEoiFilters,
   serializeEoiFilters,
-} from "@/features/opportunities/eoi-list/schema";
-import { mergeResourceDefaults } from "@/server/configuration/resources";
+} from "@/features/modules/opportunities/eoi-list/schema";
+import { mergeResourceDefaults } from "@/server/platform/configuration/resources";
 import { mockOracle } from "@/test-support/transport";
 
 const f = (change: Partial<typeof DEFAULT_EOI_FILTERS>) => ({

@@ -4,7 +4,7 @@ import type {
   LineSeriesOption,
   ScatterSeriesOption,
 } from "echarts/charts";
-import type { StatisticRow, WidgetData } from "@/features/home/types";
+import type { StatisticRow, WidgetData } from "@/features/modules/home/types";
 import { moneyDisplay, type FormatSettings } from "@/lib/format";
 // Legacy getCorrectMappingForChart: LA is lineWithArea; anything unknown is a pie.
 const dynamicTypes: Record<string, "pie" | "line" | "area" | "bar"> = {

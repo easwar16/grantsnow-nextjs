@@ -316,13 +316,14 @@ textarea {
   line-height: 1.4;
   resize: vertical;
 }
-/* Redwood focus on fields: the border and a 1px ring take the brand colour instead of an outline. */
-:is(
-  input:not([type="checkbox"], [type="radio"]),
-  select,
-  textarea,
-  .gn-control
-):focus-visible {
+/* Redwood focus on fields: the border and a 1px ring take the brand colour instead of an outline (keyboard only). */
+:where(:root:not([data-input="pointer"]))
+  :is(
+    input:not([type="checkbox"], [type="radio"]),
+    select,
+    textarea,
+    .gn-control
+  ):focus-visible {
   outline: none;
   border-color: var(--focus);
   box-shadow: 0 0 0 1px var(--focus);
@@ -2384,7 +2385,8 @@ html.accContrastTheme-100 {
     transition: none;
   }
 }
-/* The org title is the picker: the native select lies transparently over the h1 and its chevron. */
+/* The org title is the picker: its Select lies transparently over the h1 and its chevron, and shows its field only
+   while open, so the typed search can be seen. */
 .home-heading {
   display: flex;
   align-items: center;
@@ -2403,15 +2405,15 @@ html.accContrastTheme-100 {
   font-weight: 700;
   line-height: 27px;
 }
-.organization-heading select {
+.organization-heading .organization-picker {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
 }
-.organization-heading:has(select:focus-visible) {
+.organization-picker [data-part="field"]:not([data-open]) {
+  opacity: 0;
+}
+:where(:root:not([data-input="pointer"]))
+  .organization-heading:has(.organization-picker input:focus-visible) {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
@@ -2753,4 +2755,9 @@ html.accContrastTheme-100 {
   .insight-filter {
     flex: 1 1 100px;
   }
+}
+/* Focus rings are for keyboard navigation (InputModality): after a mouse, touch or pen press nothing draws one
+   (owner). Rings drawn on a wrapper or sibling are gated with :where(:root:not([data-input="pointer"])) where they are set. */
+:root[data-input="pointer"] :focus-visible {
+  outline: none;
 }

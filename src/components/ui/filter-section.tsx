@@ -1,7 +1,10 @@
 "use client";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { Icon } from "@/components/ui/icon";
+import { Select } from "@/components/ui/select";
 import { idPart } from "@/lib/ids";
+import { expand } from "@/lib/motion";
 import styles from "./filter-section.module.css";
 
 /** One listing page's filter column contents (GN-Angular finder drawer): Clear on top, then the sections. */
@@ -42,7 +45,7 @@ export function FilterClear({
   );
 }
 
-/** A collapsible filter group: a 27px bold heading with a chevron, sliding open and closed (.gn-collapsible). */
+/** A collapsible filter group: a 27px bold heading with a chevron, its body sliding open and closed. */
 export function FilterSection({
   id,
   title,
@@ -59,22 +62,39 @@ export function FilterSection({
   action?: ReactNode;
   children: ReactNode;
 }) {
+  // The <details> stays open until its body has slid shut.
+  const [shown, setShown] = useState(open);
+  if (open && !shown) setShown(true);
   return (
     <details
       id={id}
-      className={`gn-collapsible ${styles.section}`}
-      open={open}
+      className={styles.section}
+      open={shown}
+      data-open={open}
       onToggle={(e) => {
         const next = e.currentTarget.open;
-        if (next !== open) onToggle(next);
+        if (next !== shown) onToggle(next);
       }}
     >
-      <summary id={`${id}-heading`}>
+      <summary
+        id={`${id}-heading`}
+        onClick={(e) => {
+          // The state toggles, not the browser, so closing can animate first.
+          e.preventDefault();
+          onToggle(!open);
+        }}
+      >
         <Icon className={styles.chevron} name="chevron-down" size={14} />
         {title}
         {action}
       </summary>
-      <div className={styles.body}>{children}</div>
+      <AnimatePresence initial={false} onExitComplete={() => setShown(false)}>
+        {open && (
+          <motion.div {...expand} id={`${id}-panel`} className={styles.panel}>
+            <div className={styles.body}>{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </details>
   );
 }
@@ -167,20 +187,15 @@ export function SortControl({
   const ascending = dir === "ascending";
   return (
     <div id={id} className={styles.sort}>
-      <select
+      <Select
         id={`${id}-field`}
-        className="gn-control"
-        aria-label={label}
+        className={styles.sortField}
+        label={label}
+        options={options}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        {blank && <option value="" />}
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+        clearable={!!blank}
+        onChange={onChange}
+      />
       <button
         type="button"
         id={`${id}-direction`}

@@ -5,7 +5,7 @@ const state = vi.hoisted(() => ({
   oracle: vi.fn(),
 }));
 vi.mock("node:fs/promises", () => ({ readFile: state.read, stat: state.stat }));
-vi.mock("@/server/api/transport", async (importOriginal) => ({
+vi.mock("@/server/oracle/connection", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   oracle: state.oracle,
 }));
@@ -14,7 +14,7 @@ import {
   DEV_SESSION_LEASE_MS,
   parsePastedToken,
   pastedBrowserSession,
-} from "@/server/session/browser-session";
+} from "@/server/identity/session/browser-session";
 import { fixtureUser } from "@/test-support/fixtures";
 const base = "https://dev.example/ords/dev_base/";
 const apps = "https://dev.example/ords/dev/";

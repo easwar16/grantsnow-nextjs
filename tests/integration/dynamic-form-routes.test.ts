@@ -1,4 +1,4 @@
-import { forget } from "@/server/cache/memo";
+import { forget } from "@/server/oracle/cache";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "@/lib/errors";
 const state = vi.hoisted(() => ({
@@ -11,7 +11,7 @@ const state = vi.hoisted(() => ({
   modules: { "opportunities-group": true } as Record<string, boolean>,
   dashboard: [] as { page_name: string; read_access: string }[],
 }));
-vi.mock("@/server/session/service", () => ({
+vi.mock("@/server/identity/session/service", () => ({
   authenticate: async () => ({
     session: { token: "server-token" },
     user: {
@@ -22,32 +22,41 @@ vi.mock("@/server/session/service", () => ({
     },
   }),
 }));
-vi.mock("@/server/api/transport", () => ({
+vi.mock("@/server/oracle/connection", () => ({
   oracle: state.oracle,
   oracleWrite: state.oracleWrite,
 }));
-vi.mock("@/server/api/oic", () => ({
+vi.mock("@/server/oic/connection", () => ({
   oicConnected: () => state.connected,
   oicUpload: state.oicUpload,
   oicDownload: state.oicDownload,
   oicDelete: state.oicDelete,
 }));
-vi.mock("@/server/configuration/service", () => ({
+vi.mock("@/server/platform/configuration/service", () => ({
   dashboardRoles: async () => state.dashboard,
 }));
-vi.mock("@/server/configuration/resources", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("@/server/configuration/resources")
-  >()),
-  resources: async () => [],
-}));
+vi.mock(
+  "@/server/platform/configuration/resources",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("@/server/platform/configuration/resources")
+    >()),
+    resources: async () => [],
+  }),
+);
 import { GET as getForm, POST as postForm } from "@/app/api/dynamic-form/route";
 import { POST as upload } from "@/app/api/files/route";
 import { DELETE as remove, GET as download } from "@/app/api/files/[id]/route";
-import { checkAnswers, mapForms } from "@/server/dynamic-form/forms";
-import { formSettings } from "@/server/dynamic-form/globals";
-import { fileNameProblem, storageLocation } from "@/server/files/service";
+import { checkAnswers, mapForms } from "@/server/record/dynamic-form/forms";
+import { formSettings } from "@/server/record/dynamic-form/globals";
+import {
+  fileNameProblem,
+  storageLocation,
+} from "@/server/record/attachments/service";
 const origin = "http://127.0.0.1:3000";
+// The client also passes its optional signal / query / path arguments; assertions compare the leading ones.
+const lead = (mock: { mock: { calls: unknown[][] } }, n = 3) =>
+  mock.mock.calls.map((c) => c.slice(0, n));
 const APP =
   "objectType=OPPORTUNITIES&slot=OPPORTUNITIES-EOI-APPLICATION&parentId=7165673";
 const RECORD = `${APP}&objectId=3934`;
@@ -366,15 +375,23 @@ describe("GET /api/dynamic-form", () => {
     state.dashboard = [];
     expect((await getReq(APP)).status).toBe(403);
     state.dashboard = [{ page_name: "apply-opportunities", read_access: "Y" }];
-    state.oracle.mockImplementationOnce(async () => ({
-      items: [
-        {
-          opportunities_id: 7165673,
-          opportunity_status: "CLOSED",
-          create_application_of_interest: "Y",
-        },
-      ],
-    }));
+    // The opportunity closes: a page load may show its held copy for a minute, so the next load starts afresh here
+    // (a Create re-reads it fresh, as every write does).
+    forget("");
+    const open = state.oracle.getMockImplementation()!;
+    state.oracle.mockImplementation(async (op: string, ...rest: unknown[]) =>
+      op === "getSharedGetOpportunities"
+        ? {
+            items: [
+              {
+                opportunities_id: 7165673,
+                opportunity_status: "CLOSED",
+                create_application_of_interest: "Y",
+              },
+            ],
+          }
+        : open(op, ...rest),
+    );
     expect((await getReq(APP)).status).toBe(403);
     expect(
       (
@@ -729,7 +746,7 @@ describe("GET and DELETE /api/files/[id]", () => {
     expect(res.status).toBe(200);
     expect(order).toEqual(["oic", "record"]);
     expect(state.oicDelete).toHaveBeenCalledWith(owned.file_location);
-    expect(state.oracleWrite).toHaveBeenCalledWith(
+    expect(lead(state.oracleWrite, 2)).toContainEqual([
       "deletePre_awardAttachments",
       {
         token: "server-token",
@@ -737,7 +754,7 @@ describe("GET and DELETE /api/files/[id]", () => {
         org_id: "202",
         legal_id: "77",
       },
-    );
+    ]);
   });
   it("deletes nothing that is not the record's, nor without edit", async () => {
     attachments = [owned];

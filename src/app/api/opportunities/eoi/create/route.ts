@@ -1,23 +1,21 @@
 import { ZodError } from "zod";
-import { createEoiApplication } from "@/server/opportunities/record";
-import { json, failure } from "@/server/api/http";
-import { sameOrigin } from "@/lib/security";
-import { appOrigin } from "@/server/configuration/environment";
+import { createEoiApplication } from "@/server/modules/opportunities/record";
+import { route } from "@/server/http/route";
 import { AppError } from "@/lib/errors";
 const MAX_BODY = 1024;
 /** Create (WRITES): inserts the application once its form has validated; the browser sends only the opportunity id. */
-export async function POST(request: Request) {
-  try {
-    sameOrigin(request, appOrigin());
+export const POST = route(
+  async (request) => {
     const text = await request.text();
     if (text.length > MAX_BODY)
       throw new AppError("BAD_REQUEST", "Request is too large.", 400);
-    return json(await createEoiApplication(JSON.parse(text)));
-  } catch (e) {
-    return failure(
+    return createEoiApplication(JSON.parse(text));
+  },
+  {
+    write: true,
+    onError: (e) =>
       e instanceof ZodError || e instanceof SyntaxError
         ? new AppError("BAD_REQUEST", "Invalid application request.", 400)
         : e,
-    );
-  }
-}
+  },
+);

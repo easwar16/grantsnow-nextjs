@@ -2,15 +2,15 @@ import { afterEach, expect, it, vi } from "vitest";
 import {
   assertWritesEnabled,
   browserSessionMode,
-} from "@/server/configuration/environment";
+} from "@/server/platform/configuration/environment";
 import {
   mergeResourceDefaults,
   proposalColumns,
-} from "@/server/configuration/resources";
-import { mapProposals } from "@/server/proposals/service";
-import { parseQuery } from "@/features/proposals/schemas";
-import { mapWidget } from "@/server/home/service";
-import { widgets } from "@/server/home/widgets";
+} from "@/server/platform/configuration/resources";
+import { mapProposals } from "@/server/modules/proposals/service";
+import { parseQuery } from "@/features/modules/proposals/schemas";
+import { mapWidget } from "@/server/modules/home/service";
+import { widgets } from "@/server/modules/home/widgets";
 afterEach(() => vi.unstubAllEnvs());
 const local = {
   DEV_BROWSER_SESSION: "true",

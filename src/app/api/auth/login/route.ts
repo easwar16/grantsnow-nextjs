@@ -1,7 +1,7 @@
 import {
   capturedBrowserSession,
   pastedBrowserSession,
-} from "@/server/session/browser-session";
+} from "@/server/identity/session/browser-session";
 import { AppError } from "@/lib/errors";
 import * as oidc from "openid-client";
 import {
@@ -9,13 +9,13 @@ import {
   fixtureMode,
   browserSessionMode,
   oidcSettings,
-} from "@/server/configuration/environment";
-import { idcs } from "@/server/auth/oidc";
-import { storage } from "@/server/session/storage";
-import { oracle } from "@/server/api/transport";
-import { mapBootstrap } from "@/server/session/contracts";
+} from "@/server/platform/configuration/environment";
+import { idcs } from "@/server/identity/auth/oidc";
+import { storage } from "@/server/identity/session/storage";
+import { oracle } from "@/server/oracle/connection";
+import { mapBootstrap } from "@/server/identity/session/contracts";
 import { safeReturn, sameOrigin } from "@/lib/security";
-import { failure } from "@/server/api/http";
+import { failure } from "@/server/http/response";
 export async function POST(request: Request) {
   try {
     sameOrigin(request, appOrigin());

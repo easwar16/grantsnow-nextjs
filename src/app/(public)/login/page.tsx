@@ -1,8 +1,8 @@
-import { storage } from "@/server/session/storage";
+import { storage } from "@/server/identity/session/storage";
 import {
   fixtureMode,
   browserSessionMode,
-} from "@/server/configuration/environment";
+} from "@/server/platform/configuration/environment";
 import { safeReturn } from "@/lib/security";
 import { Icon } from "@/components/ui/icon";
 const messages: Record<string, string> = {

@@ -7,7 +7,7 @@ const state = vi.hoisted(() => ({
   roles: [] as Record<string, unknown>[],
   status: "DRFT",
 }));
-vi.mock("@/server/session/service", () => ({
+vi.mock("@/server/identity/session/service", () => ({
   authenticate: async () => ({
     session: { token: "server-token" },
     user: {
@@ -18,41 +18,50 @@ vi.mock("@/server/session/service", () => ({
     },
   }),
 }));
-vi.mock("@/server/api/transport", () => ({
+vi.mock("@/server/oracle/connection", () => ({
   oracle: state.calls,
   oracleWrite: state.writes,
 }));
-vi.mock("@/server/configuration/resources", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("@/server/configuration/resources")
-  >()),
-  resources: async () => state.labels,
-}));
-vi.mock("@/server/configuration/formatting", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("@/server/configuration/formatting")
-  >()),
-  displayFormat: async () => undefined,
-}));
+vi.mock(
+  "@/server/platform/configuration/resources",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("@/server/platform/configuration/resources")
+    >()),
+    resources: async () => state.labels,
+  }),
+);
+vi.mock(
+  "@/server/platform/configuration/formatting",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("@/server/platform/configuration/formatting")
+    >()),
+    displayFormat: async () => undefined,
+  }),
+);
 import {
   historyView,
   insertStatus,
   nextStatuses,
-} from "@/server/objects/history";
+} from "@/server/record/objects/history";
 import {
   delegationPeople,
   delegationView,
   removeDelegation,
   setDelegationAccess,
   submitDelegation,
-} from "@/server/objects/delegations";
+} from "@/server/record/objects/delegations";
 import {
   eoiDelegationHost,
   eoiHistoryHost,
-} from "@/server/opportunities/eoi-record/objects";
+} from "@/server/modules/opportunities/eoi-record/objects";
 import { POST as historyPost } from "@/app/api/objects/history/route";
 import { POST as delegationPost } from "@/app/api/objects/delegations/route";
 const origin = "http://127.0.0.1:3000";
+// The client also passes its optional signal / query / path arguments; assertions compare the leading ones.
+const lead = (mock: { mock: { calls: unknown[][] } }, n = 3) =>
+  mock.mock.calls.map((c) => c.slice(0, n));
 const page = (name: string, id: number, more: Record<string, string> = {}) => ({
   page_id: id,
   page_name: `opportunities-eoi-${name}`,
@@ -255,12 +264,15 @@ describe("object history", () => {
       // Not AWARD/DEC: a response date is never sent.
       responseDate: "2026-10-20",
     });
-    expect(state.calls).toHaveBeenCalledWith("getSharedGetNextObjectStatus", {
-      token: "server-token",
-      p_object_id: id,
-      p_object_type: "OPPORTUNITIES-EOI",
-    });
-    expect(state.writes).toHaveBeenCalledWith(
+    expect(lead(state.calls, 2)).toContainEqual([
+      "getSharedGetNextObjectStatus",
+      {
+        token: "server-token",
+        p_object_id: id,
+        p_object_type: "OPPORTUNITIES-EOI",
+      },
+    ]);
+    expect(lead(state.writes)).toContainEqual([
       "postSharedObjectStatus",
       { token: "server-token", legal_id: "77", org_id: "202", user_id: "101" },
       {
@@ -270,7 +282,7 @@ describe("object history", () => {
         p_obj_type: "OPPORTUNITIES-EOI",
         p_status: "AIA",
       },
-    );
+    ]);
   });
   it("sends the response date only for AWARD / DEC where its field shows", async () => {
     state.calls.mockImplementation(
@@ -393,7 +405,7 @@ describe("object delegations", () => {
       edit: false,
       delete: true,
     });
-    expect(state.writes).toHaveBeenCalledWith(
+    expect(lead(state.writes)).toContainEqual([
       "postProposalDelegations",
       { token: "server-token", legal_id: "77", org_id: "202" },
       {
@@ -417,7 +429,7 @@ describe("object delegations", () => {
           },
         ],
       },
-    );
+    ]);
   });
   it("refuses people, pages and dates the record does not offer", async () => {
     const host = await eoiDelegationHost(next());
@@ -473,20 +485,26 @@ describe("object delegations", () => {
     const id = next();
     const host = await eoiDelegationHost(id);
     await removeDelegation(host, { id: "502" });
-    expect(state.writes).toHaveBeenLastCalledWith("deleteProposalDelegations", {
-      token: "server-token",
-      object_id: id,
-      object_type: "OPPORTUNITIES-EOI",
-      person_id: "102",
-      delegation_id: "502",
-    });
+    expect(lead(state.writes, 2).at(-1)).toEqual([
+      "deleteProposalDelegations",
+      {
+        token: "server-token",
+        object_id: id,
+        object_type: "OPPORTUNITIES-EOI",
+        person_id: "102",
+        delegation_id: "502",
+      },
+    ]);
     await removeDelegation(host, { person: "102" });
-    expect(state.writes).toHaveBeenLastCalledWith("deleteProposalDelegations", {
-      token: "server-token",
-      object_id: id,
-      object_type: "OPPORTUNITIES-EOI",
-      person_id: "102",
-    });
+    expect(lead(state.writes, 2).at(-1)).toEqual([
+      "deleteProposalDelegations",
+      {
+        token: "server-token",
+        object_id: id,
+        object_type: "OPPORTUNITIES-EOI",
+        person_id: "102",
+      },
+    ]);
     await expect(removeDelegation(host, { id: "501" })).rejects.toMatchObject({
       code: "BAD_REQUEST",
     });

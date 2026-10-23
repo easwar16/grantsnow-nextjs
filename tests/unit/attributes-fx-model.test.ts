@@ -4,13 +4,13 @@ import {
   attributeOptions,
   attributePick,
   type AttributeField,
-} from "@/features/attributes/model";
+} from "@/features/record/attributes/model";
 import {
   applyEdit,
   editedColumn,
   withEdits,
   type FxRate,
-} from "@/features/fx-rates/model";
+} from "@/features/record/fx-rates/model";
 const field = (over: Partial<AttributeField>): AttributeField => ({
   fieldId: 1,
   name: "attribute_1",

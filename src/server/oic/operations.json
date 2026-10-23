@@ -1,0 +1,63 @@
+{
+  "getCHECK_DOCUSIGN_ENVELOPE_STATUS1_0EnvelopeEnvelope_id": {
+    "path": "/CHECK_DOCUSIGN_ENVELOPE_STATUS/1.0/envelope/{envelope_id}",
+    "method": "GET",
+    "headers": ["legal_id", "user_id", "contract_id", "org_id", "token"]
+  },
+  "postREQUEST_SIGNATURE_BY_EMAIL1_0Esign": {
+    "path": "/REQUEST_SIGNATURE_BY_EMAIL/1.0/esign",
+    "method": "POST",
+    "headers": ["legal_id", "contract_id"],
+    "write": true
+  },
+  "postFP_GRANT_TO_ERP_AWARD_V2_2_0GrantsToERP": {
+    "path": "/FP_GRANT_TO_ERP_AWARD_V2/2.0/GrantsToERP",
+    "method": "POST",
+    "headers": [],
+    "write": true
+  },
+  "postFP_GRANT_TO_ERP_PROJE_V2_2_0GrantsToERP": {
+    "path": "/FP_GRANT_TO_ERP_PROJE_V2/2.0/GrantsToERP",
+    "method": "POST",
+    "headers": [],
+    "write": true
+  },
+  "getGET_OBJECT_VERSIONS1_0Objectversions": {
+    "path": "/GET_OBJECT_VERSIONS/1.0/objectversions",
+    "method": "GET",
+    "headers": []
+  },
+  "deleteDELETE_OBJECT1_0Objectstorage": {
+    "path": "/DELETE_OBJECT/1.0/objectstorage",
+    "method": "DELETE",
+    "headers": ["file_name"],
+    "write": true,
+    "storage": "delete"
+  },
+  "getGET_OBJECT1_0Objectstorage": {
+    "path": "/GET_OBJECT/1.0/objectstorage",
+    "method": "GET",
+    "headers": ["file_name"],
+    "storage": "download"
+  },
+  "putUPLOAD_OBJECT1_0Objectstorage": {
+    "path": "/UPLOAD_OBJECT/1.0/objectstorage",
+    "method": "PUT",
+    "headers": ["file_name"],
+    "write": true,
+    "storage": "upload"
+  },
+  "getIcApiIntegrationV1FlowsRestUNIT4_MAIN_FLOW1_0Unit4integration": {
+    "path": "/",
+    "method": "POST",
+    "headers": [],
+    "write": true,
+    "unresolved": true
+  },
+  "getREPORTING_API_INTEGRATIO1_0GenericReport2": {
+    "path": "/REPORTING_API_INTEGRATIO/1.0/genericReport",
+    "method": "POST",
+    "headers": [],
+    "write": true
+  }
+}

@@ -1,15 +1,15 @@
 import * as oidc from "openid-client";
-import { storage } from "@/server/session/storage";
-import { clearSession } from "@/server/session/service";
-import { idcs } from "@/server/auth/oidc";
+import { storage } from "@/server/identity/session/storage";
+import { clearSession } from "@/server/identity/session/service";
+import { idcs } from "@/server/identity/auth/oidc";
 import {
   appOrigin,
   fixtureMode,
   browserSessionMode,
   oidcSettings,
-} from "@/server/configuration/environment";
+} from "@/server/platform/configuration/environment";
 import { sameOrigin } from "@/lib/security";
-import { failure } from "@/server/api/http";
+import { failure } from "@/server/http/response";
 export async function POST(request: Request) {
   try {
     sameOrigin(request, appOrigin());

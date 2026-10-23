@@ -1,9 +1,9 @@
-import { pageIdentity } from "@/server/auth/page";
-import { newApplicationContext } from "@/server/opportunities/record";
-import { openingShell } from "@/server/opportunities/eoi-record/shell";
-import { resources } from "@/server/configuration/resources";
+import { pageIdentity } from "@/server/identity/auth/page";
+import { newApplicationContext } from "@/server/modules/opportunities/record";
+import { openingShell } from "@/server/modules/opportunities/eoi-record/shell";
+import { resources } from "@/server/platform/configuration/resources";
 import { State } from "@/components/feedback/state";
-import { RecordShell } from "@/features/opportunities/eoi/record-shell";
+import { RecordShell } from "@/features/modules/opportunities/eoi/record-shell";
 import { publicError } from "@/lib/errors";
 /** A new application (Apply): Summary and Application only; the request is created on Create. */
 export default async function NewApplicationLayout({
