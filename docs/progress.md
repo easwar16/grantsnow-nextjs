@@ -94,7 +94,7 @@ The finder, the EOI list, the EOI record and the finder's dialogs were ported fr
 
 **Outstanding:**
 
-- Escape while Chrome's native date picker is open also closes the enclosing dialog.
+- Escape while Chrome's native date picker is open also closed the enclosing dialog. Since 2026-10-23 the card dialogs and the Advanced filter stay open while a picker inside them matches `:open` (`pickerOpen` in `date-input.tsx`); not yet confirmed with a real key press, which automation cannot send to the native picker.
 - Not yet browser-tested: the Comments dialog, the deadline-warning dialog, the Bookmarked / Shared tabs, resizing the filter panel and narrow screens.
 - The Advanced filter's values are not written to the URL.
 - Proposals and Contracts belong to another owner and were not changed.
@@ -178,13 +178,12 @@ Its fixtures are in `src/test-support/eoi-writes.ts`. That lock store is held on
 - **Contract:** `getPersonListAll` / `getPersonList` answer 25 rows with `hasMore: "true"` (a string) unless sent `p_offset` / `p_limit`. Legacy sends neither, so it stops at 25 people.
 - **Fix:** `referenceRead` now pages those two lists (500 rows a page, at most 20 pages, then refuses).
 - **On DEV:** the list has exactly 25 people (`p_limit=500` gives 25 with `hasMore: "false"`), so nothing was missing there; the fix matters wherever there are more.
-- **Still single-page:** `src/server/modules/account/service.ts` (the proxy picker) and Proposals' `lookups.ts` (Easwar's) call `getPersonList` directly.
+- **Callers:** the proxy picker (`proxyPeople`) and Proposals' `lookups.ts` both read `people.inOrg`, which is paged whole; `account.proxyDirectory` (first page only) is gone (2026-10-23).
 
 **Outstanding:**
 
 - Owner: approve a live Submit for Approval on 3954, which notifies the DEV approvers.
 - The live files run (upload, download, delete) once OIC accepts the credentials.
-- Delete test application 3954 on DEV when finished.
 
 ### API layer, catalogues, fallback translations and restructure — 2026-10-23
 
