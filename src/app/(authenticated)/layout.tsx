@@ -1,33 +1,32 @@
-import { pageIdentity } from "@/server/auth/page";
-import { dashboardConfiguration } from "@/server/configuration/service";
+import { pageIdentity } from "@/server/identity/auth/page";
+import { dashboardConfiguration } from "@/server/platform/configuration/service";
 import {
   resources,
   label,
   resourceDescription,
-} from "@/server/configuration/resources";
+} from "@/server/platform/configuration/resources";
 import {
   displayFormat,
   globalVariables,
-} from "@/server/configuration/formatting";
+} from "@/server/platform/configuration/formatting";
 import { safeImageUrl } from "@/lib/security";
-import { availableThemes } from "@/server/account/themes";
+import { availableThemes } from "@/server/modules/account/themes";
 import { AppShell } from "@/components/layout/app-shell";
 import { Navigation } from "@/components/layout/navigation";
-import { visibleNavigation } from "@/server/permissions/policy";
+import { visibleNavigation } from "@/server/platform/permissions";
 import type { NavDefinition, NavEntry } from "@/lib/unavailable-modules";
 import {
   findTheme,
   presetThemes,
   themeVariables,
-} from "@/features/account/themes";
+} from "@/features/modules/account/themes";
 import {
   shellLabelKeys,
   type ShellLabels,
-} from "@/features/account/shell-labels";
+} from "@/features/modules/account/shell-labels";
 import { externalToolUrls } from "./modules/external-tools";
 import { ChatbotMount } from "@/components/chatbot/chatbot-mount";
-import { cachedRead } from "@/server/cache/reads";
-import { TTL } from "@/server/cache/memo";
+import { opportunities } from "@/server/oracle/api";
 import { AppError } from "@/lib/errors";
 type Labels = Awaited<ReturnType<typeof resources>>;
 // GN-Angular marks the Opportunities group and the finder when getOpportunitiesNewFlags reports anything new.
@@ -81,13 +80,9 @@ function shellLabels(rows: Labels): ShellLabels {
   };
 }
 /** Whether any opportunity is new for this user; the dot is decoration, so a failure shows none (as GN-Angular). */
-async function opportunitiesNew(token: string) {
+async function opportunitiesNew() {
   try {
-    const flags = (await cachedRead(
-      "getSharedGetOpportunitiesNewFlags",
-      { token },
-      TTL.access,
-    )) as Record<string, unknown>;
+    const flags = (await opportunities.newFlags()) as Record<string, unknown>;
     return flags.is_new_preference === "Y" || flags.is_new_others === "Y";
   } catch {
     return false;
@@ -102,7 +97,7 @@ export default async function AuthLayout({
   const items = visibleNavigation(user.modules);
   // The new-opportunities dot streams in; it starts with the shell's reads, never fails, and is awaited by Navigation.
   const isNew = items.some((i) => i.id === "opportunities-group")
-    ? opportunitiesNew(session.token)
+    ? opportunitiesNew()
     : Promise.resolve(false);
   // The shell only takes the theme and accessibility from these, so a failed read shows the defaults, not an error page.
   const preferences = dashboardConfiguration().catch(
@@ -116,7 +111,7 @@ export default async function AuthLayout({
     resources(),
     displayFormat(),
     // Legacy header: the configured APPLICATION_LOGO_URL, else the GrantsNow logo; the logo is decoration, so a failure shows ours.
-    globalVariables(session.token).then(
+    globalVariables().then(
       (items) =>
         safeImageUrl(
           items.find((v) => v.var_key === "APPLICATION_LOGO_URL")?.var_value,
@@ -147,7 +142,12 @@ export default async function AuthLayout({
         </div>
       )}
       <AppShell
-        name={user.name}
+        user={{
+          name: user.name,
+          organization: user.organization,
+          organizationId: user.organizationId,
+          modules: user.modules,
+        }}
         logo={logo}
         labels={shellLabels(labels)}
         format={format && { dateFormat: format.dateFormat }}

@@ -1,10 +1,4 @@
-import { mentionPeople } from "@/server/objects/comments";
-import { json, failure } from "@/server/api/http";
+import { mentionPeople } from "@/server/record/objects/comments";
+import { route, searchOf } from "@/server/http/route";
 /** The @mention feed for a page the user may comment on: GET ?type&id&page. */
-export async function GET(request: Request) {
-  try {
-    return json(await mentionPeople(new URL(request.url).searchParams));
-  } catch (e) {
-    return failure(e);
-  }
-}
+export const GET = route((request) => mentionPeople(searchOf(request)));

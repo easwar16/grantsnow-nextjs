@@ -4,23 +4,28 @@ const mocks = vi.hoisted(() => ({
   oracleWrite: vi.fn(),
   resources: vi.fn(),
 }));
-vi.mock("@/server/session/service", () => ({
+vi.mock("@/server/identity/session/service", () => ({
   authenticate: async () => ({
     session: { token: "private-test-token" },
     user: { personId: "12", modules: {} },
   }),
 }));
-vi.mock("@/server/configuration/resources", async (importOriginal) => ({
-  resourceVisible: (
-    await importOriginal<typeof import("@/server/configuration/resources")>()
-  ).resourceVisible,
-  resources: mocks.resources,
-  label: () => "",
-}));
-vi.mock("@/server/configuration/service", () => ({
+vi.mock(
+  "@/server/platform/configuration/resources",
+  async (importOriginal) => ({
+    resourceVisible: (
+      await importOriginal<
+        typeof import("@/server/platform/configuration/resources")
+      >()
+    ).resourceVisible,
+    resources: mocks.resources,
+    label: () => "",
+  }),
+);
+vi.mock("@/server/platform/configuration/service", () => ({
   organizations: async () => [],
 }));
-vi.mock("@/server/api/transport", async (importOriginal) => ({
+vi.mock("@/server/oracle/connection", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   oracle: mocks.oracle,
   oracleWrite: mocks.oracleWrite,
@@ -30,17 +35,20 @@ import {
   markAllRead,
   repairNotificationHtml,
   utcOf,
-} from "@/server/notifications/service";
+} from "@/server/modules/notifications/service";
 import { POST } from "@/app/api/notifications/route";
-import { digitalPresence, saveAccount } from "@/server/account/service";
-import { customThemeRows } from "@/server/account/themes";
+// The client also passes its optional signal / query / path arguments; assertions compare the leading ones.
+const lead = (mock: { mock: { calls: unknown[][] } }, n = 3) =>
+  mock.mock.calls.map((c) => c.slice(0, n));
+import { digitalPresence, saveAccount } from "@/server/modules/account/service";
+import { customThemeRows } from "@/server/modules/account/themes";
 import { groupByDay } from "@/components/layout/notification-days";
 import {
   findTheme,
   presetThemes,
   themeVariables,
-} from "@/features/account/themes";
-import { drawerAccess, visibleNavigation } from "@/server/permissions/policy";
+} from "@/features/modules/account/themes";
+import { drawerAccess, visibleNavigation } from "@/server/platform/permissions";
 const presenceVisible = [
   {
     module_name: "dashboard",
@@ -121,7 +129,7 @@ it("marks only the user's own unread notifications read, and writes nothing when
     ],
   });
   expect(await markAllRead()).toEqual({ marked: 2 });
-  expect(mocks.oracleWrite).toHaveBeenCalledWith(
+  expect(lead(mocks.oracleWrite)).toContainEqual([
     "postNotificationsNotifications",
     { token: "private-test-token" },
     {
@@ -130,7 +138,7 @@ it("marks only the user's own unread notifications read, and writes nothing when
         { id: 9, is_read: "Y" },
       ],
     },
-  );
+  ]);
   mocks.oracleWrite.mockClear();
   mocks.oracle.mockResolvedValue({ items: [{ id: 8, is_read: "Y" }] });
   expect(await markAllRead()).toEqual({ marked: 0 });
@@ -167,19 +175,19 @@ it("reads digital presence with the session's pid and keeps only the five links"
     orc_id: "",
     researcher_id: "",
   });
-  expect(mocks.oracle).toHaveBeenCalledWith("getSharedDigitalPresence", {
-    token: "private-test-token",
-    pid: "12",
-  });
+  expect(lead(mocks.oracle, 2)).toContainEqual([
+    "getSharedDigitalPresence",
+    { token: "private-test-token", pid: "12" },
+  ]);
 });
 it("saves digital presence through the write gate with the token as a header, never unsafe links", async () => {
   mocks.resources.mockResolvedValue(presenceVisible);
   await saveAccount("presence", links);
-  expect(mocks.oracleWrite).toHaveBeenCalledWith(
+  expect(lead(mocks.oracleWrite)).toContainEqual([
     "postSharedDigitalPresence",
     { token: "private-test-token" },
     links,
-  );
+  ]);
   mocks.oracleWrite.mockClear();
   await expect(
     saveAccount("presence", { ...links, scholar: "javascript:alert(1)" }),

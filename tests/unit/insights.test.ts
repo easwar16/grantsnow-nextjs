@@ -4,7 +4,7 @@ import {
   fundingEfficiency,
   drillHref,
   drillRows,
-} from "@/server/home/insight-mapping";
+} from "@/server/modules/home/insight-mapping";
 import {
   pieLabel,
   insightOptions,
@@ -14,8 +14,8 @@ import {
   legendTextWidth,
   dynamicChartData,
 } from "@/lib/chart-options";
-import type { WidgetData } from "@/features/home/types";
-import { homeFilters } from "@/features/home/schemas";
+import type { WidgetData } from "@/features/modules/home/types";
+import { homeFilters } from "@/features/modules/home/schemas";
 it("labels pie shares to two significant digits, as Redwood does", () => {
   expect([13.04, 8, 1, 0].map(pieLabel)).toEqual([
     "13%",

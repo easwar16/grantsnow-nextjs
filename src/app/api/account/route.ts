@@ -4,35 +4,29 @@ import {
   saveAccount,
   proxyPeople,
   digitalPresence,
-} from "@/server/account/service";
-import { json, failure } from "@/server/api/http";
-import { sameOrigin } from "@/lib/security";
-import { appOrigin } from "@/server/configuration/environment";
+} from "@/server/modules/account/service";
+import { route, searchOf } from "@/server/http/route";
 import { AppError } from "@/lib/errors";
-export async function GET(request: Request) {
-  try {
-    const query = new URL(request.url).searchParams;
+const badValues = (e: unknown) =>
+  e instanceof ZodError
+    ? new AppError("BAD_REQUEST", "Invalid settings values.", 400)
+    : e;
+export const GET = route(
+  async (request) => {
+    const query = searchOf(request);
     const org = query.get("organization");
     const panel = query.get("panel") || "profile";
     if (
       !["profile", "preferences", "accessibility", "presence"].includes(panel)
     )
       throw new AppError("BAD_REQUEST", "Unknown settings panel.", 400);
-    if (org) return json(await proxyPeople(org));
-    return json(
-      panel === "presence" ? await digitalPresence() : await accountData(panel),
-    );
-  } catch (e) {
-    return failure(
-      e instanceof ZodError
-        ? new AppError("BAD_REQUEST", "Invalid settings values.", 400)
-        : e,
-    );
-  }
-}
-export async function POST(request: Request) {
-  try {
-    sameOrigin(request, appOrigin());
+    if (org) return proxyPeople(org);
+    return panel === "presence" ? digitalPresence() : accountData(panel);
+  },
+  { onError: badValues },
+);
+export const POST = route(
+  async (request) => {
     const reader = request.body?.getReader();
     if (!reader)
       throw new AppError("BAD_REQUEST", "Empty settings request.", 400);
@@ -69,12 +63,7 @@ export async function POST(request: Request) {
     if (Object.keys(body).some((k) => !["kind", "changes"].includes(k)))
       throw new AppError("BAD_REQUEST", "Unknown settings field.", 400);
     await saveAccount(body.kind || "", body.changes);
-    return json({ saved: true });
-  } catch (e) {
-    return failure(
-      e instanceof ZodError
-        ? new AppError("BAD_REQUEST", "Invalid settings values.", 400)
-        : e,
-    );
-  }
-}
+    return { saved: true };
+  },
+  { write: true, onError: badValues },
+);

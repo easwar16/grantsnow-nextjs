@@ -1,19 +1,26 @@
 import { expect, it, beforeEach, afterEach, vi } from "vitest";
-vi.mock("@/server/configuration/environment", async (importOriginal) => ({
-  assertWritesEnabled: (
-    await importOriginal<typeof import("@/server/configuration/environment")>()
-  ).assertWritesEnabled,
-  fixtureMode: () => false,
-  oracleSettings: () => ({
-    apps: new URL("https://oracle.example/ords/dev/"),
-    authorization: "test-service-auth",
+vi.mock(
+  "@/server/platform/configuration/environment",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("@/server/platform/configuration/environment")
+    >()),
+    fixtureMode: () => false,
+    oracleSettings: () => ({
+      apps: new URL("https://oracle.example/ords/dev/"),
+      authorization: "test-service-auth",
+    }),
   }),
+);
+// The client takes the token from the session; the test session's token is the isolated one.
+vi.mock("@/server/oracle/context", () => ({
+  oracleContext: async () => ({ token: "isolated-token" }),
 }));
 import {
   chartDimensions,
   safeChartReport,
   saveChartPreference,
-} from "@/server/api/chart-preferences";
+} from "@/server/modules/home/chart-preferences";
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn());
   vi.stubEnv("WRITES_ENABLED", "true");
@@ -25,7 +32,7 @@ afterEach(() => {
 it("sends no live chart preference while writes are off", async () => {
   vi.stubEnv("WRITES_ENABLED", "false");
   await expect(
-    saveChartPreference("isolated-token", {
+    saveChartPreference({
       infolet_id: 201,
       colspan: 6,
       rowspan: 3,
@@ -65,7 +72,7 @@ it("rejects unsafe or token-bearing report URLs", () => {
 });
 it("uses the allowlisted POST and server token and accepts documented empty success", async () => {
   vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 204 }));
-  await saveChartPreference("isolated-token", {
+  await saveChartPreference({
     infolet_id: 201,
     colspan: 6,
     rowspan: 3,
@@ -85,7 +92,7 @@ it("uses the allowlisted POST and server token and accepts documented empty succ
 it("does not treat HTTP 200 business errors as saved", async () => {
   vi.mocked(fetch).mockResolvedValue(Response.json({ response_msg: "ERROR" }));
   await expect(
-    saveChartPreference("isolated-token", {
+    saveChartPreference({
       infolet_id: 201,
       colspan: 6,
       rowspan: 3,
@@ -99,7 +106,7 @@ it("distinguishes expired and forbidden writes", async () => {
   ] as const) {
     vi.mocked(fetch).mockResolvedValue(new Response(null, { status }));
     await expect(
-      saveChartPreference("isolated-token", {
+      saveChartPreference({
         infolet_id: 201,
         colspan: 6,
         rowspan: 3,
@@ -110,7 +117,7 @@ it("distinguishes expired and forbidden writes", async () => {
 it("treats a plain-text dead-session reply as an expired session", async () => {
   vi.mocked(fetch).mockResolvedValue(new Response("Context Not Set: N"));
   await expect(
-    saveChartPreference("isolated-token", {
+    saveChartPreference({
       infolet_id: 201,
       colspan: 6,
       rowspan: 3,

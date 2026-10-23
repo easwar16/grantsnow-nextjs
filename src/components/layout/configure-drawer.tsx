@@ -2,8 +2,8 @@
 import { idPart } from "@/lib/ids";
 import { useEffect, useId, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useRemote } from "@/lib/use-remote";
-import { useInFlight } from "@/lib/use-in-flight";
+import { account, useApi } from "@/lib/api";
+import { useInFlight } from "@/lib/hooks/use-in-flight";
 import { Skeleton } from "@/components/feedback/skeleton";
 import { useToast } from "@/components/feedback/toast";
 import { HelpButton } from "@/components/ui/help-button";
@@ -14,14 +14,14 @@ import {
   nextAccessibility,
   preferencesChanges,
   type AccountData,
-} from "@/features/account/contracts";
-import { findTheme, DEFAULT_THEME } from "@/features/account/themes";
+} from "@/features/modules/account/contracts";
+import { findTheme, DEFAULT_THEME } from "@/features/modules/account/themes";
 import {
   applyAccessibility,
   applyTheme,
-  postAccount,
+  saveSettings,
   saveFailure,
-} from "@/features/account/apply";
+} from "@/features/modules/account/apply";
 import { useShell } from "./shell-context";
 import styles from "./configure-drawer.module.css";
 export type ConfigureMode = "preferences" | "accessibility";
@@ -47,7 +47,7 @@ export function ConfigureDrawer({
   onClose: () => void;
 }) {
   const { labels } = useShell();
-  const remote = useRemote<AccountData>(`/api/account?panel=${mode}`);
+  const remote = useApi(account.settings, mode);
   const title = useId();
   return (
     <aside
@@ -152,15 +152,15 @@ function Settings({
   async function save() {
     // Blocks Save from click to settle (D44).
     await run(async () => {
-      try {
-        await postAccount("dashboard", preferencesChanges(mode, draft, onHome));
-        saved.current = true;
-        toast.show("success", "Preferences saved");
-        onClose();
-        router.refresh();
-      } catch (e) {
-        saveFailure(toast, e as { code?: string; message: string });
-      }
+      const r = await saveSettings(
+        "dashboard",
+        preferencesChanges(mode, draft, onHome),
+      );
+      if (!r.ok) return saveFailure(toast, r.error);
+      saved.current = true;
+      toast.show("success", "Preferences saved");
+      onClose();
+      router.refresh();
     });
   }
   return (

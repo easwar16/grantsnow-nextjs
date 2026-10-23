@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
-import { usePresence } from "@/lib/use-presence";
+import { AnimatePresence } from "motion/react";
+import { Pop } from "@/components/ui/pop";
 import { useShellOptional } from "@/components/layout/shell-context";
 import styles from "./help-button.module.css";
 /**
@@ -26,7 +27,6 @@ export function HelpButton({
     host = useRef<HTMLSpanElement>(null),
     autoId = useId(),
     popup = id ? `${id}-popup` : autoId;
-  const presence = usePresence(open);
   useEffect(() => {
     if (!open) return;
     const rect = host.current?.getBoundingClientRect();
@@ -58,22 +58,24 @@ export function HelpButton({
       >
         <Icon name="info" size={14} />
       </button>
-      {presence.mounted && (
-        <div
-          id={popup}
-          className={`${styles.popup} ${above ? styles.above : ""} ${presence.motion.className}`}
-          inert={presence.leaving}
-          onAnimationEnd={presence.motion.onAnimationEnd}
-          role="dialog"
-          aria-label={label}
-        >
-          <div className={styles.title}>{label}</div>
-          <div
-            className={styles.text}
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
-        </div>
-      )}
+      <AnimatePresence>
+        {open && (
+          <Pop
+            id={popup}
+            className={`${styles.popup} ${above ? styles.above : ""}`}
+            // Motion owns transform, so the CSS centring is carried here.
+            style={{ x: "-50%" }}
+            role="dialog"
+            aria-label={label}
+          >
+            <div className={styles.title}>{label}</div>
+            <div
+              className={styles.text}
+              dangerouslySetInnerHTML={{ __html: html }}
+            />
+          </Pop>
+        )}
+      </AnimatePresence>
     </span>
   );
 }

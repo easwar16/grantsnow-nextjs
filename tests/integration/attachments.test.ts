@@ -1,4 +1,4 @@
-import { forget } from "@/server/cache/memo";
+import { forget } from "@/server/oracle/cache";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "@/lib/errors";
 const state = vi.hoisted(() => ({
@@ -10,7 +10,7 @@ const state = vi.hoisted(() => ({
   connected: true,
   rows: [] as Record<string, string>[],
 }));
-vi.mock("@/server/session/service", () => ({
+vi.mock("@/server/identity/session/service", () => ({
   authenticate: async () => ({
     session: { token: "server-token" },
     user: {
@@ -21,37 +21,43 @@ vi.mock("@/server/session/service", () => ({
     },
   }),
 }));
-vi.mock("@/server/api/transport", () => ({
+vi.mock("@/server/oracle/connection", () => ({
   oracle: state.oracle,
   oracleWrite: state.oracleWrite,
 }));
-vi.mock("@/server/api/oic", () => ({
+vi.mock("@/server/oic/connection", () => ({
   oicConnected: () => state.connected,
   oicUpload: state.oicUpload,
   oicDownload: state.oicDownload,
   oicDelete: state.oicDelete,
 }));
-vi.mock("@/server/configuration/service", () => ({
+vi.mock("@/server/platform/configuration/service", () => ({
   dashboardRoles: async () => [],
 }));
-vi.mock("@/server/configuration/resources", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("@/server/configuration/resources")
-  >()),
-  resources: async () => state.rows,
-}));
+vi.mock(
+  "@/server/platform/configuration/resources",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("@/server/platform/configuration/resources")
+    >()),
+    resources: async () => state.rows,
+  }),
+);
 import { GET as list, POST as upload } from "@/app/api/files/route";
 import { DELETE as remove, GET as download } from "@/app/api/files/[id]/route";
 import { POST as postLink } from "@/app/api/files/links/route";
 import { DELETE as removeLink } from "@/app/api/files/links/[id]/route";
-import { attachmentsView } from "@/server/files/attachments";
+import { attachmentsView } from "@/server/record/attachments/attachments";
 import {
   folderTree,
   safeLinkUrl,
   withExtension,
-} from "@/features/attachments/model";
+} from "@/features/record/attachments/model";
 
 const origin = "http://127.0.0.1:3000";
+// The client also passes its optional signal / query / path arguments; assertions compare the leading ones.
+const lead = (mock: { mock: { calls: unknown[][] } }, n = 3) =>
+  mock.mock.calls.map((c) => c.slice(0, n));
 const HOST = "host=eoi&record=3934";
 const row = (
   label_type: string,
@@ -411,7 +417,7 @@ describe("GET and DELETE /api/files/[id]?host&record", () => {
     );
     expect(res.status).toBe(200);
     expect(state.oicDelete).toHaveBeenCalledWith(owned.file_location);
-    expect(state.oracleWrite).toHaveBeenCalledWith(
+    expect(lead(state.oracleWrite, 2)).toContainEqual([
       "deletePre_awardAttachments",
       {
         token: "server-token",
@@ -419,7 +425,7 @@ describe("GET and DELETE /api/files/[id]?host&record", () => {
         org_id: "202",
         legal_id: "77",
       },
-    );
+    ]);
   });
   it("deletes nothing on a locked page, without edit, or that is not the record's", async () => {
     attachments = [owned];
@@ -481,7 +487,7 @@ describe("links", () => {
     const res = await add({ title: " Docs ", url: "https://docs.example" });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ linkId: 7 });
-    expect(state.oracleWrite).toHaveBeenLastCalledWith(
+    expect(lead(state.oracleWrite).at(-1)).toEqual([
       "postPre_awardLinks",
       { token: "server-token", org_id: "202", legal_id: "77" },
       {
@@ -491,7 +497,7 @@ describe("links", () => {
         obj_ref_type: "OPPORTUNITIES-EOI",
         is_confidential: "N",
       },
-    );
+    ]);
     expect((await add({ title: "x", url: "javascript:alert(1)" })).status).toBe(
       400,
     );

@@ -4,21 +4,21 @@ const mocks = vi.hoisted(() => ({
   preferences: vi.fn(),
   globals: vi.fn(),
 }));
-vi.mock("@/server/auth/page", () => ({
+vi.mock("@/server/identity/auth/page", () => ({
   pageIdentity: async () => ({
     session: { token: "private-test-token" },
     user: { name: "Test User", modules: {} },
   }),
 }));
-vi.mock("@/server/configuration/service", () => ({
+vi.mock("@/server/platform/configuration/service", () => ({
   dashboardConfiguration: mocks.preferences,
 }));
-vi.mock("@/server/configuration/resources", () => ({
+vi.mock("@/server/platform/configuration/resources", () => ({
   resources: async () => [],
   label: (_rows: unknown, _m: string, _g: string, _k: string, f: string) => f,
   resourceDescription: () => null,
 }));
-vi.mock("@/server/configuration/formatting", () => ({
+vi.mock("@/server/platform/configuration/formatting", () => ({
   displayFormat: async () => undefined,
   globalVariables: mocks.globals,
 }));

@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { validateMetadata } from "@/server/auth/metadata";
+import { validateMetadata } from "@/server/identity/auth/metadata";
 const expected = {
   issuer: new URL("https://identity.oraclecloud.com/"),
   endpointOrigin: "https://tenant.example.invalid",

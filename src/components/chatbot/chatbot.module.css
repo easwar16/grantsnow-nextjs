@@ -255,7 +255,7 @@
   border-radius: 3px;
   background: #fff;
 }
-.foot input:focus {
+:global(:where(:root:not([data-input="pointer"]))) .foot input:focus {
   border-color: rgb(14 114 151);
 }
 /* 28px borderless icon buttons (Speak, Send), as the live app. */

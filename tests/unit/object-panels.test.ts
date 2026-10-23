@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { matchMentions, mentionAttributes, mentionQuery } from "@/lib/mentions";
 import { dateTimeDisplay } from "@/lib/format";
-import { plainText } from "@/server/html/sanitize";
-import { oracle, oracleWrite } from "@/server/api/transport";
+import { plainText } from "@/server/platform/sanitize";
+import { oracle, oracleWrite } from "@/server/oracle/connection";
 
 describe("mentions", () => {
   const people = [

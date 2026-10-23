@@ -14,30 +14,38 @@ const state = vi.hoisted(() => ({
   },
   modules: { PROPOSALS: true, "opportunities-finder": true },
 }));
-vi.mock("@/server/home/service", () => ({
+vi.mock("@/server/modules/home/service", () => ({
   homeAccess: async () => ({
     session: { token: "isolated-token" },
     user: { modules: state.modules },
   }),
 }));
-vi.mock("@/server/configuration/service", () => ({
+vi.mock("@/server/platform/configuration/service", () => ({
   dashboardConfiguration: async () => state.config,
   organizations: async () => [{ id: "202", name: "Fixture organization" }],
 }));
-vi.mock("@/server/configuration/resources", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("@/server/configuration/resources")
-  >()),
-  resources: async () =>
-    ["notifications", "opportunities", "dynamic-charts"].map((label_name) => ({
-      module_name: "DASHBOARD",
-      label_type: "button-labels",
-      label_name,
-      is_visible: "Y",
-    })),
+vi.mock(
+  "@/server/platform/configuration/resources",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("@/server/platform/configuration/resources")
+    >()),
+    resources: async () =>
+      ["notifications", "opportunities", "dynamic-charts"].map(
+        (label_name) => ({
+          module_name: "DASHBOARD",
+          label_type: "button-labels",
+          label_name,
+          is_visible: "Y",
+        }),
+      ),
+  }),
+);
+vi.mock("@/server/oracle/connection", () => ({ oracle: state.oracle }));
+vi.mock("@/server/oracle/context", () => ({
+  oracleContext: async () => ({ token: "isolated-token", identity: {} }),
 }));
-vi.mock("@/server/api/transport", () => ({ oracle: state.oracle }));
-vi.mock("@/server/opportunities/service", () => ({
+vi.mock("@/server/modules/opportunities/service", () => ({
   listOpportunities: vi.fn(),
 }));
 import {
@@ -45,7 +53,7 @@ import {
   dynamicChart,
   notifications,
   notificationPage,
-} from "@/server/home/extra-tabs";
+} from "@/server/modules/home/extra-tabs";
 beforeEach(() => {
   state.oracle.mockReset();
   state.config.notifications = true;
@@ -84,12 +92,15 @@ it("passes only enabled chart ID and scoped organization", async () => {
     },
   ]);
   const result = await dynamicChart("201", "202");
-  expect(state.oracle).toHaveBeenCalledWith(
-    "getSharedGetDynamicCharts",
-    { token: "isolated-token", report_name: "201", p_org_id: "202" },
-    undefined,
-    undefined,
-  );
+  // The client also passes its optional path argument; compare the leading ones.
+  expect(state.oracle.mock.calls.map((c) => c.slice(0, 4))).toEqual([
+    [
+      "getSharedGetDynamicCharts",
+      { token: "isolated-token", report_name: "201", p_org_id: "202" },
+      undefined,
+      undefined,
+    ],
+  ]);
   expect(result[0]).toMatchObject({
     columns: 6,
     rows: 3,

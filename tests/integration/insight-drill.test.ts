@@ -3,13 +3,13 @@ const state = vi.hoisted(() => ({
   oracle: vi.fn(),
   modules: {} as Record<string, boolean>,
 }));
-vi.mock("@/server/session/service", () => ({
+vi.mock("@/server/identity/session/service", () => ({
   authenticate: async () => ({
     session: { token: "isolated-token" },
     user: { modules: state.modules, organizationId: "202" },
   }),
 }));
-vi.mock("@/server/api/transport", () => ({ oracle: state.oracle }));
+vi.mock("@/server/oracle/connection", () => ({ oracle: state.oracle }));
 import { GET } from "@/app/api/home/[widget]/route";
 const visible = (ids: string[]) =>
   Object.fromEntries(ids.map((id) => [id, { isVisible: true }]));

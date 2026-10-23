@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { legacyDeepLink } from "@/features/auth/legacy-link";
+import { legacyDeepLink } from "@/shared/auth/legacy-link";
 it.each([
   [
     "?mode=view&proposal_id=4795&proposal_type=PROPOSAL&page=shell&shell=proposals&proposals=proposals-info-start",

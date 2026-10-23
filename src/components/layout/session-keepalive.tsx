@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { renewDelay } from "@/features/auth/session-schedule";
+import { renewDelay } from "@/shared/auth/session-schedule";
+import { session } from "@/lib/api";
 interface Failure {
   message: string;
   action?: string;
@@ -20,23 +21,25 @@ export function SessionKeepAlive() {
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     async function request(method: "GET" | "POST") {
-      const response = await fetch(
-        method === "GET" ? "/api/auth/session" : "/api/auth/renew",
-        { method, cache: "no-store", signal: controller.signal },
+      const result = await (method === "GET" ? session.expiry : session.renew)(
+        controller.signal,
       );
-      if (response.status === 401) {
+      // An aborted call (unmount) answers nothing, as the fetch it replaced rejected.
+      if (controller.signal.aborted) throw new Error("aborted");
+      if (result.ok) return result.data?.expiresAt;
+      if (session.signedOut(result.error)) {
         window.location.assign(signIn("EXPIRED"));
         return null;
       }
-      const body = await response.json();
-      if (!response.ok) {
-        setFailure({
-          message: body?.error?.message || GENERIC,
-          action: body?.error?.action,
-        });
-        return null;
-      }
-      return body?.expiresAt as unknown;
+      setFailure(
+        session.offline(result.error)
+          ? { message: GENERIC }
+          : {
+              message: result.error.message || GENERIC,
+              action: result.error.action,
+            },
+      );
+      return null;
     }
     function schedule(expiresAt: unknown, previous?: number) {
       const delay = renewDelay(expiresAt, Date.now(), previous);

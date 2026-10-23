@@ -1,23 +1,28 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({ oracle: vi.fn(), token: "token-a" }));
-vi.mock("@/server/session/service", () => ({
+vi.mock("@/server/identity/session/service", () => ({
   authenticate: async () => ({
     session: { token: state.token },
     user: { personId: "12", modules: {} },
   }),
 }));
-vi.mock("@/server/api/transport", async (importOriginal) => ({
+vi.mock("@/server/oracle/connection", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   oracle: state.oracle,
 }));
-vi.mock("@/server/configuration/environment", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  fixtureMode: () => false,
-  oracleSettings: () => ({ apps: new URL("https://oracle.example/ords/dev/") }),
-}));
-import { dashboardConfiguration } from "@/server/configuration/service";
-import { saveAccount } from "@/server/account/service";
-import { pagedRows, PAGE_CONCURRENCY } from "@/server/home/paging";
+vi.mock(
+  "@/server/platform/configuration/environment",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    fixtureMode: () => false,
+    oracleSettings: () => ({
+      apps: new URL("https://oracle.example/ords/dev/"),
+    }),
+  }),
+);
+import { dashboardConfiguration } from "@/server/platform/configuration/service";
+import { saveAccount } from "@/server/modules/account/service";
+import { pagedRows, PAGE_CONCURRENCY } from "@/server/modules/home/paging";
 let stored = "theme-default";
 const preferenceReads = () =>
   state.oracle.mock.calls.filter(
@@ -51,7 +56,8 @@ it("shares dashboard preferences between reads and reads them again after a save
     dashboardConfiguration(),
   ]);
   expect(a.theme).toBe("theme-default");
-  expect(b).toBe(a);
+  // One shared read; each caller gets its own parse of the held body.
+  expect(b).toEqual(a);
   expect(preferenceReads()).toBe(1);
   await saveAccount("dashboard", { theme: "theme-dark" });
   // The save read Oracle fresh for its merge, never the memo.

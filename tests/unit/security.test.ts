@@ -5,15 +5,15 @@ import {
   safeReturn,
   sameOrigin,
 } from "@/lib/security";
-import { fixtureMode } from "@/server/configuration/environment";
-import { mapBootstrap, expiry } from "@/server/session/contracts";
-import { LatestRequest } from "@/lib/latest-request";
-import { assertBusiness } from "@/server/api/transport";
+import { fixtureMode } from "@/server/platform/configuration/environment";
+import { mapBootstrap, expiry } from "@/server/identity/session/contracts";
+import { LatestRequest } from "@/lib/store/latest-request";
+import { assertBusiness } from "@/server/oracle/connection";
 import {
   requireModule,
   requireRead,
   scopeOrganization,
-} from "@/server/permissions/policy";
+} from "@/server/platform/permissions";
 import { fixtureUser } from "@/test-support/fixtures";
 afterEach(() => vi.unstubAllEnvs());
 describe("trusted identity", () => {

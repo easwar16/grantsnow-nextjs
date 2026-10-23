@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { RENEW_LEAD_MS, renewDelay } from "@/features/auth/session-schedule";
+import { RENEW_LEAD_MS, renewDelay } from "@/shared/auth/session-schedule";
 const now = 1_000_000;
 it("extends one minute before expiry", () =>
   expect(renewDelay(now + 10 * 60000, now)).toBe(10 * 60000 - RENEW_LEAD_MS));

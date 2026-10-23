@@ -1,34 +1,44 @@
 import { it, expect, vi, beforeEach, afterEach } from "vitest";
 const mocks = vi.hoisted(() => ({ oracle: vi.fn(), resources: vi.fn() }));
-vi.mock("@/server/session/service", () => ({
+vi.mock("@/server/identity/session/service", () => ({
   authenticate: async () => ({
     session: { token: "private-test-token" },
     user: { personId: "12", modules: { "opportunities-finder": true } },
   }),
 }));
-vi.mock("@/server/configuration/resources", async (importOriginal) => ({
-  resourceVisible: (
-    await importOriginal<typeof import("@/server/configuration/resources")>()
-  ).resourceVisible,
-  resources: mocks.resources,
-  label: () => "",
-}));
-vi.mock("@/server/configuration/service", () => ({
+vi.mock(
+  "@/server/platform/configuration/resources",
+  async (importOriginal) => ({
+    resourceVisible: (
+      await importOriginal<
+        typeof import("@/server/platform/configuration/resources")
+      >()
+    ).resourceVisible,
+    resources: mocks.resources,
+    label: () => "",
+  }),
+);
+vi.mock("@/server/platform/configuration/service", () => ({
   organizations: async () => [{ id: "5", name: "Own organization" }],
   forgetDashboardConfiguration: () => {},
 }));
-vi.mock("@/server/api/transport", async (importOriginal) => ({
+vi.mock("@/server/oracle/connection", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   oracle: mocks.oracle,
 }));
-vi.mock("@/server/configuration/environment", async (importOriginal) => ({
-  assertWritesEnabled: (
-    await importOriginal<typeof import("@/server/configuration/environment")>()
-  ).assertWritesEnabled,
-  fixtureMode: () => false,
-  oracleSettings: () => ({ apps: new URL("https://oracle.example/ords/dev/") }),
-}));
-import { saveAccount } from "@/server/account/service";
+vi.mock(
+  "@/server/platform/configuration/environment",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("@/server/platform/configuration/environment")
+    >()),
+    fixtureMode: () => false,
+    oracleSettings: () => ({
+      apps: new URL("https://oracle.example/ords/dev/"),
+    }),
+  }),
+);
+import { saveAccount } from "@/server/modules/account/service";
 beforeEach(() => {
   mocks.resources.mockResolvedValue([
     {

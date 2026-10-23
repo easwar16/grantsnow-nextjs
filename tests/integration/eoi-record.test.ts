@@ -4,7 +4,7 @@ const state = vi.hoisted(() => ({
   writes: vi.fn(),
   dashboard: [] as { page_name: string; read_access: string }[],
 }));
-vi.mock("@/server/session/service", () => ({
+vi.mock("@/server/identity/session/service", () => ({
   authenticate: async () => ({
     session: { token: "isolated-token" },
     user: {
@@ -15,11 +15,11 @@ vi.mock("@/server/session/service", () => ({
     },
   }),
 }));
-vi.mock("@/server/api/transport", () => ({
+vi.mock("@/server/oracle/connection", () => ({
   oracle: state.calls,
   oracleWrite: state.writes,
 }));
-vi.mock("@/server/configuration/service", () => ({
+vi.mock("@/server/platform/configuration/service", () => ({
   dashboardRoles: async () => state.dashboard,
 }));
 import {
@@ -30,8 +30,11 @@ import {
   eoiRecordRead,
   eoiSetFinalized,
   newApplicationContext,
-} from "@/server/opportunities/record";
+} from "@/server/modules/opportunities/record";
 import { AppError } from "@/lib/errors";
+// The client also passes its optional signal / query / path arguments; assertions compare the leading ones.
+const lead = (mock: { mock: { calls: unknown[][] } }, n = 3) =>
+  mock.mock.calls.map((c) => c.slice(0, n));
 const role = (tab: string, page_id: number, read = "Y") => ({
   page_id,
   page_name: `opportunities-eoi-${tab}`,
@@ -172,11 +175,7 @@ describe("record access", () => {
     const context = await eoiRecordContext(next());
     expect(context.opportunity?.opp_heading).toBe("Linked opportunity");
     expect(context.createdBy).toBe("Alex Morgan");
-    expect(state.calls).toHaveBeenCalledWith(
-      "getSharedGetOpportunities",
-      expect.anything(),
-      expect.objectContaining({}),
-    );
+    expect(lead(state.calls, 1)).toContainEqual(["getSharedGetOpportunities"]);
     const query = state.calls.mock.calls.find(
       (c) => c[0] === "getSharedGetOpportunities",
     )![2] as URLSearchParams;
@@ -259,7 +258,7 @@ describe("locks and finalize", () => {
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
     expect(state.writes).not.toHaveBeenCalled();
     await eoiSetFinalized(id, { tab: "application", finalize: true });
-    expect(state.writes).toHaveBeenCalledWith(
+    expect(lead(state.writes)).toContainEqual([
       "postProposalInsertModuleLock",
       { token: "isolated-token", legal_id: "77", org_id: "202" },
       {
@@ -270,7 +269,7 @@ describe("locks and finalize", () => {
         id: 31,
         module_name: "OPPORTUNITIES-EOI",
       },
-    );
+    ]);
   });
   it("refuses to finalize an application that is no longer a draft", async () => {
     state.calls.mockImplementation(
@@ -358,12 +357,15 @@ describe("new application", () => {
       number: "AOI_88",
     });
     expect(state.writes).toHaveBeenCalledTimes(1);
-    expect(state.writes).toHaveBeenCalledWith("getDynamicFormsInsertRequest", {
-      token: "isolated-token",
-      P_REF_OBJECT_ID: "11",
-      P_REF_OBJECT_TYPE: "OPPORTUNITIES",
-      P_REQUEST_TYPE: "OPPORTUNITIES-EOI",
-    });
+    expect(lead(state.writes, 2)).toContainEqual([
+      "getDynamicFormsInsertRequest",
+      {
+        token: "isolated-token",
+        P_REF_OBJECT_ID: "11",
+        P_REF_OBJECT_TYPE: "OPPORTUNITIES",
+        P_REQUEST_TYPE: "OPPORTUNITIES-EOI",
+      },
+    ]);
   });
   it("returns no number when it cannot be read, so no files go under an unknown folder", async () => {
     state.dashboard = [{ page_name: "apply-opportunities", read_access: "Y" }];

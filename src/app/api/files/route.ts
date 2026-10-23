@@ -1,11 +1,12 @@
-import { json, failure } from "@/server/api/http";
-import { sameOrigin } from "@/lib/security";
-import { appOrigin } from "@/server/configuration/environment";
 import { AppError } from "@/lib/errors";
-import { targetFromQuery } from "@/server/dynamic-form/access";
-import { formGlobals } from "@/server/dynamic-form/globals";
-import { uploadFile } from "@/server/files/service";
-import { listAttachments, uploadAttachment } from "@/server/files/attachments";
+import { targetFromQuery } from "@/server/record/dynamic-form/access";
+import { formGlobals } from "@/server/record/dynamic-form/globals";
+import { uploadFile } from "@/server/record/attachments/service";
+import {
+  listAttachments,
+  uploadAttachment,
+} from "@/server/record/attachments/attachments";
+import { route, searchOf } from "@/server/http/route";
 // Multipart framing around the one file.
 const OVERHEAD = 64 * 1024;
 const tooLarge = (maxMb: number) =>
@@ -32,21 +33,14 @@ async function readCapped(request: Request, cap: number, maxMb: number) {
   return Buffer.concat(chunks);
 }
 /** A host record's documents and links (the Attachments panel): GET ?host&record. */
-export async function GET(request: Request) {
-  try {
-    return json(await listAttachments(new URL(request.url).searchParams));
-  } catch (e) {
-    return failure(e);
-  }
-}
+export const GET = route((request) => listAttachments(searchOf(request)));
 /**
  * WRITES a file, multipart with one `file`: a form's (?objectType&slot&objectId[&parentId]) → { attachmentId }, or a
  * host record's Attachments panel (?host&record, plus `folder`, `newFolder`, `description`, `confidential`).
  */
-export async function POST(request: Request) {
-  try {
-    sameOrigin(request, appOrigin());
-    const query = new URL(request.url).searchParams;
+export const POST = route(
+  async (request) => {
+    const query = searchOf(request);
     const panel = query.has("host");
     const target = panel ? null : targetFromQuery(query);
     const { maxMb } = await formGlobals();
@@ -74,14 +68,13 @@ export async function POST(request: Request) {
       type: file.type,
       bytes: new Uint8Array(await file.arrayBuffer()),
     };
-    if (target) return json(await uploadFile(target, sent));
+    if (target) return uploadFile(target, sent);
     const fields = Object.fromEntries(
       [...form.entries()].filter(
         ([key, value]) => key !== "file" && typeof value === "string",
       ),
     );
-    return json(await uploadAttachment(query, fields, sent));
-  } catch (e) {
-    return failure(e);
-  }
-}
+    return uploadAttachment(query, fields, sent);
+  },
+  { write: true },
+);

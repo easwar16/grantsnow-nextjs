@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { InputModality } from "@/components/layout/input-modality";
 export const metadata: Metadata = {
   title: { default: "GrantsNow", template: "%s | GrantsNow" },
   description: "Research administration workspace",
@@ -20,6 +21,7 @@ export default function RootLayout({
         <link rel="stylesheet" href={oracleGallery} />
       </head>
       <body>
+        <InputModality />
         <a id="skip-link" className="skip-link" href="#main">
           Skip to content
         </a>

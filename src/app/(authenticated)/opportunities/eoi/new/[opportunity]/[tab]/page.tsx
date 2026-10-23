@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { newApplicationContext } from "@/server/opportunities/record";
+import { newApplicationContext } from "@/server/modules/opportunities/record";
 import { State } from "@/components/feedback/state";
-import { NewTabContent } from "@/features/opportunities/eoi/tab-content";
+import { NewTabContent } from "@/features/modules/opportunities/eoi/tab-content";
 const identity = z.object({
   opportunity: z.string().regex(/^[1-9]\d{0,14}$/),
   tab: z.enum(["summary", "application"]),

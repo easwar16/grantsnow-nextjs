@@ -1,28 +1,28 @@
 import { idPart } from "@/lib/ids";
-import { InsightWidget } from "@/features/home/components/insight-widget";
-import { dashboardTabs } from "@/server/home/extra-tabs";
-import { OrganizationHeading } from "@/features/home/components/organization-heading";
-import { Announcements } from "@/features/home/components/announcements";
-import { loadAnnouncements } from "@/server/home/announcements";
-import { DashboardTabs } from "@/features/home/components/dashboard-tabs";
-import { KpiStrip } from "@/features/home/components/kpi-strip";
-import { loadKpis } from "@/server/home/kpis";
+import { InsightWidget } from "@/features/modules/home/components/insight-widget";
+import { dashboardTabs } from "@/server/modules/home/extra-tabs";
+import { OrganizationHeading } from "@/features/modules/home/components/organization-heading";
+import { Announcements } from "@/features/modules/home/components/announcements";
+import { loadAnnouncements } from "@/server/modules/home/announcements";
+import { DashboardTabs } from "@/features/modules/home/components/dashboard-tabs";
+import { KpiStrip } from "@/features/modules/home/components/kpi-strip";
+import { loadKpis } from "@/server/modules/home/kpis";
 import Link from "next/link";
 import { Suspense } from "react";
-import { pageIdentity } from "@/server/auth/page";
+import { pageIdentity } from "@/server/identity/auth/page";
 import {
   enabledWidgets,
   homeAccess,
   widgetResult,
-} from "@/server/home/service";
-import { homeFilters } from "@/features/home/schemas";
-import { organizations } from "@/server/configuration/service";
-import { HomeFilterControls } from "@/features/home/components/filters";
-import { Widget } from "@/features/home/components/widget";
-import type { HomeFilters } from "@/features/home/types";
+} from "@/server/modules/home/service";
+import { homeFilters } from "@/features/modules/home/schemas";
+import { organizations } from "@/server/platform/configuration/service";
+import { HomeFilterControls } from "@/features/modules/home/components/filters";
+import { Widget } from "@/features/modules/home/components/widget";
+import type { HomeFilters } from "@/features/modules/home/types";
 import { AppError } from "@/lib/errors";
 import type { FormatSettings } from "@/lib/format";
-import { displayFormat } from "@/server/configuration/formatting";
+import { displayFormat } from "@/server/platform/configuration/formatting";
 import { RecordSkeleton, KpiSkeleton } from "@/components/feedback/skeleton";
 import { State } from "@/components/feedback/state";
 import {
@@ -31,8 +31,8 @@ import {
   resourceVisible,
   resources,
   type Resources,
-} from "@/server/configuration/resources";
-import type { WidgetLabels } from "@/features/home/components/widget";
+} from "@/server/platform/configuration/resources";
+import type { WidgetLabels } from "@/features/modules/home/components/widget";
 export const metadata = { title: "Home" };
 /** A dashboard RB entry by its `<group>.<name>` key. */
 const dashboardKey = (key: string) => {

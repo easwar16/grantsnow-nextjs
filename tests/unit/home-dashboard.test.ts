@@ -4,23 +4,26 @@ const { oracle, session, user } = vi.hoisted(() => ({
   session: { token: "token-a" },
   user: { modules: { ETHICS: true } as Record<string, boolean> },
 }));
-vi.mock("@/server/api/transport", () => ({ oracle }));
-vi.mock("@/server/session/service", () => ({
+vi.mock("@/server/oracle/connection", () => ({ oracle }));
+vi.mock("@/server/identity/session/service", () => ({
   authenticate: async () => ({ session, user }),
 }));
-vi.mock("@/server/home/service", () => ({
+vi.mock("@/server/modules/home/service", () => ({
   homeAccess: async () => ({ session, user }),
 }));
-import { ethicsAccess, grantsEthicsAccess } from "@/server/home/ethics-access";
-import { orgDepth } from "@/server/configuration/service";
+import {
+  ethicsAccess,
+  grantsEthicsAccess,
+} from "@/server/modules/home/ethics-access";
+import { orgDepth } from "@/server/platform/configuration/service";
 import {
   monthOptions,
   pruneMonths,
   yearOptions,
-} from "@/features/home/insight-filters";
-import { stepSlide } from "@/features/home/components/announcements";
-import { announcementMessages } from "@/server/home/announcements";
-import { indent } from "@/features/home/components/organization-heading";
+} from "@/features/modules/home/insight-filters";
+import { stepSlide } from "@/features/modules/home/components/announcements";
+import { announcementMessages } from "@/server/modules/home/announcements";
+import { indent } from "@/features/modules/home/components/organization-heading";
 beforeEach(() => {
   oracle.mockReset();
   user.modules.ETHICS = true;
@@ -76,21 +79,23 @@ it("grants Ethics access only on true, 'true' or 'Y'", () => {
   expect(grantsEthicsAccess({})).toBe(false);
   expect(() => grantsEthicsAccess({ hasAccess: 1 })).toThrow();
 });
-it("asks Oracle once per token, retries after a failure and never shares across tokens", async () => {
+it("asks Oracle on each check, as legacy reads it per Home visit and holds it nowhere longer", async () => {
   session.token = "token-once";
-  oracle.mockResolvedValueOnce({ hasAccess: "N" });
+  oracle.mockResolvedValue({ hasAccess: "N" });
   expect(await ethicsAccess()).toBe(false);
   expect(await ethicsAccess()).toBe(false);
-  expect(oracle).toHaveBeenCalledTimes(1);
-  expect(oracle).toHaveBeenCalledWith("getDynamicFormsCheckApplApprAccess", {
-    token: "token-once",
-  });
+  expect(oracle).toHaveBeenCalledTimes(2);
+  // The client also passes its optional signal / query / path arguments; compare the leading ones.
+  expect(oracle.mock.calls[0].slice(0, 2)).toEqual([
+    "getDynamicFormsCheckApplApprAccess",
+    { token: "token-once" },
+  ]);
   session.token = "token-failing";
   oracle.mockRejectedValueOnce(new Error("upstream"));
   await expect(ethicsAccess()).rejects.toThrow("upstream");
   oracle.mockResolvedValueOnce({ hasAccess: "Y" });
   expect(await ethicsAccess()).toBe(true);
-  expect(oracle).toHaveBeenCalledTimes(3);
+  expect(oracle).toHaveBeenCalledTimes(4);
 });
 it("refuses the Ethics check without the Ethics module", async () => {
   session.token = "token-no-module";

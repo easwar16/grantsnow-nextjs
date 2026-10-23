@@ -4,36 +4,54 @@ type Rights = { read: boolean; edit: boolean; delete: boolean };
 const state = vi.hoisted(() => ({
   oracle: vi.fn(),
   oracleWrite: vi.fn(),
-  reference: vi.fn(),
   context: vi.fn(),
   roles: new Map<string, Rights>(),
   labels: [] as Record<string, unknown>[],
 }));
-vi.mock("@/server/opportunities/record", () => ({
+vi.mock("@/server/modules/opportunities/record", () => ({
   eoiRecordContext: state.context,
 }));
-vi.mock("@/server/api/transport", () => ({
+vi.mock("@/server/oracle/connection", () => ({
   oracle: state.oracle,
   oracleWrite: state.oracleWrite,
 }));
-vi.mock("@/server/opportunities/reference", () => ({
-  referenceRead: state.reference,
+// The client reads identity from the same session the record context gives the panels.
+vi.mock("@/server/oracle/context", () => ({
+  oracleContext: async () => {
+    const { session, user } = await state.context();
+    return {
+      session,
+      user,
+      token: session.token,
+      identity: {
+        legal_id: user.legalId ?? "",
+        org_id: user.organizationId,
+        user_id: user.personId,
+      },
+    };
+  },
 }));
-vi.mock("@/server/configuration/formatting", () => ({
+vi.mock("@/server/platform/configuration/formatting", () => ({
   displayFormat: async () => ({ dateFormat: "DD-MMM-YYYY" }),
 }));
-vi.mock("@/server/configuration/resources", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("@/server/configuration/resources")
-  >()),
-  resources: async () => state.labels,
-}));
+vi.mock(
+  "@/server/platform/configuration/resources",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("@/server/platform/configuration/resources")
+    >()),
+    resources: async () => state.labels,
+  }),
+);
 import { GET, POST } from "@/app/api/objects/comments/route";
 import { PUT, DELETE } from "@/app/api/objects/comments/[commentId]/route";
 import { GET as PEOPLE } from "@/app/api/objects/comments/people/route";
 import { GET as AUDIT } from "@/app/api/objects/audit/route";
 
 const origin = "http://127.0.0.1:3000";
+// The client also passes its optional signal / query / path arguments; assertions compare the leading ones.
+const lead = (mock: { mock: { calls: unknown[][] } }, n = 3) =>
+  mock.mock.calls.map((c) => c.slice(0, n));
 const PAGE = "opportunities-eoi-application";
 const record = `type=OPPORTUNITIES-EOI&id=12&page=${PAGE}`;
 const url = (path: string, query = record) =>
@@ -78,7 +96,6 @@ beforeEach(() => {
   vi.stubEnv("APP_ORIGIN", origin);
   state.oracle.mockReset().mockResolvedValue(thread);
   state.oracleWrite.mockReset().mockResolvedValue({});
-  state.reference.mockReset();
   state.roles = new Map();
   state.labels = [];
   state.context.mockReset().mockImplementation(async () => ({
@@ -104,11 +121,11 @@ describe("comment access", () => {
   it("reads the page's thread and marks only the user's own as changeable when they may edit", async () => {
     grant({ read: true });
     const read = await (await GET(new Request(url("comments")))).json();
-    expect(state.oracle).toHaveBeenCalledWith(
+    expect(lead(state.oracle)).toContainEqual([
       "getProposalComments",
       { token: "server-token" },
       new URLSearchParams({ module: PAGE, object_id: "12" }),
-    );
+    ]);
     expect(read.canComment).toBe(false);
     expect(read.items.map((c: { canChange: boolean }) => c.canChange)).toEqual([
       false,
@@ -168,11 +185,11 @@ describe("comment writes", () => {
       new Request(url("comments"), json("POST", { comments: "<p>New</p>" })),
     );
     expect(res.status).toBe(200);
-    expect(state.oracleWrite).toHaveBeenCalledWith(
+    expect(lead(state.oracleWrite)).toContainEqual([
       "postProposalComments",
       headers,
       { module: PAGE, comments: "<p>New</p>", object_id: 12 },
-    );
+    ]);
   });
   it("refuses without edit, from a foreign origin, with smuggled fields, empty or over the limit", async () => {
     grant({ read: true });
@@ -227,11 +244,11 @@ describe("comment writes", () => {
     expect((await edit("abc")).status).toBe(400);
     expect(state.oracleWrite).not.toHaveBeenCalled();
     expect((await edit("2")).status).toBe(200);
-    expect(state.oracleWrite).toHaveBeenLastCalledWith(
+    expect(lead(state.oracleWrite).at(-1)).toEqual([
       "postProposalComments",
       headers,
       { comment_id: 2, comments: "<p>B</p>", module: PAGE, object_id: 12 },
-    );
+    ]);
     const remove = (id: string) =>
       DELETE(
         new Request(url(`comments/${id}`), {
@@ -242,11 +259,11 @@ describe("comment writes", () => {
       );
     expect((await remove("1")).status).toBe(403);
     expect((await remove("2")).status).toBe(200);
-    expect(state.oracleWrite).toHaveBeenLastCalledWith(
+    expect(lead(state.oracleWrite).at(-1)).toEqual([
       "deleteSharedComments",
       headers,
       { comment_id: 2, comments: "<p>Mine</p>", module: PAGE, object_id: 12 },
-    );
+    ]);
     grant({ read: true });
     expect((await remove("2")).status).toBe(403);
     expect(state.oracleWrite).toHaveBeenCalledTimes(2);
@@ -257,7 +274,7 @@ describe("comment writes", () => {
       403,
     );
     grant({ read: true, edit: true });
-    state.reference.mockResolvedValue({
+    state.oracle.mockResolvedValue({
       items: [
         {
           person_id: 913,
@@ -278,10 +295,11 @@ describe("comment writes", () => {
         email: "m@example.ac.uk",
       },
     ]);
-    expect(state.reference).toHaveBeenCalledWith(
+    // Read whole: the person list pages itself (25 rows by default).
+    expect(lead(state.oracle, 2)).toContainEqual([
       "getPre_awardGetPersonListAll",
       { token: "server-token" },
-    );
+    ]);
   });
 });
 
@@ -311,13 +329,16 @@ describe("audit trail", () => {
     grant({ read: true });
     state.oracle.mockResolvedValue(trail);
     const all = await (await AUDIT(new Request(url("audit")))).json();
-    expect(state.oracle).toHaveBeenLastCalledWith("getSharedGetObjectAudits2", {
-      token: "server-token",
-      p_obj_id: "12",
-      p_obj_type: "OPPORTUNITIES-EOI",
-      p_page_name: PAGE,
-      p_event: "",
-    });
+    expect(lead(state.oracle, 2).at(-1)).toEqual([
+      "getSharedGetObjectAudits2",
+      {
+        token: "server-token",
+        p_obj_id: "12",
+        p_obj_type: "OPPORTUNITIES-EOI",
+        p_page_name: PAGE,
+        p_event: "",
+      },
+    ]);
     expect(all.items.map((a: { key: string }) => a.key)).toEqual([
       "2026-10-02-t14-10-updated",
       "2026-10-02-t14-10-updated-2",

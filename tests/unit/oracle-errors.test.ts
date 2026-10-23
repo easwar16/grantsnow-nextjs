@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { assertBusiness, oracle } from "@/server/api/transport";
-import { failure } from "@/server/api/http";
+import { assertBusiness, oracle } from "@/server/oracle/connection";
+import { failure } from "@/server/http/response";
 import { publicError } from "@/lib/errors";
 const caught = (fn: () => unknown) => {
   try {

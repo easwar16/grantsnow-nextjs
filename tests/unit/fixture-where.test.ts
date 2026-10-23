@@ -1,7 +1,7 @@
 import { it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockOracle } from "@/test-support/transport";
-import { oracleQuery } from "@/server/proposals/where-clause";
-import { parseQuery } from "@/features/proposals/schemas";
+import { oracleQuery } from "@/server/modules/proposals/where-clause";
+import { parseQuery } from "@/features/modules/proposals/schemas";
 beforeEach(() => {
   vi.stubEnv("FIXTURE_MODE", "true");
   vi.stubEnv("APP_ENV", "development");

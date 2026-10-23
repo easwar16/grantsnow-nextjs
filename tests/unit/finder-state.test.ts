@@ -11,12 +11,12 @@ import {
   queryString,
   resolveTab,
   toQuery,
-} from "@/features/opportunities/finder/state";
+} from "@/features/modules/opportunities/finder/state";
 import {
   finderRequest,
   parseOpportunityQuery,
   serializeOpportunityQuery,
-} from "@/features/opportunities/schemas";
+} from "@/features/modules/opportunities/schemas";
 // Port of GN-Angular finder-state.spec.ts, plus the URL and request round-trips.
 describe("finder URL sync", () => {
   it("writes the defaults the way VBCS does", () => {

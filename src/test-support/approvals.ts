@@ -1,5 +1,5 @@
 import "server-only";
-import { fixtureMode } from "@/server/configuration/environment";
+import { fixtureMode } from "@/server/platform/configuration/environment";
 /**
  * Development-only approval routes for the fixture EOIs (fixture writes return `{}` and change nothing):
  * EOI_1 is a draft with a two-stage route (Submit, Add Stage, delete the added stage); EOI_2 is in approval with the

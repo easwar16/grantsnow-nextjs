@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "@/lib/errors";
+// The client also passes its optional signal / query / path arguments; assertions compare the leading ones.
+const lead = (mock: { mock: { calls: unknown[][] } }, n = 3) =>
+  mock.mock.calls.map((c) => c.slice(0, n));
 const state = vi.hoisted(() => ({
   oracle: vi.fn(),
   oracleWrite: vi.fn(),
@@ -12,10 +15,10 @@ const state = vi.hoisted(() => ({
   record: vi.fn(),
   token: "server-token",
 }));
-vi.mock("@/server/opportunities/record", () => ({
+vi.mock("@/server/modules/opportunities/record", () => ({
   eoiConvertSource: state.record,
 }));
-vi.mock("@/server/session/service", () => ({
+vi.mock("@/server/identity/session/service", () => ({
   authenticate: async () => ({
     session: { token: state.token },
     user: {
@@ -26,23 +29,26 @@ vi.mock("@/server/session/service", () => ({
     },
   }),
 }));
-vi.mock("@/server/api/transport", () => ({
+vi.mock("@/server/oracle/connection", () => ({
   oracle: state.oracle,
   oracleWrite: state.oracleWrite,
 }));
-vi.mock("@/server/configuration/service", () => ({
+vi.mock("@/server/platform/configuration/service", () => ({
   dashboardRoles: async () => state.roles,
   organizations: async () => [{ id: "202", name: "Fixture organization" }],
 }));
-vi.mock("@/server/configuration/formatting", () => ({
+vi.mock("@/server/platform/configuration/formatting", () => ({
   formattingConfiguration: async () => ({ currency: "GBP", decimals: 2 }),
 }));
-vi.mock("@/server/configuration/resources", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("@/server/configuration/resources")
-  >()),
-  resources: async () => state.labels,
-}));
+vi.mock(
+  "@/server/platform/configuration/resources",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("@/server/platform/configuration/resources")
+    >()),
+    resources: async () => state.labels,
+  }),
+);
 import { POST, GET } from "@/app/api/opportunities/actions/[action]/route";
 import {
   defaultFormResponse,
@@ -50,19 +56,19 @@ import {
   sharePayload,
   sponsorDeadlines,
   matchSponsor,
-} from "@/server/opportunities/payloads";
+} from "@/server/modules/opportunities/payloads";
 import {
   cardActions,
   convertGates,
   deadlineWarningDays,
   pageAccess,
-} from "@/server/opportunities/gates";
+} from "@/server/modules/opportunities/gates";
 import {
   endDateAfter,
   monthsBetween,
   nearDeadline,
-} from "@/features/opportunities/components/actions/duration";
-import { shareProblem } from "@/features/opportunities/components/actions/share-dialog";
+} from "@/features/modules/opportunities/components/actions/duration";
+import { shareProblem } from "@/features/modules/opportunities/components/actions/share-dialog";
 const origin = "http://127.0.0.1:3000";
 const post = (action: string, body: unknown, from = origin) =>
   POST(
@@ -383,10 +389,10 @@ describe("POST /api/opportunities/actions", () => {
     expect(
       (await post("bookmark", { opportunityId: 5, bookmarked: true })).status,
     ).toBe(200);
-    expect(state.oracleWrite).toHaveBeenCalledWith("postSharedBookmarkOpp", {
-      token: "server-token",
-      p_opp_id: "5",
-    });
+    expect(lead(state.oracleWrite, 2)).toContainEqual([
+      "postSharedBookmarkOpp",
+      { token: "server-token", p_opp_id: "5" },
+    ]);
     state.oracleWrite.mockRejectedValueOnce(
       new AppError(
         "WRITES_DISABLED",
@@ -397,10 +403,10 @@ describe("POST /api/opportunities/actions", () => {
     const off = await post("bookmark", { opportunityId: 5, bookmarked: false });
     expect(off.status).toBe(409);
     expect((await off.json()).error.code).toBe("WRITES_DISABLED");
-    expect(state.oracleWrite).toHaveBeenLastCalledWith(
+    expect(lead(state.oracleWrite, 2).at(-1)).toEqual([
       "deleteSharedBookmarkOpp",
       { token: "server-token", p_opp_id: "5" },
-    );
+    ]);
   });
   it("refuses identity fields smuggled into a write", async () => {
     expect(
@@ -624,7 +630,7 @@ describe("parallel reads", () => {
     expect(record.status).toBe(403);
     expect(JSON.stringify(await record.json())).not.toMatch(/Server heading/);
   });
-  it("memoises lookups and sponsors per session, never across sessions", async () => {
+  it("holds reference data (lookups, sponsors, people, org units) per session, never across sessions", async () => {
     state.roles = grant("convert-opportunity-to-proposal");
     state.oracle.mockImplementation(async (op: string) => convertReads(op));
     const open = () =>
@@ -644,8 +650,11 @@ describe("parallel reads", () => {
       "getPre_awardGetLkpOrgUnitType",
     ])
       expect(tokens(op)).toEqual(["server-token", "other-token"]);
-    // The opportunity itself is record data: read every time.
-    expect(tokens("getSharedGetOpportunities")).toHaveLength(3);
+    // The opportunity is held for a minute per session (a visit), never across sessions.
+    expect(tokens("getSharedGetOpportunities")).toEqual([
+      "server-token",
+      "other-token",
+    ]);
   });
 });
 describe("client helpers", () => {

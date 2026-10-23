@@ -1,12 +1,7 @@
-import { delegationPeople } from "@/server/objects/delegations";
-import { delegationHost } from "@/server/objects/hosts";
-import { json, failure } from "@/server/api/http";
+import { delegationPeople } from "@/server/record/objects/delegations";
+import { delegationHost } from "@/server/record/objects/hosts";
+import { route, searchOf } from "@/server/http/route";
 /** The Add Delegation picker's people: GET ?host&record (needs the host's edit right). */
-export async function GET(request: Request) {
-  try {
-    const host = await delegationHost(new URL(request.url).searchParams);
-    return json(await delegationPeople(host));
-  } catch (e) {
-    return failure(e);
-  }
-}
+export const GET = route(async (request) =>
+  delegationPeople(await delegationHost(searchOf(request))),
+);

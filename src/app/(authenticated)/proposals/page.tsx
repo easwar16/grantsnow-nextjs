@@ -1,12 +1,15 @@
-import { displayFormat } from "@/server/configuration/formatting";
-import { listingChoices } from "@/server/proposals/lookups";
-import { pageIdentity } from "@/server/auth/page";
-import { resources, proposalColumns } from "@/server/configuration/resources";
-import { listProposals } from "@/server/proposals/service";
-import { parseQuery } from "@/features/proposals/schemas";
-import { Listing } from "@/features/proposals/components/listing";
+import { displayFormat } from "@/server/platform/configuration/formatting";
+import { listingChoices } from "@/server/modules/proposals/lookups";
+import { pageIdentity } from "@/server/identity/auth/page";
+import {
+  resources,
+  proposalColumns,
+} from "@/server/platform/configuration/resources";
+import { listProposals } from "@/server/modules/proposals/service";
+import { parseQuery } from "@/features/modules/proposals/schemas";
+import { Listing } from "@/features/modules/proposals/components/listing";
 import { publicError } from "@/lib/errors";
-import { requireModule } from "@/server/permissions/policy";
+import { requireModule } from "@/server/platform/permissions";
 import { State } from "@/components/feedback/state";
 export const metadata = { title: "Proposals" };
 export default async function Proposals({

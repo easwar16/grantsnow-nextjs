@@ -7,7 +7,7 @@ const state = vi.hoisted(() => ({
   rb: [] as Record<string, unknown>[],
   dashboard: [] as { page_name: string; read_access: string }[],
 }));
-vi.mock("@/server/session/service", () => ({
+vi.mock("@/server/identity/session/service", () => ({
   authenticate: async () => ({
     session: { token: "server-token" },
     user: {
@@ -18,22 +18,28 @@ vi.mock("@/server/session/service", () => ({
     },
   }),
 }));
-vi.mock("@/server/api/transport", () => ({
+vi.mock("@/server/oracle/connection", () => ({
   oracle: state.oracle,
   oracleWrite: state.oracleWrite,
 }));
-vi.mock("@/server/configuration/service", () => ({
+vi.mock("@/server/platform/configuration/service", () => ({
   dashboardRoles: async () => state.dashboard,
 }));
-vi.mock("@/server/configuration/resources", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("@/server/configuration/resources")
-  >()),
-  resources: async () => state.rb,
-}));
+vi.mock(
+  "@/server/platform/configuration/resources",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("@/server/platform/configuration/resources")
+    >()),
+    resources: async () => state.rb,
+  }),
+);
 import { GET as getAttributes } from "@/app/api/attributes/route";
 import { GET as getFx, POST as postFx } from "@/app/api/fx-rates/route";
 const origin = "http://127.0.0.1:3000";
+// The client also passes its optional signal / query / path arguments; assertions compare the leading ones.
+const lead = (mock: { mock: { calls: unknown[][] } }, n = 3) =>
+  mock.mock.calls.map((c) => c.slice(0, n));
 const rb = (module: string, group: string, key: string, visible = "Y") => ({
   module_name: module,
   label_type: group,
@@ -214,7 +220,7 @@ describe("object attributes (EOI Application tab)", () => {
       () => (state.modules = {}),
     ]) {
       set();
-      const { forget } = await import("@/server/cache/memo");
+      const { forget } = await import("@/server/oracle/cache");
       forget("");
       state.oracle.mockClear();
       expect((await read()).status).toBe(403);
@@ -346,11 +352,10 @@ describe("FX rates (proposal Budget / Pricing)", () => {
     const response = await read();
     expect(response.status).toBe(200);
     const view = await response.json();
-    expect(state.oracle).toHaveBeenCalledWith("getProposalFxRates", {
-      token: "server-token",
-      proposal_id: "5581",
-      version_id: "6649",
-    });
+    expect(lead(state.oracle, 2)).toContainEqual([
+      "getProposalFxRates",
+      { token: "server-token", proposal_id: "5581", version_id: "6649" },
+    ]);
     expect(view.editable).toBe(true);
     expect(view.texts.currency).toBe("fx-currency");
     expect(view.texts.cost).toBe("Cost Rate");
@@ -384,7 +389,7 @@ describe("FX rates (proposal Budget / Pricing)", () => {
         roles: structuredClone(roles),
       };
       change();
-      const { forget } = await import("@/server/cache/memo");
+      const { forget } = await import("@/server/oracle/cache");
       forget("");
       const response = await read();
       expect(response.status).toBe(200);
@@ -395,7 +400,7 @@ describe("FX rates (proposal Budget / Pricing)", () => {
     }
     // A finalized Pricing tab does not lock Budget's rates.
     proposal.locked_modules = [{ id: 9, page_id: 41 }];
-    (await import("@/server/cache/memo")).forget("");
+    (await import("@/server/oracle/cache")).forget("");
     expect((await (await read()).json()).editable).toBe(true);
   });
 
@@ -420,7 +425,7 @@ describe("FX rates (proposal Budget / Pricing)", () => {
     for (const change of cases) {
       const saved = structuredClone(roles);
       change();
-      const { forget } = await import("@/server/cache/memo");
+      const { forget } = await import("@/server/oracle/cache");
       forget("");
       expect((await read()).status).toBe(403);
       roles = saved;

@@ -6,7 +6,8 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { useInFlight } from "@/lib/use-in-flight";
+import { useInFlight } from "@/lib/hooks/use-in-flight";
+import { chatbot, session } from "@/lib/api";
 import {
   chatPosition,
   dragTo,
@@ -137,32 +138,27 @@ export function Chatbot({
             at: new Date(),
           },
         ]);
-      try {
-        const response = await fetch("/api/chatbot", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question }),
-          cache: "no-store",
-          // Server waits up to 60s for the assistant; this bounds the whole round trip.
-          signal: AbortSignal.timeout(70000),
-        });
-        const body = await response.json().catch(() => null);
-        if (!response.ok || typeof body?.html !== "string") {
-          setFailure(body?.error?.message ? body.error : UNAVAILABLE);
-          return;
-        }
-        setMessages((m) => [
-          ...m,
-          {
-            id: nextId.current++,
-            from: "bot",
-            html: body.html,
-            options: Array.isArray(body.options) ? body.options : [],
-          },
-        ]);
-      } catch {
-        setFailure(UNAVAILABLE);
+      // Server waits up to 60s for the assistant; this bounds the whole round trip.
+      const result = await chatbot.ask(question, AbortSignal.timeout(70000));
+      if (!result.ok || typeof result.data.html !== "string") {
+        setFailure(
+          !result.ok && result.error.message && !session.offline(result.error)
+            ? result.error
+            : UNAVAILABLE,
+        );
+        return;
       }
+      const html = result.data.html,
+        options = result.data.options;
+      setMessages((m) => [
+        ...m,
+        {
+          id: nextId.current++,
+          from: "bot",
+          html,
+          options: Array.isArray(options) ? options : [],
+        },
+      ]);
     });
 
   const show = () => {

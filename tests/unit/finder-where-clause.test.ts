@@ -4,12 +4,12 @@ import {
   keywordCriteria,
   whereClause,
   type Criterion,
-} from "@/server/opportunities/query";
+} from "@/server/modules/opportunities/query";
 import {
   DEFAULT_FILTERS,
   type FinderFilters,
   type FinderTab,
-} from "@/features/opportunities/finder/state";
+} from "@/features/modules/opportunities/finder/state";
 // Port of GN-Angular where-clause.spec.ts.
 const where = (patch: Partial<FinderFilters> = {}, tab: FinderTab = "others") =>
   whereClause(finderCriteria(tab, { ...DEFAULT_FILTERS, ...patch }));

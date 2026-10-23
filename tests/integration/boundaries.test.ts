@@ -1,4 +1,4 @@
-import { loadSummary } from "@/server/proposals/record";
+import { loadSummary } from "@/server/modules/proposals/record";
 import { beforeEach, afterEach, it, expect, vi } from "vitest";
 const state = vi.hoisted(() => ({
   app: undefined as unknown,
@@ -7,8 +7,10 @@ const state = vi.hoisted(() => ({
   destroy: vi.fn(),
   calls: vi.fn(),
 }));
-vi.mock("@/server/session/storage", () => ({ storage: async () => state }));
-vi.mock("@/server/api/transport", async (importOriginal) => ({
+vi.mock("@/server/identity/session/storage", () => ({
+  storage: async () => state,
+}));
+vi.mock("@/server/oracle/connection", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   oracle: state.calls,
 }));
@@ -17,10 +19,10 @@ import {
   renewSession,
   clearSession,
   forgetValidation,
-} from "@/server/session/service";
+} from "@/server/identity/session/service";
 import { GET as proposalsGet } from "@/app/api/proposals/route";
 import { GET as callback } from "@/app/api/auth/callback/route";
-import { widgetResult, loadWidget } from "@/server/home/service";
+import { widgetResult, loadWidget } from "@/server/modules/home/service";
 import { fixtureUser } from "@/test-support/fixtures";
 const app = () => ({
   token: "isolated-test-token",
@@ -76,12 +78,9 @@ it("direct API request with denied module returns 403", async () => {
     new Request("http://127.0.0.1:3000/api/proposals"),
   );
   expect(response.status).toBe(403);
-  expect(state.calls).not.toHaveBeenCalledWith(
-    "getPre_awardGetProposalsList",
-    expect.anything(),
-    expect.anything(),
-    expect.anything(),
-  );
+  expect(
+    state.calls.mock.calls.some((c) => c[0] === "getPre_awardGetProposalsList"),
+  ).toBe(false);
 });
 it("expired cookie cannot call Oracle", async () => {
   state.app = { ...app(), expiresAt: Date.now() - 1 };
@@ -185,7 +184,12 @@ it("verified org and statistics filter propagation never substitutes browser ide
     quarter: "4",
     offset: 0,
   });
-  expect(state.calls).toHaveBeenCalledWith(
+  // The client also passes its optional path argument; compare the leading ones.
+  expect(
+    state.calls.mock.calls
+      .filter((c) => c[0] === "getProposalGetProposalStatistics")
+      .map((c) => c.slice(0, 4)),
+  ).toContainEqual([
     "getProposalGetProposalStatistics",
     {
       token: "isolated-test-token",
@@ -197,18 +201,28 @@ it("verified org and statistics filter propagation never substitutes browser ide
     },
     expect.any(URLSearchParams),
     undefined,
-  );
+  ]);
 });
 
 it("summary denies missing object read access before fetching a record", async () => {
   await expect(
     loadSummary({ type: "PROPOSAL", id: "123" }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
-  expect(state.calls).toHaveBeenCalledWith("getSecurityUser_roles", {
-    token: "isolated-test-token",
-    p_obj_type: "PROPOSAL",
-    p_obj_id: "123",
-  });
+  // The client also passes its optional signal / query / path arguments; compare the leading ones.
+  expect(
+    state.calls.mock.calls
+      .filter((c) => c[0] === "getSecurityUser_roles")
+      .map((c) => c.slice(0, 2)),
+  ).toEqual([
+    [
+      "getSecurityUser_roles",
+      {
+        token: "isolated-test-token",
+        p_obj_type: "PROPOSAL",
+        p_obj_id: "123",
+      },
+    ],
+  ]);
   expect(
     state.calls.mock.calls.some((c) => c[0] === "getProposalProposal_id"),
   ).toBe(false);

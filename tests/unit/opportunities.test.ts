@@ -3,9 +3,9 @@ import {
   finderRequest,
   parseOpportunityQuery,
   serializeOpportunityQuery,
-} from "@/features/opportunities/schemas";
-import { DEFAULT_FILTERS } from "@/features/opportunities/finder/state";
-import { opportunityOracleQuery } from "@/server/opportunities/query";
+} from "@/features/modules/opportunities/schemas";
+import { DEFAULT_FILTERS } from "@/features/modules/opportunities/finder/state";
+import { opportunityOracleQuery } from "@/server/modules/opportunities/query";
 import {
   gatedFilters,
   hasPreferences,
@@ -13,8 +13,8 @@ import {
   metaCells,
   opportunityCard,
   uniqueOptions,
-} from "@/server/opportunities/service";
-import { splitFunders } from "@/features/opportunities/display";
+} from "@/server/modules/opportunities/service";
+import { splitFunders } from "@/features/modules/opportunities/display";
 import { idPart } from "@/lib/ids";
 const none = () => false;
 const only =

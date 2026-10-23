@@ -6,6 +6,20 @@ This is the standalone Next.js project for the GrantsNow UI rebuild. It uses the
 
 Current dashboard work: all five configured tabs, source-type Insights charts/multi-date filters and geometric skeletons are documented in [dashboard parity](docs/dashboard-parity.md). Opportunity write workflows and exact/full VBCS sign-off remain outstanding.
 
+## Docs
+
+| Read                                                                                                                                                                   | For                                                                                      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| [AGENTS.md](AGENTS.md) and [foundations](docs/grantsnow-foundations.md)                                                                                                | the rules: backend contract, resource bundles, engineering rules, decisions              |
+| [architecture](docs/architecture.md)                                                                                                                                   | the project structure, layering rules and runtime design                                 |
+| [API layer](docs/api-layer.md)                                                                                                                                         | how every backend call is made: Oracle and OIC functions, caching, paging, browser hooks |
+| [progress](docs/progress.md)                                                                                                                                           | where the rebuild stands, the approved plan and history                                  |
+| [authentication](docs/authentication.md), [DEV browser session](docs/dev-browser-session.md)                                                                           | IDCS sign-in and the local DEV token bridge                                              |
+| [API mapping](docs/api-mapping.md), [Home coverage](docs/home-coverage.md), [dashboard parity](docs/dashboard-parity.md), [account settings](docs/account-settings.md) | per-area contracts and parity notes                                                      |
+| [security review](docs/security-review.md), [Azure deployment](docs/azure-deployment.md)                                                                               | security and hosting                                                                     |
+
+Generated from the legacy repo (read-only): `node scripts/oracle-catalogue.mjs --write` produces the Oracle and OIC API catalogues, and `node scripts/resource-seed.mjs` produces the fallback translations (`--check` verifies it).
+
 ## Run locally now
 
 Use Node **24 LTS** (the project has `.nvmrc`) and npm. The lockfile pins dependencies.
@@ -74,15 +88,15 @@ It never touches source, docs, `.env*` files or git. `npm run test:e2e` now remo
 
 ## Reference patterns
 
-- **Server service:** `src/server/proposals/service.ts` loads initial Server Component data directly and serves the same protected browser refresh handler.
-- **Oracle contracts:** allowlisted operation paths/headers in `src/server/api/operations.json`; schemas reject malformed/business-error responses.
+- **Server service:** `src/server/modules/proposals/service.ts` loads initial Server Component data directly and serves the same protected browser refresh handler.
+- **Oracle contracts:** allowlisted operation paths/headers in `src/server/oracle/operations.json`; schemas reject malformed/business-error responses.
 - **Client state:** listing URL is backend query state, filter form/expanded toolbar is interaction state, sealed cookie is authentication state. These are separate concerns.
 - **Dashboard:** one Suspense/error result per widget, shared permission/scope checks on initial reads and API refresh.
 - **UI stack:** semantic HTML controls/tables, React, one CSS token system. No competing state/form/styling libraries. Zod validates boundaries; Vitest and Playwright verify behavior.
 
-Current parity implementation and remaining work: [VBCS progress](docs/vbcs-parity-progress.md). This is not yet exact/full VBCS parity or the complete Proposal module.
+Current parity implementation and remaining work: [progress](docs/progress.md). This is not yet exact/full VBCS parity or the complete Proposal module.
 
-Read [architecture](docs/architecture.md), [API mapping](docs/api-mapping.md), [Home coverage](docs/home-coverage.md), [Azure preparation](docs/azure-deployment.md), and [implementation status](docs/implementation-status.md). Full Proposal workflows are approved follow-on work in the parity plan; edit/create/copy/delete/restore and approval mutations are not yet implemented.
+Read [architecture](docs/architecture.md), [API mapping](docs/api-mapping.md), [Home coverage](docs/home-coverage.md), [Azure preparation](docs/azure-deployment.md), and [progress and history](docs/progress.md). Full Proposal workflows are approved follow-on work in the parity plan; edit/create/copy/delete/restore and approval mutations are not yet implemented.
 
 ## Non-disruptive checks
 

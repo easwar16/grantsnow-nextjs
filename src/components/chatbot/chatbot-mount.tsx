@@ -1,7 +1,7 @@
 import "server-only";
-import { chatbotEnabled } from "@/server/chatbot/service";
-import { resources, label } from "@/server/configuration/resources";
-import { authenticate } from "@/server/session/service";
+import { chatbotEnabled } from "@/server/modules/chatbot/service";
+import { resources, label } from "@/server/platform/configuration/resources";
+import { authenticate } from "@/server/identity/session/service";
 import { Chatbot } from "./chatbot";
 
 /** Server gate for the launcher: only the enabled flag and labels reach the client, never the chatbot URL. */

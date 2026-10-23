@@ -1,30 +1,21 @@
-import { workflowRead, workflowWrite } from "@/server/approvals/workflow";
-import { eoiApprovalHost } from "@/server/opportunities/eoi-record/workflow";
-import { json, failure } from "@/server/api/http";
-import { sameOrigin } from "@/lib/security";
-import { appOrigin } from "@/server/configuration/environment";
+import {
+  workflowRead,
+  workflowWrite,
+} from "@/server/record/approvals/workflow";
+import { eoiApprovalHost } from "@/server/modules/opportunities/eoi-record/workflow";
+import { route, searchOf } from "@/server/http/route";
 import { AppError } from "@/lib/errors";
 const MAX_BODY = 32 * 1024;
+type Context = { params: Promise<{ id: string }> };
 /** The Workflow tab's reads: the route (default), a stage's approvers, the Add Stage setup, people or groups. */
-export async function GET(
-  request: Request,
-  context: { params: Promise<{ id: string }> },
-) {
-  try {
-    const { id } = await context.params;
-    const host = await eoiApprovalHost(id);
-    return json(await workflowRead(host, new URL(request.url).searchParams));
-  } catch (e) {
-    return failure(e);
-  }
-}
+export const GET = route<Context>(async (request, context) => {
+  const { id } = await context.params;
+  const host = await eoiApprovalHost(id);
+  return workflowRead(host, searchOf(request));
+});
 /** One change to the approval route (WRITES); the record's rules and a fresh route read decide, not the browser. */
-export async function POST(
-  request: Request,
-  context: { params: Promise<{ id: string }> },
-) {
-  try {
-    sameOrigin(request, appOrigin());
+export const POST = route<Context>(
+  async (request, context) => {
     const { id } = await context.params;
     const text = await request.text();
     if (text.length > MAX_BODY)
@@ -42,8 +33,7 @@ export async function POST(
     > | null;
     // Add Approver toasts the backend's own response_message (SelectValueItemChangeChain).
     const message = result?.response_message;
-    return json(typeof message === "string" ? { message } : {});
-  } catch (e) {
-    return failure(e);
-  }
-}
+    return typeof message === "string" ? { message } : {};
+  },
+  { write: true },
+);

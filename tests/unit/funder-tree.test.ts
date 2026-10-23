@@ -5,11 +5,11 @@ import {
   toggleFunder,
   toggleSite,
   type FunderRow,
-} from "@/features/opportunities/finder/funders";
+} from "@/features/modules/opportunities/finder/funders";
 import {
   MAX_FUNDER_KEYS,
   type FunderKey,
-} from "@/features/opportunities/finder/state";
+} from "@/features/modules/opportunities/finder/state";
 // Port of GN-Angular funder-tree.spec.ts.
 const rows: FunderRow[] = [
   {

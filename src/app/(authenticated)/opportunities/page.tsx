@@ -1,26 +1,26 @@
-import { displayFormat } from "@/server/configuration/formatting";
-import { pageIdentity } from "@/server/auth/page";
-import { requireDrawerAccess } from "@/server/permissions/policy";
+import { displayFormat } from "@/server/platform/configuration/formatting";
+import { pageIdentity } from "@/server/identity/auth/page";
+import { requireDrawerAccess } from "@/server/platform/permissions";
 import {
   finderRequest,
   finderRequestSchema,
-} from "@/features/opportunities/schemas";
+} from "@/features/modules/opportunities/schemas";
 import {
   DEFAULT_FILTERS,
   fromQuery,
   resolveTab,
   URL_KEYS,
   type FinderQuery,
-} from "@/features/opportunities/finder/state";
+} from "@/features/modules/opportunities/finder/state";
 import {
   finderContext,
   finderPreferences,
   listOpportunities,
-} from "@/server/opportunities/service";
+} from "@/server/modules/opportunities/service";
 import {
   Finder,
   type FinderResult,
-} from "@/features/opportunities/components/finder";
+} from "@/features/modules/opportunities/components/finder";
 import { State } from "@/components/feedback/state";
 import { AppError, publicError } from "@/lib/errors";
 export const metadata = { title: "Funding opportunities" };

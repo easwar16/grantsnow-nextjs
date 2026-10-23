@@ -5,12 +5,12 @@ import {
   formOf,
   headerConverts,
   visibleTabs,
-} from "@/server/opportunities/eoi-record/model";
-import { finalizedOf, objectAccessOf } from "@/server/permissions/policy";
+} from "@/shared/opportunities/eoi-record";
+import { finalizedOf, objectAccessOf } from "@/server/platform/permissions";
 import {
   inAppDestination,
   mustAsk,
-} from "@/features/opportunities/eoi/unsaved";
+} from "@/features/modules/opportunities/eoi/unsaved";
 const rows = (...pages: [string, number, string?][]) =>
   pages.map(([page, id, read = "Y"]) => ({
     page_id: id,

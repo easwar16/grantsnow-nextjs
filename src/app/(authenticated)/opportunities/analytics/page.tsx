@@ -1,8 +1,8 @@
 import { ChartSkeleton } from "@/components/feedback/skeleton";
 import { Suspense } from "react";
-import { pageIdentity } from "@/server/auth/page";
-import { requireDrawerAccess } from "@/server/permissions/policy";
-import { opportunityStatistics } from "@/server/opportunities/analytics";
+import { pageIdentity } from "@/server/identity/auth/page";
+import { requireDrawerAccess } from "@/server/platform/permissions";
+import { opportunityStatistics } from "@/server/modules/opportunities/analytics";
 import { State } from "@/components/feedback/state";
 import { publicError } from "@/lib/errors";
 export const metadata = { title: "Opportunity analytics" };

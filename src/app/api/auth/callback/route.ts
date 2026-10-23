@@ -1,14 +1,14 @@
 import * as oidc from "openid-client";
-import { idcs } from "@/server/auth/oidc";
+import { idcs } from "@/server/identity/auth/oidc";
 import {
   appOrigin,
   fixtureMode,
   oidcSettings,
-} from "@/server/configuration/environment";
-import { storage } from "@/server/session/storage";
+} from "@/server/platform/configuration/environment";
+import { storage } from "@/server/identity/session/storage";
 import { trustedUsername, safeReturn } from "@/lib/security";
-import { oracle } from "@/server/api/transport";
-import { mapBootstrap } from "@/server/session/contracts";
+import { oracle } from "@/server/oracle/connection";
+import { mapBootstrap } from "@/server/identity/session/contracts";
 export async function GET(request: Request) {
   const store = await storage(),
     transaction = store.transaction;

@@ -1,0 +1,215 @@
+/* The shared History and Delegation panels (legacy object-history / object-delegations fragments). */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 40px;
+}
+/* Title on the start edge, the actions on the end (oj-sm-justify-content-space-between, margin-3x-vertical). */
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 12px 0;
+}
+.head h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+.end {
+  justify-content: flex-end;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+}
+.tableWrap {
+  overflow-x: auto;
+}
+.tableWrap table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+}
+.tableWrap th,
+.tableWrap td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+/* Legacy header cells: bg-brand-color oj-color-invert. */
+.tableWrap th {
+  font-weight: 600;
+  background: var(--gn-brand);
+  color: var(--on-accent);
+}
+.link {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  text-align: left;
+  cursor: pointer;
+}
+.link:hover {
+  background: none;
+  text-decoration: underline;
+}
+.clamp {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.comment {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.section > summary,
+.group > summary {
+  padding: 12px 0;
+  font-weight: 700;
+  cursor: pointer;
+}
+.delegates,
+.pages {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.delegates > li {
+  border-bottom: 1px solid var(--gn-divider);
+}
+.person {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  cursor: pointer;
+}
+.name {
+  flex: 1;
+  min-width: 160px;
+  font-weight: 600;
+}
+.dates {
+  display: flex;
+  gap: 16px;
+  color: var(--gn-text-secondary);
+}
+.group {
+  padding-left: 16px;
+}
+.group > summary {
+  padding: 8px 0;
+  font-weight: 400;
+  color: var(--gn-text-secondary);
+}
+.page {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0 6px 32px;
+}
+.pageName {
+  flex: 0 1 33%;
+  min-width: 140px;
+}
+/* oj-switch with its label after it, as the record panel's Finalize switch (36x20). */
+.switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.switch input {
+  position: absolute;
+  opacity: 0;
+}
+.track {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  background: var(--gn-border-input);
+  border-radius: 10px;
+  transition: background var(--gn-dur-fast) var(--gn-ease);
+}
+.track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: var(--gn-surface);
+  border-radius: 50%;
+  transition: transform var(--gn-dur-fast) var(--gn-ease);
+}
+.switch input:checked + .track {
+  background: var(--gn-brand);
+}
+.switch input:checked + .track::after {
+  transform: translateX(16px);
+}
+:global(:where(:root:not([data-input="pointer"])))
+  .switch
+  input:focus-visible
+  + .track {
+  box-shadow: 0 0 0 2px var(--gn-brand);
+}
+.switch input:disabled + .track {
+  opacity: 0.6;
+}
+.rights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.rights legend {
+  margin-bottom: 6px;
+  padding: 0;
+  color: var(--gn-text-secondary);
+}
+/* Start and end dates share a row (D36). */
+.row {
+  display: flex;
+  gap: 8px;
+}
+.row > * {
+  flex: 1;
+  min-width: 0;
+}
+.catalogue {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.groupPick {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 8px;
+}
+.groupPages {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 20px;
+}

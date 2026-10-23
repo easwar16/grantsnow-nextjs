@@ -1,12 +1,15 @@
 import { it, expect } from "vitest";
-import { parseQuery, serializeQuery } from "@/features/proposals/schemas";
-import { oracleQuery } from "@/server/proposals/where-clause";
-import { mapProposals } from "@/server/proposals/service";
+import {
+  parseQuery,
+  serializeQuery,
+} from "@/features/modules/proposals/schemas";
+import { oracleQuery } from "@/server/modules/proposals/where-clause";
+import { mapProposals } from "@/server/modules/proposals/service";
 import { proposals } from "@/test-support/fixtures";
 import { moneyDisplay, dateDisplay } from "@/lib/format";
-import { homeFilters } from "@/features/home/schemas";
-import { mapWidget } from "@/server/home/service";
-import { widgets } from "@/server/home/widgets";
+import { homeFilters } from "@/features/modules/home/schemas";
+import { mapWidget } from "@/server/modules/home/service";
+import { widgets } from "@/server/modules/home/widgets";
 const q = parseQuery(new URLSearchParams());
 it("round trips URL queries and reset restores defaults", () => {
   const data = parseQuery(

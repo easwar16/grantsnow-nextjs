@@ -3,22 +3,23 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { MotionConfig } from "motion/react";
 import { Icon } from "@/components/ui/icon";
 import { ToastProvider } from "@/components/feedback/toast";
-import { AppStoreProvider } from "@/lib/app-store";
-import { applyAccessibility } from "@/features/account/apply";
-import type { ShellLabels } from "@/features/account/shell-labels";
+import { AppStoreProvider } from "@/lib/store/app-store";
+import { applyAccessibility } from "@/features/modules/account/apply";
+import type { ShellLabels } from "@/features/modules/account/shell-labels";
 import type { FormatSettings } from "@/lib/format";
 import { UserMenu } from "./user-menu";
 import { SessionKeepAlive } from "./session-keepalive";
 import { NotificationBell } from "./notification-bell";
 import { IdleDialog } from "./idle-dialog";
 import { ConfigureDrawer, type ConfigureMode } from "./configure-drawer";
-import { ShellProvider } from "./shell-context";
+import { ShellProvider, type ShellUser } from "./shell-context";
 export function AppShell({
   children,
   accessibility,
-  name,
+  user,
   logo,
   navigation,
   labels,
@@ -26,7 +27,7 @@ export function AppShell({
 }: {
   children: React.ReactNode;
   accessibility: Record<string, number>;
-  name: string;
+  user: ShellUser;
   /** The configured logo (already checked on the server); the GrantsNow logo when absent. */
   logo?: string;
   navigation: React.ReactNode;
@@ -45,134 +46,137 @@ export function AppShell({
     applyAccessibility(accessibility);
   }, [accessibility]);
   return (
-    <ToastProvider>
-      <AppStoreProvider>
-        <ShellProvider value={{ labels, format }}>
-          <div
-            id="shell"
-            className={`shell-frame${drawerOpen ? " shell-drawer-open" : ""}${configure ? " shell-configure-open" : ""}`}
-          >
-            <header id="shell-header" className="header">
-              <button
-                ref={trigger}
-                id="shell-menu-button"
-                className="header-icon"
-                aria-label={labels.navigation}
-                aria-haspopup="dialog"
-                aria-expanded={drawerOpen}
-                onClick={() => {
-                  if (drawer.current?.open) {
-                    drawer.current.close();
-                    return;
-                  }
-                  if (window.matchMedia("(max-width: 600px)").matches)
-                    drawer.current?.showModal();
-                  else drawer.current?.show();
-                  setDrawerOpen(true);
-                }}
-              >
-                <Icon name="menu" size={24} />
-              </button>
-              <Link
-                id="shell-brand"
-                className="brand"
-                href="/home"
-                prefetch={false}
-              >
-                {logo ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- an admin-configured address on any host.
-                  <img
-                    src={logo}
-                    alt={labels.logo}
-                    title={labels.logo}
-                    width={120}
-                    height={34}
-                  />
-                ) : (
-                  <Image
-                    src="/brand/grantsnow.svg"
-                    alt={labels.logo}
-                    title={labels.logo}
-                    width={120}
-                    height={34}
-                    priority
-                  />
-                )}
-              </Link>
-              <div className="header-end">
-                <Link
-                  id="shell-help"
-                  className="header-icon"
-                  href="/modules/tutorials"
-                  prefetch={false}
-                  aria-label="Help"
-                >
-                  <Icon name="help" />
-                </Link>
-                <NotificationBell />
-                <UserMenu name={name} onConfigure={setConfigure} />
-              </div>
-            </header>
-            <SessionKeepAlive />
-            <IdleDialog />
-            <dialog
-              ref={drawer}
-              id="navigation-drawer"
-              className="navigation-drawer"
-              aria-label={labels.navigation}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") {
-                  event.preventDefault();
-                  drawer.current?.close();
-                }
-              }}
-              onClose={() => {
-                setDrawerOpen(false);
-                trigger.current?.focus();
-              }}
-              onClick={(e) => {
-                if (e.target === e.currentTarget) drawer.current?.close();
-              }}
+    // Motion follows prefers-reduced-motion, as the CSS motion tokens do.
+    <MotionConfig reducedMotion="user">
+      <ToastProvider>
+        <AppStoreProvider>
+          <ShellProvider value={{ labels, format, user }}>
+            <div
+              id="shell"
+              className={`shell-frame${drawerOpen ? " shell-drawer-open" : ""}${configure ? " shell-configure-open" : ""}`}
             >
-              <div className="drawer-heading">
-                <span className="sr-only">GrantsNow navigation</span>
+              <header id="shell-header" className="header">
                 <button
-                  id="navigation-drawer-close"
-                  aria-label={labels.close}
-                  onClick={() => drawer.current?.close()}
+                  ref={trigger}
+                  id="shell-menu-button"
+                  className="header-icon"
+                  aria-label={labels.navigation}
+                  aria-haspopup="dialog"
+                  aria-expanded={drawerOpen}
+                  onClick={() => {
+                    if (drawer.current?.open) {
+                      drawer.current.close();
+                      return;
+                    }
+                    if (window.matchMedia("(max-width: 600px)").matches)
+                      drawer.current?.showModal();
+                    else drawer.current?.show();
+                    setDrawerOpen(true);
+                  }}
                 >
-                  <Icon name="close" />
+                  <Icon name="menu" size={24} />
                 </button>
-              </div>
-              {navigation}
-            </dialog>
-            <main
-              id="main"
-              className={
-                path.startsWith("/proposals") ||
-                path.startsWith("/opportunities")
-                  ? "proposal-workspace"
-                  : "home-workspace"
-              }
-            >
-              {children}
-            </main>
-            {configure && (
-              <ConfigureDrawer
-                key={configure}
-                mode={configure}
-                onClose={() => {
-                  setConfigure(null);
-                  // Focus goes back to the menu the drawer was opened from.
-                  document
-                    .querySelector<HTMLElement>(".user-menu > summary")
-                    ?.focus();
+                <Link
+                  id="shell-brand"
+                  className="brand"
+                  href="/home"
+                  prefetch={false}
+                >
+                  {logo ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- an admin-configured address on any host.
+                    <img
+                      src={logo}
+                      alt={labels.logo}
+                      title={labels.logo}
+                      width={120}
+                      height={34}
+                    />
+                  ) : (
+                    <Image
+                      src="/brand/grantsnow.svg"
+                      alt={labels.logo}
+                      title={labels.logo}
+                      width={120}
+                      height={34}
+                      priority
+                    />
+                  )}
+                </Link>
+                <div className="header-end">
+                  <Link
+                    id="shell-help"
+                    className="header-icon"
+                    href="/modules/tutorials"
+                    prefetch={false}
+                    aria-label="Help"
+                  >
+                    <Icon name="help" />
+                  </Link>
+                  <NotificationBell />
+                  <UserMenu name={user.name} onConfigure={setConfigure} />
+                </div>
+              </header>
+              <SessionKeepAlive />
+              <IdleDialog />
+              <dialog
+                ref={drawer}
+                id="navigation-drawer"
+                className="navigation-drawer"
+                aria-label={labels.navigation}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    drawer.current?.close();
+                  }
                 }}
-              />
-            )}
-          </div>
-        </ShellProvider>
-      </AppStoreProvider>
-    </ToastProvider>
+                onClose={() => {
+                  setDrawerOpen(false);
+                  trigger.current?.focus();
+                }}
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) drawer.current?.close();
+                }}
+              >
+                <div className="drawer-heading">
+                  <span className="sr-only">GrantsNow navigation</span>
+                  <button
+                    id="navigation-drawer-close"
+                    aria-label={labels.close}
+                    onClick={() => drawer.current?.close()}
+                  >
+                    <Icon name="close" />
+                  </button>
+                </div>
+                {navigation}
+              </dialog>
+              <main
+                id="main"
+                className={
+                  path.startsWith("/proposals") ||
+                  path.startsWith("/opportunities")
+                    ? "proposal-workspace"
+                    : "home-workspace"
+                }
+              >
+                {children}
+              </main>
+              {configure && (
+                <ConfigureDrawer
+                  key={configure}
+                  mode={configure}
+                  onClose={() => {
+                    setConfigure(null);
+                    // Focus goes back to the menu the drawer was opened from.
+                    document
+                      .querySelector<HTMLElement>(".user-menu > summary")
+                      ?.focus();
+                  }}
+                />
+              )}
+            </div>
+          </ShellProvider>
+        </AppStoreProvider>
+      </ToastProvider>
+    </MotionConfig>
   );
 }

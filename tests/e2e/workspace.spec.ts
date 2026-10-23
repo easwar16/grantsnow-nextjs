@@ -56,9 +56,8 @@ test("Home queues, organization/year filters, independent failure/retry, navigat
     page.getByRole("heading", { name: "Contracts Approaching Deadlines" }),
   ).toBeVisible();
   await page.getByRole("tab", { name: "Insights", exact: true }).click();
-  await page
-    .getByRole("combobox", { name: "Dashboard organization" })
-    .selectOption("203");
+  await page.getByRole("combobox", { name: "Dashboard organization" }).click();
+  await page.getByRole("option", { name: "Faculty of Science" }).click();
   await expect(page).toHaveURL(/organization=203/);
   await page.getByRole("combobox", { name: "Years", exact: true }).click();
   await page.getByRole("option", { name: "2026", exact: true }).click();
@@ -82,9 +81,10 @@ test("Home queues, organization/year filters, independent failure/retry, navigat
     else await route.continue();
   });
   // The whole-institution scope has a second page; scrolling the queue requests it, and that request fails in isolation.
+  await page.getByRole("combobox", { name: "Dashboard organization" }).click();
   await page
-    .getByRole("combobox", { name: "Dashboard organization" })
-    .selectOption("202");
+    .getByRole("option", { name: "Example Research University", exact: true })
+    .click();
   await expect(page).toHaveURL(/organization=202/);
   await nextPageOnScroll(
     widget.locator(".attention-list"),
@@ -410,6 +410,22 @@ test("preview-style desktop drawer, user menu and Opportunities routes", async (
     .evaluate((list) => list.scrollTo(0, list.scrollHeight));
   await expect(page.locator(".opportunity-card")).toHaveCount(29);
   await expect(page.locator(".listing-count")).toHaveText("Total: 29");
+  // A tab already seen shows its held list at once, while its background refresh is still slow.
+  await page.route("**/api/opportunities?*", async (route) => {
+    await new Promise((r) => setTimeout(r, 3000));
+    await route.continue().catch(() => undefined);
+  });
+  await page.getByRole("tab", { name: /^Featured/ }).click();
+  await expect(page.locator(".listing-count")).toHaveText("25 of 58", {
+    timeout: 1000,
+  });
+  await expect(page.locator("#finder-list-loading")).toHaveCount(0);
+  await page.getByRole("tab", { name: "Bookmarked", exact: true }).click();
+  await expect(page.locator(".listing-count")).toHaveText("Total: 29", {
+    timeout: 1000,
+  });
+  await expect(page.locator("#finder-list-loading")).toHaveCount(0);
+  await page.unroute("**/api/opportunities?*");
   // More Info opens the opportunity's summary as a detail page, with its actions and no tabs.
   await page
     .getByRole("link", { name: /More Info:/ })

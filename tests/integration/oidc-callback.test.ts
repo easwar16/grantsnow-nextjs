@@ -9,14 +9,14 @@ const mocks = vi.hoisted(() => ({
   grant: vi.fn(),
   oracle: vi.fn(),
 }));
-vi.mock("@/server/session/storage", () => ({
+vi.mock("@/server/identity/session/storage", () => ({
   storage: async () => mocks.store,
 }));
-vi.mock("@/server/auth/oidc", () => ({
+vi.mock("@/server/identity/auth/oidc", () => ({
   idcs: async () => ({ tenant: "isolated-fake-oidc" }),
 }));
 vi.mock("openid-client", () => ({ authorizationCodeGrant: mocks.grant }));
-vi.mock("@/server/api/transport", async (original) => ({
+vi.mock("@/server/oracle/connection", async (original) => ({
   ...(await original<object>()),
   oracle: mocks.oracle,
 }));

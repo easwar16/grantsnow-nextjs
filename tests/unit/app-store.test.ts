@@ -1,17 +1,23 @@
 import { afterEach, expect, it, vi } from "vitest";
 import {
   createStoreApi,
-  storeReducer,
+  newQueryClient,
   type StoreResult,
-} from "@/lib/app-store";
+} from "@/lib/store/app-store";
 
-// The store without React: the reducer holds state, the API drives it as the provider does.
+// The store's API over a real QueryClient, configured as the app's provider configures it.
 function harness() {
-  let state: Parameters<typeof storeReducer>[0] = {};
-  const api = createStoreApi((action) => {
-    state = storeReducer(state, action);
-  });
-  return { api, state: () => state };
+  const client = newQueryClient();
+  return {
+    api: createStoreApi(client),
+    data: (key: string) => client.getQueryData([key]),
+    state: (key: string) => client.getQueryState([key]),
+    keys: () =>
+      client
+        .getQueryCache()
+        .getAll()
+        .map((q) => q.queryKey[0]),
+  };
 }
 const deferred = <T>() => {
   let resolve!: (v: T) => void;
@@ -23,7 +29,7 @@ afterEach(() => {
 });
 
 it("shares one in-flight request between concurrent readers of a key", async () => {
-  const { api, state } = harness();
+  const { api, data } = harness();
   const load = vi.fn(async (): Promise<StoreResult<string>> => ({
     ok: true,
     data: "funders",
@@ -31,7 +37,7 @@ it("shares one in-flight request between concurrent readers of a key", async () 
   const [a, b] = await Promise.all([api.load("k", load), api.load("k", load)]);
   expect(load).toHaveBeenCalledTimes(1);
   expect(a).toEqual(b);
-  expect(state().k).toMatchObject({ data: "funders", loading: false });
+  expect(data("k")).toBe("funders");
 });
 
 it("serves fresh data without a request, and reloads once it is older than ttl", async () => {
@@ -50,7 +56,7 @@ it("serves fresh data without a request, and reloads once it is older than ttl",
 });
 
 it("lets only the latest request settle a key: a forgotten slow answer never lands", async () => {
-  const { api, state } = harness();
+  const { api, data } = harness();
   const slow = deferred<StoreResult<string>>();
   void api.load("notes", () => slow.promise);
   api.forget("notes");
@@ -58,13 +64,13 @@ it("lets only the latest request settle a key: a forgotten slow answer never lan
   slow.resolve({ ok: true, data: "old" });
   await slow.promise;
   await Promise.resolve();
-  expect(state().notes.data).toBe("new");
+  expect(data("notes")).toBe("new");
 });
 
 it("never reuses a failure, and keeps the last good data beside the error", async () => {
-  const { api, state } = harness();
+  const { api, data, state } = harness();
   await api.load("k", async () => ({ ok: true, data: "good" }));
-  await api.load(
+  const failed = await api.load(
     "k",
     async () => ({
       ok: false,
@@ -72,18 +78,32 @@ it("never reuses a failure, and keeps the last good data beside the error", asyn
     }),
     { force: true },
   );
-  expect(state().k).toMatchObject({ data: "good", error: { message: "down" } });
+  expect(failed).toEqual({
+    ok: false,
+    error: { code: "UPSTREAM", message: "down" },
+  });
+  expect(data("k")).toBe("good");
   const retry = vi.fn(async (): Promise<StoreResult<string>> => ({
     ok: true,
     data: "back",
   }));
   await api.load("k", retry, { force: true });
   expect(retry).toHaveBeenCalledTimes(1);
-  expect(state().k.error).toBeUndefined();
+  expect(state("k")?.error).toBeNull();
+});
+
+it("does not retry a failure on its own (a refusal must not be repeated)", async () => {
+  const { api } = harness();
+  const load = vi.fn(async (): Promise<StoreResult<never>> => ({
+    ok: false,
+    error: { code: "FORBIDDEN", message: "no" },
+  }));
+  await api.load("k", load);
+  expect(load).toHaveBeenCalledTimes(1);
 });
 
 it("turns a thrown loader into a failure, and forget drops entries by prefix", async () => {
-  const { api, state } = harness();
+  const { api, keys } = harness();
   const result = await api.load("action:a", () =>
     Promise.reject(new Error("offline")),
   );
@@ -91,12 +111,40 @@ it("turns a thrown loader into a failure, and forget drops entries by prefix", a
   await api.load("action:b", async () => ({ ok: true, data: 1 }));
   await api.load("other", async () => ({ ok: true, data: 2 }));
   api.forget("action:");
-  expect(Object.keys(state())).toEqual(["other"]);
+  expect(keys()).toEqual(["other"]);
 });
 
-it("patches an entry with what a write already returned", async () => {
-  const { api, state } = harness();
+it("patches an entry with what a write already returned, as fresh data", async () => {
+  const { api, data } = harness();
   await api.load("bell", async () => ({ ok: true, data: { unread: 3 } }));
   api.patch("bell", { unread: 0 });
-  expect(state().bell.data).toEqual({ unread: 0 });
+  expect(data("bell")).toEqual({ unread: 0 });
+  const load = vi.fn(async (): Promise<StoreResult<unknown>> => ({
+    ok: true,
+    data: { unread: 9 },
+  }));
+  await api.load("bell", load, { ttl: 60_000 });
+  expect(load).not.toHaveBeenCalled();
+});
+
+it("updates the held data of every entry under a prefix, and nothing else", async () => {
+  const { api, data } = harness();
+  await api.load("/api/opportunities?q=a", async () => ({
+    ok: true,
+    data: [1],
+  }));
+  await api.load("/api/opportunities?q=b", async () => ({
+    ok: true,
+    data: [2],
+  }));
+  await api.load("/api/opportunities/actions/share", async () => ({
+    ok: true,
+    data: [3],
+  }));
+  api.update<number[]>("/api/opportunities?", (rows) =>
+    rows.map((n) => n * 10),
+  );
+  expect(data("/api/opportunities?q=a")).toEqual([10]);
+  expect(data("/api/opportunities?q=b")).toEqual([20]);
+  expect(data("/api/opportunities/actions/share")).toEqual([3]);
 });

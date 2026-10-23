@@ -6,8 +6,8 @@ import {
   researchSchema,
   dashboardChange,
   preferencesChanges,
-} from "@/features/account/contracts";
-import { infoletSettings } from "@/features/account/infolets";
+} from "@/features/modules/account/contracts";
+import { infoletSettings } from "@/features/modules/account/infolets";
 it("cycles multi-step accessibility controls and toggles binary controls", () => {
   expect(
     [0, 25, 50, 75, 100].map((v) => nextAccessibility("accFontSize", v)),
@@ -56,7 +56,8 @@ it("prevents comma injection into legacy research CSV and rejects identity overr
   ).toBe(false);
 });
 it("rejects incomplete Out of Office and unknown status identity", async () => {
-  const { personStatusSchema } = await import("@/features/account/contracts");
+  const { personStatusSchema } =
+    await import("@/features/modules/account/contracts");
   expect(
     personStatusSchema.safeParse({
       status_code: "OOO",

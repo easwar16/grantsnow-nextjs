@@ -9,10 +9,8 @@ import {
   share,
   shareDialog,
   shareValues,
-} from "@/server/opportunities/actions";
-import { json, failure } from "@/server/api/http";
-import { sameOrigin } from "@/lib/security";
-import { appOrigin } from "@/server/configuration/environment";
+} from "@/server/modules/opportunities/actions";
+import { route, searchOf } from "@/server/http/route";
 import { AppError } from "@/lib/errors";
 // Notes are rich text; everything else is a few ids.
 const MAX_BODY = 131072;
@@ -33,25 +31,18 @@ const writes: Record<string, (body: unknown) => Promise<unknown>> = {
   apply,
   convert,
 };
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ action: string }> },
-) {
-  try {
+type Context = { params: Promise<{ action: string }> };
+export const GET = route<Context>(
+  async (request, { params }) => {
     const { action } = await params;
     const read = Object.hasOwn(reads, action) ? reads[action] : undefined;
     if (!read) throw new AppError("BAD_REQUEST", "Unknown action.", 400);
-    return json(await read(new URL(request.url).searchParams));
-  } catch (e) {
-    return failure(invalid(e));
-  }
-}
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ action: string }> },
-) {
-  try {
-    sameOrigin(request, appOrigin());
+    return read(searchOf(request));
+  },
+  { onError: invalid },
+);
+export const POST = route<Context>(
+  async (request, { params }) => {
     const { action } = await params;
     const write = Object.hasOwn(writes, action) ? writes[action] : undefined;
     if (!write) throw new AppError("BAD_REQUEST", "Unknown action.", 400);
@@ -66,8 +57,7 @@ export async function POST(
     } catch {
       throw new AppError("BAD_REQUEST", "Invalid opportunity action.", 400);
     }
-    return json(await write(body));
-  } catch (e) {
-    return failure(invalid(e));
-  }
-}
+    return write(body);
+  },
+  { write: true, onError: invalid },
+);

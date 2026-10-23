@@ -28,7 +28,7 @@ Both Insights and Dynamic Charts use modular Apache ECharts 6.1.0, loaded when a
 
 - Unit/integration (2026-10-14): 152 checks passed; trusted mappings, invalid targets, chart pagination completeness, disabled/arbitrary report IDs, scope widening, sanitized messages, strict dimension bodies/business errors and filter serialization are covered.
 - Chromium fixture journeys: 11 passed, including all dashboard tabs, chart expansion, keyboard focus after filter navigation, filter/reset, notification paging/recovery, chart preference POST/CSRF and skeleton/reduced-motion checks. These are isolated fixture checks, not live IDCS verification.
-- TypeScript, ESLint and a production build with fixture/browser-session modes disabled were run. See implementation-status for final recorded results.
+- TypeScript, ESLint and a production build with fixture/browser-session modes disabled were run. See progress.md § 3 for the recorded results.
 - Live DEV: KPI values, cost plot, Proposal year charts, value-by-year lines, category bars and notifications rendered using captured browser-session credentials. Oracle's Funding Opportunity Status operation returned HTTP 555 with a non-JSON body; it remains an independent error/retry state. Award statistics succeeded with a longer timeout. Funding Efficiency ignores unrelated widget settings; missing DASHBOARD_FEI data is an empty state, not a fabricated gauge.
 - The enabled live Dynamic Chart returned an empty dataProvider. Its real empty response was verified; nonempty chart rendering/dimension saving was exercised with fixtures.
 - Local IDCS is still not verified or enabled; the existing browser-session DEV bridge remains explicit, labelled, server-only and prohibited in production.

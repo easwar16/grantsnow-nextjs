@@ -5,15 +5,15 @@ const state = vi.hoisted(() => ({
   oracle: vi.fn(),
   fetch: vi.fn(),
 }));
-vi.mock("@/server/session/service", () => ({
+vi.mock("@/server/identity/session/service", () => ({
   authenticate: state.authenticate,
 }));
-vi.mock("@/server/api/transport", async (importOriginal) => ({
+vi.mock("@/server/oracle/connection", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   oracle: state.oracle,
 }));
 import { POST } from "@/app/api/chatbot/route";
-import { chatbotEnabled, toAnswer } from "@/server/chatbot/service";
+import { chatbotEnabled, toAnswer } from "@/server/modules/chatbot/service";
 const origin = "http://127.0.0.1:3000";
 const flag = (value: string) => ({
   items: [{ var_key: "CHATBOT_ENABLED", var_value: value }],

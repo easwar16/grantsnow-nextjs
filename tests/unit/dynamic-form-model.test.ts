@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { DynamicFormModel } from "@/features/dynamic-form/model";
-import type { DynField, DynForm } from "@/features/dynamic-form/models";
+import { DynamicFormModel } from "@/features/record/dynamic-form/model";
+import type { DynField, DynForm } from "@/features/record/dynamic-form/models";
 // Port of GN-Angular dynamic-form.model.spec.ts, plus the D42 rules and change tracking.
 const field = (fieldId: number, patch: Partial<DynField> = {}): DynField => ({
   fieldId,
