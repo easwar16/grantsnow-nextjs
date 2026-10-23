@@ -5,6 +5,10 @@ import { useFormat } from "@/components/layout/shell-context";
 import { dateDisplay, datePattern, parseDisplayDate } from "@/lib/format";
 import styles from "./date-input.module.css";
 
+/** Whether a native date picker inside `root` is open: its Escape closes the picker, not the dialog around it. */
+export const pickerOpen = (root: Element | null) =>
+  CSS.supports("selector(:open)") && !!root?.querySelector("input:open");
+
 /**
  * A date field in the configured global date format (getGlobalVar DEFAULT_DATE_FORMAT): the pattern is its
  * placeholder, typed text is read in that pattern on blur or Enter, and the calendar button opens the native picker.
@@ -100,7 +104,7 @@ export function DateInput({
       {/* The native picker, opened by the button; it stays out of the tab order and the accessibility tree. */}
       <input
         ref={picker}
-        id={`${id}-picker`}
+        id={`${id}-native`}
         className={styles.picker}
         type="date"
         tabIndex={-1}

@@ -17,7 +17,12 @@ import {
 import { early } from "@/server/platform/async";
 import { forgetOperation } from "@/server/oracle/cache";
 import { assertBusiness } from "@/server/oracle/connection";
-import { account, configuration, opportunities } from "@/server/oracle/api";
+import {
+  account,
+  configuration,
+  opportunities,
+  people,
+} from "@/server/oracle/api";
 import { availableThemes } from "./themes";
 import {
   resources,
@@ -294,8 +299,8 @@ export async function saveAccount(kind: string, body: unknown) {
       const directory = directories[i];
       if (!directory || proxy.proxy_pid === user.personId)
         throw new AppError("FORBIDDEN", "Invalid proxy selection.", 403);
-      const people = await directory;
-      if (!people.some((p) => p.id === proxy.proxy_pid))
+      const members = await directory;
+      if (!members.some((p) => p.id === proxy.proxy_pid))
         throw new AppError(
           "FORBIDDEN",
           "Proxy is not in the authorized directory.",
@@ -432,7 +437,11 @@ export async function proxyPeople(orgId: string) {
   if (!visible(rows, "manage") || !orgs.some((o) => o.id === orgId))
     throw new AppError("FORBIDDEN", "Organization unavailable.", 403);
   // An org's directory is reference data; the proxy picker and the status save share it.
-  return (await account.proxyDirectory({ orgId })).flatMap((p) => {
+  const body = (await people.inOrg({ orgId })) as { items?: unknown };
+  const directory = Array.isArray(body.items)
+    ? (body.items as Record<string, unknown>[])
+    : [];
+  return directory.flatMap((p) => {
     const id = p.person_id ?? p.PERSON_ID,
       name = p.full_name ?? p.FULL_NAME;
     return typeof name === "string" &&

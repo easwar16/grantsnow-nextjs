@@ -1,5 +1,5 @@
 "use client";
-import { DateInput } from "@/components/ui/date-input";
+import { DateInput, pickerOpen } from "@/components/ui/date-input";
 import { idPart } from "@/lib/ids";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
@@ -47,7 +47,10 @@ export function AdvancedFilter({
   useEffect(() => {
     // An Escape a field inside already handled (closing its own dropdown) leaves the popup open.
     const escape = (e: KeyboardEvent) =>
-      e.key === "Escape" && !e.defaultPrevented && onClose();
+      e.key === "Escape" &&
+      !e.defaultPrevented &&
+      !pickerOpen(host.current) &&
+      onClose();
     const outside = (e: PointerEvent) => {
       const target = e.target as HTMLElement;
       // The multi-select's own list sits inside the popup; the toggle button handles itself.

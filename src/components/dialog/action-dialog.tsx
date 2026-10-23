@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
+import { pickerOpen } from "@/components/ui/date-input";
 import styles from "./dialog.module.css";
 /**
  * The card dialogs' frame (GN-Angular gn-dialog): modal from mount, closed by its X, Escape or the owner unmounting
@@ -39,7 +40,7 @@ export function ActionDialog({
       style={{ width: `min(${width}px, calc(100vw - 32px))` }}
       aria-labelledby={`${id}-title`}
       onCancel={(e) => {
-        if (busy) e.preventDefault();
+        if (busy || pickerOpen(ref.current)) e.preventDefault();
       }}
       onClose={onClose}
     >

@@ -26,16 +26,6 @@ export const storedPersonStatus = read<void, Body>({
   op: "getSharedPersonStatus",
   parse: record,
 });
-/** The people of one organisation (legacy getPersonList, first page only as the proxy picker reads it). */
-export const proxyDirectory = read<{ orgId: string }, Body[]>({
-  op: "getPre_awardGetPersonList",
-  headers: (p) => ({ p_org_id: p.orgId }),
-  ttl: TTL.config,
-  parse: (b) => {
-    const rows = (b as Body).items;
-    return Array.isArray(rows) ? rows : [];
-  },
-});
 /** The five profile links (legacy getSharedDigitalPresence2); `pid` is the session's person. */
 export const digitalPresence = read<{ personId: string }, Body>({
   op: "getSharedDigitalPresence",
