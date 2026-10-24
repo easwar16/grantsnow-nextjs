@@ -20,6 +20,23 @@ it("answers a stale figure at once while one background read refreshes it", asyn
   // The refresh has settled (its promise resolved before the awaits above): the next read has the new value.
   expect(await read()).toBe("second");
 });
+it("drops a background refresh that a write cleared while it ran", async () => {
+  let settle: (v: string) => void = () => undefined;
+  const load = vi
+    .fn()
+    .mockResolvedValueOnce("before")
+    .mockImplementationOnce(() => new Promise<string>((r) => (settle = r)))
+    .mockResolvedValueOnce("after");
+  const read = () => memo("r", 1000, load, { staleMs: 5000 });
+  expect(await read()).toBe("before");
+  vi.advanceTimersByTime(1500);
+  expect(await read()).toBe("before");
+  // The write lands while the refresh is in flight; the refresh then settles with pre-write data.
+  forget("r");
+  settle("stale");
+  await Promise.resolve();
+  expect(await read()).toBe("after");
+});
 it("never serves past the stale window, and keeps no failure", async () => {
   const load = vi
     .fn()

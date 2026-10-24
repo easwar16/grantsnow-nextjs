@@ -232,6 +232,12 @@ async function send(
         ? `timed out after ${timeout / 1000}s`
         : `network error ${e instanceof Error ? `${e.name} ${String((e.cause as { code?: string } | undefined)?.code ?? "")}` : ""}`,
     );
+    // A write that reached Oracle may have committed, so a blind retry could save it twice.
+    if (writes(operation) && !connectTimedOut(e))
+      throw new AppError(
+        "UPSTREAM",
+        "Oracle did not answer. The change may have been saved; refresh before trying again.",
+      );
     throw new AppError("UPSTREAM", "Oracle is unavailable. Please retry.");
   }
   // Slow calls name themselves in development, so latency is traced to Oracle or to our own waits.

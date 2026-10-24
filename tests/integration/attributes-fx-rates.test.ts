@@ -521,6 +521,33 @@ describe("FX rates (proposal Budget / Pricing)", () => {
     expect(state.oracleWrite).not.toHaveBeenCalled();
   });
 
+  it("refuses an oversized chunked body before any Oracle call", async () => {
+    state.oracle.mockClear();
+    // 10 MB in 1 KB chunks, pulled on demand: the route must stop just past its 64 KB cap.
+    let pulled = 0;
+    const body = new ReadableStream<Uint8Array>(
+      {
+        pull(c) {
+          if (pulled++ === 10_240) return c.close();
+          c.enqueue(new Uint8Array(1024));
+        },
+      },
+      { highWaterMark: 0 },
+    );
+    const res = await postFx(
+      new Request(`${origin}/api/fx-rates`, {
+        method: "POST",
+        headers: { "content-type": "application/json", origin },
+        body,
+        duplex: "half",
+      } as RequestInit),
+    );
+    expect(res.status).toBe(413);
+    expect(pulled).toBeLessThan(100);
+    expect(state.oracle).not.toHaveBeenCalled();
+    expect(state.oracleWrite).not.toHaveBeenCalled();
+  });
+
   it("surfaces writes switched off (WRITES_ENABLED) without re-reading", async () => {
     state.oracleWrite.mockRejectedValue(
       new AppError(

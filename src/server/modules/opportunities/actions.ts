@@ -94,6 +94,8 @@ async function readOpportunity(id: number) {
 export async function setBookmark(raw: unknown) {
   const input = bookmarkInput.parse(raw);
   await actor();
+  // Only an opportunity this user can read (the card's id is the browser's word).
+  await readOpportunity(input.opportunityId);
   await (input.bookmarked ? opportunities.bookmark : opportunities.unbookmark)({
     opportunityId: input.opportunityId,
   });
@@ -102,7 +104,10 @@ export async function setBookmark(raw: unknown) {
 export async function saveNotes(raw: unknown) {
   const input = notesInput.parse(raw);
   await actor();
-  await requireAccess("opportunity-notes", "edit");
+  await afterCheck(
+    requireAccess("opportunity-notes", "edit"),
+    readOpportunity(input.opportunityId),
+  );
   const notes = sanitizeHtml(input.notes);
   await opportunities.saveNotes({ opportunityId: input.opportunityId, notes });
   return { notes };
@@ -215,8 +220,10 @@ export async function share(raw: unknown) {
   const input = shareInput.parse(raw);
   await actor();
   // Settled only after the comment check below, which still fails first.
-  const recipients = shareValues(input.sendTo);
+  const recipients = shareValues(input.sendTo),
+    opportunity = readOpportunity(input.opportunityId);
   recipients.catch(() => undefined);
+  opportunity.catch(() => undefined);
   const limit = shareLimit(await resources());
   if (input.comment.trim().length > limit)
     throw new AppError(
@@ -232,6 +239,7 @@ export async function share(raw: unknown) {
       : [input.sendToValue];
   if (chosen.some((v) => !offered.has(v)))
     throw new AppError("BAD_REQUEST", "Unknown share recipient.", 400);
+  await opportunity;
   await opportunities.share({ body: sharePayload(input) });
   return { shared: true };
 }

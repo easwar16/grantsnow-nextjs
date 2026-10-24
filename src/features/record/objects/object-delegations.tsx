@@ -1,5 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
+import moment from "moment";
 import { useRouter } from "next/navigation";
 import { State } from "@/components/feedback/state";
 import { useFormat } from "@/components/layout/shell-context";
@@ -281,7 +282,7 @@ export function ObjectDelegations({
 function DelegationDialog({
   id,
   host,
-  view: { texts, gates, catalogue, today },
+  view: { texts, gates, catalogue },
   draft,
   onSaved,
   onClose,
@@ -341,7 +342,8 @@ function DelegationDialog({
       if (!result.ok) return fail(result.error);
       onSaved();
     }, "save");
-  // Legacy min is today; an existing earlier start stays valid when editing.
+  // Legacy min is the browser's today (getCurrentDate); an existing earlier start stays valid when editing.
+  const today = moment().format("YYYY-MM-DD");
   const minStart =
     draft.edit && draft.start && draft.start < today ? draft.start : today;
   const check = (

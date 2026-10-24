@@ -281,6 +281,13 @@ describe("DynamicFormModel grids", () => {
     expect(m.validate()).toBe(false);
     expect(m.hasMissing()).toBe(true);
   });
+  it("refuses a cell holding the row separator, which would shift every later row", () => {
+    const m = new DynamicFormModel(GRID, stored);
+    m.addRow(1, section);
+    m.setCell(1, "A~~B");
+    expect(m.doneRow()).toBe(false);
+    expect(m.cellError(1)).toBe('Remove "~~" from this value.');
+  });
   it("clears the table when every row is deleted", () => {
     const m = new DynamicFormModel(GRID, stored);
     m.deleteRow(1, section, 0);
@@ -330,6 +337,15 @@ describe("DynamicFormModel files", () => {
     m.uploaded(m.pendingFiles.values().next().value!, 9);
     expect(m.value(1, 10, 1)).toBe("new.pdf~~9");
     expect(m.pendingFile(1, 10, 1)).toBeNull();
+  });
+  it("deletes a replaced file after the answers, unless the new one takes its name", () => {
+    const other = new DynamicFormModel(FILES, stored);
+    other.pickFile(1, 10, 1, file("new.pdf"));
+    // A failed upload or answer save must leave cv.pdf~~7 still pointing at a stored file.
+    expect(other.deleteOrder()).toEqual({ before: [], after: [7] });
+    const same = new DynamicFormModel(FILES, stored);
+    same.pickFile(1, 10, 1, file("cv.pdf"));
+    expect(same.deleteOrder()).toEqual({ before: [7], after: [] });
   });
   it("deletes a stored file on save and drops a picked one at once; both are unsaved changes", () => {
     const m = new DynamicFormModel(FILES, stored);

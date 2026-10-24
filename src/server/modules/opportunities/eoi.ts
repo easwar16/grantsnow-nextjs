@@ -1,4 +1,5 @@
 import "server-only";
+import { safeUrl } from "@/lib/security";
 import { cache } from "react";
 import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
@@ -158,20 +159,6 @@ const listSchema = z.object({
   total_count: z.coerce.number().int().nonnegative().optional(),
   hasMore: z.union([z.boolean(), z.enum(["true", "false"])]).optional(),
 });
-
-function safeUrl(value: string | null | undefined) {
-  if (!value) return undefined;
-  try {
-    const url = new URL(value);
-    return ["https:", "http:"].includes(url.protocol) &&
-      !url.username &&
-      !url.password
-      ? url.href
-      : undefined;
-  } catch {
-    return undefined;
-  }
-}
 
 const present = (show: boolean, v: string | null | undefined) =>
   show && v ? v : undefined;

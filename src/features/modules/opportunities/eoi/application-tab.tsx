@@ -115,7 +115,8 @@ export function ApplicationTab({
         host="opportunities-eoi-application"
         parentId={opportunityId}
         objectId={requestId}
-        editable={editable}
+        // Read-only: the EOI save has no attributes write (legacy saveAttributes only copies them), so edits were lost.
+        editable={false}
       />
       <DynamicForm
         ref={form}

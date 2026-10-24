@@ -310,18 +310,26 @@ export function checkAnswers(forms: DynForm[], raw: unknown): CheckedAnswers {
         if (!s || seenSections.has(rs.section_id)) throw mismatch();
         seenSections.add(rs.section_id);
         const seenFields = new Set<string>();
-        return {
-          section_id: rs.section_id,
-          fields: rs.fields.map((rx) => {
-            const d = s.fields.find((x) => String(x.fieldId) === rx.field_id);
-            if (!d || seenFields.has(rx.field_id)) throw mismatch();
-            seenFields.add(rx.field_id);
-            return {
-              field_id: rx.field_id,
-              value: checkValue(d, s.sectionType === "GRID", rx.value),
-            };
-          }),
-        };
+        const fields = rs.fields.map((rx) => {
+          const d = s.fields.find((x) => String(x.fieldId) === rx.field_id);
+          if (!d || seenFields.has(rx.field_id)) throw mismatch();
+          seenFields.add(rx.field_id);
+          return {
+            field_id: rx.field_id,
+            value: checkValue(d, s.sectionType === "GRID", rx.value),
+          };
+        });
+        // GRID columns hold one `~~` token per row; unequal counts mean a cell held the separator.
+        if (
+          s.sectionType === "GRID" &&
+          new Set(
+            fields.flatMap((x) =>
+              typeof x.value === "string" ? [x.value.split("~~").length] : [],
+            ),
+          ).size > 1
+        )
+          throw mismatch();
+        return { section_id: rs.section_id, fields };
       }),
     };
   });

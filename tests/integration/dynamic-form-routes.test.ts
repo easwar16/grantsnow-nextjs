@@ -878,6 +878,39 @@ describe("server helpers", () => {
     expect(() => checkAnswers(forms, body(["6"]))).toThrow();
     expect(() => checkAnswers(forms, body("4"))).toThrow();
   });
+  it("refuses GRID columns whose row counts differ, so no cell can shift the rows", () => {
+    const forms = mapForms([
+      {
+        formId: 1,
+        sections: [
+          {
+            sectionId: 2,
+            sectionType: "GRID",
+            fields: [
+              { fieldId: 3, fieldType: "TEXTBOX" },
+              { fieldId: 4, fieldType: "NUMERIC" },
+            ],
+          },
+        ],
+      },
+    ]);
+    const body = (names: string, amounts: string) => [
+      {
+        form_id: "1",
+        sections: [
+          {
+            section_id: "2",
+            fields: [
+              { field_id: "3", value: names },
+              { field_id: "4", value: amounts },
+            ],
+          },
+        ],
+      },
+    ];
+    expect(() => checkAnswers(forms, body("A~~C", "5~~6"))).not.toThrow();
+    expect(() => checkAnswers(forms, body("A~~B~~C", "5~~6"))).toThrow();
+  });
   it("reads the form globals with their defaults", () => {
     expect(formSettings([])).toEqual({
       decimals: 2,

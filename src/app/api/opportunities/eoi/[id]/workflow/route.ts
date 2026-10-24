@@ -1,3 +1,4 @@
+import { readText } from "@/server/http/body";
 import {
   workflowRead,
   workflowWrite,
@@ -17,9 +18,7 @@ export const GET = route<Context>(async (request, context) => {
 export const POST = route<Context>(
   async (request, context) => {
     const { id } = await context.params;
-    const text = await request.text();
-    if (text.length > MAX_BODY)
-      throw new AppError("BAD_REQUEST", "Request is too large.", 400);
+    const text = await readText(request, MAX_BODY);
     let body: unknown;
     try {
       body = JSON.parse(text);

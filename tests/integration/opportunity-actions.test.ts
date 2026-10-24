@@ -386,6 +386,7 @@ describe("POST /api/opportunities/actions", () => {
     expect(state.oracleWrite).not.toHaveBeenCalled();
   });
   it("bookmarks and un-bookmarks with the server token, and reports writes switched off", async () => {
+    state.oracle.mockResolvedValue(opportunity());
     expect(
       (await post("bookmark", { opportunityId: 5, bookmarked: true })).status,
     ).toBe(200);
@@ -408,6 +409,24 @@ describe("POST /api/opportunities/actions", () => {
       { token: "server-token", p_opp_id: "5" },
     ]);
   });
+  it("writes nothing for an opportunity the user cannot read", async () => {
+    state.roles = grant("opportunity-notes");
+    state.oracle.mockImplementation(async (op: string) =>
+      op === "getSharedGetOpportunities"
+        ? { items: [] }
+        : { items: [{ value: "R1", description: "Role one" }] },
+    );
+    for (const [action, body] of [
+      ["bookmark", { opportunityId: 999, bookmarked: true }],
+      ["notes", { opportunityId: 999, notes: "<p>x</p>" }],
+      [
+        "share",
+        { opportunityId: 999, sendTo: "ROLE", sendToValue: "R1", comment: "" },
+      ],
+    ] as const)
+      expect((await post(action, body)).status).toBe(404);
+    expect(state.oracleWrite).not.toHaveBeenCalled();
+  });
   it("refuses identity fields smuggled into a write", async () => {
     expect(
       (await post("bookmark", { opportunityId: 5, bookmarked: true, pid: 9 }))
@@ -417,6 +436,7 @@ describe("POST /api/opportunities/actions", () => {
   });
   it("saves notes only with edit access, sanitised", async () => {
     const body = { opportunityId: 5, notes: "<p>x<script>bad()</script></p>" };
+    state.oracle.mockResolvedValue(opportunity());
     expect((await post("notes", body)).status).toBe(403);
     state.roles = grant("opportunity-notes");
     const saved = await post("notes", body);
@@ -427,9 +447,11 @@ describe("POST /api/opportunities/actions", () => {
     expect((await saved.json()).notes).toBe(payload.notes);
   });
   it("shares only to recipients the dialog offers", async () => {
-    state.oracle.mockResolvedValue({
-      items: [{ value: "R1", description: "Role one" }],
-    });
+    state.oracle.mockImplementation(async (op: string) =>
+      op === "getSharedGetOpportunities"
+        ? opportunity()
+        : { items: [{ value: "R1", description: "Role one" }] },
+    );
     expect(
       (
         await post("share", {

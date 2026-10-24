@@ -1,4 +1,5 @@
 import "server-only";
+import { safeUrl } from "@/lib/security";
 import { z } from "zod";
 import { opportunities } from "@/server/oracle/api";
 import { dashboardRoles } from "@/server/platform/configuration/service";
@@ -65,19 +66,6 @@ export async function readOpportunityRecord(id: number) {
 }
 const present = (v: string | null | undefined): v is string =>
   v !== null && v !== undefined && v.trim() !== "";
-function safeUrl(value: string | null | undefined) {
-  if (!present(value)) return undefined;
-  try {
-    const url = new URL(value);
-    return ["https:", "http:"].includes(url.protocol) &&
-      !url.username &&
-      !url.password
-      ? url.href
-      : undefined;
-  } catch {
-    return undefined;
-  }
-}
 /** VBCS isHTMLString: backend text that carries markup is rendered as (sanitised) HTML, otherwise as text. */
 export const isHtml = (v: string) => /<\/?[a-z][\s\S]*>/i.test(v);
 const richText = (v: string): Pick<SummaryField, "html" | "text"> =>

@@ -12,6 +12,12 @@ import { mapBootstrap } from "@/server/identity/session/contracts";
 export async function GET(request: Request) {
   const store = await storage(),
     transaction = store.transaction;
+  // No sign-in in progress: a forged or replayed callback must not end the session this browser holds.
+  if (!transaction)
+    return Response.redirect(
+      new URL("/login?reason=LOGIN_FAILED", appOrigin()),
+      303,
+    );
   // Consume transaction even on a failed callback; no automatic bootstrap retries.
   delete store.transaction;
   await store.save();

@@ -243,3 +243,15 @@ it("shares one Oracle validate per token across a page's parallel requests (D24)
   );
   expect(validates.length).toBeLessThanOrEqual(1);
 });
+it("a sign-out in one module instance drops the validation the other holds", async () => {
+  const validates = () =>
+    state.calls.mock.calls.filter(([op]) => op === "getSessionValidate").length;
+  await authenticate();
+  expect(validates()).toBe(1);
+  // Route handlers and pages load the session module separately.
+  vi.resetModules();
+  const other = await import("@/server/identity/session/service");
+  other.forgetValidation("isolated-test-token");
+  await authenticate();
+  expect(validates()).toBe(2);
+});

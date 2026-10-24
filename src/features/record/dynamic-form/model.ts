@@ -2,8 +2,11 @@ import {
   fieldError,
   fieldKey,
   fileIdOf,
+  fileNameOf,
   fileNameTaken,
   fileValue,
+  GRID_SEPARATOR,
+  GRID_SEPARATOR_MESSAGE,
   gridRows,
   gridRowsComplete,
   isBlank,
@@ -60,8 +63,8 @@ export class DynamicFormModel {
   readonly gridErrors = new Set<string>();
   /** Files to upload on save, by field key. */
   readonly pendingFiles = new Map<string, PendingFile>();
-  /** Stored attachments to delete on save. */
-  readonly pendingDeletes = new Set<number>();
+  /** Stored attachments to delete on save: id → file name. */
+  readonly pendingDeletes = new Map<number, string>();
   version = 0;
   private readonly values = new Map<string, FieldValue>();
   private readonly enabledSections = new Map<string, boolean>();
@@ -262,6 +265,9 @@ export class DynamicFormModel {
     if (!field || !isGridEditable(field)) return null;
     const value =
       this.rows(e.formId, e.sectionId)[e.index]?.[String(fieldId)] ?? null;
+    // `~~` separates a column's rows in the stored answer, so a cell holding it would shift every later row.
+    if (typeof value === "string" && value.includes(GRID_SEPARATOR))
+      return GRID_SEPARATOR_MESSAGE;
     return fieldError(field, value, field.isRequired === "Y");
   }
   private rowInvalid(e: RowEdit) {
@@ -334,8 +340,9 @@ export class DynamicFormModel {
     return "ok";
   }
   private dropFile(key: string) {
-    const id = fileIdOf(this.values.get(key) ?? null);
-    if (id !== null) this.pendingDeletes.add(id);
+    const value = this.values.get(key) ?? null,
+      id = fileIdOf(value);
+    if (id !== null) this.pendingDeletes.set(id, fileNameOf(value));
     this.pendingFiles.delete(key);
     this.values.set(key, null);
   }
@@ -357,6 +364,20 @@ export class DynamicFormModel {
     this.pendingFiles.delete(key);
     this.values.set(key, fileValue(p.file.name, attachmentId));
     this.changed();
+  }
+  /**
+   * The pending deletes in save order: a same-name replacement before the uploads (the upload refuses a taken name),
+   * the rest after the answers, so a failed save never leaves an answer pointing at a deleted file.
+   */
+  deleteOrder() {
+    const picked = new Set(
+      [...this.pendingFiles.values()].map((p) => p.file.name),
+    );
+    const ids = [...this.pendingDeletes];
+    return {
+      before: ids.filter(([, name]) => picked.has(name)).map(([id]) => id),
+      after: ids.filter(([, name]) => !picked.has(name)).map(([id]) => id),
+    };
   }
   deleted(attachmentId: number) {
     this.pendingDeletes.delete(attachmentId);

@@ -1,3 +1,4 @@
+import { readText } from "@/server/http/body";
 import { ZodError } from "zod";
 import { eoiSetFinalized } from "@/server/modules/opportunities/record";
 import { route } from "@/server/http/route";
@@ -8,9 +9,7 @@ type Context = { params: Promise<{ id: string }> };
 export const POST = route<Context>(
   async (request, context) => {
     const { id } = await context.params;
-    const text = await request.text();
-    if (text.length > MAX_BODY)
-      throw new AppError("BAD_REQUEST", "Request is too large.", 400);
+    const text = await readText(request, MAX_BODY);
     return eoiSetFinalized(id, JSON.parse(text));
   },
   {

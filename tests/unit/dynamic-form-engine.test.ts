@@ -278,6 +278,8 @@ describe("validation", () => {
   it("rounds numbers to the configured decimals", () => {
     expect(roundTo(12.345, 2)).toBe(12.35);
     expect(roundTo(12.3, 0)).toBe(12);
+    // Multiplying by 100 first gives 100.49999…, which rounded down to 1.
+    expect(roundTo(1.005, 2)).toBe(1.01);
   });
 });
 describe("toPayload", () => {

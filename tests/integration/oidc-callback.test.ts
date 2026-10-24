@@ -96,3 +96,15 @@ it("unknown backend user in HTTP 200 creates no session", async () => {
   expect(response.headers.get("location")).toContain("LOGIN_FAILED");
   expect(mocks.store.app).toBeUndefined();
 });
+it("a callback with no sign-in in progress leaves the current session alone", async () => {
+  mocks.store.app = { token: "live-session" };
+  mocks.store.transaction = undefined;
+  const response = await GET(
+    new Request("http://127.0.0.1:3000/api/auth/callback?code=forged"),
+  );
+  expect(mocks.store.destroy).not.toHaveBeenCalled();
+  expect(mocks.store.app).toEqual({ token: "live-session" });
+  expect(response.headers.get("location")).toBe(
+    "http://127.0.0.1:3000/login?reason=LOGIN_FAILED",
+  );
+});

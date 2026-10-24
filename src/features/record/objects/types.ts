@@ -132,6 +132,4 @@ export interface DelegationView {
     startRequired: boolean;
     endRequired: boolean;
   };
-  /** Today on the server (yyyy-mm-dd): the earliest start date, as legacy's min. */
-  today: string;
 }

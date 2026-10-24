@@ -830,3 +830,66 @@ test("EOI create, finalize with the unsaved-changes refusal, and an attachment u
     .click();
   await expect(panel.getByText("fixture-e2e", { exact: false })).toHaveCount(0);
 });
+test.describe("audit fixes in the browser", () => {
+  // Far east of UTC, so the browser's day and the server's UTC day differ for half of every day.
+  test.use({ timezoneId: "Pacific/Kiritimati" });
+  test("NUMERIC shows rounded but saves as typed; a grid cell refuses ~~; delegation starts from the browser's today", async ({
+    page,
+  }) => {
+    await login(page);
+    await page.goto("/opportunities");
+    await page
+      .getByRole("link", { name: /More Info:/ })
+      .first()
+      .click();
+    await expect(page).toHaveURL(/\/opportunities\/\d+$/);
+    await page.getByRole("button", { name: "Apply", exact: true }).click();
+    await expect(page).toHaveURL(/\/eoi\/new\/\d+\/application$/);
+    const amount = page.getByRole("spinbutton", { name: "Amount" });
+    await amount.fill("12.345");
+    await amount.blur();
+    // DECIMAL_PLACES_COUNT is 2 in the fixtures: view-only rounding.
+    await expect(amount).toHaveValue("12.35");
+    // A grid cell holding the row separator is refused on Done (the optional grid section is switched on first).
+    const grid = page.getByRole("switch", { name: "Budget lines" });
+    // The track covers the transparent input; the click lands on the switch's label, as a user's does.
+    await grid.locator("..").click();
+    await expect(grid).toBeChecked();
+    await page.locator('[id$="-insert"]').first().click();
+    await page.getByRole("textbox", { name: "Item" }).fill("Desk~~Chair");
+    await page.locator('[id$="-done"]').first().click();
+    await expect(page.getByText('Remove "~~" from this value.')).toBeVisible();
+    await page.getByRole("textbox", { name: "Item" }).fill("Desk");
+    await page.locator('[id$="-done"]').first().click();
+    await expect(page.getByText('Remove "~~" from this value.')).toHaveCount(0);
+    await page
+      .getByRole("textbox", { name: "Project title" })
+      .fill("Audit fixes application");
+    const saved = page.waitForRequest(
+      (r) => r.method() === "POST" && r.url().includes("/api/dynamic-form"),
+    );
+    await page.getByRole("button", { name: "Create", exact: true }).click();
+    const fields = (
+      (await saved).postDataJSON() as {
+        answers: {
+          sections: { fields: { field_id: string; value: unknown }[] }[];
+        }[];
+      }
+    ).answers.flatMap((f) => f.sections.flatMap((s) => s.fields));
+    expect(fields.find((f) => f.field_id === "3")?.value).toBe(12.345);
+    expect(fields.find((f) => f.field_id === "21")?.value).toBe("Desk");
+    // Delegation: the earliest start is the browser's local day, as legacy getCurrentDate().
+    await page.goto("/opportunities/eoi");
+    await page.getByRole("button", { name: "View EOI_1", exact: true }).click();
+    await page.getByRole("link", { name: "Delegation", exact: true }).click();
+    const panel = page.locator("#opportunities-eoi-delegation");
+    await panel.locator('[id$="-add"]').first().click();
+    const today = await page.evaluate(() =>
+      new Date().toLocaleDateString("en-CA"),
+    );
+    await expect(page.locator('[id$="-dialog-start-native"]')).toHaveAttribute(
+      "min",
+      today,
+    );
+  });
+});

@@ -1,3 +1,4 @@
+import { readText } from "@/server/http/body";
 import { ZodError } from "zod";
 import {
   apply,
@@ -46,11 +47,7 @@ export const POST = route<Context>(
     const { action } = await params;
     const write = Object.hasOwn(writes, action) ? writes[action] : undefined;
     if (!write) throw new AppError("BAD_REQUEST", "Unknown action.", 400);
-    if (Number(request.headers.get("content-length") || 0) > MAX_BODY)
-      throw new AppError("BAD_REQUEST", "Request is too large.", 400);
-    const text = await request.text();
-    if (text.length > MAX_BODY)
-      throw new AppError("BAD_REQUEST", "Request is too large.", 400);
+    const text = await readText(request, MAX_BODY);
     let body: unknown;
     try {
       body = JSON.parse(text);

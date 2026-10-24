@@ -234,6 +234,14 @@ Its fixtures are in `src/test-support/eoi-writes.ts`. That lock store is held on
   - No focus ring on click anywhere, fields included; keyboard keeps every ring.
 - **Evidence:** typecheck clean; lint 0 errors (one React Compiler notice on the virtualised list); Prettier clean apart from the input-only migration spec; 711 unit and integration tests, the isolated production build and all 13 fixture Chromium journeys pass. On live DEV, switching between Others and Bookmarked shows each held list within 30 ms, with no skeleton. Live DEV, dev server: EOI Summary 449 ms cold, 357 ms held; Home 485 ms then 317 ms; the notifications read 2,088 ms cold, 35 ms held. No pre-change baseline was measured.
 
+### Proxy picker, date-picker Escape and ids — 2026-10-23 (latest)
+
+- **Proxy picker:** Profile → Manage reads an organisation's people through `people.inOrg`, read whole. `account.proxyDirectory` (first page, 25 people) is gone, and the proxy check before a status save uses the same list.
+- **Escape:** the card dialogs and the Advanced filter ignore Escape while a native date picker inside them is open (`pickerOpen` in `date-input.tsx`, `input:open`). Automation cannot press keys in Chrome's native picker, so the original bug was not reproduced and the guard is unconfirmed by a real key press.
+- **Ids:** the hidden native date input no longer shares `${id}-picker` with its button; it is `${id}-native`.
+- **Owner (2026-10-23):** DEV records made in testing are test data and stay; nothing is deleted.
+- **Evidence:** typecheck, Prettier, 711 unit/integration tests and all 13 fixture Chromium journeys pass. Lint has 0 errors and one warning, which was already there. Nothing was run on live DEV.
+
 ## 2. Approved plan (2026-10-14)
 
 ## GrantsNow VBCS → Next.js parity implementation plan
