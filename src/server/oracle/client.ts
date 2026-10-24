@@ -79,7 +79,8 @@ const isPaged = (b: unknown): b is { items: unknown[]; hasMore?: unknown } =>
   b !== null &&
   Array.isArray((b as { items?: unknown }).items);
 const PAGE_ROWS = 500,
-  MAX_PAGES = 20;
+  MAX_PAGES = 20,
+  ALL_PAGES_MS = 120_000;
 /** The backend pages a list with p_offset / p_limit and a `hasMore` flag ("true" as a string); read every page. */
 async function everyPage(
   send: (query: URLSearchParams) => Promise<unknown>,
@@ -133,9 +134,12 @@ export function read<P = void, R = unknown>(def: ReadDef<P, R>) {
       query.set("p_limit", String(limit));
     }
     const read = (signal?: AbortSignal) => {
-      const send = (q?: URLSearchParams) =>
-        oracle(def.op, headers, q, signal, path);
-      return def.pages === "all" ? everyPage(send, query) : send(query);
+      if (def.pages !== "all")
+        return oracle(def.op, headers, query, signal, path);
+      // Each page has its own limit; the whole list gets one too, so up to MAX_PAGES slow pages cannot chain.
+      const deadline = AbortSignal.timeout(ALL_PAGES_MS),
+        all = signal ? AbortSignal.any([signal, deadline]) : deadline;
+      return everyPage((q) => oracle(def.op, headers, q, all, path), query);
     };
     // Every parameter is in the key (the token only as the session prefix), so a changed one is a new read.
     const key =

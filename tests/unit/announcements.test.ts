@@ -27,11 +27,11 @@ it("keeps tables and CKEditor classes, drops <style> and form controls", () => {
 });
 it("opens links in a new tab and refuses protocol-relative URLs", () => {
   const html = sanitizeHtml(
-    '<a href="https://example.org">Read</a><a href="//evil.example">Bad</a><a href="/proposals">In app</a>',
+    '<a href="https://example.org">Read</a><a href="//evil.example">Bad</a><a href="/\\evil.example">Bad</a><a href="/proposals">In app</a>',
   );
   expect(html).toContain('rel="noopener noreferrer"');
   expect(html).toContain('target="_blank"');
-  expect(html).not.toContain("//evil.example");
+  expect(html).not.toContain("evil.example");
   expect(html).toContain('href="/proposals"');
 });
 it("normalises the backend's literal \\r\\n sequences as legacy renderAsHTML does", () => {

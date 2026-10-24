@@ -45,7 +45,12 @@ export function assertActive(session?: AppSession) {
 // D24: validate once per token, not once per request. Home fans out to a dozen widget routes, and DEV's slow
 // validate timed out under that load. A minute bounds how long a revoked token keeps working.
 const VALIDATE_TTL_MS = 60_000;
-const validations = new Map<string, { at: number; body: Promise<unknown> }>();
+// On globalThis: route handlers and pages load this module separately, and a sign-out must clear both.
+const validations = ((
+  globalThis as {
+    __gnValidations?: Map<string, { at: number; body: Promise<unknown> }>;
+  }
+).__gnValidations ??= new Map());
 const validationKey = (token: string) =>
   createHash("sha256").update(token).digest("hex");
 /** Sign-out, or a token that must be checked again, drops its shared validation. */

@@ -337,6 +337,22 @@ All writes go through `oracleWrite` and stay off (`WRITES_ENABLED=false`). Live 
 their creation date (owner's GN-Angular decision, matches live); announcement text is white on brand (only CKEditor
 markers are black); DEV has no featured opportunities.
 
+## Decisions 2026-10-24 (audit fixes, checked against the GrantsNow KB)
+
+| Finding                                                                         | Settled by                                                                   | Now                                                                                                               |
+| ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| EOI Application attributes editable but never saved                             | Legacy `saveAttributes` only copies the values; the EOI save posts none (KB) | Shown read-only on EOI until an attributes write exists                                                           |
+| Form file save deleted the old file before uploads and answers (D42 order)      | Fix legacy defects (D42's own aim: no answer pointing at a missing file)     | Same-name replacements deleted first, other deletes after the answers save                                        |
+| `~~` in a grid cell shifted later rows                                          | Legacy `~~` row encoding (KB Dynamic Forms)                                  | Cell refused on Done; server refuses unequal column row counts                                                    |
+| New sub-folder upload stored under the parent folder                            | Legacy `FilePickerSelectChain` + `insertAttachmentActionChain` (defect)      | Stored under `folder~~newFolder`, as uploads into an existing sub-folder already are                              |
+| NUMERIC value rounded on blur                                                   | Owner rule: decimals are view-only; legacy keeps 12.345                      | Display rounded (lodash `round`), value kept                                                                      |
+| Delegation minimum start date from the server's UTC day                         | Legacy `getCurrentDate()` is the browser's day                               | Browser's local day                                                                                               |
+| Share / notes / bookmark wrote for any opportunity id                           | Scope at every service boundary (AGENTS)                                     | Opportunity re-read first, as Apply and Convert do; no new page gate (legacy has none for Share)                  |
+| Write bodies buffered whole before the size check; callback GET cleared session | Engineering rules                                                            | `readText` byte cap (`src/server/http/body.ts`); a callback with no sign-in in progress leaves the session        |
+| Background refresh re-stored data a write had cleared; all-pages read unbounded | API layer rules                                                              | Refresh stored only if its entry is unchanged; one 120 s deadline per all-pages read; validations on `globalThis` |
+| Write timeout told the user to retry                                            | Engineering rules (no double writes)                                         | "The change may have been saved; refresh before trying again" unless the connect never reached Oracle             |
+| Featured stale after a research-preference save                                 | API layer invalidation                                                       | The save also drops `getSharedGetOpportunities` and its new-flags read                                            |
+
 ## Open for the owner
 
 Framework and improvement choices only:
@@ -347,6 +363,14 @@ Framework and improvement choices only:
 - Floating-label 39 px filter fields on the Proposal listing (D36 keeps them only for profile and Insights).
 - LIKE wildcards `%` / `_` stay unescaped, as in legacy; escaping needs an `ESCAPE` clause the backend must accept.
 - Overdue uses the server's calendar day, not the user's time zone.
+- Same-name uploads racing on one record overwrite each other's object (legacy path = file name); a unique stored name
+  would change the storage path contract.
+- FX rates accept 0 and negative values, as legacy's `oj-input-number` does; refusing them is a new business rule.
+- Sessions end at the ID token's `exp` (docs/authentication.md); confirm the IDCS ID-token lifetime on DEV.
+- The generated Oracle catalogue (`src/server/oracle/api/catalogue/*`, 256 `"catalogue": true` operations) is used only
+  by its test and widens the allowlist; keep or remove.
+- The server cache is bounded by entry count, not size; uploads are copied in memory three times and OIC downloads
+  are buffered whole.
 - Not yet built: funder tree and deep links, per-filter `list-*` visibility gates on the listing.
 - To confirm on DEV: whether `pendingApproval` / `approvedAwards` return `appr_deadline_date`; whether
   `total_count` is filtered or global.

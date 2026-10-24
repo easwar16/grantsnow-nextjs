@@ -255,19 +255,24 @@ export function DynamicForm({
       const t = withRecord(targetKey, recordId);
       const done = await run(async () => {
         try {
-          // Files first, one at a time: a failed upload or delete stops the save, so no answer points at a missing file.
-          for (const attachmentId of [...m.pendingDeletes]) {
-            try {
-              await deleteFormFile(t, attachmentId);
-            } catch (e) {
-              // Already gone from the record's list: nothing left to delete.
-              if (!(e instanceof RequestFailed && e.status === 404)) throw e;
+          // One at a time; a failure stops the save (deleteOrder keeps answers off deleted files).
+          const remove = async (ids: number[]) => {
+            for (const attachmentId of ids) {
+              try {
+                await deleteFormFile(t, attachmentId);
+              } catch (e) {
+                // Already gone from the record's list: nothing left to delete.
+                if (!(e instanceof RequestFailed && e.status === 404)) throw e;
+              }
+              m.deleted(attachmentId);
             }
-            m.deleted(attachmentId);
-          }
+          };
+          const { before, after } = m.deleteOrder();
+          await remove(before);
           for (const p of [...m.pendingFiles.values()])
             m.uploaded(p, await uploadFormFile(t, p.file));
           await saveAnswers(t, m.payload());
+          await remove(after);
         } catch (e) {
           fail(e);
           return false;

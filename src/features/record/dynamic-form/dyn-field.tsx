@@ -18,7 +18,8 @@ import type {
 import styles from "./dynamic-form.module.css";
 /**
  * A number box that keeps what is typed ("1.") while the model holds a number or nothing; an empty number stays
- * empty (D42). Rounded to DECIMAL_PLACES_COUNT when the field is left.
+ * empty (D42). Shown rounded to DECIMAL_PLACES_COUNT when the field is left; the value keeps what was typed (decimals
+ * are view-only, as legacy's 12.345 shown as 12.35).
  */
 export function NumberInput({
   value,
@@ -55,10 +56,8 @@ export function NumberInput({
         onChange(n === null || Number.isFinite(n) ? n : null);
       }}
       onBlur={() => {
-        if (typeof value === "number") {
-          const rounded = roundTo(value, decimals);
-          if (rounded !== value) onChange(rounded);
-        }
+        if (typeof value === "number")
+          setText(String(roundTo(value, decimals)));
         onBlur?.();
       }}
     />

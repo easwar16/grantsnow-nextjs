@@ -225,7 +225,6 @@ export async function delegationView(
         : [];
     }),
     gates: delegationGates(rows, host),
-    today: new Date().toISOString().slice(0, 10),
   };
 }
 /** The add picker's people (legacy getPreAwardGetPersonListADP), each with its org unit beneath the name. */

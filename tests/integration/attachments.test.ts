@@ -271,7 +271,9 @@ describe("POST /api/files?host&record", () => {
       { folder: "GEN", newFolder: "Drafts", description: "Q1" },
     );
     expect(res.status).toBe(200);
-    const location = "DEV/77/OPPORTUNITIES-EOI/3934/GEN/Budget v1.2.pdf";
+    // Stored in the new sub-folder it is filed in, as an upload into an existing GEN~~Drafts is.
+    const location =
+      "DEV/77/OPPORTUNITIES-EOI/3934/GEN~~Drafts/Budget v1.2.pdf";
     expect(state.oicUpload).toHaveBeenCalledWith(
       location,
       new Uint8Array(Buffer.from("hello")),

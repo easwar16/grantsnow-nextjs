@@ -1,3 +1,4 @@
+import { readText } from "@/server/http/body";
 import { AppError } from "@/lib/errors";
 import {
   fxQuery,
@@ -12,9 +13,7 @@ export const GET = route((request) => loadFxRates(fxQuery(searchOf(request))));
 /** WRITES the rates: { target: { type, id, versionId, mode }, edits: [{ currency, reset, rate? }] }. */
 export const POST = route(
   async (request) => {
-    const text = await request.text();
-    if (text.length > MAX_BODY)
-      throw new AppError("BAD_REQUEST", "Request is too large.", 413);
+    const text = await readText(request, MAX_BODY);
     let body: unknown;
     try {
       body = JSON.parse(text);

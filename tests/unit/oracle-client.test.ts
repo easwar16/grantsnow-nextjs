@@ -163,3 +163,23 @@ it("reads fresh inside a write, so a held copy never decides whether the write m
   });
   expect(state.read).toHaveBeenCalledTimes(2);
 });
+it("gives a whole-list read one deadline shared by every page", async () => {
+  const people = read<void>({
+    op: "getPre_awardGetPersonListAll",
+    pages: "all",
+  });
+  const page = (n: number, more: boolean) => ({
+    items: Array.from({ length: n }, (_, i) => ({ i })),
+    hasMore: more ? "true" : "false",
+  });
+  state.read
+    .mockResolvedValueOnce(page(500, true))
+    .mockResolvedValueOnce(page(500, true))
+    .mockResolvedValueOnce(page(3, false));
+  const all = (await people()) as { items: unknown[] };
+  expect(all.items).toHaveLength(1003);
+  const signals = state.read.mock.calls.map((c) => c[3] as AbortSignal);
+  // Without a caller's signal there is still a deadline, and it is the same one for all three pages.
+  expect(signals[0]).toBeInstanceOf(AbortSignal);
+  expect(new Set(signals).size).toBe(1);
+});

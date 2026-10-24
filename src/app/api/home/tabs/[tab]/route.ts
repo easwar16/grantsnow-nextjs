@@ -1,3 +1,4 @@
+import { readText } from "@/server/http/body";
 import {
   notifications,
   dynamicChart,
@@ -27,19 +28,7 @@ export const POST = route(
   async (request, { params }: Context) => {
     if ((await params).tab !== "charts")
       throw new AppError("BAD_REQUEST", "Unknown preference operation.", 400);
-    if (Number(request.headers.get("content-length") || 0) > 1024)
-      throw new AppError(
-        "BAD_REQUEST",
-        "Preference request is too large.",
-        400,
-      );
-    const text = await request.text();
-    if (text.length > 1024)
-      throw new AppError(
-        "BAD_REQUEST",
-        "Preference request is too large.",
-        400,
-      );
+    const text = await readText(request, 1024);
     let body: unknown;
     try {
       body = JSON.parse(text);

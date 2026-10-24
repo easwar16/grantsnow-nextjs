@@ -1,4 +1,5 @@
 import "server-only";
+import { readText } from "@/server/http/body";
 import { z, ZodError } from "zod";
 import { AppError } from "@/lib/errors";
 import {
@@ -29,11 +30,9 @@ function resolve<T>(
 export const historyHost = (q: URLSearchParams) => resolve(HISTORY, q);
 /** `?host&record` → the resolved delegations host; anything malformed or unknown is a 400. */
 export const delegationHost = (q: URLSearchParams) => resolve(DELEGATIONS, q);
-/** A write's JSON body, capped at `max` characters. */
+/** A write's JSON body, capped at `max` bytes. */
 export async function jsonBody(request: Request, max: number) {
-  const text = await request.text();
-  if (text.length > max)
-    throw new AppError("BAD_REQUEST", "Request is too large.", 400);
+  const text = await readText(request, max);
   return JSON.parse(text) as unknown;
 }
 /** A malformed body or input as a 400 with `message`; anything else unchanged. */

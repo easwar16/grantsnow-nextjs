@@ -1,3 +1,4 @@
+import round from "lodash/round";
 import type {
   DynCondition,
   DynField,
@@ -305,6 +306,9 @@ export function optionsFor(
 }
 /** JET's required message, as the original shows it (measured live). */
 export const REQUIRED_MESSAGE = "Enter a value.";
+/** Joins a GRID column's rows in the stored answer. */
+export const GRID_SEPARATOR = "~~";
+export const GRID_SEPARATOR_MESSAGE = 'Remove "~~" from this value.';
 /**
  * The original's regex validator (JET RegExpValidator matches the whole value): the message, or null when it passes.
  * Rich text is tested as stored, HTML included, as the original's RTEValueChange did. A bad regex never blocks.
@@ -333,11 +337,9 @@ export function fieldError(
   if (required && isBlank(value)) return REQUIRED_MESSAGE;
   return patternError(field, value);
 }
-/** NUMERIC on leaving the field: rounded to DECIMAL_PLACES_COUNT. */
-export function roundTo(value: number, decimals: number) {
-  const factor = 10 ** decimals;
-  return Math.round(value * factor) / factor;
-}
+/** NUMERIC as shown on leaving the field, to DECIMAL_PLACES_COUNT; lodash shifts the exponent, so 1.005 → 1.01. */
+export const roundTo = (value: number, decimals: number) =>
+  round(value, decimals);
 /** One GRID row: a value per column, keyed by fieldId (the original keyed rows by column label). */
 export type GridRow = Record<string, FieldValue>;
 /** Grid columns edited in place; other types show their value (as the original's grid did). */

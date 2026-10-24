@@ -52,12 +52,15 @@ export function memo<T>(
       hit.refreshing = true;
       const next = load();
       next.then(
-        () =>
+        () => {
+          // A write that cleared the entry meanwhile wins: this read may predate it.
+          if (store.peek(key) !== hit) return;
           store.set(
             key,
             { at: Date.now(), fresh: ttlMs, stale: staleMs, value: next },
             { ttl: ttlMs + staleMs },
-          ),
+          );
+        },
         // A failed refresh keeps the held answer until its window ends; the next caller tries again.
         () => (hit.refreshing = false),
       );

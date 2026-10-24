@@ -96,3 +96,12 @@ it("never sends a write twice, even when its connection timed out", async () => 
   ).rejects.toMatchObject({ code: "UPSTREAM" });
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
+it("a write that timed out after sending says it may have been saved, not to retry", async () => {
+  fetchMock.mockRejectedValue(new DOMException("aborted", "TimeoutError"));
+  await expect(
+    oracleWrite("postSharedOppAddlDetails", { token: "t" }, { notes: "x" }),
+  ).rejects.toMatchObject({
+    code: "UPSTREAM",
+    message: expect.stringContaining("may have been saved"),
+  });
+});

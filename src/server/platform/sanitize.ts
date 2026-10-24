@@ -46,6 +46,6 @@ export function plainText(html: string) {
 export function sanitizeHtml(html: string) {
   return purify.sanitize(html.replace(/\\r\\n/g, ""), {
     FORBID_TAGS: ["style", "form", "input", "button", "select", "textarea"],
-    ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|#|\/(?!\/)|\?)/i,
+    ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|#|\/(?![/\\])|\?)/i,
   });
 }

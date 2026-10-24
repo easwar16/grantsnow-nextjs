@@ -1,3 +1,4 @@
+import { readText } from "@/server/http/body";
 import { AppError } from "@/lib/errors";
 import { targetFromQuery } from "@/server/record/dynamic-form/access";
 import { loadForm, saveForm } from "@/server/record/dynamic-form/service";
@@ -11,11 +12,7 @@ export const GET = route((request) =>
 /** WRITES the answers: { target: { objectType, slot, parentId?, objectId }, answers }. */
 export const POST = route(
   async (request) => {
-    if (Number(request.headers.get("content-length") || 0) > MAX_BODY)
-      throw new AppError("BAD_REQUEST", "Request is too large.", 413);
-    const text = await request.text();
-    if (text.length > MAX_BODY)
-      throw new AppError("BAD_REQUEST", "Request is too large.", 413);
+    const text = await readText(request, MAX_BODY);
     let body: unknown;
     try {
       body = JSON.parse(text);

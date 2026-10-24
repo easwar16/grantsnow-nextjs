@@ -45,6 +45,20 @@ export function safeImageUrl(value: unknown) {
     return undefined;
   }
 }
+/** A backend link (opportunity page, sponsor site, logo): http(s) with no credentials, else dropped. */
+export function safeUrl(value: string | null | undefined) {
+  if (!value) return undefined;
+  try {
+    const url = new URL(value);
+    return ["https:", "http:"].includes(url.protocol) &&
+      !url.username &&
+      !url.password
+      ? url.href
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
 export function trustedUsername(
   claims: Record<string, unknown>,
   claim: string,

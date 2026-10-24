@@ -355,6 +355,9 @@ export async function saveAccount(kind: string, body: unknown) {
       );
     } finally {
       forgetOperation("getSharedUserPreference", session.token);
+      // Featured and its new-flags dot are filtered by these preferences in Oracle.
+      forgetOperation("getSharedGetOpportunities", session.token);
+      forgetOperation("getSharedGetOpportunitiesNewFlags", session.token);
     }
     return;
   }

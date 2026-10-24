@@ -121,6 +121,28 @@ it("uses token-bound research write and deduplicated source CSV without browser 
   });
   expect(init?.cache).toBe("no-store");
 });
+it("drops the held Featured pages and new flags with the preference, since Oracle filters them by it", async () => {
+  const { memo, operationKey } = await import("@/server/oracle/cache");
+  const held = (op: string) => {
+    const load = vi.fn().mockResolvedValue("held");
+    return {
+      load,
+      read: () =>
+        memo(operationKey(op, "private-test-token") + "q", 60_000, load),
+    };
+  };
+  const pages = held("getSharedGetOpportunities"),
+    flags = held("getSharedGetOpportunitiesNewFlags");
+  await Promise.all([pages.read(), flags.read()]);
+  await saveAccount("research", {
+    research_areas: ["Medicine"],
+    favourite_funder: [],
+    research_keywords: [],
+  });
+  await Promise.all([pages.read(), flags.read()]);
+  expect(pages.load).toHaveBeenCalledTimes(2);
+  expect(flags.load).toHaveBeenCalledTimes(2);
+});
 it("denies research preference writes when the resource is hidden", async () => {
   mocks.resources.mockResolvedValue([]);
   await expect(

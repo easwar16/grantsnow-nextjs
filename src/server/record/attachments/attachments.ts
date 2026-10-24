@@ -359,7 +359,9 @@ export async function uploadAttachment(
       "Choose one of the record's folders.",
       400,
     );
-  const stored = location(globals.instance, host, folder, file.name);
+  // Stored where it is filed (legacy stored a new sub-folder's file under the parent, so names clashed there).
+  const filedIn = newFolder === "" ? folder : `${folder}~~${newFolder}`;
+  const stored = location(globals.instance, host, filedIn, file.name);
   // One object per name per folder: storing a taken name would overwrite another attachment's bytes.
   if (items.some((a) => a.file_location === stored))
     throw new AppError(
@@ -382,7 +384,7 @@ export async function uploadAttachment(
     obj_ref_id: Number(host.objectId),
     obj_ref_type: host.objectType,
     sec_obj_ref_id: Number(host.objectId),
-    sec_obj_ref_type: newFolder === "" ? folder : `${folder}~~${newFolder}`,
+    sec_obj_ref_type: filedIn,
     is_confidential: allowConfidential
       ? (fields.data.confidential ?? "N")
       : "N",
