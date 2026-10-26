@@ -48,16 +48,18 @@ test("Contracts listing filters, paging and guarded Summary", async ({
   await page.getByRole("link", { name: "Draft", exact: true }).click();
   await expect(page).toHaveURL(/status=DRFT/);
   await expect(page.getByText("8 of 8")).toBeVisible();
-  await page.getByRole("link", { name: "Clear filters" }).click();
+  await page.getByRole("button", { name: "Clear", exact: true }).click();
   await expect(page).toHaveURL(/\/contracts$/);
-  await page
-    .getByRole("textbox", { name: "Reference Object Number" })
-    .fill("P_100");
-  await page.getByRole("button", { name: "Apply filters" }).click();
+  const referenceNumber = page.getByRole("textbox", {
+    name: "Reference Object Number",
+  });
+  await referenceNumber.fill("P_100");
+  await referenceNumber.press("Enter");
   await expect(page).toHaveURL(/referenceNumber=P_100/);
   await expect(page.getByText("1 of 1")).toBeVisible();
-  await page.getByRole("link", { name: "Clear filters" }).click();
+  await page.getByRole("button", { name: "Clear", exact: true }).click();
   await expect(page).toHaveURL(/\/contracts$/);
+  await expect(referenceNumber).toHaveValue("");
   await page
     .getByRole("link", {
       name: "Research collaboration agreement 1",

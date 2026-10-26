@@ -19,10 +19,11 @@ import {
   resources,
 } from "@/server/platform/configuration/resources";
 import styles from "./contracts.module.css";
+import { ContractFilterForm } from "./contract-filter-form";
 
 export function ContractFilters({ query }: { query: ContractQuery }) {
   return (
-    <form action="/contracts" className={styles.form}>
+    <ContractFilterForm key={contractSearch(query)}>
       <input type="hidden" name="status" value={query.status} />
       <fieldset className={styles.levels}>
         <legend>Reference Object</legend>
@@ -39,11 +40,12 @@ export function ContractFilters({ query }: { query: ContractQuery }) {
         ))}
       </fieldset>
       <label className={styles.insideField}>
-        Contract Number
+        <span>Contract Number</span>
         <input
           name="number"
           defaultValue={query.number}
           aria-label="Contract Number"
+          placeholder=" "
         />
       </label>
       <div className={styles.sortRow}>
@@ -110,15 +112,16 @@ export function ContractFilters({ query }: { query: ContractQuery }) {
         />
       </Suspense>
       <label className={styles.insideField}>
-        Reference Object Number
+        <span>Reference Object Number</span>
         <input
           name="referenceNumber"
           defaultValue={query.referenceNumber}
           aria-label="Reference Object Number"
+          placeholder=" "
         />
       </label>
       <label className={styles.insideField}>
-        Start Date
+        <span>Start Date</span>
         <input
           type="date"
           name="from"
@@ -127,7 +130,7 @@ export function ContractFilters({ query }: { query: ContractQuery }) {
         />
       </label>
       <label className={styles.insideField}>
-        End Date
+        <span>End Date</span>
         <input
           type="date"
           name="to"
@@ -135,11 +138,7 @@ export function ContractFilters({ query }: { query: ContractQuery }) {
           aria-label="End Date"
         />
       </label>
-      <div className={styles.filterActions}>
-        <button type="submit">Apply filters</button>
-        <Link href="/contracts">Clear filters</Link>
-      </div>
-    </form>
+    </ContractFilterForm>
   );
 }
 
