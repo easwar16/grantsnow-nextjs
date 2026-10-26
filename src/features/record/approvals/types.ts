@@ -25,6 +25,15 @@ export interface ApprovalStage {
   canDelete: boolean;
   /** Approve / Reject / Rework: the backend says this user is the stage's current approver. */
   canAct: boolean;
+  /** Read-only host route to its scoped approvers dialog. */
+  approverHref?: string;
+}
+export interface ApprovalTreeNode {
+  name: string;
+  title: string;
+  contact: string;
+  status: string;
+  children: ApprovalTreeNode[];
 }
 export interface StageUser {
   /** `user_name` (the approver's email), the row key and the remove / reassign identity. */
@@ -129,6 +138,8 @@ export interface WorkflowView {
   texts: Record<WorkflowTextKey, string>;
   stages: ApprovalStage[];
   history: { rows: ApprovalRow[] } | { error: string };
+  graph?: ApprovalTreeNode | null;
+  graphError?: string;
   gates: {
     /** Generate Approval Route: no route yet on an editable record. */
     generate: boolean;

@@ -8,6 +8,7 @@ import { pageAccess } from "@/server/modules/opportunities/gates";
 import { canCreate } from "@/features/modules/opportunities/display";
 import { AppError } from "@/lib/errors";
 import { early } from "@/server/platform/async";
+import { loadContract } from "@/server/contracts/service";
 /**
  * Who may read or change a dynamic form (and its files), decided on the server and failing closed. Today only the EOI
  * hosts: the Application tab (OPPORTUNITIES / OPPORTUNITIES-EOI-APPLICATION) and Dynamic Form 1–5
@@ -43,6 +44,8 @@ const denied = (message = "You do not have access to this page.") =>
   new AppError("FORBIDDEN", message, 403);
 /** The record's role page for the slot (`opportunities-eoi-<tab>`, GN-Angular eoi.ts); null for an unsupported host. */
 export function pageOf(t: Pick<FormTarget, "objectType" | "slot">) {
+  if (t.objectType === "CONTRACT" && t.slot === "CONTRACTS-SUMMARY")
+    return "contracts-summary";
   if (
     t.objectType === "OPPORTUNITIES" &&
     t.slot === "OPPORTUNITIES-EOI-APPLICATION"
@@ -145,6 +148,14 @@ export async function authorizeForm(t: FormTarget, mode: "read" | "edit") {
   const page = pageOf(t);
   if (page === null)
     throw denied("Forms are not available for this record type.");
+  if (t.objectType === "CONTRACT") {
+    requireModule(user, "CONTRACTS");
+    if (t.objectId === undefined || (t.parentId && t.parentId !== t.objectId))
+      throw new AppError("BAD_REQUEST", "Invalid Contract form request.", 400);
+    if (mode === "edit") throw denied("Contract form editing is unavailable.");
+    const contract = await loadContract(t.objectId);
+    return { user, page, record: { id: contract.id, number: contract.number } };
+  }
   requireModule(user, "opportunities-group");
   if (t.objectId === undefined) {
     if (mode === "edit" || t.objectType !== "OPPORTUNITIES")

@@ -13,6 +13,7 @@ import { displayFormat } from "@/server/platform/configuration/formatting";
 import { plainText, sanitizeHtml } from "@/server/platform/sanitize";
 import { dateDisplay, type FormatSettings } from "@/lib/format";
 import { AppError } from "@/lib/errors";
+import { mapApprovalGraph } from "./graph";
 import type { UserContext } from "@/shared/auth/types";
 import type { ApprovalRow } from "@/features/record/objects/types";
 import type {
@@ -195,7 +196,7 @@ const KEYS: Record<WorkflowTextKey, [string, string, string]> = {
     "Stage Added Succesfully",
   ],
 };
-function workflowTexts(rows: Resources, bundle: string) {
+export function workflowTexts(rows: Resources, bundle: string) {
   return Object.fromEntries(
     Object.entries(KEYS).map(([k, [group, key, fallback]]) => [
       k,
@@ -303,7 +304,7 @@ function stageView(s: StageRow, host: ApprovalHost): ApprovalStage {
 }
 /** Stages, history and gates for the Workflow tab; a history failure degrades only its table. */
 export async function workflowView(host: ApprovalHost): Promise<WorkflowView> {
-  const [rows, stages, history] = await Promise.all([
+  const [rows, stages, history, graph] = await Promise.all([
     resources(),
     readStages(host),
     displayFormat()
@@ -317,11 +318,21 @@ export async function workflowView(host: ApprovalHost): Promise<WorkflowView> {
           return { error: "Approval history could not be loaded." };
         },
       ),
+    approvals.graph({ docNum: host.docNum, docType: host.docType }).then(
+      (raw) => ({ root: mapApprovalGraph(raw, host.docNum) }),
+      (error: unknown) => {
+        if (error instanceof AppError && [401, 403].includes(error.status ?? 0))
+          throw error;
+        return { error: "Approval graph could not be loaded." };
+      },
+    ),
   ]);
   return {
     texts: workflowTexts(rows, host.bundle),
     stages: stages.map((s) => stageView(s, host)),
     history,
+    graph: "root" in graph ? graph.root : null,
+    graphError: "error" in graph ? graph.error : undefined,
     gates: routeGates(stages, host, rows),
   };
 }

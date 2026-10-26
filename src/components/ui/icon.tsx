@@ -5,6 +5,7 @@
  */
 const icons = {
   menu: { ux: "menu", material: "menu" },
+  "collapse-menu": { ux: "collapse-menu", material: "left_panel_close" },
   help: { ux: "help", material: "help" },
   bell: { ux: "notification", material: "notifications" },
   "caret-down": { ux: "caret-down", material: "arrow_drop_down" },
@@ -53,6 +54,7 @@ const icons = {
   administration: { ux: "administration", material: "admin_panel_settings" },
   support: { ux: "support-services", material: "support_agent" },
   "document-link": { ux: "document-link", material: "link" },
+  link: { ux: "link", material: "link" },
   "user-configuration": {
     ux: "user-configuration",
     material: "manage_accounts",

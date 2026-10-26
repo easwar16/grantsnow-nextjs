@@ -25,6 +25,247 @@ async function login(page: import("@playwright/test").Page) {
     page.getByRole("heading", { name: "Example Research University" }),
   ).toBeVisible();
 }
+test("Contracts listing filters, paging and guarded Summary", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/contracts");
+  await expect(
+    page.getByRole("heading", { name: "Contracts", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("10 of 24")).toBeVisible();
+  await expect(
+    page
+      .getByRole("button", { name: "Sort ascending" })
+      .locator(".oj-ux-ico-arrow-circle-down"),
+  ).toBeVisible();
+  await page.screenshot({
+    path: "test-results/contracts-list.png",
+    fullPage: true,
+  });
+  await page.getByRole("link", { name: "Next", exact: true }).click();
+  await expect(page.getByText("Page 2")).toBeVisible();
+  await page.getByRole("link", { name: "Draft", exact: true }).click();
+  await expect(page).toHaveURL(/status=DRFT/);
+  await expect(page.getByText("8 of 8")).toBeVisible();
+  await page.getByRole("link", { name: "Clear filters" }).click();
+  await expect(page).toHaveURL(/\/contracts$/);
+  await page
+    .getByRole("textbox", { name: "Reference Object Number" })
+    .fill("P_100");
+  await page.getByRole("button", { name: "Apply filters" }).click();
+  await expect(page).toHaveURL(/referenceNumber=P_100/);
+  await expect(page.getByText("1 of 1")).toBeVisible();
+  await page.getByRole("link", { name: "Clear filters" }).click();
+  await expect(page).toHaveURL(/\/contracts$/);
+  await page
+    .getByRole("link", {
+      name: "Research collaboration agreement 1",
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByRole("region", { name: "Contract Summary" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Contract Summary" })
+      .getByText("Research collaboration agreement 1", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("textbox", { name: "Testing Text box" }),
+  ).toHaveValue("Synthetic contract note");
+  await expect(
+    page.getByRole("link", { name: "Download Standard Template" }),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "View contract" })).toBeVisible();
+  const [tagsDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("link", { name: "Get Placeholder Tags" }).click(),
+  ]);
+  expect(tagsDownload.suggestedFilename()).toBe("Placeholder Variables.xlsx");
+  await page.getByRole("link", { name: "Comments", exact: true }).click();
+  await expect(
+    page.getByRole("complementary", { name: "Comments" }),
+  ).toContainText("Please confirm the funder deadline.");
+  await page.getByRole("link", { name: "Close drawer" }).click();
+  await expect(page).toHaveURL(/\/contracts\/1300$/);
+  await page.getByRole("link", { name: "Open Audit Trail" }).click();
+  await expect(
+    page.getByRole("complementary", { name: "Audit Trail" }),
+  ).toContainText("UPDATED");
+  await page.getByRole("link", { name: "UPDATED" }).click();
+  await expect(page).toHaveURL(/event=UPDATED/);
+  await page.getByRole("link", { name: "Close drawer" }).click();
+  await expect(page).toHaveURL(/\/contracts\/1300$/);
+  await page.screenshot({
+    path: "test-results/contracts-summary.png",
+    fullPage: true,
+  });
+});
+test("Contracts status and results stream before a slow filter lookup", async ({
+  page,
+}) => {
+  test.skip(
+    !process.env.GRANTSNOW_FIXTURE_DELAY_CONTRACT_LOOKUPS_MS,
+    "Requires the isolated slow lookup fixture",
+  );
+  await login(page);
+  await page.goto("/contracts", { waitUntil: "commit" });
+  await expect(
+    page.getByRole("link", { name: "Draft", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("combobox", { name: "Contract Type" }),
+  ).toHaveAttribute("aria-busy", "true");
+  await expect(page.getByText("10 of 24")).toBeVisible();
+  await expect(
+    page.getByRole("combobox", { name: "Contract Type" }),
+  ).not.toHaveAttribute("aria-busy", "true");
+});
+test("Contract approval route streams before slow approval history", async ({
+  page,
+}) => {
+  test.skip(
+    !process.env.GRANTSNOW_FIXTURE_DELAY_CONTRACT_HISTORY_MS,
+    "Requires the isolated slow history fixture",
+  );
+  await login(page);
+  await page.goto("/contracts/1301");
+  const header = page.getByRole("link", { name: "← List" }).locator("..");
+  await header.evaluate((element) => {
+    element.dataset.persistCheck = "kept";
+  });
+  await page.getByRole("link", { name: "Contracts Workflow" }).click();
+  await expect(page).toHaveURL(/\/contracts\/1301\/workflow$/);
+  await expect(header).toHaveAttribute("data-persist-check", "kept");
+  await expect(
+    page
+      .getByRole("navigation", { name: "Contract sections" })
+      .locator('[aria-current="page"]'),
+  ).toContainText("Contracts Workflow");
+  await expect(
+    page.getByRole("heading", { name: "Approval Route" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("status", { name: "Loading Approval History" }),
+  ).toBeVisible();
+  await expect(
+    page.locator("#contract-1301-workflow-history-table tbody tr"),
+  ).toHaveCount(2);
+  await expect(
+    page.getByRole("status", { name: "Loading Approval History" }),
+  ).toBeHidden();
+});
+test("Contracts creation fields and scoped Workflow navigation", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/contracts");
+  await page.getByRole("link", { name: "New Contract" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Contract Detail" }).first(),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("combobox", { name: /Contract Type/ }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Add Deadline Date" }).click();
+  const dialog = page.getByRole("dialog", { name: "Add new Deadline" });
+  await expect(
+    dialog.getByRole("textbox", { name: "Deadline Date *" }),
+  ).toBeDisabled();
+  await dialog
+    .getByRole("combobox", { name: "Deadline Type *" })
+    .selectOption({ index: 1 });
+  await expect(
+    dialog.getByRole("textbox", { name: "Deadline Date *" }),
+  ).toBeEnabled();
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await page.goto("/contracts/1301");
+  await expect(page.getByRole("region", { name: "Test" })).toBeVisible();
+  await expect(
+    page.getByRole("textbox", { name: "Testing Text box" }),
+  ).toHaveValue("Synthetic contract note");
+  await page.getByRole("link", { name: "Workflow" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Approval Route" }),
+  ).toBeVisible();
+  await expect(page.locator('ol[id$="-stages"] li').first()).toContainText(
+    "Contract Approval",
+  );
+  await page.getByRole("button", { name: "Graph View" }).click();
+  await expect(page.locator(".Treant-loaded .node")).toHaveCount(3);
+  await expect
+    .poll(() => page.locator(".Treant-loaded svg path").count())
+    .toBeGreaterThan(2);
+  await page.screenshot({ path: "test-results/contracts-workflow-graph.png" });
+  await page.getByRole("button", { name: "Card View" }).click();
+  await expect(page.getByRole("button", { name: "Card View" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(page.locator('[id$="history-cards"] li').first()).toContainText(
+    "Approved",
+  );
+  await page.locator('[id$="history-cards"]').scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "test-results/contracts-workflow-cards.png" });
+});
+test("shared approval views render on an EOI host", async ({ page }) => {
+  await login(page);
+  await page.goto("/opportunities/eoi/1001/approvals");
+  await expect(page.locator("#eoi-workflow")).toBeVisible();
+  await page.getByRole("button", { name: "Graph View" }).click();
+  await expect(page.locator("#eoi-workflow .Treant-loaded .node")).toHaveCount(
+    3,
+  );
+  await page.getByRole("button", { name: "Card View" }).click();
+  await expect(
+    page.locator('#eoi-workflow [id$="history-cards"] li').first(),
+  ).toBeVisible();
+});
+test("Contracts History, Signers and Delegation use the shared subflow shell", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 1170 });
+  await login(page);
+  await page.goto("/contracts/1301/history");
+  await expect(
+    page.getByRole("region", { name: "Contract Summary" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Contract History" }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add Status" })).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: "Transaction No." }),
+  ).toBeVisible();
+  await expect(page.locator("#contract-history-table tbody tr")).toHaveCount(3);
+  await page.screenshot({ path: "test-results/contracts-history.png" });
+  await page.getByRole("button", { name: "Add Status" }).click();
+  await expect(
+    page.getByRole("dialog", { name: /Add New Status/i }),
+  ).toBeVisible();
+  await page.locator("#contract-history-dialog-cancel").click();
+  await page.goto("/contracts/1301/signers");
+  await expect(
+    page.getByRole("region", { name: "Contract Summary" }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Signers" })).toBeVisible();
+  await expect(page.getByText("sam.taylor@example.org")).toBeVisible();
+  await page.screenshot({ path: "test-results/contracts-signers.png" });
+  await page.goto("/contracts/1301/delegation");
+  await expect(
+    page.getByRole("region", { name: "Contract Summary" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Add Delegation" }),
+  ).toBeVisible();
+  await page.screenshot({ path: "test-results/contracts-delegation.png" });
+  await page.getByRole("button", { name: "Add Delegation" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Add Delegation" }),
+  ).toBeVisible();
+});
 test("login boundary, protected API, callback rejection and CSRF", async ({
   page,
   request,
@@ -124,12 +365,20 @@ test("listing search, filter, reset, paging, back, reload, masked values", async
     page.locator(".listing-count").filter({ hasText: "10 of 37" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Next", exact: true }).click();
-  await expect(page.getByText("Page 2", { exact: true })).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Proposal listing" })
+      .getByText("Page 2", { exact: true }),
+  ).toBeVisible();
   await expect(page.locator(".proposal-card")).toHaveCount(10);
   await page.reload();
-  await expect(page.getByText("Page 2", { exact: true })).toBeVisible();
-  await page.getByLabel("Search proposal titles").fill("Climate");
-  await page.getByLabel("Search proposal titles").press("Enter");
+  await expect(
+    page
+      .getByRole("region", { name: "Proposal listing" })
+      .getByText("Page 2", { exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Search proposal titles").first().fill("Climate");
+  await page.getByLabel("Search proposal titles").first().press("Enter");
   await expect(page).toHaveURL(/search=Climate/);
   await expect(
     page.locator(".listing-count").filter({ hasText: "10 of 10" }),
@@ -150,8 +399,8 @@ test("listing search, filter, reset, paging, back, reload, masked values", async
   await expect(
     page.locator(".listing-count").filter({ hasText: "10 of 37" }),
   ).toBeVisible();
-  await page.getByLabel("Reference", { exact: true }).fill("NO-MATCH");
-  await page.getByLabel("Reference", { exact: true }).press("Enter");
+  await page.getByLabel("Reference", { exact: true }).first().fill("NO-MATCH");
+  await page.getByLabel("Reference", { exact: true }).first().press("Enter");
   await expect(
     page.getByRole("heading", { name: "No matching proposals" }),
   ).toBeVisible();
@@ -365,10 +614,14 @@ test("preview-style desktop drawer, user menu and Opportunities routes", async (
   await page
     .getByRole("button", { name: "Application Navigation Drawer" })
     .click();
-  const after = await page
-    .locator("main")
-    .evaluate((e) => e.getBoundingClientRect().x);
-  expect(after - before).toBe(240);
+  await expect
+    .poll(
+      async () =>
+        (await page
+          .locator("main")
+          .evaluate((e) => e.getBoundingClientRect().x)) - before,
+    )
+    .toBe(240);
   await page.keyboard.press("Escape");
   await expect(
     page.getByRole("dialog", { name: "Application Navigation Drawer" }),

@@ -105,7 +105,7 @@ it("links every queue row to its route or module placeholder with record params"
   ).toBe("/opportunities/eoi/4");
   expect(
     href("cPendingApprovals", { contract_id: 7, contract_number: "CT_7" }),
-  ).toBe("/modules/contracts?contract_id=7&mode=view");
+  ).toBe("/contracts/7");
   expect(
     href("ePendingApprovals", {
       setup_flow_id: 8,

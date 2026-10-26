@@ -39,6 +39,11 @@ export const stages = read<Doc, StageRow[]>({
   query: (p) => ({ doc_num: p.docNum, doc_type: p.docType }),
   parse: (b) => stageRows.parse(b).items,
 });
+/** The nested route rendered by the shared Graph View. */
+export const graph = read<Doc>({
+  op: "getApproval_setupApproval_stages_graph",
+  query: (p) => ({ doc_num: p.docNum, doc_type: p.docType }),
+});
 const userRows = z.object({
   items: z.array(z.object({ user_name: z.string(), name: text, status: text })),
 });
@@ -57,6 +62,7 @@ const historyRows = z.object({
   items: z.array(
     z.object({
       approval_history_id: num,
+      transaction_number: text,
       full_name: text,
       status: text,
       stage_desc: text,

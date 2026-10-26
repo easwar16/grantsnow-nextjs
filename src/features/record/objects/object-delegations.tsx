@@ -2,7 +2,6 @@
 import { useState, useTransition } from "react";
 import moment from "moment";
 import { useRouter } from "next/navigation";
-import { State } from "@/components/feedback/state";
 import { useFormat } from "@/components/layout/shell-context";
 import { DateInput } from "@/components/ui/date-input";
 import { Icon } from "@/components/ui/icon";
@@ -259,7 +258,9 @@ export function ObjectDelegations({
           })}
         </ul>
       ) : (
-        <State id={`${id}-empty`} title={texts.noData} />
+        <p id={`${id}-empty`} className={styles.noData}>
+          {texts.noData}
+        </p>
       )}
       {draft && (
         <DelegationDialog

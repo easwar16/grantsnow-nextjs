@@ -18,6 +18,8 @@ export interface ApprovalRow {
   stage: string;
   comments: string;
   updated: string;
+  created?: string;
+  transaction?: string;
 }
 export type HistoryTextKey =
   | "title"
@@ -34,6 +36,7 @@ export type HistoryTextKey =
   | "approvalStatus"
   | "approvalStage"
   | "approvalComments"
+  | "approvalTransaction"
   | "approvalUpdated"
   | "approvalNoData"
   | "dialogTitle"
@@ -48,6 +51,7 @@ export interface HistoryView {
   rows: HistoryRow[];
   /** null when the bundle hides approval history; `error` when it could not be read. */
   approvals: { rows: ApprovalRow[] } | { error: string } | null;
+  approvalTransaction?: boolean;
   gates: {
     addStatus: boolean;
     abandon: boolean;

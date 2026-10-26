@@ -214,6 +214,35 @@ const post = (
     }),
   );
 describe("object history", () => {
+  it("rejects another record's status and approval rows from the shared provider", async () => {
+    const id = next();
+    const host = await eoiHistoryHost(id);
+    state.calls.mockImplementation(
+      reads({
+        getSharedObjectStatus: {
+          items: [{ object_id: Number(id) + 1, object_status: "Other" }],
+        },
+      }),
+    );
+    await expect(historyView(host)).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+
+    state.labels = [
+      ...allLabels(),
+      visible("header-labels", "history-page-approval-history"),
+    ];
+    state.calls.mockImplementation(
+      reads({
+        getPre_awardGetApprovalHistory: {
+          items: [{ transaction_number: "EOI_OTHER" }],
+        },
+      }),
+    );
+    await expect(historyView(host)).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+  });
   it("shows the history with both actions only when the bundle and the button key allow them", async () => {
     const view = await historyView(await eoiHistoryHost(next()));
     expect(view.rows).toEqual([
@@ -231,6 +260,23 @@ describe("object history", () => {
       responseDate: true,
     });
     expect(view.texts.addStatus).toBe("history-add-status");
+  });
+  it("renders Oracle UTC status timestamps in the preview's local time", async () => {
+    const host = await eoiHistoryHost(next());
+    state.calls.mockImplementation(
+      reads({
+        getSharedObjectStatus: {
+          items: [
+            {
+              object_status: "Approved",
+              creation_date: "2026-10-13T17:35:15Z",
+            },
+          ],
+        },
+      }),
+    );
+    const view = await historyView(host);
+    expect(view.rows[0].date).toBe("13-Oct-2026 23:05:15");
   });
   it("fails closed without the RB row or without edit on the button key", async () => {
     state.labels = [];

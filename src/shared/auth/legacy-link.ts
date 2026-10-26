@@ -53,6 +53,12 @@ export function legacyDeepLink(search: string): string | null {
       return `/opportunities/eoi/${id}/summary`;
     return opportunityPages[page] ?? "/opportunities";
   }
+  if (flow === "contracts") {
+    const id = params.get("contract_id") ?? "";
+    return page === "contracts-new-contract" && recordId.test(id)
+      ? `/contracts/${id}`
+      : "/contracts";
+  }
   // A page id names the drawer child (claims=claims-unit-inquiry…); otherwise the flow names the module.
   const placeholder =
     placeholderModules.find(

@@ -152,6 +152,9 @@ export function ObjectHistory({
                     <th scope="col">{texts.approvalStatus}</th>
                     <th scope="col">{texts.approvalStage}</th>
                     <th scope="col">{texts.approvalComments}</th>
+                    {view.approvalTransaction && (
+                      <th scope="col">{texts.approvalTransaction}</th>
+                    )}
                     <th scope="col">{texts.approvalUpdated}</th>
                   </tr>
                 </thead>
@@ -177,6 +180,7 @@ export function ObjectHistory({
                           </button>
                         )}
                       </td>
+                      {view.approvalTransaction && <td>{r.transaction}</td>}
                       <td>{r.updated}</td>
                     </tr>
                   ))}

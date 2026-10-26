@@ -153,7 +153,8 @@ export function AppShell({
                 id="main"
                 className={
                   path.startsWith("/proposals") ||
-                  path.startsWith("/opportunities")
+                  path.startsWith("/opportunities") ||
+                  path.startsWith("/contracts")
                     ? "proposal-workspace"
                     : "home-workspace"
                 }

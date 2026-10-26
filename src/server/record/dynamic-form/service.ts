@@ -42,12 +42,12 @@ const TEXTS: Record<DynamicFormText, [string, string, string]> = {
     "File storage is not connected in this environment.",
   ],
 };
-async function formTexts() {
+async function formTexts(bundle = BUNDLE) {
   const rows = await resources();
   return Object.fromEntries(
     Object.entries(TEXTS).map(([k, [group, key, fallback]]) => [
       k,
-      label(rows, BUNDLE, group, key, fallback),
+      label(rows, bundle, group, key, fallback),
     ]),
   ) as Record<DynamicFormText, string>;
 }
@@ -67,7 +67,9 @@ const hasSections = (forms: { sections: unknown[] }[]) =>
 export async function loadForm(t: FormTarget): Promise<DynamicFormData> {
   // Settings and labels are not the record's; they load while access is checked.
   const settings = early(formGlobals()),
-    labels = early(formTexts());
+    labels = early(
+      formTexts(t.objectType === "CONTRACT" ? "contract" : BUNDLE),
+    );
   await authorizeForm(t, "read");
   const objectId = t.objectId ?? "";
   const [forms, rawAnswers, globals, texts] = await Promise.all([

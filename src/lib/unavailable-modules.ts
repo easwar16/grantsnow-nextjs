@@ -62,7 +62,7 @@ export const navigationDefinitions: NavDefinition[] = [
   { id: "ethics", name: "Ethics", icon: "composite-form" },
   { id: "due-diligence", name: "Due Diligence", icon: "due-diligence" },
   { id: "awards", name: "Awards", icon: "deposits" },
-  { id: "contracts", name: "Contracts", icon: "signature" },
+  { id: "contracts", name: "Contracts", icon: "signature", href: "/contracts" },
   {
     id: "claims-group",
     name: "Claims",

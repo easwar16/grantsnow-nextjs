@@ -1,5 +1,12 @@
 "use client";
-import { memo, useCallback, useState, useTransition } from "react";
+import {
+  memo,
+  useCallback,
+  useState,
+  useTransition,
+  type ReactNode,
+} from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { State } from "@/components/feedback/state";
 import { useToast } from "@/components/feedback/toast";
@@ -12,6 +19,7 @@ import { useStoreApi } from "@/lib/store/app-store";
 import { idPart } from "@/lib/ids";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
 import { AddStageDialog, ApproversDialog, CommentsDialog } from "./dialogs";
+import { ApprovalTree } from "./approval-tree";
 import type {
   ApprovalAction,
   ApprovalStage,
@@ -105,7 +113,17 @@ const Stage = memo(function Stage({
       </div>
       <div className={styles.actions}>
         <div className={styles.links}>
-          {stage.approvers && (
+          {stage.approverHref ? (
+            <Link
+              id={`${id}-approvers`}
+              className="gn-btn gn-btn--borderless"
+              href={stage.approverHref}
+              prefetch={false}
+            >
+              <Icon name="contact" size={14} />
+              {stage.review ? texts.viewReviewers : texts.viewApprovers}
+            </Link>
+          ) : stage.approvers ? (
             <button
               type="button"
               id={`${id}-approvers`}
@@ -115,7 +133,7 @@ const Stage = memo(function Stage({
               <Icon name="contact" size={14} />
               {stage.review ? texts.viewReviewers : texts.viewApprovers}
             </button>
-          )}
+          ) : null}
           {stage.canDelete && (
             <button
               type="button"
@@ -176,10 +194,16 @@ export function ApprovalWorkflow({
   id,
   api,
   view,
+  showHistory = true,
+  graphContent,
+  compactGraph = false,
 }: {
   id: string;
   api: string;
   view: WorkflowView;
+  showHistory?: boolean;
+  graphContent?: ReactNode;
+  compactGraph?: boolean;
 }) {
   const { texts, stages, gates, history } = view;
   const router = useRouter(),
@@ -194,7 +218,8 @@ export function ApprovalWorkflow({
       stage?: ApprovalStage;
     } | null>(null),
     [approvers, setApprovers] = useState<ApprovalStage | null>(null),
-    [adding, setAdding] = useState(false);
+    [adding, setAdding] = useState(false),
+    [routeView, setRouteView] = useState<"list" | "graph">("list");
   const write = useCallback<Write>(
     async (key, body, success) =>
       (await run(async () => {
@@ -249,7 +274,10 @@ export function ApprovalWorkflow({
     [ask, texts, write],
   );
   return (
-    <div id={id} className={styles.workflow}>
+    <div
+      id={id}
+      className={`${styles.workflow} ${compactGraph ? styles.compactGraph : ""}`}
+    >
       {stages.length > 0 && (
         <details
           id={`${id}-route`}
@@ -258,6 +286,32 @@ export function ApprovalWorkflow({
         >
           <summary className={styles.head}>
             <h3 id={`${id}-route-heading`}>{texts.route}</h3>
+            <span
+              className={styles.viewSwitch}
+              role="group"
+              aria-label={`${texts.route} view`}
+            >
+              <button
+                type="button"
+                aria-pressed={routeView === "list"}
+                onClick={(event) => {
+                  event.preventDefault();
+                  setRouteView("list");
+                }}
+              >
+                List View
+              </button>
+              <button
+                type="button"
+                aria-pressed={routeView === "graph"}
+                onClick={(event) => {
+                  event.preventDefault();
+                  setRouteView("graph");
+                }}
+              >
+                Graph View
+              </button>
+            </span>
             {gates.addStage && (
               <button
                 type="button"
@@ -274,71 +328,36 @@ export function ApprovalWorkflow({
               </button>
             )}
           </summary>
-          <ol id={`${id}-stages`} className={styles.stages}>
-            {stages.map((stage) => (
-              <Stage
-                key={stage.id}
-                id={`${id}-stage-${idPart(stage.id)}`}
-                stage={stage}
-                texts={texts}
-                busy={busy}
-                onApprovers={setApprovers}
-                onAct={onAct}
-                onDelete={onDelete}
-              />
-            ))}
-          </ol>
+          {routeView === "graph" ? (
+            (graphContent ??
+            (view.graphError ? (
+              <State title={view.graphError} code="UPSTREAM" />
+            ) : view.graph ? (
+              <ApprovalTree root={view.graph} />
+            ) : (
+              <State title={texts.noData} />
+            )))
+          ) : (
+            <ol id={`${id}-stages`} className={styles.stages}>
+              {stages.map((stage) => (
+                <Stage
+                  key={stage.id}
+                  id={`${id}-stage-${idPart(stage.id)}`}
+                  stage={stage}
+                  texts={texts}
+                  busy={busy}
+                  onApprovers={setApprovers}
+                  onAct={onAct}
+                  onDelete={onDelete}
+                />
+              ))}
+            </ol>
+          )}
         </details>
       )}
-      <details
-        id={`${id}-history`}
-        className={`gn-collapsible ${styles.panel}`}
-        open
-      >
-        <summary className={styles.head}>
-          <h3 id={`${id}-history-heading`}>{texts.history}</h3>
-        </summary>
-        {"error" in history ? (
-          <State
-            id={`${id}-history-error`}
-            title={history.error}
-            code="UPSTREAM"
-          />
-        ) : history.rows.length === 0 ? (
-          <State id={`${id}-history-empty`} title={texts.noData} />
-        ) : (
-          <div className={styles.tableWrap}>
-            <table id={`${id}-history-table`}>
-              <thead>
-                <tr>
-                  <th scope="col">{texts.historyName}</th>
-                  <th scope="col">{texts.historyStatus}</th>
-                  <th scope="col">{texts.historyStage}</th>
-                  <th scope="col">{texts.historyComments}</th>
-                  <th scope="col">{texts.historyUpdated}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.rows.map((row) => (
-                  <tr
-                    key={row.id}
-                    id={`${id}-history-${idPart(row.id)}`}
-                    className="enter-rise"
-                  >
-                    <td>{row.name}</td>
-                    <td>{row.status}</td>
-                    <td>{row.stage}</td>
-                    <td className={styles.comment} title={row.comments}>
-                      {row.comments}
-                    </td>
-                    <td>{row.updated}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </details>
+      {showHistory && (
+        <ApprovalHistory id={id} history={history} texts={texts} />
+      )}
       <div id={`${id}-footer`} className={styles.footer}>
         {gates.generate && (
           <button
@@ -429,5 +448,124 @@ export function ApprovalWorkflow({
         />
       )}
     </div>
+  );
+}
+
+/** The same history section can stream after its route and be reused by every approval host. */
+export function ApprovalHistory({
+  id,
+  history,
+  texts,
+  standalone = false,
+}: {
+  id: string;
+  history: WorkflowView["history"];
+  texts: WorkflowView["texts"];
+  standalone?: boolean;
+}) {
+  const [historyView, setHistoryView] = useState<"table" | "card">("table");
+  return (
+    <details
+      id={`${id}-history`}
+      className={`gn-collapsible ${styles.panel} ${standalone ? styles.historyStandalone : ""}`}
+      open
+    >
+      <summary className={styles.head}>
+        <h3 id={`${id}-history-heading`}>{texts.history}</h3>
+        <span
+          className={styles.viewSwitch}
+          role="group"
+          aria-label={`${texts.history} view`}
+        >
+          <button
+            type="button"
+            aria-pressed={historyView === "table"}
+            onClick={(event) => {
+              event.preventDefault();
+              setHistoryView("table");
+            }}
+          >
+            Table View
+          </button>
+          <button
+            type="button"
+            aria-pressed={historyView === "card"}
+            onClick={(event) => {
+              event.preventDefault();
+              setHistoryView("card");
+            }}
+          >
+            Card View
+          </button>
+        </span>
+      </summary>
+      {"error" in history ? (
+        <State
+          id={`${id}-history-error`}
+          title={history.error}
+          code="UPSTREAM"
+        />
+      ) : history.rows.length === 0 ? (
+        <State id={`${id}-history-empty`} title={texts.noData} />
+      ) : historyView === "card" ? (
+        <ol id={`${id}-history-cards`} className={styles.historyCards}>
+          {history.rows.map((row) => (
+            <li
+              key={row.id}
+              className={styles.historyCard}
+              data-status={row.status}
+            >
+              <span className={styles.historyIcon} aria-hidden="true">
+                {row.status === "Approved"
+                  ? "✓"
+                  : row.status === "Rejected"
+                    ? "×"
+                    : "⇄"}
+              </span>
+              <span className={styles.historyBody}>
+                <span>{row.name}</span>
+                <span>
+                  {row.stage}
+                  {row.comments ? `|${row.comments}` : ""}
+                </span>
+                <span>{row.status}</span>
+              </span>
+              <time>{row.created || row.updated}</time>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <div className={styles.tableWrap}>
+          <table id={`${id}-history-table`}>
+            <thead>
+              <tr>
+                <th scope="col">{texts.historyName}</th>
+                <th scope="col">{texts.historyStatus}</th>
+                <th scope="col">{texts.historyStage}</th>
+                <th scope="col">{texts.historyComments}</th>
+                <th scope="col">{texts.historyUpdated}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {history.rows.map((row) => (
+                <tr
+                  key={row.id}
+                  id={`${id}-history-${idPart(row.id)}`}
+                  className="enter-rise"
+                >
+                  <td>{row.name}</td>
+                  <td>{row.status}</td>
+                  <td>{row.stage}</td>
+                  <td className={styles.comment} title={row.comments}>
+                    {row.comments}
+                  </td>
+                  <td>{row.updated}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </details>
   );
 }

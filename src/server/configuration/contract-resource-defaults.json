@@ -1,0 +1,4074 @@
+[
+  {
+    "module_name": "CONTRACT",
+    "label_type": "aria-labels",
+    "label_name": "choose-navigation-item",
+    "label_value": "Choose a navigation item",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "aria-labels",
+    "label_name": "finalized",
+    "label_value": "Finalized",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "aria-labels",
+    "label_name": "finalized1",
+    "label_value": "Finalized",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "aria-labels",
+    "label_name": "listing-choose-navigation-item",
+    "label_value": "Choose a navigation item",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "aria-labels",
+    "label_name": "sender-list",
+    "label_value": "Sender List",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "delegation-delete-no",
+    "label_value": "No",
+    "is_visible": "N",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "delegation-delete-yes",
+    "label_value": "Yes",
+    "is_visible": "N",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "list-link",
+    "label_value": "Link",
+    "is_visible": "Y",
+    "is_mandatory": "N",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "list-menu",
+    "label_value": "More Actions",
+    "is_visible": "Y",
+    "is_mandatory": "N",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "list-view-record",
+    "label_value": "View",
+    "is_visible": "N",
+    "is_mandatory": "N",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "add",
+    "label_value": "Add",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "add-approver",
+    "label_value": "Add Approver",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "add-delegation",
+    "label_value": "Add Delegation",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "add-stage",
+    "label_value": "Add Stage",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "add-status",
+    "label_value": "Add Status",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "approve",
+    "label_value": "Approve",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "cancel",
+    "label_value": "Cancel",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "clear",
+    "label_value": "Clear",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "close",
+    "label_value": "Close",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "comments",
+    "label_value": "Comments",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "contract-audit-close",
+    "label_value": "Close",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "contract-cancel-edit",
+    "label_value": "cancel",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "contract-close",
+    "label_value": "Close",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "contract-comments",
+    "label_value": "Comments",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "contract-edit",
+    "label_value": "Edit",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "contract-edit-comment",
+    "label_value": "Edit",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "contract-list",
+    "label_value": "List",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "contract-send-comment",
+    "label_value": "Send",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "contract-submit-edit",
+    "label_value": "submit",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "create-contract",
+    "label_value": "Create Contract",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "delegation-add-delegation",
+    "label_value": "Add Delegation",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "delegation-delete",
+    "label_value": "Delete",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "delegation-edit",
+    "label_value": "Edit",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "delegation-edit-access",
+    "label_value": "Edit Access",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "delegation-read",
+    "label_value": "Read",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "delegation-remove",
+    "label_value": "Remove",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "delegation-submit",
+    "label_value": "Submit",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "delegation-warning-no",
+    "label_value": "No",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "delegation-warning-yes",
+    "label_value": "Yes",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "delete",
+    "label_value": "Delete",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "edit",
+    "label_value": "Edit",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "edit-access",
+    "label_value": "Edit Access",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "generate-approval-route",
+    "label_value": "Generate Approval Route",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "history-add-status",
+    "label_value": "Add Status",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "history-cancel",
+    "label_value": "Cancel",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "history-save",
+    "label_value": "Save",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "list",
+    "label_value": "List",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "listing-contract-link",
+    "label_value": "Link",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "listing-contract-view",
+    "label_value": "View",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "listing-filter-clear",
+    "label_value": "Clear",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "listing-filter-close",
+    "label_value": "Close",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "listing-new-contract",
+    "label_value": "New Contract",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "listing-toggle",
+    "label_value": "Toggle",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "listing-view",
+    "label_value": "View",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "more_info",
+    "label_value": "More Info",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "new-contract",
+    "label_value": "New Contract",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "no",
+    "label_value": "No",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "read",
+    "label_value": "Read",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "reject",
+    "label_value": "Reject",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "remove",
+    "label_value": "Remove",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "rework",
+    "label_value": "Rework",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "save",
+    "label_value": "Save",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "send",
+    "label_value": "Send",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "submit",
+    "label_value": "Submit",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "submit-for-approval",
+    "label_value": "Submit For Approval",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "submit-for-signing",
+    "label_value": "Submit for Signing",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "summary-create",
+    "label_value": "Create",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "summary-more_info",
+    "label_value": "More Info",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "summary-save",
+    "label_value": "Save",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "summary-warning-no",
+    "label_value": "No",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "summary-warning-yes",
+    "label_value": "Yes",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "toggle",
+    "label_value": "Toggle",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "view",
+    "label_value": "View",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "withdraw",
+    "label_value": "Withdraw",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "yes",
+    "label_value": "Yes",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "approvals-attachments-delete",
+    "label_value": "Delete attachments",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "approvals-attachments-view",
+    "label_value": "View attachment",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "openAuditTrail",
+    "label_value": "Open Audit Trail",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "add-attachments",
+    "label_value": "Add Attachment",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "add-edit-user_remarks",
+    "label_value": "Add / Edit User Remarks",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "approval-add-stage-cancel",
+    "label_value": "Cancel",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "approval-add-stage-submit",
+    "label_value": "Submit",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "approval-approve",
+    "label_value": "Approve",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "approval-approver-delete",
+    "label_value": "Delete Approver",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "approval-approver-save",
+    "label_value": "Save",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "approval-attachment-add",
+    "label_value": "Add Document",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "approval-attachment-cancel",
+    "label_value": "Cancel",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "approval-comments-cancel",
+    "label_value": "Cancel",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "approval-comments-submit",
+    "label_value": "Submit",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "approval-confirm-delete",
+    "label_value": "Confirm Delete",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "approval-delete",
+    "label_value": "Delete",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "approval-delete-cancel",
+    "label_value": "Cancel",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "approval-generate-approval-route",
+    "label_value": "Generate Approval Route",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "approval-new-approver",
+    "label_value": "Change Approver",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "approval-reject",
+    "label_value": "Reject",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "approval-rework",
+    "label_value": "Rework",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "approval-submit-for-approval",
+    "label_value": "Submit for Approval",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "approval-withdraw",
+    "label_value": "Withdraw",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "approvals-add-stage",
+    "label_value": "Add Stage",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "view-attachments",
+    "label_value": "View Attachment",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "button-labels",
+    "label_name": "contract-add-status",
+    "label_value": "Add Status",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "contract",
+    "label_name": "details",
+    "label_value": "Contract Details",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "delegation-delete-entity",
+    "label_value": "Delete Entity",
+    "is_visible": "N",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "add-delegation",
+    "label_value": "Add Delegation",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "add-new-document",
+    "label_value": "Add New Document",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "add-new-status",
+    "label_value": "Add New Status",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "add-stage",
+    "label_value": "Add Stage",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "approve-reject",
+    "label_value": "Approve/Reject Contract",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "approver-information",
+    "label_value": "Approver Information",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "delegation-add-delegation",
+    "label_value": "Add Delegation",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "delete-entity",
+    "label_value": "Delete Entity",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "history-add-new-status",
+    "label_value": "Add New Status",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "linked-objects",
+    "label_value": "Linked Objects",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "listing-linked-objects",
+    "label_value": "Linked Objects",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "summary-warning",
+    "label_value": "Warning",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "warning",
+    "label_value": "Warning",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "approval-user_remarks",
+    "label_value": "User Remarks",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "comments",
+    "label_value": "Comments",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "creator-details",
+    "label_value": "Creator Details",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "approval-add-new-document",
+    "label_value": "Add New Document",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "approval-add-stage",
+    "label_value": "Add Stage",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "approval-approver-information",
+    "label_value": "Approver Information",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "approval-confirm",
+    "label_value": "Confirm",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "approval-delete-warning",
+    "label_value": "Delete Stage",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "approve-reject-rework-proposal",
+    "label_value": "Approval Action",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "submit-proposal",
+    "label_value": "Submit for Approval",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "dialog-titles",
+    "label_name": "withdrawn",
+    "label_value": "Withdraw",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "header-labels",
+    "label_name": "approval-history",
+    "label_value": "Approval History",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "header-labels",
+    "label_name": "contract-detail",
+    "label_value": "Contract Detail",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "header-labels",
+    "label_name": "new-contract",
+    "label_value": "New Contract",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "header-labels",
+    "label_name": "number-of-contracts-created",
+    "label_value": "Contracts created per month",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "header-labels",
+    "label_name": "number-of-contracts-per-level",
+    "label_value": "Contracts by Level",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "header-labels",
+    "label_name": "number-of-contracts-per-status",
+    "label_value": "Contracts by Status",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "header-labels",
+    "label_name": "number-of-versions-per-contracts",
+    "label_value": "Number of Versions Per Contracts",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "header-labels",
+    "label_name": "please-note",
+    "label_value": "Please Note:",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "header-labels",
+    "label_name": "summary-new-contract",
+    "label_value": "New Contract",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "header-labels",
+    "label_name": "workflow-please-note",
+    "label_value": "Please Note:",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "header-labels",
+    "label_name": "history-page-approval-history",
+    "label_value": "Approval History",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "header-labels",
+    "label_name": "approval-please-note",
+    "label_value": "Please Note",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "header-labels",
+    "label_name": "approval-route",
+    "label_value": "Approval Route",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "header-labels",
+    "label_name": "attachment-links-header",
+    "label_value": "Attachment Links",
+    "is_visible": "N",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "helper-texts",
+    "label_name": "delegation-no-data",
+    "label_value": "No data to display.",
+    "is_visible": "N",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "helper-texts",
+    "label_name": "contract-no-data",
+    "label_value": "No data to display.",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "helper-texts",
+    "label_name": "contract-no-of-days-deadline",
+    "label_value": "no. of days before deadline date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "helper-texts",
+    "label_name": "listing-no-data",
+    "label_value": "No data to display.",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "helper-texts",
+    "label_name": "no-data",
+    "label_value": "No data to display.",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "helper-texts",
+    "label_name": "no-of-days-deadline",
+    "label_value": "no. of days before deadline date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "helper-texts",
+    "label_name": "select-or-drop",
+    "label_value": "Select or drop file here.",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "helper-texts",
+    "label_name": "summary-no-of-days-deadline",
+    "label_value": "no. of days before deadline date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "helper-texts",
+    "label_name": "summary-select-or-drop",
+    "label_value": "Select or drop file here.",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "helper-texts",
+    "label_name": "approval-no-data",
+    "label_value": "No data to display.",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "show-attributes",
+    "label_value": "Show Attributes",
+    "is_visible": "N",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "help-text",
+    "label_value": "Help Text",
+    "is_visible": "N",
+    "is_mandatory": "N",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "delegation-all",
+    "label_value": "All",
+    "is_visible": "N",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "delegation-pages",
+    "label_value": "Pages",
+    "is_visible": "N",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "delegation-buttons",
+    "label_value": "Buttons",
+    "is_visible": "N",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "delegation-privileges",
+    "label_value": "Privileges",
+    "is_visible": "N",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "delegation-others",
+    "label_value": "Others",
+    "is_visible": "N",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "list-assigned-to",
+    "label_value": "Assigned To",
+    "is_visible": "N",
+    "is_mandatory": "N",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "list-date-sort",
+    "label_value": "Date Sort",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "list-contract-type",
+    "label_value": "Contract Type",
+    "is_visible": "Y",
+    "is_mandatory": "N",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "list-creation-date",
+    "label_value": "Created On",
+    "is_visible": "Y",
+    "is_mandatory": "N",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "list-deadline-date",
+    "label_value": "Deadline Date",
+    "is_visible": "Y",
+    "is_mandatory": "N",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "list-end-date",
+    "label_value": "End Date",
+    "is_visible": "Y",
+    "is_mandatory": "N",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "list-last-update-date",
+    "label_value": "Last Updated Date",
+    "is_visible": "Y",
+    "is_mandatory": "N",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "list-org-unit",
+    "label_value": "Org Unit",
+    "is_visible": "Y",
+    "is_mandatory": "N",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "list-reference-object",
+    "label_value": "Reference Object",
+    "is_visible": "Y",
+    "is_mandatory": "N",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "list-reference-object-number",
+    "label_value": "Reference Object Number",
+    "is_visible": "Y",
+    "is_mandatory": "N",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "list-start-date",
+    "label_value": "Start Date",
+    "is_visible": "Y",
+    "is_mandatory": "N",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "action-type",
+    "label_value": "Action Type",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "add-signer",
+    "label_value": "Add Signer",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "approver-role",
+    "label_value": "Approver Role",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "awards",
+    "label_value": "Awards",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "card-view",
+    "label_value": "Card View",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "comments",
+    "label_value": "Comments",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "contract-created-by",
+    "label_value": "Created by",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "contract-deadline-date",
+    "label_value": "Deadline date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "contract-end-date",
+    "label_value": "End date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "contract-lastUpdatedBy",
+    "label_value": "Last Updated by",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "contract-level",
+    "label_value": "Contract Level",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "contract-number",
+    "label_value": "Contract Number",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "contract-relation-item",
+    "label_value": "Relation Item",
+    "is_visible": "Y",
+    "is_mandatory": "N",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "contract-relation-type",
+    "label_value": "Contract Relation Type",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "contract-remind-me-before",
+    "label_value": "Remind me before",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "contract-start-date",
+    "label_value": "Start date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "contract-template",
+    "label_value": "Contract template",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "contract-title",
+    "label_value": "Contract Title",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "contract-type",
+    "label_value": "Contract Type",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "contract-version",
+    "label_value": "Contract Version",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "contractStatus",
+    "label_value": "Contract Status",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "contracts",
+    "label_value": "Contracts",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "created-by",
+    "label_value": "Created by",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "date",
+    "label_value": "Date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "deadline-date",
+    "label_value": "Deadline date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "delegation-end-date",
+    "label_value": "End date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "delegation-from",
+    "label_value": "From",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "delegation-privilege",
+    "label_value": "Privilege",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "delegation-search-by-name",
+    "label_value": "Search by Name",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "delegation-start-date",
+    "label_value": "Start date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "delegation-to",
+    "label_value": "To",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "description",
+    "label_value": "Description",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "download-standard-template",
+    "label_value": "Download Standard Template",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "email",
+    "label_value": "Email",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "end-date",
+    "label_value": "End date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "ethics",
+    "label_value": "Ethics",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "extended-proposals",
+    "label_value": "Extended Proposals",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "extended-sub-proposal",
+    "label_value": "Extended Sub Proposal",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "finalize",
+    "label_value": "Finalize",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "from",
+    "label_value": "From",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "full-name",
+    "label_value": "Full Name",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "get-placeholder-tags",
+    "label_value": "Get Placeholder Tags",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "graph-view",
+    "label_value": "Graph View",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "history-comments",
+    "label_value": "Comments",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "history-contractStatus",
+    "label_value": "Contract Status",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "last-update-date",
+    "label_value": "Last Update Date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "last-updated-by",
+    "label_value": "Last Updated by",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "last-updated-date",
+    "label_value": "Last Updated Date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "lastUpdatedBy",
+    "label_value": "Last Updated by",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "list-view",
+    "label_value": "List View",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-awards",
+    "label_value": "Awards",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-contract-level",
+    "label_value": "Contract Level",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-contract-type",
+    "label_value": "Contract Type",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-org-unit",
+    "label_value": "Org Unit",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-contracts",
+    "label_value": "Contracts",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-end-date",
+    "label_value": "End date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-ethics",
+    "label_value": "Ethics",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-extended-proposals",
+    "label_value": "Extended Proposals",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-extended-sub-proposal",
+    "label_value": "Extended Sub Proposal",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-filter-contract-type",
+    "label_value": "Contract Type",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-filter-org-unit",
+    "label_value": "Org Unit",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-filter-end-date",
+    "label_value": "End date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-filter-reference-object",
+    "label_value": "Reference Object",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-filter-start-date",
+    "label_value": "Start date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-last-update-date",
+    "label_value": "Last Update Date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-last-updated-by",
+    "label_value": "Last Updated by",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-parent-proposal",
+    "label_value": "Parent Proposal",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-participants-name",
+    "label_value": "Participants Name",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-reference-object",
+    "label_value": "Reference Object",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-reference-object-number",
+    "label_value": "Reference Object number",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-start-date",
+    "label_value": "Start date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-sub-proposals",
+    "label_value": "Sub Proposals",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "no-linked-data-found",
+    "label_value": "No Linked Data Found",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "number-of-action-required",
+    "label_value": "Number of Action Required:",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "number-of-contracts",
+    "label_value": "Number of Contracts",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "parent-proposal",
+    "label_value": "Parent Proposal",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "participants-name",
+    "label_value": "Participants Name",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "position",
+    "label_value": "Position",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "privilege",
+    "label_value": "Privilege",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "process-mode",
+    "label_value": "Process Mode",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "reference-object",
+    "label_value": "Reference Object",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "reference-object-number",
+    "label_value": "Reference Object number",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "relation-item",
+    "label_value": "Relation Item",
+    "is_visible": "Y",
+    "is_mandatory": "N",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "remarks",
+    "label_value": "Remarks",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "remind-me-before",
+    "label_value": "Remind me before",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "search-by-name",
+    "label_value": "Search by Name",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "signer-name",
+    "label_value": "Signer Name",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "signers",
+    "label_value": "Signers",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "signing-status",
+    "label_value": "Signing Status",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "stage",
+    "label_value": "Stage",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "stage-name",
+    "label_value": "Stage Name",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "start-date",
+    "label_value": "Start date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "status",
+    "label_value": "Status :",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "sub-proposals",
+    "label_value": "Sub Proposals",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "summary-contract-number",
+    "label_value": "Contract Number",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "summary-contract-relation-type",
+    "label_value": "Contract Relation Type",
+    "is_visible": "Y",
+    "is_mandatory": "N",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "summary-contract-template",
+    "label_value": "Contract template",
+    "is_visible": "Y",
+    "is_mandatory": "N",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "summary-contract-title",
+    "label_value": "Contract Title",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "summary-contract-type",
+    "label_value": "Contract Type",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "summary-contractStatus",
+    "label_value": "Contract Status",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "summary-deadline-date",
+    "label_value": "Deadline date",
+    "is_visible": "Y",
+    "is_mandatory": "N",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "summary-download-standard-template",
+    "label_value": "Download Standard Template",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "summary-end-date",
+    "label_value": "End date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "summary-get-placeholder-tags",
+    "label_value": "Get Placeholder Tags",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "summary-org-unit",
+    "label_value": "Org Unit",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "summary-relation-item",
+    "label_value": "Relation Item",
+    "is_visible": "Y",
+    "is_mandatory": "N",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "summary-remind-me-before",
+    "label_value": "Remind me before",
+    "is_visible": "N",
+    "is_mandatory": "N",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "summary-start-date",
+    "label_value": "Start date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "summary-use-standard-template",
+    "label_value": "Use standard template",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "summary-view-contracts",
+    "label_value": "View contract",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "table-view",
+    "label_value": "Table View",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "to",
+    "label_value": "To",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "transaction-no",
+    "label_value": "Transaction No.",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "user",
+    "label_value": "User",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "user-comments",
+    "label_value": "User Comments",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "view-contracts",
+    "label_value": "View contract",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "workflow-card-view",
+    "label_value": "Card View",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "workflow-comments",
+    "label_value": "Comments",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "workflow-file-name",
+    "label_value": "File Name",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "workflow-file-should-not-exceed",
+    "label_value": "**File Size should not exceed 20MB",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "workflow-graph-view",
+    "label_value": "Graph View",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "workflow-remarks",
+    "label_value": "Remarks",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "workflow-signing-status",
+    "label_value": "Signing Status",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "workflow-stage-description",
+    "label_value": "Description",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "attachment-delete-success",
+    "label_value": "Attachment deleted successfully",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "external-user",
+    "label_value": "External",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "internal-user",
+    "label_value": "Internal",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "select-user",
+    "label_value": "Select User",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "user-type",
+    "label_value": "User Type",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-date-sort",
+    "label_value": "Date Sort",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "approval-user_remarks",
+    "label_value": "User Remarks",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "approval-user_remarks_type",
+    "label_value": "Remarks Type",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-creation-date",
+    "label_value": "Creation Date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-deadline-date",
+    "label_value": "Deadline Date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "address",
+    "label_value": "Address",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "employee-number",
+    "label_value": "Employee Number",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "org-unit",
+    "label_value": "Organization",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "school",
+    "label_value": "School",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "approval-file-should-not-exceed",
+    "label_value": "**File Size should not exceed 20MB",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "attachment-file-should-not-exceed",
+    "label_value": "**File Size should not exceed 20MB",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "comments-input",
+    "label_value": "Comments",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {
+      "maxLength": "4000"
+    }
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "pending-since",
+    "label_value": "Pending Since",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "summary-standalone",
+    "label_value": "Standalone",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "approval-deadline-days",
+    "label_value": "Deadline Days",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "approval-action-type",
+    "label_value": "Action Type",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "approval-add-approver",
+    "label_value": "Add Approver",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "approval-approver-role",
+    "label_value": "Approver Role",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "approval-attachments-description",
+    "label_value": "Description",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "approval-card-view",
+    "label_value": "Card View",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "approval-confirm-reject",
+    "label_value": "Are you sure you want to proceed?",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "approval-description",
+    "label_value": "Description",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "approval-file-name",
+    "label_value": "File Name",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "approval-graph-view",
+    "label_value": "Graph View",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "approval-list-view",
+    "label_value": "List View",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "approval-new-approver",
+    "label_value": "New Approver",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "approval-number-of-action-required",
+    "label_value": "Number of Action Required",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "approval-position",
+    "label_value": "Position",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "approval-remarks",
+    "label_value": "Remarks",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "approval-stage-name",
+    "label_value": "Stage Name",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "approval-table-view",
+    "label_value": "Table View",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "contract-attribute-1",
+    "label_value": "Attribute Test",
+    "is_visible": "Y",
+    "is_mandatory": "N",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "drag-and-drop",
+    "label_value": "Drag and Drop",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "please-note",
+    "label_value": "Please Note:",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "user_remarks",
+    "label_value": "User Remarks",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "assigned-to-dept",
+    "label_value": "Assigned to Department",
+    "is_visible": "N",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "assigned-to-emp-no",
+    "label_value": "Assigned to Employee No",
+    "is_visible": "N",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "assigned-to-org-unit",
+    "label_value": "Assigned to Org Unit",
+    "is_visible": "N",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-assigned-to",
+    "label_value": "Assigned To",
+    "is_visible": "N",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "listing-filter-assigned-staff",
+    "label_value": "Assigned To Staff",
+    "is_visible": "N",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "labels",
+    "label_name": "summary-assigned-to",
+    "label_value": "Assigned To",
+    "is_visible": "N",
+    "is_mandatory": "N",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "option-keys",
+    "label_name": "delegation-pages",
+    "label_value": "Pages",
+    "is_visible": "N",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "option-keys",
+    "label_name": "delegation-buttons",
+    "label_value": "Buttons",
+    "is_visible": "N",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "option-keys",
+    "label_name": "delegation-privileges",
+    "label_value": "Privileges",
+    "is_visible": "N",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "option-keys",
+    "label_name": "delegation-others",
+    "label_value": "Others",
+    "is_visible": "N",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "option-keys",
+    "label_name": "all",
+    "label_value": "All",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "option-keys",
+    "label_name": "award",
+    "label_value": "Award",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "option-keys",
+    "label_name": "delegation-all",
+    "label_value": "All",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "option-keys",
+    "label_name": "listing-award",
+    "label_value": "Award",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "option-keys",
+    "label_name": "listing-project",
+    "label_value": "Project",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "option-keys",
+    "label_name": "listing-proposal",
+    "label_value": "Proposal",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "option-keys",
+    "label_name": "no",
+    "label_value": "No",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "option-keys",
+    "label_name": "project",
+    "label_value": "Project",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "option-keys",
+    "label_name": "proposal",
+    "label_value": "Proposal",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "option-keys",
+    "label_name": "summary-template-no",
+    "label_value": "No",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "option-keys",
+    "label_name": "summary-template-yes",
+    "label_value": "Yes",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "option-keys",
+    "label_name": "yes",
+    "label_value": "Yes",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "page-name",
+    "label_name": "proposals-contracts",
+    "label_value": "Proposal contracts",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "page-name",
+    "label_name": "contracts-delegation",
+    "label_value": "Contracts Summary",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "page-name",
+    "label_name": "contracts-history",
+    "label_value": "Contracts History",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "page-name",
+    "label_name": "contracts-signers",
+    "label_value": "Contracts Signers",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "page-name",
+    "label_name": "contracts-summary",
+    "label_value": "Contracts Summary",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "page-name",
+    "label_name": "contracts-workflow",
+    "label_value": "Contracts Workflow",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "page-titles",
+    "label_name": "approval-status",
+    "label_value": "Approval Status",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "page-titles",
+    "label_name": "contract-document",
+    "label_value": "Contract Document",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "page-titles",
+    "label_name": "contracts-history",
+    "label_value": "Contract History",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "page-titles",
+    "label_name": "summary-contract-document",
+    "label_value": "Contract Document",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "placeholders",
+    "label_name": "comments",
+    "label_value": "Comments",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "placeholders",
+    "label_name": "history-comments",
+    "label_value": "Comments",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "placeholders",
+    "label_name": "select",
+    "label_value": "Select",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "section-header-labels",
+    "label_name": "comments",
+    "label_value": "Comments",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "section-header-labels",
+    "label_name": "contracts",
+    "label_value": "CONTRACTS",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "section-header-labels",
+    "label_name": "workflow-comments",
+    "label_value": "Comments",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "section-header-labels",
+    "label_name": "approval-comments",
+    "label_value": "Comments",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "table-headers",
+    "label_name": "history-comments",
+    "label_value": "Comments",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "table-headers",
+    "label_name": "history-contractStatus",
+    "label_value": "Contract Status",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "table-headers",
+    "label_name": "history-date",
+    "label_value": "Date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "table-headers",
+    "label_name": "history-process-mode",
+    "label_value": "Process Mode",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "table-headers",
+    "label_name": "history-user",
+    "label_value": "User",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "table-headers",
+    "label_name": "signer-delivered-dt",
+    "label_value": "Delivered Datetime",
+    "is_visible": "N",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "table-headers",
+    "label_name": "signer-email",
+    "label_value": "Email",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "table-headers",
+    "label_name": "signer-name",
+    "label_value": "Name",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "table-headers",
+    "label_name": "signer-sent-dt",
+    "label_value": "Sent Date time",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "table-headers",
+    "label_name": "signer-signed-dt",
+    "label_value": "Signed Date Time",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "table-headers",
+    "label_name": "signer-status",
+    "label_value": "Status",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "table-headers",
+    "label_name": "signer-user-type",
+    "label_value": "User Type",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "table-headers",
+    "label_name": "approval-email",
+    "label_value": "Email",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "table-headers",
+    "label_name": "approval-last-updated-date",
+    "label_value": "Last Updated Date",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "table-headers",
+    "label_name": "approval-name",
+    "label_value": "Name",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "table-headers",
+    "label_name": "approval-stage",
+    "label_value": "Stage",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "table-headers",
+    "label_name": "approval-status",
+    "label_value": "Status",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "table-headers",
+    "label_name": "approval-user-comments",
+    "label_value": "User Comments",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "table-headers",
+    "label_name": "approvals-full-name",
+    "label_value": "Full Name",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "warning-messages",
+    "label_name": "permanent-delete",
+    "label_value": "This operation will remove this record permanently. Do you want to proceed?",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "warning-messages",
+    "label_name": "delegation-are-you-sure",
+    "label_value": "Are you sure you want to delete?",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "warning-messages",
+    "label_name": "less-than-2500",
+    "label_value": "Enter less than 2500 characters",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "warning-messages",
+    "label_name": "summary-unsaved-changes",
+    "label_value": "You may have unsaved changes, Do you want to proceed?",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "warning-messages",
+    "label_name": "unsaved-changes",
+    "label_value": "You may have unsaved changes, Do you want to proceed?",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "warning-messages",
+    "label_name": "dynamic-less-than",
+    "label_value": "The length should be less than {num} characters!",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": "&lt;p&gt;{num} would be replaced dynamically with the configured number&lt;&#x2F;p&gt;",
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "warning-messages",
+    "label_name": "approval-permanent-delete",
+    "label_value": "This will permanently delete the stage. Are you sure you want to proceed?",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "warning-messages",
+    "label_name": "no-template",
+    "label_value": "No Templates Found",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "table-header",
+    "label_name": "signer-delivered-dt",
+    "label_value": "Delivered Datetime",
+    "is_visible": "N",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "table-header",
+    "label_name": "signer-email",
+    "label_value": "Signer Email",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "table-header",
+    "label_name": "signer-signed-dt",
+    "label_value": "Singed Datetime",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "table-header",
+    "label_name": "signer-status",
+    "label_value": "Status",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "info-messages",
+    "label_name": "template-description",
+    "label_value": "Please upload a template below",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "info-messages",
+    "label_name": "template-summary",
+    "label_value": "No Template Found",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "error-msg",
+    "label_name": "file-should-be-unique",
+    "label_value": "File should be unique",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "success-msg",
+    "label_name": "created",
+    "label_value": "Created",
+    "is_visible": "Y",
+    "is_mandatory": "Y",
+    "label_description": null,
+    "preferences": {}
+  }
+]

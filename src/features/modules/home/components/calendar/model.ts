@@ -38,7 +38,7 @@ export function viewLabel(provider: CalendarProvider) {
 
 // Rows carry their module through `href` (server rowHref); legacy findProposalType splits proposals by number prefix.
 const MODULE_PROVIDERS: [string, CalendarProvider][] = [
-  ["/modules/contracts", "CONTRACT"],
+  ["/contracts", "CONTRACT"],
   ["/modules/ethics", "ETHICS"],
   ["/modules/awards", "AWARD"],
   ["/opportunities/eoi", "AOI"],

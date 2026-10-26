@@ -130,6 +130,20 @@ beforeEach(() => {
   ];
   state.oracle.mockImplementation(async (op: string) => {
     if (op === "getApproval_setupApproval_stages") return { items: route };
+    if (op === "getApproval_setupApproval_stages_graph")
+      return {
+        nodeStructure: {
+          text: { name: "Approval Workflow", title: "Start" },
+          children: route.map((item) => ({
+            text: {
+              name: item.level_desc,
+              title: item.status,
+              contact: item.level_name,
+            },
+            data: { approval_number: "EOI_12", status: item.status },
+          })),
+        },
+      };
     if (op === "getApproval_setupGet_stage_users") return { items: users };
     if (op === "getPre_awardGetApprovalHistory")
       return {
@@ -192,6 +206,7 @@ describe("route gates", () => {
       addStage: false,
     });
     expect(view.stages[0]).toMatchObject({ canDelete: false, canAct: false });
+    expect(view.graph?.children[0].name).toBe("Review");
     for (const body of [
       { op: "act", action: "Submitted" },
       { op: "generate" },

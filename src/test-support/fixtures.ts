@@ -55,3 +55,32 @@ export const proposals = Array.from({ length: 37 }, (_, i) => ({
   total_cost: i === 4 ? "****" : String(25000 + i * 7123),
   currency_code: "GBP",
 }));
+export const contracts = Array.from({ length: 24 }, (_, i) => ({
+  contract_id: 1300 + i,
+  contract_number: `C_${1300 + i}`,
+  contract_title:
+    [
+      "Research collaboration agreement",
+      "Funding contract",
+      "Data sharing agreement",
+    ][i % 3] + ` ${i + 1}`,
+  status: ["Draft", "Awaiting Internal Approval", "Signed"][i % 3],
+  status_lkp_code: ["DRFT", "AIA", "SIGNED"][i % 3],
+  contract_type: "RESEARCH",
+  template_id: 1,
+  legal_id: 1,
+  uses_standard_templ: "Y",
+  contract_type_name: "Research Contract",
+  contract_level: i % 2 ? "AWARD" : "PROPOSAL",
+  contract_level_desc: i % 2 ? "Award" : "Proposal",
+  object_ref_id: i % 2 ? `A_${100 + i}` : `P_${100 + i}`,
+  object_number: i % 2 ? `A_${100 + i}` : `P_${100 + i}`,
+  contract_start_date: "2026-10-01T00:00:00Z",
+  contract_end_date: "2027-09-30T00:00:00Z",
+  creation_date: "2026-09-12T10:00:00Z",
+  last_update_date: "2026-10-10T10:00:00Z",
+  deadline_date: "2027-09-15T00:00:00Z",
+  org_unit_name: "Example Research University",
+  org_id: 202,
+  assigned_to_name: "Alex Morgan",
+}));

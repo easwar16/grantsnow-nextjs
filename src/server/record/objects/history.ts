@@ -63,6 +63,11 @@ const KEYS: Record<HistoryTextKey, [string, string, string]> = {
     "approval-user-comments",
     "User Comments",
   ],
+  approvalTransaction: [
+    "table-headers",
+    "approval-transaction-no",
+    "Transaction No.",
+  ],
   approvalUpdated: [
     "table-headers",
     "approval-last-updated-date",
@@ -125,10 +130,22 @@ const show = (v: string | null | undefined) =>
 /** The timestamp in the configured date format plus its time, as legacy's `DEFAULT_DATE_FORMAT + " HH:mm:ss"`. */
 function stamp(value: string | null | undefined, format?: FormatSettings) {
   if (!value) return "—";
-  const time = value.match(/T(\d{2}:\d{2}:\d{2})/)?.[1];
-  return time
-    ? `${dateDisplay(value, format)} ${time}`
-    : dateDisplay(value, format);
+  if (Number.isNaN(Date.parse(value))) return dateDisplay(value, format);
+  const date = new Date(value);
+  const time = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(date);
+  const localDate = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+  return `${dateDisplay(localDate, format)} ${time}`;
 }
 /** Lookup codes → descriptions (legacy loadLookups); a failed read degrades to the row's own text. */
 async function descriptions(codes: string[]) {
@@ -145,7 +162,8 @@ const settled = <T>(p: Promise<T>) =>
     (value) => ({ value }),
     (error: unknown) => {
       // A dead session still signs out; anything else degrades this part only.
-      if (error instanceof AppError && error.status === 401) throw error;
+      if (error instanceof AppError && [401, 403].includes(error.status ?? 0))
+        throw error;
       return { error };
     },
   );
@@ -158,10 +176,26 @@ export async function historyView(host: HistoryHost): Promise<HistoryView> {
   const approvalsRead = rowsRead.then((rows) =>
     historyGates(rows, host).approvals && host.objectNumber
       ? settled(
-          approvals.history({
-            transaction: host.objectNumber,
-            approvalType: host.approvalType,
-          }),
+          approvals
+            .history({
+              transaction: host.objectNumber,
+              approvalType: host.approvalType,
+            })
+            .then((items) => {
+              if (
+                items.some(
+                  (item) =>
+                    item.transaction_number &&
+                    item.transaction_number !== host.objectNumber,
+                )
+              )
+                throw new AppError(
+                  "FORBIDDEN",
+                  "Oracle returned another record's approval history.",
+                  403,
+                );
+              return items;
+            }),
         )
       : null,
   );
@@ -173,6 +207,17 @@ export async function historyView(host: HistoryHost): Promise<HistoryView> {
     settled(people.all()),
     approvalsRead,
   ]);
+  if (
+    history.some(
+      (item) =>
+        item.object_id != null && String(item.object_id) !== host.objectId,
+    )
+  )
+    throw new AppError(
+      "FORBIDDEN",
+      "Oracle returned another record's status history.",
+      403,
+    );
   const gates = historyGates(rows, host);
   const texts = historyTexts(rows, host);
   const code = (type: string, value?: string | null) =>
@@ -209,6 +254,7 @@ export async function historyView(host: HistoryHost): Promise<HistoryView> {
                 name: show(r.full_name),
                 status: show(r.status),
                 stage: show(r.stage_desc),
+                transaction: r.transaction_number ?? "",
                 comments:
                   typeof r.user_comments === "string"
                     ? plainText(r.user_comments)
@@ -216,6 +262,7 @@ export async function historyView(host: HistoryHost): Promise<HistoryView> {
                 updated: stamp(r.last_update_date, format),
               })),
             },
+    approvalTransaction: host.objectType === "CONTRACT",
     gates: {
       addStatus: gates.addStatus,
       abandon: gates.abandon,

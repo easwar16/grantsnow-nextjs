@@ -1,7 +1,7 @@
 import "server-only";
 import { fixtureMode } from "@/server/platform/configuration/environment";
 import type { Operation } from "@/server/oracle/connection";
-import { fixtureUser, proposals } from "./fixtures";
+import { fixtureUser, proposals, contracts } from "./fixtures";
 import { widgets } from "@/server/modules/home/widgets";
 /**
  * Evaluates the p_where_clause grammar that src/server/proposals/where-clause.ts emits:
@@ -70,6 +70,34 @@ export async function mockOracle(
     throw new Error(
       "Fixture transport cannot run outside explicit development mode.",
     );
+  // The isolated Playwright run can hold one lookup to verify that list results and
+  // status navigation render before this filter is ready. Never used by live ORDS.
+  if (
+    process.env.GRANTSNOW_E2E === "true" &&
+    op === "getPre_awardGetLookupTypesCodes" &&
+    query?.get("lookupTypeCode") === "CONTRACT_TYPE"
+  ) {
+    const delay = Number(
+      process.env.GRANTSNOW_FIXTURE_DELAY_CONTRACT_LOOKUPS_MS,
+    );
+    if (Number.isFinite(delay) && delay > 0)
+      await new Promise((resolve) =>
+        setTimeout(resolve, Math.min(delay, 5000)),
+      );
+  }
+  if (
+    process.env.GRANTSNOW_E2E === "true" &&
+    op === "getPre_awardGetApprovalHistory" &&
+    headers.approval_type === "CONTRACT"
+  ) {
+    const delay = Number(
+      process.env.GRANTSNOW_FIXTURE_DELAY_CONTRACT_HISTORY_MS,
+    );
+    if (Number.isFinite(delay) && delay > 0)
+      await new Promise((resolve) =>
+        setTimeout(resolve, Math.min(delay, 5000)),
+      );
+  }
   if (op === "getPre_awardGetLookupTypesCodes") {
     const types: Record<string, [string, string][]> = {
       PROPOSAL_STATUS: [
@@ -115,6 +143,8 @@ export async function mockOracle(
         ["GROUP", "Group"],
         ["INDIVIDUAL", "Individual"],
       ],
+      CONTRACT_TYPE: [["RESEARCH", "Research Contract"]],
+      CTR_DEADLINE_TYPE: [["SIGNING", "Signing deadline"]],
     };
     return {
       items: Object.entries(types).flatMap(([lookup_type_code, rows]) =>
@@ -694,6 +724,7 @@ export async function mockOracle(
     };
   if (
     op === "getApproval_setupApproval_stages" ||
+    op === "getApproval_setupApproval_stages_graph" ||
     op === "getApproval_setupGet_stage_users" ||
     op === "getApproval_groupApproval_group_m"
   )
@@ -702,10 +733,59 @@ export async function mockOracle(
     op === "getProposalDelegationsProposal_id" ||
     op === "getSharedObjectStatus"
   )
-    return { items: [] };
+    return op === "getSharedObjectStatus" &&
+      headers.p_obj_type === "CONTRACT" &&
+      headers.p_obj_id === "1301"
+      ? {
+          items: [
+            {
+              object_id: 1301,
+              object_status: "Internally Approved",
+              status_process_mode: "AUTO",
+              created_by_name: "Alex Morgan",
+              creation_date: "2026-10-13T17:35:15Z",
+            },
+            {
+              object_id: 1301,
+              object_status: "Awaiting Internal Approval",
+              status_process_mode: "AUTO",
+              created_by_name: "Alex Morgan",
+              creation_date: "2026-10-13T17:34:57Z",
+            },
+            {
+              object_id: 1301,
+              object_status: "Draft",
+              status_process_mode: "AUTO",
+              comments: "Contract Created",
+              created_by_name: "Alex Morgan",
+              creation_date: "2026-10-13T17:33:37Z",
+            },
+          ],
+        }
+      : { items: [] };
+  if (op === "getContractsSignerDetails")
+    return headers.contract_id === "1301"
+      ? {
+          items: [
+            {
+              contract_id: 1301,
+              signer_name: "Sam Taylor",
+              signer_email: "sam.taylor@example.org",
+              user_type: "Internal User",
+              sentdatetime: "2026-10-13T17:35:43Z",
+            },
+          ],
+        }
+      : { items: [] };
   // Dynamic forms (shapes as GN-Angular's specs and GrantsNow-Dynamic-Forms.md): conditions, dependent fields and
   // LOVs, every field type, an optional section, a GRID and a FILE field.
   if (op === "getProposalEthical_dynFormsP_ref_module") {
+    if (
+      headers.p_obj_type === "CONTRACT" &&
+      headers.p_obj_id &&
+      headers.p_ref_module !== "CONTRACTS-SUMMARY"
+    )
+      return [];
     const f = (
       fieldId: number,
       description: string,
@@ -720,6 +800,27 @@ export async function mockOracle(
       colspan: 6,
       ...more,
     });
+    if (headers.p_ref_module === "CONTRACTS-SUMMARY")
+      return [
+        {
+          formId: 7,
+          formName: "Test",
+          sections: [
+            {
+              sectionId: 71,
+              sectionName: "Test",
+              isVisible: "Y",
+              fields: [
+                f(1, "Testing Text box", "TEXTBOX"),
+                f(2, "LOV Test", "LOV", {
+                  isRequired: "Y",
+                  options: [{ optionId: 1, optionValue: "Option one" }],
+                }),
+              ],
+            },
+          ],
+        },
+      ];
     return [
       {
         formId: 1,
@@ -816,6 +917,24 @@ export async function mockOracle(
       },
     ];
   }
+  if (
+    op === "getProposalEthicaldynFormResponse" &&
+    headers.P_REF_MODULE === "CONTRACTS-SUMMARY"
+  )
+    return [
+      {
+        form_id: 7,
+        sections: [
+          {
+            section_id: 71,
+            fields: [
+              { field_id: 1, value: "Synthetic contract note" },
+              { field_id: 2, value: "1" },
+            ],
+          },
+        ],
+      },
+    ];
   if (op === "getProposalEthicaldynFormResponse")
     return [
       {
@@ -849,6 +968,7 @@ export async function mockOracle(
     return {
       items: [
         { page_name: "home", read_access: "Y" },
+        { page_name: "create-contract", read_access: "Y" },
         ...[
           "opportunity-notes",
           "apply-opportunities",
@@ -926,13 +1046,79 @@ export async function mockOracle(
         rate_status: status,
       })),
     };
+  if (op === "getContractsGetRelationType")
+    return {
+      items: [
+        { object_type: "AWARD", object_desc: "Award" },
+        { object_type: "PROJECT", object_desc: "Project" },
+        { object_type: "PROPOSAL", object_desc: "Proposal" },
+      ],
+    };
+  if (op === "getContractsGetRelationItem")
+    return {
+      items: [
+        {
+          object_id: 6718,
+          object_number: "P_6718",
+          object_title: "Example proposal",
+        },
+      ],
+    };
+  if (op === "getContractsGetContractTemplateName")
+    return {
+      items: [
+        {
+          template_id: 1,
+          file_name: "Standard contract template.docx",
+          legal_id: 1,
+        },
+      ],
+      count: 1,
+    };
+  if (op === "getGetPlaceholderTags")
+    return {
+      items: [
+        {
+          column_name: "CONTRACT_NUMBER",
+          column_tag: "{CONTRACT_NUMBER}",
+          description: null,
+        },
+        {
+          column_name: "CONTRACT_TITLE",
+          column_tag: "{CONTRACT_TITLE}",
+          description: null,
+        },
+      ],
+    };
   if (op === "getSecurityUser_roles")
     return {
       items: [
         {
-          page_name: headers.p_obj_id ? "proposals-summary" : "home",
+          page_name: headers.p_obj_id
+            ? headers.p_obj_type === "CONTRACT"
+              ? "contracts-summary"
+              : "proposals-summary"
+            : "home",
           read_access: "Y",
         },
+        ...(headers.p_obj_type === "CONTRACT" && headers.p_obj_id
+          ? [
+              { page_name: "contracts-history", read_access: "Y" },
+              { page_name: "contracts-workflow", read_access: "Y" },
+              {
+                page_name: "contracts-delegation",
+                read_access: "Y",
+                edit_access: "Y",
+                delete_access: "Y",
+              },
+              { page_name: "contracts-signers", read_access: "Y" },
+              {
+                page_name: "contract-add-status",
+                read_access: "Y",
+                edit_access: "Y",
+              },
+            ]
+          : []),
       ],
     };
   if (op === "getProposalProposal_id") {
@@ -957,6 +1143,41 @@ export async function mockOracle(
             "Synthetic project description for local UI verification.",
         },
       ],
+    };
+  }
+  if (op === "getContractsContract_id") {
+    const record = contracts.find(
+      (r) => String(r.contract_id) === pathParams?.contract_id,
+    );
+    if (!record) throw new Error("Fixture contract not found.");
+    return record;
+  }
+  if (op === "getGetAllContracts") {
+    const where = query?.get("p_where_clause");
+    const offset = Number(query?.get("p_offset") || 0);
+    const limit = Number(query?.get("p_limit") || 10);
+    const rows = contracts.filter(
+      (r) =>
+        (!headers.p_status || r.status_lkp_code === headers.p_status) &&
+        (!headers.p_level ||
+          headers.p_level.split(",").includes(r.contract_level)) &&
+        (!where || whereMatcher(where)(r)),
+    );
+    const sort = query?.get("p_order_by")?.replaceAll('"', "");
+    const direction = query?.get("p_sort_order") === "DESC" ? -1 : 1;
+    if (sort)
+      rows.sort(
+        (a, b) =>
+          String(a[sort as keyof typeof a] ?? "").localeCompare(
+            String(b[sort as keyof typeof b] ?? ""),
+            "en",
+            { numeric: true },
+          ) * direction,
+      );
+    return {
+      items: rows.slice(offset, offset + limit),
+      offset,
+      total_count: rows.length,
     };
   }
   if (op === "getSharedLabels")

@@ -347,9 +347,10 @@ export function DynFieldView({
             )}
           </>
         ) : !live ? (
-          <span id={id} className={styles.readOnly}>
-            {texts.noFile}
-          </span>
+          <div id={id} className={styles.readOnlyDrop} aria-disabled="true">
+            <strong>{texts.dragAndDrop}</strong>
+            <span>{label}</span>
+          </div>
         ) : (
           <label
             className={`gn-btn gn-btn--outlined ${styles.pick} ${storageOff ? styles.pickOff : ""}`}
@@ -370,7 +371,7 @@ export function DynFieldView({
             />
           </label>
         )}
-        {storageOff && (
+        {storageOff && (live || name !== "") && (
           <span className={styles.storageOff}>{texts.storageOff}</span>
         )}
       </div>

@@ -11,6 +11,8 @@ export function safeReturn(value: unknown) {
         [
           "/home",
           "/proposals",
+          "/contracts",
+          "/contracts/new",
           "/opportunities",
           "/opportunities/eoi",
           "/opportunities/analytics",
@@ -25,6 +27,9 @@ export function safeReturn(value: unknown) {
         ) ||
         /^\/opportunities\/[1-9]\d{0,14}$/.test(url.pathname) ||
         /^\/proposals\/(PROPOSAL|OUTLINE_PROPOSAL|SUB_PROPOSAL|EXTENSION_PROPOSAL)\/[1-9]\d{0,14}$/.test(
+          url.pathname,
+        ) ||
+        /^\/contracts\/[1-9]\d{0,14}(?:\/(?:workflow|history|delegation|signers))?$/.test(
           url.pathname,
         )
       )

@@ -124,6 +124,50 @@ const HISTORY: Record<string, Record<string, unknown>[]> = {
     },
   ],
 };
+const CONTRACT_STAGES = [
+  {
+    approval_number: "C_1301",
+    level_id: 701,
+    level_name: "Stage 1",
+    level_desc: "Contract Approval",
+    approval_type: "Approval",
+    approval_group_type: "Individual",
+    no_of_approval_req: 1,
+    status: "Approved",
+    remarks: "NA",
+  },
+  {
+    approval_number: "C_1301",
+    level_id: 702,
+    level_name: "Stage 2",
+    level_desc: "Legal head approval",
+    approval_type: "Approval",
+    approval_group_type: "Individual",
+    no_of_approval_req: 1,
+    status: "Pending",
+    remarks: "NA",
+  },
+];
+const CONTRACT_HISTORY = [
+  {
+    transaction_number: "C_1301",
+    full_name: "Alex Morgan",
+    level_name: "Stage 1",
+    status: "Approved",
+    stage_desc: "Stage 1|Contract Approval|NA",
+    creation_date: "2026-10-03T14:40:00Z",
+    last_update_date: "2026-10-03T14:40:00Z",
+  },
+  {
+    transaction_number: "C_1301",
+    full_name: "Alex Morgan",
+    level_name: "Stage 1",
+    status: "Submitted",
+    stage_desc: "Stage 1|Contract Approval|NA",
+    creation_date: "2026-10-02T10:15:00Z",
+    last_update_date: "2026-10-02T10:15:00Z",
+  },
+];
 export function fixtureApprovals(
   op: string,
   headers: Record<string, string>,
@@ -138,8 +182,73 @@ export function fixtureApprovals(
       items:
         query?.get("doc_type") === "OPPORTUNITIES-EOI"
           ? (ROUTES[query.get("doc_num") ?? ""] ?? [])
-          : [],
+          : query?.get("doc_type") === "CONTRACT" &&
+              query.get("doc_num") === "C_1301"
+            ? CONTRACT_STAGES
+            : [],
     };
+  if (op === "getApproval_setupApproval_stages_graph") {
+    if (query?.get("doc_type") === "OPPORTUNITIES-EOI") {
+      const number = query.get("doc_num") ?? "";
+      const stages = ROUTES[number] ?? [];
+      return {
+        nodeStructure: {
+          text: { name: "Approval Workflow", title: "Start" },
+          children: stages.length
+            ? [
+                {
+                  text: {
+                    name: String(stages[0].level_desc ?? ""),
+                    title: String(stages[0].status ?? ""),
+                    contact: String(stages[0].level_name ?? ""),
+                  },
+                  data: { approval_number: number, status: stages[0].status },
+                  children: stages.slice(1).map((stage) => ({
+                    text: {
+                      name: String(stage.level_desc ?? ""),
+                      title: String(stage.status ?? ""),
+                      contact: String(stage.level_name ?? ""),
+                    },
+                    data: { approval_number: number, status: stage.status },
+                  })),
+                },
+              ]
+            : [],
+        },
+      };
+    }
+    if (
+      query?.get("doc_type") !== "CONTRACT" ||
+      query.get("doc_num") !== "C_1301"
+    )
+      return { chart: {}, nodeStructure: [] };
+    return {
+      chart: { rootOrientation: "WEST" },
+      nodeStructure: {
+        text: { name: "Approval Workflow", title: "Start" },
+        children: [
+          {
+            text: {
+              name: "Contract Approval",
+              title: "Alex Morgan",
+              contact: "Stage 1",
+            },
+            data: { approval_number: "C_1301", status: "Approved" },
+            children: [
+              {
+                text: {
+                  name: "Legal head approval",
+                  title: "Alex Morgan",
+                  contact: "Stage 2",
+                },
+                data: { approval_number: "C_1301", status: "Pending" },
+              },
+            ],
+          },
+        ],
+      },
+    };
+  }
   if (op === "getApproval_setupGet_stage_users")
     return { items: USERS[headers.stage_id] ?? [] };
   if (op === "getApproval_groupApproval_group_m")
@@ -156,6 +265,9 @@ export function fixtureApprovals(
     items:
       headers.approval_type === "OPPORTUNITIES-EOI"
         ? (HISTORY[headers.transaction_number] ?? [])
-        : [],
+        : headers.approval_type === "CONTRACT" &&
+            headers.transaction_number === "C_1301"
+          ? CONTRACT_HISTORY
+          : [],
   };
 }

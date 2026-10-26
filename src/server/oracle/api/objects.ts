@@ -51,6 +51,7 @@ const key = z.union([z.string(), z.number()]).nullish();
 const statusRows = z.object({
   items: z.array(
     z.object({
+      object_id: key,
       object_status_lkp_code: text,
       object_status: text,
       status_process_mode_lkp_code: text,

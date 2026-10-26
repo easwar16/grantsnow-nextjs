@@ -41,7 +41,7 @@ it("repairs the backend's `=`-for-`&` shape before routing", () => {
     legacyDeepLink(
       "?contract_id=1207=view=shell=contracts=contracts-new-contract",
     ),
-  ).toBe("/modules/contracts");
+  ).toBe("/contracts/1207");
   expect(
     legacyDeepLink("?request_id=55=view=shell=opportunities=opportunities-eoi"),
   ).toBe("/opportunities/eoi/55/summary");

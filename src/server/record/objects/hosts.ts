@@ -6,14 +6,17 @@ import {
   eoiDelegationHost,
   eoiHistoryHost,
 } from "@/server/modules/opportunities/eoi-record/objects";
+import { contractDelegationHost, contractHistoryHost } from "@/server/contracts/service";
 import type { HistoryHost } from "./history";
 import type { DelegationHost } from "./delegations";
 /** The modules hosting the shared History and Delegation panels; a request names only its host and record. */
 const HISTORY: Record<string, (id: string) => Promise<HistoryHost>> = {
   eoi: eoiHistoryHost,
+  contract: contractHistoryHost,
 };
 const DELEGATIONS: Record<string, (id: string) => Promise<DelegationHost>> = {
   eoi: eoiDelegationHost,
+  contract: contractDelegationHost,
 };
 const record = z.string().regex(/^[1-9]\d{0,14}$/);
 function resolve<T>(

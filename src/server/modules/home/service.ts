@@ -63,11 +63,10 @@ export function rowHref(
       ? `/opportunities/eoi/${id}`
       : "/opportunities/eoi";
   }
-  if (kind === "contract")
-    return link("/modules/contracts", {
-      contract_id: str(r, "contract_id"),
-      mode: "view",
-    });
+  if (kind === "contract") {
+    const id = str(r, "contract_id");
+    return id && /^[1-9]\d{0,14}$/.test(id) ? `/contracts/${id}` : "/contracts";
+  }
   if (kind === "ethics")
     return link("/modules/ethics", {
       access_type: str(r, "access_type"),
