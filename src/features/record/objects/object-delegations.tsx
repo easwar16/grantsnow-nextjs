@@ -378,7 +378,7 @@ function DelegationDialog({
         <InsideField
           htmlFor={`${id}-people-field`}
           label={texts.people}
-          filled={users.length > 0}
+          filled
           required={gates.peopleRequired}
         >
           <MultiSelect

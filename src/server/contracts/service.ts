@@ -28,6 +28,7 @@ import type {
 } from "@/features/contracts/types";
 import type { HistoryHost } from "@/server/record/objects/history";
 import type { DelegationHost } from "@/server/record/objects/delegations";
+import type { PanelHost, PanelMode } from "@/server/record/objects/panels";
 
 const optional = z.union([z.string(), z.number()]).nullish();
 const contractRoleRows = cache(async (id: string) => {
@@ -443,6 +444,47 @@ export async function contractVisibleTabs(id: string) {
         "contracts-delegation",
       ].map((key) => [key, label(rb, "contract", "page-name", key, key)]),
     ),
+  };
+}
+
+/** Scope the shared Comments and Audit panels to the current Contract page. */
+export async function contractPanelHost(
+  id: string,
+  page: string,
+  mode: PanelMode,
+): Promise<PanelHost> {
+  const pages = [
+    "contracts-summary",
+    "contracts-workflow",
+    "contracts-signers",
+    "contracts-history",
+    "contracts-delegation",
+  ];
+  if (!pages.includes(page))
+    throw new AppError("BAD_REQUEST", "Invalid Contract page.", 400);
+  const contract = await loadContract(id);
+  const roles = await contractRoleRows(contract.id);
+  const matches = roles.items.filter((role) => role.page_name === page);
+  const canRead =
+    matches.length > 0 && matches.every((role) => role.read_access === "Y");
+  // The VBCS Contract host passes canComment=true for readable pages; comments have
+  // their own write operation, while the page's Edit grant controls Contract data.
+  const canComment = canRead;
+  if (!canRead || (mode === "write" && !canComment))
+    throw new AppError(
+      "FORBIDDEN",
+      "You do not have access to this Contract page.",
+      403,
+    );
+  const { user } = await authenticate();
+  return {
+    objectType: "CONTRACT",
+    objectId: contract.id,
+    page,
+    bundle: "contract",
+    token: roles.token,
+    user,
+    canComment,
   };
 }
 
@@ -933,14 +975,19 @@ export function parseContractAuditEvent(
   return (value || "") as ContractAuditEvent;
 }
 /** The VBCS Audit Trail drawer calls the existing getObjectAudits operation. */
-export async function contractAudits(id: string, event: ContractAuditEvent) {
+export async function contractAudits(
+  id: string,
+  event: ContractAuditEvent,
+  page = "contracts-summary",
+) {
   const scope = await loadContract(id);
   const roles = await contractRoleRows(scope.id);
+  requireRead(roles.items, page);
   const raw = await contractRead("getSharedGetObjectAudits2", {
     token: roles.token,
     p_obj_id: scope.id,
     p_obj_type: "CONTRACT",
-    p_page_name: "contracts",
+    p_page_name: page,
     p_event: event,
   });
   const items = z

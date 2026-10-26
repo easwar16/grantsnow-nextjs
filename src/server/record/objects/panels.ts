@@ -4,6 +4,7 @@ import { eoiRecordContext } from "@/server/modules/opportunities/record";
 import { EOI_MODULE, eoiTabs, pageOf } from "@/shared/opportunities/eoi-record";
 import { AppError } from "@/lib/errors";
 import type { UserContext } from "@/shared/auth/types";
+import { contractPanelHost } from "@/server/contracts/service";
 
 /**
  * One host of the shared comments and audit panels (legacy `object-comments` and each detail page's audit drawer).
@@ -59,7 +60,7 @@ async function eoiPanelHost(
 const HOSTS: Record<
   string,
   (id: string, page: string, mode: PanelMode) => Promise<PanelHost>
-> = { [EOI_MODULE]: eoiPanelHost };
+> = { [EOI_MODULE]: eoiPanelHost, CONTRACT: contractPanelHost };
 const hostQuery = z.object({
   type: z.enum(Object.keys(HOSTS) as [string, ...string[]]),
   id: z.string().regex(/^[1-9]\d{0,14}$/),

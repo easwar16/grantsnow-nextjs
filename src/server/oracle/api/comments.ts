@@ -10,6 +10,7 @@ const rows = z.object({
   items: z.array(
     z.object({
       comment_id: z.coerce.number().int().positive(),
+      object_id: z.union([z.number(), z.string()]).nullish(),
       comments: text,
       created_by: z.union([z.number(), z.string()]).nullish(),
       creation_date: text,

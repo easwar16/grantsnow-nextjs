@@ -532,6 +532,21 @@ export async function mockOracle(
   // Fixture audit trail for any record page, filtered by p_event as the backend does (empty is ALL).
   if (op === "getSharedGetObjectAudits2") {
     const trail = [
+      ...(headers.p_obj_type === "CONTRACT"
+        ? [
+            {
+              event: "NEW VERSION CREATED",
+              date_time: "2026-10-03T11:00",
+              field_values: [
+                {
+                  field_name: "Contract Version",
+                  field_value: "C_1300.pdf",
+                  old_value: "C_1299.pdf",
+                },
+              ],
+            },
+          ]
+        : []),
       {
         event: "UPDATED",
         date_time: "2026-10-02T14:10",

@@ -12,28 +12,48 @@ import {
   type AuditView,
 } from "@/features/record/objects/panel-types";
 import { panelHost } from "./panels";
+import { contractAudits } from "@/server/contracts/service";
+import { CONTRACT_AUDIT_EVENTS } from "@/features/record/objects/panel-types";
 
 /**
  * The audit trail (each detail page's `getObjectAuditsSDP`): backend-written and read-only, one page of the record,
  * filtered by event on the server (`p_event`, empty for ALL as the tab chain sets it).
  */
-const eventSchema = z.enum(AUDIT_EVENTS);
-
 export async function auditView(q: URLSearchParams): Promise<AuditView> {
-  const event = eventSchema.safeParse(q.get("event") ?? "ALL");
-  if (!event.success)
-    throw new AppError("BAD_REQUEST", "Invalid audit event.", 400);
   const [host, rows, format] = await Promise.all([
     panelHost(q, "read"),
     resources(),
     displayFormat(),
   ]);
-  const audits = await objects.audits({
-    objectType: host.objectType,
-    objectId: host.objectId,
-    page: host.page,
-    event: event.data === "ALL" ? "" : event.data,
-  });
+  const event = z
+    .enum(host.objectType === "CONTRACT" ? CONTRACT_AUDIT_EVENTS : AUDIT_EVENTS)
+    .safeParse(q.get("event") ?? "ALL");
+  if (!event.success)
+    throw new AppError("BAD_REQUEST", "Invalid audit event.", 400);
+  const audits =
+    host.objectType === "CONTRACT"
+      ? (
+          await contractAudits(
+            host.objectId,
+            event.data === "ALL" ? "" : event.data,
+            host.page,
+          )
+        ).map((row) => ({
+          date_time: row.date,
+          event: row.event,
+          name: row.name,
+          field_values: row.fields.map((field) => ({
+            field_name: field.name,
+            field_value: field.value,
+            old_value: field.oldValue,
+          })),
+        }))
+      : await objects.audits({
+          objectType: host.objectType,
+          objectId: host.objectId,
+          page: host.page,
+          event: event.data === "ALL" ? "" : event.data,
+        });
   const seen = new Map<string, number>();
   const items = audits.map((a): AuditEntry => {
     // An entry has no id: its time and event name it, a repeat takes a count.
@@ -55,12 +75,11 @@ export async function auditView(q: URLSearchParams): Promise<AuditView> {
   });
   return {
     items,
-    // Legacy reads this from the proposal bundle on every host; the host's own bundle is the intent.
     noData: label(
       rows,
       host.bundle,
       "helper-texts",
-      "eoi-no-data",
+      host.bundle === "contract" ? "no-data" : "eoi-no-data",
       "No data to display.",
     ),
   };

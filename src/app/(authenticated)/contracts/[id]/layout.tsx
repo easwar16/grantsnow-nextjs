@@ -14,6 +14,7 @@ import {
 } from "@/server/contracts/service";
 import { ContractTabs } from "./contract-tabs";
 import styles from "../contracts.module.css";
+import { ContractRecordPanels } from "@/features/record/objects/record-panels";
 
 /** Kept mounted across Contract tabs; only children below this header are replaced. */
 export default async function ContractRecordLayout({
@@ -33,14 +34,7 @@ export default async function ContractRecordLayout({
         <Link href="/contracts" prefetch={false}>
           ← List
         </Link>
-        <div className={styles.detailActions}>
-          <Link href={`/contracts/${id}?panel=comments`} prefetch={false}>
-            Comments
-          </Link>
-          <Link href={`/contracts/${id}?panel=audit`} prefetch={false}>
-            Open Audit Trail
-          </Link>
-        </div>
+        <ContractRecordPanels objectId={id} />
       </header>
       <Suspense
         fallback={

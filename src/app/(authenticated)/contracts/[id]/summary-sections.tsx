@@ -1,10 +1,5 @@
-import Link from "next/link";
 import { Suspense } from "react";
-import {
-  contractComments,
-  contractAudits,
-  loadContract,
-} from "@/server/contracts/service";
+import { loadContract } from "@/server/contracts/service";
 import type { ContractDetail } from "@/features/contracts/types";
 import { State } from "@/components/feedback/state";
 import { Skeleton } from "@/components/feedback/skeleton";
@@ -20,17 +15,7 @@ import {
 } from "@/server/platform/configuration/resources";
 import styles from "../contracts.module.css";
 
-export async function ContractSummaryContent({
-  id,
-  panel,
-  event,
-}: {
-  id: string;
-  panel?: "comments" | "audit";
-  event: ReturnType<
-    typeof import("@/server/contracts/service").parseContractAuditEvent
-  >;
-}) {
+export async function ContractSummaryContent({ id }: { id: string }) {
   let contract;
   try {
     contract = await loadContract(id);
@@ -71,11 +56,6 @@ export async function ContractSummaryContent({
         objectNumber={contract.number}
         editable={false}
       />
-      {panel && (
-        <Suspense fallback={<DrawerLoading panel={panel} id={id} />}>
-          <SummaryDrawer id={id} panel={panel} event={event} />
-        </Suspense>
-      )}
     </>
   );
 }
@@ -206,150 +186,5 @@ async function SummaryDocument({ contract }: { contract: ContractDetail }) {
         )}
       </div>
     </section>
-  );
-}
-
-function DrawerLoading({
-  panel,
-  id,
-}: {
-  panel: "comments" | "audit";
-  id: string;
-}) {
-  return (
-    <div className={styles.drawerBackdrop}>
-      <aside
-        className={styles.recordDrawer}
-        aria-label={panel === "comments" ? "Comments" : "Audit Trail"}
-      >
-        <header>
-          <h2>{panel === "comments" ? "Comments" : "Audit Trail"}</h2>
-          <Link
-            href={`/contracts/${id}`}
-            prefetch={false}
-            aria-label="Close drawer"
-          >
-            ×
-          </Link>
-        </header>
-        <Skeleton
-          kind="list"
-          count={2}
-          label={`Loading ${panel === "comments" ? "Comments" : "Audit Trail"}`}
-        />
-      </aside>
-    </div>
-  );
-}
-
-async function SummaryDrawer({
-  id,
-  panel,
-  event,
-}: {
-  id: string;
-  panel: "comments" | "audit";
-  event: ReturnType<
-    typeof import("@/server/contracts/service").parseContractAuditEvent
-  >;
-}) {
-  let drawer:
-    | Awaited<ReturnType<typeof contractComments>>
-    | Awaited<ReturnType<typeof contractAudits>> = [];
-  let drawerFailure: ReturnType<typeof publicError> | null = null;
-  try {
-    drawer =
-      panel === "comments"
-        ? await contractComments(id)
-        : await contractAudits(id, event);
-  } catch (error) {
-    drawerFailure = publicError(error);
-  }
-  return (
-    <div className={styles.drawerBackdrop}>
-      <aside
-        className={styles.recordDrawer}
-        aria-label={panel === "comments" ? "Comments" : "Audit Trail"}
-      >
-        <header>
-          <h2>{panel === "comments" ? "Comments" : "Audit Trail"}</h2>
-          <Link
-            href={`/contracts/${id}`}
-            prefetch={false}
-            aria-label="Close drawer"
-          >
-            ×
-          </Link>
-        </header>
-        {drawerFailure ? (
-          <p role="status">{drawerFailure.message}</p>
-        ) : panel === "comments" ? (
-          drawer.length ? (
-            drawer.map(
-              (item) =>
-                "html" in item && (
-                  <article key={item.id} className={styles.drawerCard}>
-                    <div dangerouslySetInnerHTML={{ __html: item.html }} />
-                    <small>
-                      {item.author} {item.date}
-                    </small>
-                  </article>
-                ),
-            )
-          ) : (
-            <p>No data to display.</p>
-          )
-        ) : (
-          <>
-            <nav aria-label="Audit event">
-              {(
-                [
-                  "",
-                  "INSERTED",
-                  "UPDATED",
-                  "NEW VERSION CREATED",
-                  "DELETED",
-                ] as const
-              ).map((item) => (
-                <Link
-                  key={item}
-                  href={`/contracts/${id}?panel=audit${item ? `&event=${encodeURIComponent(item)}` : ""}`}
-                  aria-current={event === item ? "page" : undefined}
-                  prefetch={false}
-                >
-                  {item || "ALL"}
-                </Link>
-              ))}
-            </nav>
-            {drawer.length ? (
-              drawer.map(
-                (item) =>
-                  "fields" in item && (
-                    <article key={item.id} className={styles.drawerCard}>
-                      <strong>{item.event}</strong>{" "}
-                      <span>
-                        {item.name} {item.date}
-                      </span>
-                      <dl>
-                        {item.fields.map((field, index) => (
-                          <div key={index}>
-                            <dt>{field.name}</dt>
-                            <dd>
-                              {field.oldValue ? `${field.oldValue} → ` : ""}
-                              {field.value}
-                            </dd>
-                          </div>
-                        ))}
-                      </dl>
-                    </article>
-                  ),
-              )
-            ) : (
-              <p>No data to display.</p>
-            )}
-          </>
-        )}
-      </aside>
-    </div>
   );
 }

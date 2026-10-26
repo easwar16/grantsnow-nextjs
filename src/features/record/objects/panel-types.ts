@@ -43,7 +43,14 @@ export interface CommentsView {
 }
 
 export const AUDIT_EVENTS = ["ALL", "INSERTED", "UPDATED", "DELETED"] as const;
-export type AuditEvent = (typeof AUDIT_EVENTS)[number];
+export const CONTRACT_AUDIT_EVENTS = [
+  "ALL",
+  "INSERTED",
+  "UPDATED",
+  "NEW VERSION CREATED",
+  "DELETED",
+] as const;
+export type AuditEvent = (typeof CONTRACT_AUDIT_EVENTS)[number];
 export interface AuditEntry {
   /** Stable within the list: the entry has no id of its own. */
   key: string;

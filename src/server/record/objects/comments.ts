@@ -48,6 +48,15 @@ const BUNDLE_KEYS: Record<string, Record<CommentLabel, [string, string]>> = {
     submit: ["button-labels", "eoi-comment-submit"],
     editTitle: ["dialog-titles", "eoi-edit-your-comment"],
   },
+  contract: {
+    noData: ["helper-texts", "contract-no-data"],
+    edit: ["button-labels", "contract-edit-comment"],
+    delete: ["button-labels", "delete"],
+    send: ["button-labels", "contract-send-comment"],
+    cancel: ["button-labels", "contract-cancel-edit"],
+    submit: ["button-labels", "contract-submit-edit"],
+    editTitle: ["dialog-titles", "contract-edit-your-comment"],
+  },
 };
 function settings(rows: Resources, bundle: string) {
   const keys = BUNDLE_KEYS[bundle];
@@ -74,8 +83,25 @@ function settings(rows: Resources, bundle: string) {
   };
 }
 
-const readThread = (host: PanelHost) =>
-  comments.thread({ page: host.page, objectId: host.objectId });
+const readThread = async (host: PanelHost) => {
+  const thread = await comments.thread({
+    page: host.page,
+    objectId: host.objectId,
+  });
+  if (
+    host.objectType === "CONTRACT" &&
+    thread.some(
+      (row) =>
+        String(row.object_id) !== host.objectId || row.module !== host.page,
+    )
+  )
+    throw new AppError(
+      "FORBIDDEN",
+      "Oracle returned another Contract's comments.",
+      403,
+    );
+  return thread;
+};
 const isOwn = (row: CommentRow, host: PanelHost) =>
   row.created_by !== null &&
   row.created_by !== undefined &&

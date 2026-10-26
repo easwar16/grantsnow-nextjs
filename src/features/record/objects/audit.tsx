@@ -5,6 +5,7 @@ import { State } from "@/components/feedback/state";
 import { objects, useApi } from "@/lib/api";
 import {
   AUDIT_EVENTS,
+  CONTRACT_AUDIT_EVENTS,
   type AuditEvent,
   type ObjectPanelProps,
 } from "./panel-types";
@@ -14,6 +15,7 @@ import styles from "./panels.module.css";
 const TONES: Record<string, string> = {
   INSERTED: "success",
   UPDATED: "info",
+  "NEW VERSION CREATED": "info",
   DELETED: "danger",
 };
 /**
@@ -23,6 +25,8 @@ const TONES: Record<string, string> = {
  */
 export function ObjectAudit(props: ObjectPanelProps) {
   const { id } = props;
+  const events =
+    props.objectType === "CONTRACT" ? CONTRACT_AUDIT_EVENTS : AUDIT_EVENTS;
   const [event, setEvent] = useState<AuditEvent>("ALL");
   const { data, error, retry } = useApi(objects.audit, {
     objectType: props.objectType,
@@ -45,22 +49,21 @@ export function ObjectAudit(props: ObjectPanelProps) {
           if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key))
             return;
           e.preventDefault();
-          const at = AUDIT_EVENTS.indexOf(event),
-            last = AUDIT_EVENTS.length - 1;
+          const at = events.findIndex((name) => name === event),
+            last = events.length - 1;
           const next =
             e.key === "Home"
               ? 0
               : e.key === "End"
                 ? last
-                : (at + (e.key === "ArrowRight" ? 1 : last)) %
-                  AUDIT_EVENTS.length;
+                : (at + (e.key === "ArrowRight" ? 1 : last)) % events.length;
           select(
-            AUDIT_EVENTS[next],
+            events[next],
             e.currentTarget.querySelectorAll<HTMLElement>('[role="tab"]')[next],
           );
         }}
       >
-        {AUDIT_EVENTS.map((name) => (
+        {events.map((name) => (
           <button
             key={name}
             type="button"
@@ -98,7 +101,7 @@ export function ObjectAudit(props: ObjectPanelProps) {
           </p>
         ) : (
           <ul className={styles.audits}>
-            {/* Legacy renders only the three known events. */}
+            {/* Contracts also show the NEW VERSION CREATED audit event. */}
             {data.items.map(
               (a) =>
                 TONES[a.event] && (
@@ -127,7 +130,8 @@ export function ObjectAudit(props: ObjectPanelProps) {
                             ) : (
                               <>
                                 <del>{f.old}</del>
-                                {a.event === "UPDATED" && (
+                                {(a.event === "UPDATED" ||
+                                  a.event === "NEW VERSION CREATED") && (
                                   <span>{f.value}</span>
                                 )}
                               </>

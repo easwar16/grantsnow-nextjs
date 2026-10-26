@@ -116,6 +116,10 @@
 .box [data-part="field"][data-multi] {
   padding: 17px 12px 0;
 }
+/* MultiSelect's chips variant resets its own padding. Keep selected chips below the floated label. */
+.box[data-filled] [data-part="field"][data-multi] {
+  padding-top: 19px;
+}
 .box [data-part="field"][data-multi] input[role="combobox"] {
   height: 20px;
   padding: 0;

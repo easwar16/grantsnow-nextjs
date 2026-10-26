@@ -84,19 +84,32 @@ test("Contracts listing filters, paging and guarded Summary", async ({
     page.getByRole("link", { name: "Get Placeholder Tags" }).click(),
   ]);
   expect(tagsDownload.suggestedFilename()).toBe("Placeholder Variables.xlsx");
-  await page.getByRole("link", { name: "Comments", exact: true }).click();
-  await expect(
-    page.getByRole("complementary", { name: "Comments" }),
-  ).toContainText("Please confirm the funder deadline.");
-  await page.getByRole("link", { name: "Close drawer" }).click();
+  await page.getByRole("button", { name: "Comments", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Comments" })).toContainText(
+    "Please confirm the funder deadline.",
+  );
+  await expect(page.getByRole("button", { name: "Send" })).toBeVisible();
+  await page.screenshot({ path: "test-results/contracts-comments.png" });
+  await page.getByRole("button", { name: "Close drawer" }).click();
   await expect(page).toHaveURL(/\/contracts\/1300$/);
-  await page.getByRole("link", { name: "Open Audit Trail" }).click();
+  await page.getByRole("button", { name: "Open Audit Trail" }).click();
+  await expect(page.getByRole("dialog", { name: "Audit Trail" })).toContainText(
+    "UPDATED",
+  );
+  await page.getByRole("tab", { name: "UPDATED" }).click();
+  await expect(page.getByRole("tab", { name: "UPDATED" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
   await expect(
-    page.getByRole("complementary", { name: "Audit Trail" }),
-  ).toContainText("UPDATED");
-  await page.getByRole("link", { name: "UPDATED" }).click();
-  await expect(page).toHaveURL(/event=UPDATED/);
-  await page.getByRole("link", { name: "Close drawer" }).click();
+    page.getByRole("tab", { name: "NEW VERSION CREATED" }),
+  ).toBeVisible();
+  await page.getByRole("tab", { name: "NEW VERSION CREATED" }).click();
+  await expect(page.getByRole("dialog", { name: "Audit Trail" })).toContainText(
+    "C_1300.pdf",
+  );
+  await page.screenshot({ path: "test-results/contracts-audit.png" });
+  await page.getByRole("button", { name: "Close drawer" }).click();
   await expect(page).toHaveURL(/\/contracts\/1300$/);
   await page.screenshot({
     path: "test-results/contracts-summary.png",
@@ -265,6 +278,53 @@ test("Contracts History, Signers and Delegation use the shared subflow shell", a
   await expect(
     page.getByRole("dialog", { name: "Add Delegation" }),
   ).toBeVisible();
+  const personLabel = page
+    .getByRole("dialog", { name: "Add Delegation" })
+    .getByText("Search by Name", { exact: false })
+    .first();
+  await expect(personLabel).toBeVisible();
+  await expect(
+    page.getByRole("combobox", { name: "Search by Name" }),
+  ).toBeVisible();
+  expect(
+    await personLabel.evaluate((element) => getComputedStyle(element).top),
+  ).toBe("4px");
+  await page.getByRole("combobox", { name: "Search by Name" }).click();
+  await page.getByRole("option", { name: /Alex Morgan/ }).click();
+  await expect(
+    page.getByRole("listbox", { name: "Search by Name" }),
+  ).toBeHidden();
+  const selectedChip = page
+    .getByRole("dialog", { name: "Add Delegation" })
+    .locator('[data-part="field"] [class*="chip"]')
+    .getByText("Alex Morgan", { exact: true });
+  await expect(selectedChip).toBeVisible();
+  const labelBounds = await personLabel.boundingBox();
+  const chipBounds = await selectedChip.boundingBox();
+  expect(
+    labelBounds &&
+      chipBounds &&
+      labelBounds.y + labelBounds.height <= chipBounds.y,
+  ).toBe(true);
+  await page.screenshot({
+    path: "test-results/contracts-delegation-dialog.png",
+  });
+  await page
+    .getByRole("dialog", { name: "Add Delegation" })
+    .getByRole("button", { name: "Close" })
+    .click();
+  const commentsRequest = page.waitForRequest((request) => {
+    const url = new URL(request.url());
+    return (
+      url.pathname === "/api/objects/comments" &&
+      url.searchParams.get("page") === "contracts-delegation"
+    );
+  });
+  await page.getByRole("button", { name: "Comments", exact: true }).click();
+  await commentsRequest;
+  await expect(page.getByRole("dialog", { name: "Comments" })).toContainText(
+    "Please confirm the funder deadline.",
+  );
 });
 test("login boundary, protected API, callback rejection and CSRF", async ({
   page,

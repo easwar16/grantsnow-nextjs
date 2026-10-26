@@ -39,6 +39,7 @@ import {
   contractHistory,
   contractHistoryHost,
   contractDelegationHost,
+  contractPanelHost,
   contractSigners,
   contractWorkflow,
   contractStageUsers,
@@ -58,6 +59,40 @@ beforeEach(() => {
   state.roles.mockReset();
   state.organizations.mockReset();
   state.organizations.mockResolvedValue([{ id: "202" }]);
+});
+it("scopes shared Contract panels to the granted page and rejects other pages", async () => {
+  state.oracle.mockImplementation(async (operation: string) => {
+    if (operation === "getSecurityUser_roles")
+      return {
+        items: [
+          { page_name: "contracts-summary", read_access: "Y" },
+          { page_name: "contracts-delegation", read_access: "Y" },
+        ],
+      };
+    if (operation === "getContractsContract_id")
+      return {
+        contract_id: 1420,
+        contract_number: "C_1420",
+        contract_title: "Scoped",
+        status_lkp_code: "IA",
+        org_id: 202,
+      };
+    throw new Error(`Unexpected operation: ${operation}`);
+  });
+  await expect(
+    contractPanelHost("1420", "contracts-delegation", "write"),
+  ).resolves.toMatchObject({
+    objectType: "CONTRACT",
+    objectId: "1420",
+    page: "contracts-delegation",
+    canComment: true,
+  });
+  await expect(
+    contractPanelHost("1420", "contracts-workflow", "read"),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  await expect(
+    contractPanelHost("1420", "contracts-unknown", "read"),
+  ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 });
 it("maps Contract fragment hosts to the scoped record and denies missing write grants", async () => {
   state.oracle.mockImplementation(async (operation: string) => {
@@ -436,5 +471,46 @@ it("validates Audit Trail filters and rejects another Contract's events", async 
     });
   await expect(contractAudits("1300", "UPDATED")).rejects.toMatchObject({
     code: "FORBIDDEN",
+  });
+});
+it("reads Contract audits with the current page key", async () => {
+  state.oracle.mockImplementation(async (operation: string) => {
+    if (operation === "getSecurityUser_roles")
+      return {
+        items: [
+          { page_name: "contracts-summary", read_access: "Y" },
+          { page_name: "contracts-delegation", read_access: "Y" },
+        ],
+      };
+    if (operation === "getContractsContract_id")
+      return {
+        contract_id: 1420,
+        contract_number: "C_1420",
+        contract_title: "Scoped",
+        org_id: 202,
+      };
+    if (operation === "getSharedGetObjectAudits2")
+      return {
+        items: [
+          {
+            object_id: 1420,
+            object_type: "CONTRACT",
+            event: "NEW VERSION CREATED",
+            field_values: [],
+          },
+        ],
+      };
+    throw new Error(`Unexpected operation: ${operation}`);
+  });
+  await expect(
+    contractAudits("1420", "NEW VERSION CREATED", "contracts-delegation"),
+  ).resolves.toHaveLength(1);
+  expect(
+    state.oracle.mock.calls.find(
+      ([operation]) => operation === "getSharedGetObjectAudits2",
+    )?.[1],
+  ).toMatchObject({
+    p_page_name: "contracts-delegation",
+    p_event: "NEW VERSION CREATED",
   });
 });
