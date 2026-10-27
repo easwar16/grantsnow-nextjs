@@ -30,15 +30,11 @@ const orgRows = z.object({
     }),
   ),
 });
-export const organizations = cache(async () => {
-  const { user } = await authenticate();
-  const raw = (await lookups.orgUnits({ personId: user.personId })) as {
-    items: Record<string, unknown>[];
-  };
-  // Column names arrive in either case.
+/** Org-unit rows (getLkpOrgUnitType, either column case) as id, name and tree depth. */
+export function orgUnitRows(raw: unknown) {
+  const rows = (raw as { items?: Record<string, unknown>[] }).items;
   const body = orgRows.parse({
-    ...raw,
-    items: raw.items?.map((row) =>
+    items: rows?.map((row) =>
       Object.fromEntries(
         Object.entries(row).map(([key, value]) => [key.toLowerCase(), value]),
       ),
@@ -49,4 +45,8 @@ export const organizations = cache(async () => {
     name: r.org_unit_name,
     depth: orgDepth(r.num_spaces),
   }));
+}
+export const organizations = cache(async () => {
+  const { user } = await authenticate();
+  return orgUnitRows(await lookups.orgUnits({ personId: user.personId }));
 });

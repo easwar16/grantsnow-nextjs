@@ -1,7 +1,7 @@
 import "server-only";
 import { invalidate } from "@/server/oracle/client";
 import { cache } from "react";
-import { z, ZodError } from "zod";
+import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
 import {
   finalizedOf,
@@ -21,7 +21,8 @@ import { label, resources } from "@/server/platform/configuration/resources";
 import { displayFormat } from "@/server/platform/configuration/formatting";
 import { dateDisplay } from "@/lib/format";
 import type { SummaryActionContext } from "@/features/modules/opportunities/eoi/types";
-import { afterCheck, opportunityGlobals, pageAccess } from "./gates";
+import { afterCheck, opportunityGlobals } from "./gates";
+import { pageAccess } from "@/server/platform/permissions";
 import {
   EDITABLE_STATUSES,
   ATTACHMENT_STATUSES,
@@ -40,28 +41,13 @@ import {
   summaryView,
 } from "./eoi-record/opportunity";
 import type { AttachmentHost } from "@/server/record/attachments/attachments";
+import { orNull, recordId, recordRoleRows } from "@/server/record/shared";
 export { eoiTabs, type EoiTab };
-const recordId = z.string().regex(/^[1-9]\d{0,14}$/);
 export const eoiRecordIdentity = z.object({
   id: recordId,
   tab: z.enum(eoiTabs),
 });
 const text = z.string().nullish();
-const pageId = z
-  .union([z.number(), z.string().regex(/^\d+$/)])
-  .nullish()
-  .transform((v) => (v === null || v === undefined ? null : Number(v)));
-const roleSchema = z.object({
-  items: z.array(
-    z.object({
-      page_id: pageId,
-      page_name: z.string(),
-      read_access: text.transform((v) => v ?? null),
-      edit_access: text,
-      delete_access: text,
-    }),
-  ),
-});
 const detailsSchema = z.object({
   items: z.array(
     z.object({
@@ -78,16 +64,6 @@ const detailsSchema = z.object({
     }),
   ),
 });
-/** A secondary read that degrades the page instead of failing it; a dead session still signs out. */
-async function orNull<T>(read: Promise<T>): Promise<T | null> {
-  try {
-    return await read;
-  } catch (e) {
-    if (e instanceof AppError && e.status === 401) throw e;
-    if (e instanceof AppError || e instanceof ZodError) return null;
-    throw e;
-  }
-}
 async function requestDetails(id: string) {
   const b = detailsSchema.parse(await eoi.details({ requestId: id }));
   const record = b.items[0];
@@ -101,11 +77,6 @@ const pageNames = z.object({
 const lockRows = z.object({
   items: z.array(z.object({ id: z.number(), page_id: z.number() })),
 });
-const people = z.object({
-  items: z.array(
-    z.object({ person_id: z.coerce.number(), full_name: z.string() }),
-  ),
-});
 /**
  * One AOI / EOI record (GN-Angular EoiRecordState), read once per request and shared by the layout and the tab:
  * the request, the user's rights on it (no readable page denies it), the finalize state, the opportunity (found
@@ -118,12 +89,10 @@ export const eoiRecordContext = cache(async (id: string) => {
   // "opportunities-eoi" is an RB bundle, not a module_access id: VBCS findModuleAccess derives it from the group.
   requireModule(user, "opportunities-group");
   // The person list is reference data, so it loads alongside the access check; no record data is read before it.
-  const staffRead = orNull(
-    peopleApi.all().then((items) => people.parse({ items }).items),
-  );
+  const staffRead = orNull(peopleApi.all());
   staffRead.catch(() => undefined);
   const access = objectAccessOf(
-    roleSchema.parse(
+    recordRoleRows.parse(
       // Every tab of the record reads these; held as briefly as the dashboard roles (VBCS reads them once per record).
       await recordRoles.record({ objectType: EOI_MODULE, objectId: id }),
     ).items,
@@ -169,6 +138,10 @@ export const eoiRecordContext = cache(async (id: string) => {
     createdBy:
       staff?.find((p) => String(p.person_id) === String(request.created_by))
         ?.full_name ?? null,
+    // Legacy getPersonData: the creator's own row, whose org the creator card is read with.
+    creator:
+      staff?.find((p) => String(p.person_id) === String(request.created_by)) ??
+      null,
     finalizable,
     finalized,
     tabs: visibleTabs(access, finalizable, new Set(finalized.keys())),

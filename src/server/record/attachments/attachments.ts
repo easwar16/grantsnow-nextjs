@@ -7,6 +7,7 @@ import {
   oicConnected,
   oicDelete,
   oicDownload,
+  exclusiveLocation,
   oicUpload,
 } from "@/server/oic/connection";
 import {
@@ -25,6 +26,7 @@ import {
 import { displayFormat } from "@/server/platform/configuration/formatting";
 import { fixtureMode } from "@/server/platform/configuration/environment";
 import { eoiAttachmentHost } from "@/server/modules/opportunities/record";
+import { awardAttachmentHost } from "@/server/modules/awards/record";
 import { fileProblem } from "@/features/record/dynamic-form/engine";
 import {
   ATTACHMENT_LABELS,
@@ -69,7 +71,7 @@ type Mode = "read" | "view" | "edit";
 const HOSTS: Record<
   string,
   (id: string, mode: Mode) => Promise<AttachmentHost>
-> = { eoi: eoiAttachmentHost };
+> = { eoi: eoiAttachmentHost, award: awardAttachmentHost };
 const hostQuery = z.object({
   host: z.enum(Object.keys(HOSTS) as [string, ...string[]]),
   record: z.string().regex(/^[1-9]\d{0,14}$/),
@@ -171,6 +173,28 @@ const BUNDLE_KEYS: Record<
     deleteWarningText: ["helper-texts", "this-operation-will"],
     pleaseNote: ["labels", "please-note"],
     fileShouldNotExceed: ["labels", "file-should-not-exceed"],
+    treeAriaLabel: ["aria-labels", "list-with-static-data"],
+  },
+  // awards-attachments-start-page.html:31-63
+  award: {
+    addDocument: ["button-labels", "attachment-add-document"],
+    folderName: ["labels", "attachment-folder-name"],
+    newFolder: null,
+    newFolderName: null,
+    fileName: ["labels", "attachment-file-name"],
+    description: ["labels", "attachment-description"],
+    fileSize: ["labels", "attachment-file-size"],
+    fileType: ["labels", "attachment-file-type"],
+    uploadedBy: ["labels", "attachment-created-by"],
+    lastUpdatedDate: ["labels", "attachment-last-updated-date"],
+    cancel: ["button-labels", "attachment-add-cancel"],
+    confirmDelete: ["button-labels", "attachment-delete"],
+    confidential: null,
+    yes: null,
+    no: null,
+    deleteWarningTitle: ["dialog-titles", "attachment-warning"],
+    pleaseNote: ["labels", "attachment-please-note"],
+    noData: ["helper-texts", "attachment-no-data"],
     treeAriaLabel: ["aria-labels", "list-with-static-data"],
   },
 };
@@ -332,11 +356,7 @@ export async function uploadAttachment(
     labelRows = early(resources());
   const host = await attachmentHost(q, "edit");
   requireStorage();
-  const [globals, rows, items] = await Promise.all([
-    settings,
-    labelRows,
-    readAttachments(host),
-  ]);
+  const globals = await settings;
   const { folder, description = "" } = fields.data;
   const newFolder = fields.data.newFolder?.trim() ?? "";
   const problem =
@@ -348,48 +368,52 @@ export async function uploadAttachment(
     ) ??
     (newFolder === "" ? null : folderNameProblem(newFolder));
   if (problem) throw new AppError("BAD_REQUEST", problem, 400);
-  const { folders, allowConfidential } = gates(rows, host.bundle);
-  const tree = folderTree(
-    folders,
-    items.map((a) => ({ folder: a.sec_obj_ref_type })),
-  );
-  if (!folderPaths(tree).includes(folder))
-    throw new AppError(
-      "BAD_REQUEST",
-      "Choose one of the record's folders.",
-      400,
-    );
   // Stored where it is filed (legacy stored a new sub-folder's file under the parent, so names clashed there).
   const filedIn = newFolder === "" ? folder : `${folder}~~${newFolder}`;
   const stored = location(globals.instance, host, filedIn, file.name);
-  // One object per name per folder: storing a taken name would overwrite another attachment's bytes.
-  if (items.some((a) => a.file_location === stored))
-    throw new AppError(
-      "BAD_REQUEST",
-      "A file with this name is already attached",
-      409,
+  return exclusiveLocation(stored, async () => {
+    // Read under the hold, so an upload that just finished is seen.
+    const [rows, items] = await Promise.all([labelRows, readAttachments(host)]);
+    const { folders, allowConfidential } = gates(rows, host.bundle);
+    const tree = folderTree(
+      folders,
+      items.map((a) => ({ folder: a.sec_obj_ref_type })),
     );
-  await oicUpload(stored, file.bytes);
-  const type = /^[\w.+-]{1,60}\/[\w.+-]{1,80}$/.test(file.type)
-    ? file.type
-    : "";
-  // The legacy body's keys (FilePickerSelectChain + insertAttachmentActionChain), less the UI-only display name.
-  await recordAttachment({
-    file_size: (file.bytes.byteLength / 1024).toFixed(1),
-    file_type: type,
-    file_location: stored,
-    document_type: type,
-    file_name: recordedName(file.name),
-    description,
-    obj_ref_id: Number(host.objectId),
-    obj_ref_type: host.objectType,
-    sec_obj_ref_id: Number(host.objectId),
-    sec_obj_ref_type: filedIn,
-    is_confidential: allowConfidential
-      ? (fields.data.confidential ?? "N")
-      : "N",
+    if (!folderPaths(tree).includes(folder))
+      throw new AppError(
+        "BAD_REQUEST",
+        "Choose one of the record's folders.",
+        400,
+      );
+    // One object per name per folder: storing a taken name would overwrite another attachment's bytes.
+    if (items.some((a) => a.file_location === stored))
+      throw new AppError(
+        "BAD_REQUEST",
+        "A file with this name is already attached",
+        409,
+      );
+    await oicUpload(stored, file.bytes);
+    const type = /^[\w.+-]{1,60}\/[\w.+-]{1,80}$/.test(file.type)
+      ? file.type
+      : "";
+    // The legacy body's keys (FilePickerSelectChain + insertAttachmentActionChain), less the UI-only display name.
+    await recordAttachment({
+      file_size: (file.bytes.byteLength / 1024).toFixed(1),
+      file_type: type,
+      file_location: stored,
+      document_type: type,
+      file_name: recordedName(file.name),
+      description,
+      obj_ref_id: Number(host.objectId),
+      obj_ref_type: host.objectType,
+      sec_obj_ref_id: Number(host.objectId),
+      sec_obj_ref_type: filedIn,
+      is_confidential: allowConfidential
+        ? (fields.data.confidential ?? "N")
+        : "N",
+    });
+    return { uploaded: true };
   });
-  return { uploaded: true };
 }
 
 async function owned(host: AttachmentHost, id: number) {

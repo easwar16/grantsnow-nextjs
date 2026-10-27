@@ -133,7 +133,7 @@ it("matches funding type as a contains, as the VBCS filterCriterion", () => {
     finderRequest({ filters: { ...DEFAULT_FILTERS, fundingType: ["Gr'ant"] } }),
   );
   expect(params.get("p_where_clause")).toContain(
-    `LOWER("funding_type") LIKE LOWER('%Gr''ant%')`,
+    `LOWER("funding_type") LIKE LOWER('%Gr''ant%') ESCAPE '\\'`,
   );
 });
 it("labels the card from the opener's bundle and gates date columns", () => {

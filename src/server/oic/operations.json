@@ -48,11 +48,10 @@
     "storage": "upload"
   },
   "getIcApiIntegrationV1FlowsRestUNIT4_MAIN_FLOW1_0Unit4integration": {
-    "path": "/",
+    "path": "/{flow}/{version}/{resource}",
     "method": "POST",
     "headers": [],
-    "write": true,
-    "unresolved": true
+    "write": true
   },
   "getREPORTING_API_INTEGRATIO1_0GenericReport2": {
     "path": "/REPORTING_API_INTEGRATIO/1.0/genericReport",

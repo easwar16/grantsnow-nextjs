@@ -1,4 +1,5 @@
 import "server-only";
+import { containsClause } from "@/server/oracle/where";
 import type { OpportunityQuery } from "@/features/modules/opportunities/schemas";
 import {
   PAGE_SIZE,
@@ -152,7 +153,7 @@ export function finderCriteria(tab: FinderTab, f: FinderFilters): Criterion[] {
     ...(funders.length ? [{ op: "$or", criteria: funders } as const] : []),
   ];
 }
-const SYMBOL = { $co: " LIKE ", $eq: "=", $ge: ">=", $le: "<=" } as const;
+const SYMBOL = { $eq: "=", $ge: ">=", $le: "<=" } as const;
 const esc = (v: string | number) => String(v).replace(/'/g, "''");
 function clause(c: Criterion): string | null {
   if ("criteria" in c) return whereClause(c.criteria, c.op);
@@ -162,8 +163,7 @@ function clause(c: Criterion): string | null {
   if (!("value" in c))
     return `${column} IS ${c.op === "$notnull" ? "NOT " : ""}NULL`;
   if (c.value === null || c.value === undefined || c.value === "") return null;
-  if (c.op === "$co")
-    return `LOWER(${column})${SYMBOL.$co}LOWER('%${esc(c.value)}%')`;
+  if (c.op === "$co") return containsClause(column, String(c.value));
   // transforms.js bounds a date to its whole day; only the date columns, so no other value gains a time.
   const value = DATE_COLUMNS.includes(c.attribute)
     ? `${esc(c.value)} ${c.op === "$le" ? "23:59:59" : "00:00:00"}`

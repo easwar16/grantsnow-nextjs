@@ -1,3 +1,4 @@
+import { FormSelect } from "@/components/ui/form-select";
 type Field = {
   id: number;
   label: string;
@@ -14,6 +15,7 @@ export function DynamicFields({ forms }: { forms: Form[] }) {
   return forms.flatMap((form) =>
     form.sections.map((section) => (
       <section
+        id={`contract-new-form-${form.id}-${section.id}`}
         className="contract-dynamic-section"
         key={`${form.id}-${section.id}`}
       >
@@ -26,6 +28,7 @@ export function DynamicFields({ forms }: { forms: Form[] }) {
                 {field.label}
                 {field.required && <b> *</b>}
                 <input
+                  id={`contract-new-${name}`}
                   name={name}
                   type={
                     field.type === "NUMERIC"
@@ -43,7 +46,11 @@ export function DynamicFields({ forms }: { forms: Form[] }) {
               <label key={name}>
                 {field.label}
                 {field.required && <b> *</b>}
-                <textarea name={name} required={field.required} />
+                <textarea
+                  id={`contract-new-${name}`}
+                  name={name}
+                  required={field.required}
+                />
               </label>
             );
           if (field.type === "LOV")
@@ -51,19 +58,18 @@ export function DynamicFields({ forms }: { forms: Form[] }) {
               <label key={name}>
                 {field.label}
                 {field.required && <b> *</b>}
-                <select name={name} required={field.required} defaultValue="">
-                  <option value="">Select {field.label}</option>
-                  {field.options.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <FormSelect
+                  id={`contract-new-${name}`}
+                  name={name}
+                  label={field.label}
+                  options={field.options}
+                  required={field.required}
+                />
               </label>
             );
           if (["RADIO", "CHECKBOX", "CHECKLIST"].includes(field.type))
             return (
-              <fieldset key={name}>
+              <fieldset key={name} id={`contract-new-${name}`}>
                 <legend>
                   {field.label}
                   {field.required && <b> *</b>}
@@ -71,6 +77,7 @@ export function DynamicFields({ forms }: { forms: Form[] }) {
                 {field.options.map((option) => (
                   <label key={option.value}>
                     <input
+                      id={`contract-new-${name}-${option.value}`}
                       name={name}
                       type={field.type === "RADIO" ? "radio" : "checkbox"}
                       value={option.value}

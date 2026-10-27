@@ -3,13 +3,10 @@ import { z } from "zod";
 import { read } from "../client";
 import { TTL } from "../cache";
 
-/** The labels of every bundle this app shows (legacy getSharedLabels); the service merges them over the seeds. */
-export const labels = read<void, unknown>({
+/** The labels of the user's bundles (legacy getSharedLabels, `module_name` comma-separated); merged over the seeds. */
+export const labels = read<{ bundles: string }, unknown>({
   op: "getSharedLabels",
-  headers: () => ({
-    module_name:
-      "DASHBOARD,PROPOSAL,OUTLINE_PROPOSAL,SUB_PROPOSAL,EXTENSION_PROPOSAL,OPPORTUNITIES-EOI",
-  }),
+  headers: (p) => ({ module_name: p.bundles }),
 });
 
 const globals = z.object({

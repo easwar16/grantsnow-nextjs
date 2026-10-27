@@ -15,10 +15,10 @@ export * as attributes from "./attributes";
 export * as fxRates from "./fx-rates";
 export * as opportunities from "./opportunities";
 export * as eoi from "./eoi";
+export * as awards from "./awards";
+export * as contracts from "./contracts";
 export * as lookups from "./lookups";
 export * as configuration from "./configuration";
 export * as account from "./account";
 export * as notifications from "./notifications";
 export * as home from "./home";
-/** Every legacy ORDS operation as a raw function (generated: scripts/oracle-catalogue.mjs). */
-export * as catalogue from "./catalogue";

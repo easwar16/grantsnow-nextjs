@@ -1,4 +1,5 @@
 import "server-only";
+import { containsClause } from "@/server/oracle/where";
 import type { ProposalQuery } from "@/features/modules/proposals/schemas";
 /**
  * The getProposalsList query: legacy `fetchFilterCriteria` (proposals-start-page.js) through the `apiList`
@@ -29,9 +30,7 @@ function clause(c: Criterion): string | null {
   if ("criteria" in c) return whereClause(c.criteria, c.op);
   if (!COLUMNS.includes(c.column) || c.value === "") return null;
   const column = `"${c.column}"`;
-  // `%` and `_` stay wildcards, as in legacy: escaping them needs an ESCAPE clause the backend is not known to accept.
-  if (c.op === "$co")
-    return `LOWER(${column}) LIKE LOWER(${literal(`%${c.value}%`)})`;
+  if (c.op === "$co") return containsClause(column, c.value);
   // Date bounds are local calendar-day strings, inclusive at both ends.
   if (c.op === "$ge") return `${column}>=${literal(`${c.value} 00:00:00`)}`;
   if (c.op === "$le") return `${column}<=${literal(`${c.value} 23:59:59`)}`;

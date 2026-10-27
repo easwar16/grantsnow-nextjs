@@ -1,4 +1,5 @@
 import "server-only";
+import { awardEntryFilters } from "@/features/modules/awards/listing/schema";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import type { StatisticRow } from "@/features/modules/home/types";
@@ -201,9 +202,21 @@ function proposals(filters: Record<string, string | undefined>) {
   const query = parsed.success ? serializeQuery(parsed.data) : "";
   return query ? `/proposals?${query}` : undefined;
 }
+/** The Awards listing with its entry filters; a value the listing would reject drills nowhere. */
+function awards(filters: { status?: string; org?: string }) {
+  const entry = awardEntryFilters(
+    new URLSearchParams(
+      Object.entries(filters).filter((e): e is [string, string] => !!e[1]),
+    ),
+  );
+  const query = new URLSearchParams();
+  if (entry.status) query.set("status", entry.status);
+  if (entry.org) query.set("org", entry.org);
+  return query.size ? `/awards?${query}` : undefined;
+}
 /**
  * The listing a chart point opens: legacy pieChartDrillChain and statusPieChartSelectionChangeChain, with their
- * app-scope filters carried as URL params. Ethics and Awards open their placeholders with the legacy nav params.
+ * app-scope filters carried as URL params. Ethics opens its placeholder with the legacy nav params.
  */
 export function drillHref(
   drill: InsightDrill,
@@ -236,8 +249,8 @@ export function drillHref(
     return proposals({ status: row.code, department: org });
   // Legacy PROPOSAL_SCHOOL filters pi_dept_code by the slice code; keyForFaculty is ignored by the listing.
   if (drill === "proposalSchool") return proposals({ department: row.code });
-  if (drill === "awardStatus")
-    return placeholder("awards", { byStatus: row.code });
+  // Legacy pieChartDrillChain sets the listing's status and organisation (filterAwardListing).
+  if (drill === "awardStatus") return awards({ status: row.code, org });
   // Legacy 9128 wrote the status code into the org filter; the status drill now filters by status.
   if (drill === "ethicsStatus")
     return placeholder("ethics", {

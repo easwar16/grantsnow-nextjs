@@ -1,0 +1,36 @@
+/* oj-form-layout readonly, measured on live (award header, 2026-10-26): a 12px semibold label at 70% over the value as
+   12px text (oj-text-field-readonly); an empty value keeps its 15px line. */
+.field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--gn-text-secondary);
+}
+.value {
+  min-height: 15px;
+  font-size: 12px;
+  line-height: 15px;
+  color: var(--gn-text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* label-edge="start": the label right-aligned in a third of the cell, the value beside it (live global costs). */
+.start {
+  display: grid;
+  grid-template-columns: 33% 1fr;
+  column-gap: 17px;
+  align-items: baseline;
+}
+.start .label {
+  justify-content: flex-end;
+  color: var(--gn-text);
+  text-align: end;
+}

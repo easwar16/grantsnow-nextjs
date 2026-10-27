@@ -52,7 +52,6 @@ export function NotesDialog({
       id={id}
       title={texts.title}
       subtitle={heading}
-      width={720}
       busy={saving}
       closeLabel={texts.close}
       onClose={onClose}

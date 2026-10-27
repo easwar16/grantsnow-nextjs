@@ -1,5 +1,5 @@
 "use client";
-import { idPart } from "@/lib/ids";
+import { StatusBadge } from "@/components/ui/status-badge";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,6 +10,8 @@ import { Icon } from "@/components/ui/icon";
 import { FilterPanel } from "@/components/ui/filter-panel";
 import { Select } from "@/components/ui/select";
 import { InsideField } from "@/components/ui/inside-field";
+import { StatusList } from "@/components/ui/status-list";
+import listing from "@/components/ui/listing.module.css";
 import { DateInput } from "@/components/ui/date-input";
 import { Skeleton } from "@/components/feedback/skeleton";
 import { State } from "@/components/feedback/state";
@@ -159,31 +161,17 @@ export function EoiList({
     );
 
   const drawer = (
-    <div id="eoi-list-drawer" className={styles.drawer}>
+    <div id="eoi-list-drawer" className={listing.drawer}>
       {g.statusList && (
-        <nav
+        <StatusList
           id="eoi-list-status"
-          className={styles.statuses}
-          aria-label={t.statusList}
-        >
-          {view.statuses.map((s) => (
-            <button
-              key={s.value}
-              id={`eoi-list-status-${idPart(s.value || "all")}`}
-              type="button"
-              className={s.value === filters.status ? styles.selected : ""}
-              aria-current={s.value === filters.status ? "true" : undefined}
-              onClick={() =>
-                s.value !== filters.status &&
-                apply({ ...filters, status: s.value })
-              }
-            >
-              {s.label}
-            </button>
-          ))}
-        </nav>
+          label={t.statusList}
+          options={view.statuses}
+          value={filters.status}
+          onChange={(status) => apply({ ...filters, status })}
+        />
       )}
-      <div id="eoi-list-filters" className={styles.filters}>
+      <div id="eoi-list-filters" className={listing.filters}>
         {g.number && textInput("number", t.number)}
         {g.title && textInput("title", t.title)}
         {g.funder &&
@@ -203,7 +191,7 @@ export function EoiList({
         {g.department && textInput("department", t.department)}
         {g.createdBy && textInput("createdBy", t.createdBy)}
         {g.dateSort && (
-          <div className={styles.sort}>
+          <div className={listing.sort}>
             {field(
               "eoi-list-sort-field-trigger",
               t.dateSort,
@@ -219,7 +207,7 @@ export function EoiList({
             <button
               type="button"
               id="eoi-list-sort-direction"
-              className={styles.direction}
+              className={listing.direction}
               aria-label={
                 filters.dir === "ascending" ? "Ascending" : "Descending"
               }
@@ -268,7 +256,7 @@ export function EoiList({
           <button
             type="button"
             id="eoi-list-clear"
-            className={`gn-btn gn-btn--outlined ${styles.clear}`}
+            className={`gn-btn gn-btn--outlined ${listing.clear}`}
             onClick={() => {
               setGeneration((n) => n + 1);
               apply(clearedEoiFilters(filters));
@@ -300,7 +288,7 @@ export function EoiList({
         // GN-Angular's EOI list has no collapse control.
         open
       >
-        <div id="eoi-list-main" className={styles.main}>
+        <div id="eoi-list-main" className={listing.main}>
           <h1 className="sr-only">{t.pageTitle}</h1>
           {error ? (
             <State
@@ -314,7 +302,7 @@ export function EoiList({
             <ul
               ref={list}
               id="eoi-list-rows"
-              className={styles.list}
+              className={listing.list}
               aria-label={t.pageTitle}
               aria-busy={paged.stale}
               // The previous filter's rows stay, dimmed, until the new ones arrive; they cannot be opened meanwhile.
@@ -330,7 +318,7 @@ export function EoiList({
             >
               {rows.map((row) => (
                 <li
-                  className={`${styles.row} enter-rise`}
+                  className={`${listing.row} enter-rise`}
                   key={row.id}
                   id={`eoi-${row.id}`}
                   data-eoi-row={row.id}
@@ -356,35 +344,35 @@ export function EoiList({
                       <Icon name="opportunity-logo" size={40} />
                     </span>
                   )}
-                  <div id={`eoi-${row.id}-body`} className={styles.body}>
+                  <div id={`eoi-${row.id}-body`} className={listing.body}>
                     {(row.number || row.status) && (
-                      <div className={styles.overline}>
+                      <div className={listing.overline}>
                         {row.number && (
                           <>
                             <Icon name="data-document" size={16} />
                             <span
                               id={`eoi-${row.id}-number`}
-                              className={styles.number}
+                              className={listing.number}
                             >
                               {row.number}
                             </span>
                           </>
                         )}
                         {row.status && (
-                          <span
+                          <StatusBadge
                             id={`eoi-${row.id}-status`}
-                            className={`gn-status ${styles.status}`}
-                            data-tone={row.tone}
+                            className={listing.status}
+                            tone={row.tone}
                           >
                             {row.status}
-                          </span>
+                          </StatusBadge>
                         )}
                       </div>
                     )}
                     {row.title && (
                       <Link
                         id={`eoi-${row.id}-title`}
-                        className={styles.title}
+                        className={listing.title}
                         href={eoiHref(row.id)}
                         prefetch={false}
                       >
@@ -418,7 +406,7 @@ export function EoiList({
                     <button
                       type="button"
                       id={`eoi-${row.id}-view`}
-                      className={`gn-btn gn-btn--borderless gn-btn--icon ${styles.view}`}
+                      className={`gn-btn gn-btn--borderless gn-btn--icon ${listing.view}`}
                       title={t.view}
                       aria-label={
                         row.number ? `${t.view} ${row.number}` : t.view
@@ -431,13 +419,13 @@ export function EoiList({
                 </li>
               ))}
               {rows.length === 0 && paged.last !== undefined && (
-                <li id="eoi-list-empty" className={styles.empty}>
+                <li id="eoi-list-empty" className={listing.empty}>
                   {t.empty}
                 </li>
               )}
               {/* Nothing held yet, or the next page: a held list refreshing in the background shows as it is. */}
               {((loading && !paged.last) || paged.loadingMore) && (
-                <li id="eoi-list-loading" className={styles.skeleton}>
+                <li id="eoi-list-loading" className={listing.skeleton}>
                   <Skeleton
                     kind="list"
                     count={rows.length ? 1 : 4}
@@ -446,7 +434,7 @@ export function EoiList({
                 </li>
               )}
               {moreFailed && (
-                <li className={styles.empty}>
+                <li className={listing.empty}>
                   <button
                     type="button"
                     id="eoi-list-retry"
@@ -460,12 +448,12 @@ export function EoiList({
             </ul>
           )}
           {!error && (
-            <p id="eoi-list-count" className={styles.total} aria-live="polite">
+            <p id="eoi-list-count" className={listing.total} aria-live="polite">
               {total !== null && rows.length < total ? (
                 `${rows.length} of ${total}`
               ) : (
                 <>
-                  <span className={styles.totalTitle}>{t.total}:</span>{" "}
+                  <span className={listing.totalTitle}>{t.total}:</span>{" "}
                   {total ?? rows.length}
                 </>
               )}

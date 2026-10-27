@@ -163,7 +163,7 @@ it("drills ethics by status, not by org (legacy 9128 defect), and fails closed",
       { id: "1", label: "Live", value: 1, code: "LIVE" },
       ctx,
     ),
-  ).toBe("/modules/awards?byStatus=LIVE");
+  ).toBe("/awards?status=LIVE&org=202");
   // No grant on the target, no code, or a code the listing would reject: no drill.
   expect(
     drillHref(

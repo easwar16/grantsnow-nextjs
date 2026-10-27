@@ -26,16 +26,16 @@ describe("finder where clause", () => {
   });
   it("matches title words with AND for Match All and OR for Match Any", () => {
     expect(whereClause([keywordCriteria("  heart  study ", "all")!])).toBe(
-      `((LOWER("opp_heading") LIKE LOWER('%heart%') AND LOWER("opp_heading") LIKE LOWER('%study%')))`,
+      `((LOWER("opp_heading") LIKE LOWER('%heart%') ESCAPE '\\' AND LOWER("opp_heading") LIKE LOWER('%study%') ESCAPE '\\'))`,
     );
     expect(whereClause([keywordCriteria("heart study", "any")!])).toBe(
-      `((LOWER("opp_heading") LIKE LOWER('%heart%') OR LOWER("opp_heading") LIKE LOWER('%study%')))`,
+      `((LOWER("opp_heading") LIKE LOWER('%heart%') ESCAPE '\\' OR LOWER("opp_heading") LIKE LOWER('%study%') ESCAPE '\\'))`,
     );
     expect(keywordCriteria("   ", "all")).toBeNull();
   });
   it("escapes quotes in every value, not only funders", () => {
     expect(where({ status: [], search: "Alzheimer's" })).toBe(
-      `("preference"='N' AND LOWER("opp_heading") LIKE LOWER('%Alzheimer''s%'))`,
+      `("preference"='N' AND LOWER("opp_heading") LIKE LOWER('%Alzheimer''s%') ESCAPE '\\')`,
     );
     expect(where({ status: [], call: "O'Brien" })).toContain(
       `LOWER('%O''Brien%')`,
@@ -58,7 +58,7 @@ describe("finder where clause", () => {
         ],
       }),
     ).toBe(
-      `("preference"='N' AND ("site"='UKRI' OR ((LOWER("funders") LIKE LOWER('%A (B, C)%') OR LOWER("co_funders") LIKE LOWER('%A (B, C)%')) AND "site"='NIH')))`,
+      `("preference"='N' AND ("site"='UKRI' OR ((LOWER("funders") LIKE LOWER('%A (B, C)%') ESCAPE '\\' OR LOWER("co_funders") LIKE LOWER('%A (B, C)%') ESCAPE '\\') AND "site"='NIH')))`,
     );
   });
   it("adds the day bounds to dates and handles every operator", () => {
@@ -110,7 +110,7 @@ describe("finder where clause", () => {
         totalFundTo: 5000,
       }),
     ).toBe(
-      `("preference"='N' AND (LOWER("funding_type") LIKE LOWER('%Grant%')) AND "funder_type"='Charity' AND "total_fund">='1000' AND "total_fund"<='5000')`,
+      `("preference"='N' AND (LOWER("funding_type") LIKE LOWER('%Grant%') ESCAPE '\\') AND "funder_type"='Charity' AND "total_fund">='1000' AND "total_fund"<='5000')`,
     );
   });
   it("gives only date columns a time, so a date-like value elsewhere stays as typed", () => {

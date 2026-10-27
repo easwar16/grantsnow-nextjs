@@ -1,5 +1,11 @@
 import { expect, it } from "vitest";
-import { dateDisplay, datePattern, parseDisplayDate } from "@/lib/format";
+import moment from "moment";
+import {
+  dateDisplay,
+  datePattern,
+  parseDisplayDate,
+  stampDisplay,
+} from "@/lib/format";
 it("uses the configured pattern as the placeholder, falling back when it has an unknown token", () => {
   expect(datePattern()).toBe("DD-MMM-YYYY");
   expect(datePattern({ dateFormat: "dd/mm/yyyy" })).toBe("DD/MM/YYYY");
@@ -30,4 +36,20 @@ it("round-trips with the display formatter", () => {
   expect(parseDisplayDate(dateDisplay("2026-12-31", settings), settings)).toBe(
     "2026-12-31",
   );
+});
+it("shows an instant in the viewer's zone, a wall-clock time as written, as legacy's datetime converter", () => {
+  const instant = "2026-10-13T13:47:01Z";
+  expect(stampDisplay(instant)).toBe(
+    moment(instant).format("DD-MMM-YYYY HH:mm:ss"),
+  );
+  expect(stampDisplay("2026-10-13T13:47:01")).toBe("13-Oct-2026 13:47:01");
+  // Fixed zones: Oracle's 17:35Z is 23:05 in India and 18:35 in the UK (BST).
+  const at = (zone: string) =>
+    moment("2026-10-13T17:35:15Z")
+      .utcOffset(zone === "IST" ? 330 : 60)
+      .format("DD-MMM-YYYY HH:mm:ss");
+  expect(at("IST")).toBe("13-Oct-2026 23:05:15");
+  expect(at("BST")).toBe("13-Oct-2026 18:35:15");
+  expect(stampDisplay("2026-10-13")).toBe("13-Oct-2026");
+  expect(stampDisplay(null)).toBe("—");
 });

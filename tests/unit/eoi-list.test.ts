@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
-  eoiFunderChoices,
+  nameChoices,
+  objectDateChoices,
+  statusChoices,
+} from "@/server/platform/configuration/choices";
+import {
   eoiListGates,
   eoiOracleQuery,
-  eoiSortChoices,
-  eoiStatusChoices,
   eoiWhereClause,
   gatedFilters,
   mapEoiPage,
@@ -42,17 +44,33 @@ it("builds GN-Angular's clause: order, trimming, quote doubling, day-bounded dat
       }),
     ),
   ).toBe(
-    "(LOWER(\"opp_heading\") LIKE LOWER('%Leaders%') AND LOWER(\"funders\") LIKE LOWER('%Alzheimer''s Society%')" +
+    "(LOWER(\"opp_heading\") LIKE LOWER('%Leaders%') ESCAPE '\\' AND LOWER(\"funders\") LIKE LOWER('%Alzheimer''s Society%') ESCAPE '\\'" +
       " AND \"creation_date\">='2025-01-01 00:00:00' AND \"creation_date\"<='2025-12-31 23:59:59' AND \"status_lkp_code\"='IA')",
   );
 });
 
 it.each([
-  ["number", "AOI_5", `LOWER("request_number") LIKE LOWER('%AOI_5%')`],
-  ["title", "O'Brien", `LOWER("opp_heading") LIKE LOWER('%O''Brien%')`],
-  ["funder", "UKRI (MRC)", `LOWER("funders") LIKE LOWER('%UKRI (MRC)%')`],
-  ["department", "Physics", `LOWER("org_unit_name") LIKE LOWER('%Physics%')`],
-  ["createdBy", "Ada", `LOWER("full_name") LIKE LOWER('%Ada%')`],
+  [
+    "number",
+    "AOI_5",
+    `LOWER("request_number") LIKE LOWER('%AOI\\_5%') ESCAPE '\\'`,
+  ],
+  [
+    "title",
+    "O'Brien",
+    `LOWER("opp_heading") LIKE LOWER('%O''Brien%') ESCAPE '\\'`,
+  ],
+  [
+    "funder",
+    "UKRI (MRC)",
+    `LOWER("funders") LIKE LOWER('%UKRI (MRC)%') ESCAPE '\\'`,
+  ],
+  [
+    "department",
+    "Physics",
+    `LOWER("org_unit_name") LIKE LOWER('%Physics%') ESCAPE '\\'`,
+  ],
+  ["createdBy", "Ada", `LOWER("full_name") LIKE LOWER('%Ada%') ESCAPE '\\'`],
   ["createdAfter", "2026-02-01", `"creation_date">='2026-02-01 00:00:00'`],
   ["createdBefore", "2026-02-28", `"creation_date"<='2026-02-28 23:59:59'`],
   ["status", "AWARD", `"status_lkp_code"='AWARD'`],
@@ -197,31 +215,37 @@ it("rejects duplicate requests", () =>
 
 it("lists EOI_STATUS with All first and de-duplicates funders", () => {
   expect(
-    eoiStatusChoices({
-      items: [
-        {
-          lookup_type_code: "EOI_STATUS",
-          lookup_code: "IA",
-          lookup_code_descr: "Internally Approved",
-        },
-        { lookup_type_code: "OTHER", lookup_code: "X" },
-        { lookup_type_code: "EOI_STATUS", lookup_code: "bad'code" },
-      ],
-    }),
+    statusChoices(
+      {
+        items: [
+          {
+            lookup_type_code: "EOI_STATUS",
+            lookup_code: "IA",
+            lookup_code_descr: "Internally Approved",
+          },
+          { lookup_type_code: "OTHER", lookup_code: "X" },
+          { lookup_type_code: "EOI_STATUS", lookup_code: "bad'code" },
+        ],
+      },
+      "EOI_STATUS",
+    ),
   ).toEqual([
     { value: "", label: "All" },
     { value: "IA", label: "Internally Approved" },
   ]);
   expect(
-    eoiFunderChoices({
-      items: [{ value: "UKRI" }, { value: "UKRI" }, { value: "Wellcome" }],
-    }),
+    nameChoices(
+      {
+        items: [{ value: "UKRI" }, { value: "UKRI" }, { value: "Wellcome" }],
+      },
+      "value",
+    ),
   ).toEqual([
     { value: "UKRI", label: "UKRI" },
     { value: "Wellcome", label: "Wellcome" },
   ]);
   expect(
-    eoiSortChoices({
+    objectDateChoices({
       items: [
         { column_name: "creation_date", column_description: "Created On" },
         { column_name: 'x" OR 1=1', column_description: "Bad" },

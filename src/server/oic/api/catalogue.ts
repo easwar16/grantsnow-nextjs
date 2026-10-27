@@ -66,10 +66,11 @@ export const putUPLOAD_OBJECT1_0Objectstorage = (p: {
   body: Uint8Array;
 }) => oicUpload(p.file_name, p.body);
 
-/** WRITES: POST / (no path in the legacy contract: refuses until it is confirmed) */
+/** WRITES: POST /{flow}/{version}/{resource} */
 export const getIcApiIntegrationV1FlowsRestUNIT4_MAIN_FLOW1_0Unit4integration =
-  flow<{ body?: unknown }>({
+  flow<{ flow?: Value; version?: Value; resource?: Value; body?: unknown }>({
     op: "getIcApiIntegrationV1FlowsRestUNIT4_MAIN_FLOW1_0Unit4integration",
+    path: (p) => ({ flow: p.flow, version: p.version, resource: p.resource }),
     body: (p) => p.body,
   });
 

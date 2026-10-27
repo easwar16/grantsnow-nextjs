@@ -200,6 +200,40 @@ export function fieldSpan(
     Math.max(1, Math.round(columns / Math.floor(12 / twelfths))),
   );
 }
+/**
+ * The dynamic-form fragment's own calcColSpan(colspan = 12, maxCols): only a missing colspan is a full row; a null or
+ * 0 one divides to 0, which its `|| 1` makes one column (live: a null-colspan LOV sits beside the field before it).
+ */
+export function formFieldSpan(
+  colspan: number | null | undefined,
+  maxColumns: number | null | undefined,
+): number {
+  const columns = Math.max(1, maxColumns || 1);
+  const span =
+    colspan === undefined
+      ? columns
+      : columns / Math.floor(12 / Number(colspan ?? 0));
+  return Math.min(columns, Math.max(1, Math.round(span) || 1));
+}
+/** The field's share of its section's columns (formFieldSpan), less the 16px column gap. */
+export const formFieldWidth = (
+  colspan: number | null | undefined,
+  maxColumns: number | null | undefined,
+) =>
+  `calc(${(formFieldSpan(colspan, maxColumns) / Math.max(1, maxColumns || 1)) * 100}% - 16px)`;
+/**
+ * The control's width inside its cell: legacy puts `oj-md-(colspan × maxColumns)` on it, which narrows it only when
+ * that is 1–11 twelfths (no such class otherwise, so it fills the cell).
+ */
+export function controlWidth(
+  colspan: number | null | undefined,
+  maxColumns: number | null | undefined,
+) {
+  const twelfths = Number(colspan ?? 0) * Math.max(1, maxColumns || 1);
+  return twelfths >= 1 && twelfths < 12
+    ? `${(twelfths / 12) * 100}%`
+    : undefined;
+}
 /** The section's share of the row, from its colspan in twelfths. */
 export const sectionWidth = (colspan: number | null | undefined) =>
   `${(Math.min(12, Math.max(1, colspan || 12)) / 12) * 100}%`;

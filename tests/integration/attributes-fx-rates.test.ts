@@ -514,6 +514,8 @@ describe("FX rates (proposal Budget / Pricing)", () => {
         { currency: "USD", reset: false, rate: 1 },
       ],
       [{ currency: "USD", reset: false, rate: "1" }],
+      [{ currency: "USD", reset: false, rate: 0 }],
+      [{ currency: "USD", reset: false, rate: -1.2 }],
       [{ currency: "USD", reset: false, rate: 1, status: "X" }],
     ])
       expect((await save({ target: TARGET, edits })).status).toBe(400);

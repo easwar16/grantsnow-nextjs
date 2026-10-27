@@ -1,13 +1,32 @@
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { calendarDaysUntil, isOverdue } from "@/features/modules/home/deadline";
 import { sparklineSegments } from "@/features/modules/home/sparkline";
 import { dateDisplay, moneyDisplay } from "@/lib/format";
 import { formattingSettings } from "@/server/platform/configuration/formatting";
-import { mapWidget } from "@/server/modules/home/service";
+import { mapWidget, viewerToday } from "@/server/modules/home/service";
 import { widgets } from "@/server/modules/home/widgets";
 // 22 Oct 2026, 23:30 local: late in the day, where the old millisecond diff misjudged tomorrow.
 const today = new Date(2026, 9, 22, 23, 30);
 const widget = (id: string) => widgets.find((w) => w.id === id)!;
+const zone = vi.hoisted(() => ({ value: undefined as string | undefined }));
+vi.mock("next/headers", () => ({
+  cookies: async () => ({
+    get: () => (zone.value === undefined ? undefined : { value: zone.value }),
+  }),
+}));
+it("counts on the viewer's calendar day from the shell's time-zone cookie", async () => {
+  // 20:00 UTC on 22 Oct is 01:30 on 23 Oct in Kolkata.
+  const now = new Date("2026-10-22T20:00:00Z");
+  zone.value = "Asia/Kolkata";
+  const day = await viewerToday(now);
+  expect([day.getFullYear(), day.getMonth(), day.getDate()]).toEqual([
+    2026, 9, 23,
+  ]);
+  zone.value = "Not/AZone";
+  expect(await viewerToday(now)).toBe(now);
+  zone.value = undefined;
+  expect(await viewerToday(now)).toBe(now);
+});
 it("compares calendar days in local time for date-only and timestamp values", () => {
   expect(calendarDaysUntil("2026-10-22", today)).toBe(0);
   expect(calendarDaysUntil("2026-10-23", today)).toBe(1);
@@ -114,7 +133,7 @@ it("links every queue row to its route or module placeholder with record params"
     }),
   ).toBe("/modules/ethics?access_type=EDIT&setup_flow_id=8");
   expect(href("aApprovedAwards", { award_id: 6, award_number: "AW_6" })).toBe(
-    "/modules/awards?award_id=6&mode=view",
+    "/awards/6/header",
   );
 });
 it("keeps row identities unique across scroll pages", () => {

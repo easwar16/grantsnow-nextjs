@@ -147,3 +147,17 @@ export function finalizedOf(
   }
   return finalized;
 }
+/** A user_roles row (getSecurityUser_roles, legacy `dashboard_access[page_name]`). */
+export type RoleRow = {
+  page_name: string;
+  read_access: string | null;
+  edit_access?: string | null;
+};
+/** Role based: every row for the page must grant it; no rows (or no roles read) denies. */
+export function pageAccess(roles: RoleRow[] | null, page: string) {
+  const rows = (roles ?? []).filter((r) => r.page_name === page);
+  return {
+    read: rows.length > 0 && rows.every((r) => r.read_access === "Y"),
+    edit: rows.length > 0 && rows.every((r) => r.edit_access === "Y"),
+  };
+}

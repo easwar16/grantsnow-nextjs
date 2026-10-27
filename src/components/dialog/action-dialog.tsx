@@ -21,7 +21,8 @@ export function ActionDialog({
   id: string;
   title: string;
   subtitle?: string;
-  width: number;
+  /** A vw length from the legacy width class; omitted, Redwood's default 600px dialog, at most 70vh tall (owner, 2026-10-27). */
+  width?: string;
   busy?: boolean;
   closeLabel?: string;
   onClose: () => void;
@@ -36,8 +37,8 @@ export function ActionDialog({
     <dialog
       ref={ref}
       id={id}
-      className={styles.dialog}
-      style={{ width: `min(${width}px, calc(100vw - 32px))` }}
+      className={width ? styles.dialog : `${styles.dialog} ${styles.standard}`}
+      style={{ width: `min(${width ?? "34.384vw"}, calc(100vw - 32px))` }}
       aria-labelledby={`${id}-title`}
       onCancel={(e) => {
         if (busy || pickerOpen(ref.current)) e.preventDefault();
@@ -88,7 +89,6 @@ export function useConfirm(id: string) {
     <ActionDialog
       id={id}
       title={pending.title}
-      width={440}
       closeLabel={pending.cancel}
       onClose={() => settle(false)}
     >

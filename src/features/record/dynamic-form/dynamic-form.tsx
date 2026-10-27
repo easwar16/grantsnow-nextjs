@@ -24,7 +24,7 @@ import {
 } from "./api";
 import {
   fieldKey,
-  fieldWidth,
+  formFieldWidth,
   fileIdOf,
   fileNameOf,
   fileProblem,
@@ -68,6 +68,8 @@ export interface DynamicFormProps {
   objectNumber?: string;
   /** Editable when true; read-only otherwise (locked, finalized or not in edit mode). */
   editable: boolean;
+  /** Embedded in a host page (the award header): no sections renders nothing, as the legacy fragment does. */
+  hideEmpty?: boolean;
   /** Called whenever the dirty state changes, for the host's unsaved-changes guard. */
   onDirtyChange?: (dirty: boolean) => void;
   /** Called when the form becomes ready or stops being ready, so the host can hold its save until then. */
@@ -125,6 +127,7 @@ export function DynamicForm({
   parentId,
   objectId,
   editable,
+  hideEmpty,
   onDirtyChange,
   onReadyChange,
   ref,
@@ -301,7 +304,7 @@ export function DynamicForm({
   const data = loaded.status === "ready" ? loaded.data : null;
   if (!model || !data || !model.forms.some((f) => f.sections.length > 0))
     // The backend can send a form with no sections for a record (seen on dev for AOI_476).
-    return (
+    return hideEmpty && loaded.status === "ready" ? null : (
       <p id={`${prefix}-empty`} className={styles.empty}>
         {data?.texts.noData ?? "No data to display."}
       </p>
@@ -394,7 +397,6 @@ export function DynamicForm({
                           )
                         }
                       />
-                      <span className={styles.track} aria-hidden="true" />
                     </label>
                   )}
                 </header>
@@ -423,7 +425,7 @@ export function DynamicForm({
                             key={field.fieldId}
                             className={styles.cell}
                             style={{
-                              flexBasis: fieldWidth(
+                              flexBasis: formFieldWidth(
                                 field.colspan,
                                 section.maxColumns,
                               ),

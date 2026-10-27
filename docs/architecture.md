@@ -17,7 +17,7 @@ flowchart LR
 src/
   app/                    pages, layouts and thin route files only
   server/                 server-only (every module imports "server-only")
-    oracle/               connection · context · client · cache · operations.json · api/<area> · api/catalogue (generated)
+    oracle/               connection · context · client · cache · operations.json (used operations only) · api/<area> · where (LIKE clause)
     oic/                  connection (object storage) · flows · operations.json · api/catalogue (generated)
     http/                 route() wrapper · JSON responses
     identity/             session (sealed cookie, validate, DEV bridge) · auth (OIDC, IDCS metadata)
@@ -43,7 +43,7 @@ scripts/                  oracle-catalogue.mjs (API catalogues) · resource-seed
 - **`shared/`.** Neither `"use client"` nor `server-only`. Types, schemas and pure functions only.
 - **Module boundaries.** A module never imports another module's internals. What several modules need lives in `record/`, `components/`, `lib/` or `shared/`.
 - **Oracle.** Only `server/oracle/api` functions call Oracle, and only `server/oic` calls OIC. The session module, which runs before a session exists, is the one exception that uses the connection directly.
-- **Generated files.** `oracle/api/catalogue/**`, `oic/api/catalogue.ts`, both `operations.json` catalogue entries and `platform/configuration/resource-defaults.json` are generated from the legacy repo. Regenerate them, never edit them. Rebuild-owned seeds go in `resource-additions.json`.
+- **Generated files.** `oic/api/catalogue.ts`, `oic/operations.json` and `platform/configuration/resource-defaults.json` are generated from the legacy repo. Regenerate them, never edit them. Rebuild-owned seeds go in `resource-additions.json`.
 
 Server Components load initial data through shared services directly. Browser refresh calls authenticated route handlers that invoke the same services. There are no loopback fetches. Transport operations are allowlisted. They time out after 60 s (90 s for aggregates) on one pooled keep-alive connection per host, and retry a read once when its connection timed out (never a write). They reject redirects and keep credentials and tokens in server-side headers. All backend access goes through the API layer ([api-layer.md](api-layer.md)). Oracle errors are mapped to safe messages; raw upstream bodies/errors are not logged or returned.
 

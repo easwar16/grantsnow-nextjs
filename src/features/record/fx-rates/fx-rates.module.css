@@ -7,28 +7,9 @@
 }
 .scroll {
   position: relative;
-  max-height: 60vh;
-  overflow: auto;
 }
 .table {
-  width: 100%;
-  border-collapse: collapse;
   table-layout: fixed;
-}
-.table th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  padding: 8px 12px;
-  text-align: start;
-  font-weight: 600;
-  color: var(--gn-on-brand);
-  background: var(--gn-brand);
-}
-.table td {
-  height: var(--gn-control-height);
-  padding: 4px 12px;
-  border-bottom: 1px solid var(--gn-gridline);
 }
 .actions {
   width: 5rem;
@@ -36,6 +17,9 @@
 }
 .input {
   width: 100%;
+}
+.input[aria-invalid="true"] {
+  border-color: var(--gn-danger);
 }
 .dot {
   display: inline-block;

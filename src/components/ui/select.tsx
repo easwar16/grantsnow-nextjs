@@ -40,6 +40,7 @@ export function Select({
   required = false,
   disabled = false,
   invalid = false,
+  busy = false,
 }: {
   id?: string;
   label: string;
@@ -54,6 +55,8 @@ export function Select({
   required?: boolean;
   disabled?: boolean;
   invalid?: boolean;
+  /** Its options are still loading. */
+  busy?: boolean;
 }) {
   // null while not typing: the field then shows the chosen label and the list is unfiltered.
   const [query, setQuery] = useState<string | null>(null),
@@ -129,6 +132,7 @@ export function Select({
       "aria-invalid": invalid || undefined,
       "aria-describedby": describedBy,
       "aria-required": required || undefined,
+      "aria-busy": busy || undefined,
       "aria-controls": panel,
       disabled,
       title: chosen || undefined,

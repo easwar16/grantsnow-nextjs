@@ -162,6 +162,12 @@ These rules belong in `src/server/api/*` and nowhere else.
 - **The document never scrolls; components do** (D35). Anything `position: absolute` needs a positioned
   ancestor inside its scroll container. A stray `sr-only` label once made the main area scroll on every
   page load. Applied: `<main>` is the one scroll container; a full-height page takes `.page-fill`.
+- **Layout follows the viewport** (owner, 2026-10-26):
+  - Widths and heights of pages, columns, panels, drawers and dialogs are `vw` / `vh` wherever possible, and
+    `%` / `fr` otherwise. Translate a measured JET grid fraction (`oj-sm-10` → `83.333%`).
+  - Grid tracks take `auto` where legacy sizes to content.
+  - Use no fixed px widths or caps on layout. px are for component details only: borders, icons, radii, control
+    heights, small gaps.
 - **Form fields are one size, 28 px,** set in rows of equal cells, with related fields sharing a row (D36).
 - **Use one loading placeholder,** the skeleton with `role="status"`, not "Loading…" text (D30).
 - **Use one motion system,** driven by the CSS tokens. Honour `prefers-reduced-motion`, and give dialogs exit
@@ -353,24 +359,27 @@ markers are black); DEV has no featured opportunities.
 | Write timeout told the user to retry                                            | Engineering rules (no double writes)                                         | "The change may have been saved; refresh before trying again" unless the connect never reached Oracle             |
 | Featured stale after a research-preference save                                 | API layer invalidation                                                       | The save also drops `getSharedGetOpportunities` and its new-flags read                                            |
 
+## Decisions 2026-10-26 (owner open items; IDCS items left open)
+
+| Item                                      | Now                                                                                                                                                                                       |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LIKE wildcards `%` / `_` unescaped        | Fixed: every "contains" filter goes through `containsClause` (`src/server/oracle/where.ts`), `\`-escaped with `ESCAPE '\'`                                                                |
+| Overdue on the server's calendar day      | Fixed: the shell sets a `gn-tz` cookie (IANA zone); Home queues count days on that zone's today (`viewerToday`), server day until set                                                     |
+| FX rates accept 0 and negatives           | Fixed: a rate must be above 0 (server schema; the box is marked invalid and Save waits)                                                                                                   |
+| Oracle catalogue widened the allowlist    | Removed: 103 allowlisted operations, each named by the server (test); `scripts/oracle-catalogue.mjs` writes ORDS output to preview only                                                   |
+| Cache bounded by count only               | Fixed: also 64 MB of answer JSON; an answer larger than that is not held                                                                                                                  |
+| Same-name uploads racing on one record    | Fixed per process: one upload per object path at a time (`exclusiveLocation`), the name check read under that hold                                                                        |
+| Uploads copied in memory, downloads whole | Kept: both bounded by the configured upload limit (`maxMb`, 4 MB on DEV)                                                                                                                  |
+| Filter-panel width per browser            | Kept: a layout convenience, not account data; no server preference contract for it                                                                                                        |
+| Two grids for 12-column chart spans       | Kept: the spans are backend-driven                                                                                                                                                        |
+| Floating-label fields on Proposal listing | Kept: live uses inside labels on listing drawers, as `InsideField` does on the EOI list; D36's 28 px is for top-label forms                                                               |
+| Confirmed on DEV                          | ORDS accepts `ESCAPE '\'`; `total_count` is filtered (47 of 1,376); `pendingApproval` / `approvedAwards` carry no `appr_deadline_date`, so those queues never show overdue (legacy alike) |
+| Label bundles were a fixed list           | Fixed: `getSharedLabels` asks for the user's bundles (legacy findModuleAccess; AWARDS → AWARD), so Awards reads DEV's own labels                                                          |
+| Chatbot token over plain HTTP to a raw IP | Infrastructure: needs TLS on the chatbot host; the app already keeps the token server-side                                                                                                |
+
 ## Open for the owner
 
 Framework and improvement choices only:
 
-- Width of the listing filter panel is remembered per browser, not per account (server preferences would be needed).
-- Chatbot: the session token still travels over plain HTTP to a raw IP, as in legacy; voice input is not ported.
-- Two grids kept for backend-driven 12-column chart spans (`.insight-panels`, `.dynamic-chart-grid`).
-- Floating-label 39 px filter fields on the Proposal listing (D36 keeps them only for profile and Insights).
-- LIKE wildcards `%` / `_` stay unescaped, as in legacy; escaping needs an `ESCAPE` clause the backend must accept.
-- Overdue uses the server's calendar day, not the user's time zone.
-- Same-name uploads racing on one record overwrite each other's object (legacy path = file name); a unique stored name
-  would change the storage path contract.
-- FX rates accept 0 and negative values, as legacy's `oj-input-number` does; refusing them is a new business rule.
+- Chatbot host: TLS (the session token reaches it over plain HTTP, as in legacy).
 - Sessions end at the ID token's `exp` (docs/authentication.md); confirm the IDCS ID-token lifetime on DEV.
-- The generated Oracle catalogue (`src/server/oracle/api/catalogue/*`, 256 `"catalogue": true` operations) is used only
-  by its test and widens the allowlist; keep or remove.
-- The server cache is bounded by entry count, not size; uploads are copied in memory three times and OIC downloads
-  are buffered whole.
-- Not yet built: funder tree and deep links, per-filter `list-*` visibility gates on the listing.
-- To confirm on DEV: whether `pendingApproval` / `approvedAwards` return `appr_deadline_date`; whether
-  `total_count` is filtered or global.

@@ -1,5 +1,14 @@
 # GrantsNow foundation conventions
 
+## Every agent, every session, before any change, rebase or merge (owner, 2026-10-26)
+
+1. Read [docs/agent-guide.md](docs/agent-guide.md), [docs/grantsnow-foundations.md](docs/grantsnow-foundations.md), [docs/api-layer.md](docs/api-layer.md) and the top of [docs/progress.md](docs/progress.md). The guide's §8 records which earlier changes were replaced and why; do not reintroduce them.
+2. Reuse the house components, record hosts, API layer and libraries (guide §3) instead of building a module copy. Follow the project structure (guide §4).
+3. The framework and rules win. Do not override, revert or fork owner framework code without a reproduced defect or a legacy behaviour it breaks, written in `docs/progress.md` for the owner's review. On conflicts, keep both sides where compatible; never take your side wholesale.
+4. Think before large changes: say what problem it solves, which legacy behaviour or rule requires it and which shared pieces it uses. No rewrites for their own sake.
+5. After a rebase or change, run typecheck, lint, tests, the isolated build and `npm run test:e2e`, and report the results as they are.
+6. Keep a record of every change in `docs/changes/` (one file per change, template in [docs/changes/README.md](docs/changes/README.md)): what changed, why, what it replaces and which rules it touches. Before editing, rebasing or resolving a conflict, read the records for the files you touch; if your change would undo one, say so in your record and leave the choice to the owner.
+
 This is the third GrantsNow UI: the Oracle VBCS app is being replaced, and an Angular rebuild (`GN-Angular`, frozen 2026-10-15) preceded this one. **Read [docs/grantsnow-foundations.md](docs/grantsnow-foundations.md) before project work.** It holds the backend contract, resource-bundle rules, behaviour proven in the Angular build, look-and-feel brief, engineering rules and open conflicts carried from both. Check current source against historical notes.
 
 Context notes, per machine. Read the one that exists, update it in place and never create a duplicate:

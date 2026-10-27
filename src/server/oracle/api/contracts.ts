@@ -1,55 +1,57 @@
 import "server-only";
 import { read } from "../client";
-import type { Operation } from "../connection";
-import { AppError } from "@/lib/errors";
 
-type Value = string | number | boolean | null | undefined;
-type Fields = Record<string, Value>;
-const operations = [
-  "getSecurityUser_roles",
-  "getGetAllContracts",
-  "getContractsContract_id",
-  "getContractsGetContractVersions",
-  "getApproval_setupApproval_stages",
-  "getApproval_setupApproval_stages_graph",
-  "getApproval_setupGet_stage_users",
-  "getContractsSignerDetails",
-  "getProposalDelegationsProposal_id",
-  "getSharedObjectStatus",
-  "getPre_awardGetApprovalHistory",
-  "getProposalComments",
-  "getSharedGetObjectAudits2",
-  "getSharedGetObjectDates",
-  "getPre_awardGetLookupTypesCodes",
-  "getContractsGetRelationType",
-  "getProposalEthical_dynFormsP_ref_module",
-  "getPre_awardGetPersonListAll",
-  "getContractsGetContractTemplateName",
-  "getContractsGetRelationItem",
-] as const satisfies readonly Operation[];
-type ContractOperation = (typeof operations)[number];
-
-/** Existing Contract ORDS reads while their service moves to the named API definitions. */
-export function contractRead(
-  op: ContractOperation,
-  headers: Fields,
-  query?: URLSearchParams,
-  signal?: AbortSignal,
-  path?: Record<string, string>,
-) {
-  if (!(operations as readonly string[]).includes(op))
-    throw new AppError("BAD_REQUEST", "Unapproved Contract read.", 400);
-  const params = {
-    headers: Object.fromEntries(
-      Object.entries(headers).filter(([name]) => name !== "token"),
-    ),
-    query: Object.fromEntries(query ?? []),
-    path: path ?? {},
-  };
-  return read<typeof params>({
-    op,
-    headers: (p) => p.headers,
-    query: (p) => p.query,
-    path: (p) => p.path,
-  })(params, { signal });
-}
+/** Contracts (legacy contracts flow); bodies come back as read and the services apply their schemas. */
+/** One listing page (getAllContracts): status and level as headers, the page, clause and sort as the builder makes them. */
+export const list = read<{
+  status: string;
+  level: string;
+  query: Record<string, string>;
+}>({
+  op: "getGetAllContracts",
+  headers: (p) => ({ p_status: p.status, p_level: p.level }),
+  query: (p) => p.query,
+});
+/** One contract's header row. */
+export const byId = read<{ id: string }>({
+  op: "getContractsContract_id",
+  path: (p) => ({ contract_id: p.id }),
+});
+/** The contract's document versions (legacy Contract Version selector). */
+export const versions = read<{ id: string }>({
+  op: "getContractsGetContractVersions",
+  headers: (p) => ({ contract_id: p.id }),
+});
+/** The contract's DocuSign signers. */
+export const signers = read<{ id: string }>({
+  op: "getContractsSignerDetails",
+  headers: (p) => ({ contract_id: p.id }),
+});
+/** The object types a contract can relate to (getRelationType). */
+export const relationTypes = read<void>({ op: "getContractsGetRelationType" });
+/** Records of one type a contract can relate to (getRelationItem), optionally within an org unit. */
+export const relationItems = read<{ objectType: string; orgId?: string }>({
+  op: "getContractsGetRelationItem",
+  headers: (p) => ({
+    object_type: p.objectType,
+    ...(p.orgId ? { org_unit_id: p.orgId } : {}),
+  }),
+});
+/** Standard templates for a type and level; with `templateId`, that template. */
+export const templates = read<{
+  type: string;
+  level: string;
+  templateId?: string;
+}>({
+  op: "getContractsGetContractTemplateName",
+  headers: (p) => ({
+    contract_type: p.type,
+    contract_level: p.level,
+    ...(p.templateId ? { template_id: p.templateId } : {}),
+  }),
+});
+/** The template placeholder tags (getPlaceholderTags): legacy calls it without the token header. */
+export const placeholderTags = read<void>({
+  op: "getGetPlaceholderTags",
+  tokenHeader: false,
+});

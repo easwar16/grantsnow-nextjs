@@ -261,7 +261,7 @@ describe("object history", () => {
     });
     expect(view.texts.addStatus).toBe("history-add-status");
   });
-  it("renders Oracle UTC status timestamps in the preview's local time", async () => {
+  it("passes Oracle's UTC status timestamp through for the viewer's own time zone", async () => {
     const host = await eoiHistoryHost(next());
     state.calls.mockImplementation(
       reads({
@@ -276,7 +276,8 @@ describe("object history", () => {
       }),
     );
     const view = await historyView(host);
-    expect(view.rows[0].date).toBe("13-Oct-2026 23:05:15");
+    // The browser renders it (stampDisplay), so an IST viewer sees 23:05:15 and a UK viewer 18:35:15.
+    expect(view.rows[0].date).toBe("2026-10-13T17:35:15Z");
   });
   it("fails closed without the RB row or without edit on the button key", async () => {
     state.labels = [];

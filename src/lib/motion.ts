@@ -34,3 +34,10 @@ export const expand = {
   exit: { height: 0, opacity: 0 },
   transition: base,
 } satisfies MotionProps;
+
+/** The record drawer (comments, audit) opens to legacy's 30rem .drawer-end and closes back, pushing the page as legacy's drawer layout does. */
+export const drawer = {
+  initial: { width: 0, opacity: 0 },
+  animate: { width: "30rem", opacity: 1, transition: base },
+  exit: { width: 0, opacity: 0, transition: fast },
+} satisfies MotionProps;

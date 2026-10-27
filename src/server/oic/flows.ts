@@ -65,7 +65,8 @@ export function flow<P = void>(def: FlowDef<P>) {
     const values = strings(def.path?.(params));
     const path = op.path.replace(/\{(\w+)\}/g, (_, key: string) => {
       const value = values[key];
-      if (!value || !SEGMENT.test(value))
+      // A dot segment would step out of the flow's path when the URL resolves.
+      if (!value || !SEGMENT.test(value) || /^\.{1,2}$/.test(value))
         throw new AppError("BAD_REQUEST", "Invalid integration identity.", 400);
       return encodeURIComponent(value);
     });

@@ -222,7 +222,6 @@ export function ObjectDelegations({
                                   void toggle(p, type, e.currentTarget.checked)
                                 }
                               />
-                              <span className={styles.track} />
                               {text}
                             </label>
                           );
@@ -370,7 +369,7 @@ function DelegationDialog({
     <ActionDialog
       id={id}
       title={texts.dialogTitle}
-      width={560}
+      width="41.667vw" /* legacy dialogAddDelegation oj-lg-5 */
       busy={saving}
       onClose={onClose}
     >
@@ -408,7 +407,6 @@ function DelegationDialog({
                 }
                 onChange={(e) => setRight(type, e.currentTarget.checked)}
               />
-              <span className={styles.track} />
               {texts[type]}
             </label>
           ))}

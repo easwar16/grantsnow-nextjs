@@ -12,7 +12,13 @@ import { authorizeForm, formTarget, type FormTarget } from "./access";
 import { checkAnswers, mapAnswers, mapForms } from "./forms";
 import { formGlobals } from "./globals";
 import { early } from "@/server/platform/async";
-const BUNDLE = "opportunities-eoi";
+/** The fragment's translationsModule defaults to the object type: AWARD reads the award bundle, EOI its own. */
+const bundleOf = (t: FormTarget) =>
+  t.objectType === "AWARD"
+    ? "award"
+    : t.objectType === "CONTRACT"
+      ? "contract"
+      : "opportunities-eoi";
 const TEXTS: Record<DynamicFormText, [string, string, string]> = {
   noData: ["helper-texts", "no-data", "No data to display."],
   dragAndDrop: ["labels", "drag-and-drop", "Drag and drop, or select a file"],
@@ -42,12 +48,12 @@ const TEXTS: Record<DynamicFormText, [string, string, string]> = {
     "File storage is not connected in this environment.",
   ],
 };
-async function formTexts(bundle = BUNDLE) {
+async function formTexts(t: FormTarget) {
   const rows = await resources();
   return Object.fromEntries(
     Object.entries(TEXTS).map(([k, [group, key, fallback]]) => [
       k,
-      label(rows, bundle, group, key, fallback),
+      label(rows, bundleOf(t), group, key, fallback),
     ]),
   ) as Record<DynamicFormText, string>;
 }
@@ -67,9 +73,7 @@ const hasSections = (forms: { sections: unknown[] }[]) =>
 export async function loadForm(t: FormTarget): Promise<DynamicFormData> {
   // Settings and labels are not the record's; they load while access is checked.
   const settings = early(formGlobals()),
-    labels = early(
-      formTexts(t.objectType === "CONTRACT" ? "contract" : BUNDLE),
-    );
+    labels = early(formTexts(t));
   await authorizeForm(t, "read");
   const objectId = t.objectId ?? "";
   const [forms, rawAnswers, globals, texts] = await Promise.all([

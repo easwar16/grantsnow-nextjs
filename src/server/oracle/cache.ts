@@ -14,13 +14,40 @@ type Entry = {
   fresh: number;
   value: Promise<unknown>;
   refreshing?: boolean;
+  /** The answer's JSON size once it lands; counts as 1 while in flight. */
+  size?: number;
 };
-// A bounded LRU: the least recently used entries go first, and each entry expires at its own TTL (plus stale window).
+// A bounded LRU, by count and by answer size: the least recently used entries go first, and each entry expires at its
+// own TTL (plus stale window). An answer larger than the whole budget is simply not held.
 // On globalThis: route handlers (writes) and pages (reads) can load this module as separate instances, and a write
 // must clear what the pages hold.
 const store = ((
   globalThis as { __gnOracleCache?: LRUCache<string, Entry> }
-).__gnOracleCache ??= new LRUCache<string, Entry>({ max: 2000 }));
+).__gnOracleCache ??= new LRUCache<string, Entry>({
+  max: 2000,
+  maxSize: 64 * 1024 * 1024,
+  sizeCalculation: (e) => e.size ?? 1,
+}));
+
+/** Charges a landed answer's size to the entry, if the entry is still the one held. */
+function charge(key: string, entry: Entry) {
+  entry.value.then(
+    (value) => {
+      if (store.peek(key) !== entry) return;
+      try {
+        entry.size = Math.max(
+          1,
+          Buffer.byteLength(JSON.stringify(value) ?? ""),
+        );
+      } catch {
+        // Not JSON (a cycle or a BigInt): keep the in-flight size rather than fail the read's callers.
+        return;
+      }
+      store.set(key, entry, { noUpdateTTL: true });
+    },
+    () => {},
+  );
+}
 
 /** One key per session and purpose; the token itself is never kept. */
 export function memoKey(
@@ -55,11 +82,14 @@ export function memo<T>(
         () => {
           // A write that cleared the entry meanwhile wins: this read may predate it.
           if (store.peek(key) !== hit) return;
-          store.set(
-            key,
-            { at: Date.now(), fresh: ttlMs, stale: staleMs, value: next },
-            { ttl: ttlMs + staleMs },
-          );
+          const entry = {
+            at: Date.now(),
+            fresh: ttlMs,
+            stale: staleMs,
+            value: next,
+          };
+          store.set(key, entry, { ttl: ttlMs + staleMs });
+          charge(key, entry);
         },
         // A failed refresh keeps the held answer until its window ends; the next caller tries again.
         () => (hit.refreshing = false),
@@ -68,11 +98,9 @@ export function memo<T>(
     return hit.value as Promise<T>;
   }
   const value = load();
-  store.set(
-    key,
-    { at: now, fresh: ttlMs, stale: staleMs, value },
-    { ttl: ttlMs + staleMs },
-  );
+  const entry = { at: now, fresh: ttlMs, stale: staleMs, value };
+  store.set(key, entry, { ttl: ttlMs + staleMs });
+  charge(key, entry);
   value.catch(() => {
     if (store.peek(key)?.value === value) store.delete(key);
   });

@@ -23,6 +23,22 @@ export interface ProposalRow {
   value?: string;
   currency?: string;
 }
+/** The listing's filters, each with its RB label, or null when its `list-*` entry is not visible. */
+export type FilterLabels = Record<
+  | "investigator"
+  | "category"
+  | "reference"
+  | "search"
+  | "department"
+  | "sponsor"
+  | "assignedTo"
+  | "activityType"
+  | "proposalCategory"
+  | "tags"
+  | "from"
+  | "to",
+  string | null
+>;
 export interface Column {
   key: keyof ProposalRow;
   label: string;

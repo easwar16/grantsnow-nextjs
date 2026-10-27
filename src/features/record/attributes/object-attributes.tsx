@@ -5,12 +5,14 @@ import { State } from "@/components/feedback/state";
 import { DateInput } from "@/components/ui/date-input";
 import { HelpButton } from "@/components/ui/help-button";
 import { InsideField } from "@/components/ui/inside-field";
+import { ReadonlyField } from "@/components/ui/readonly-field";
 import { RichText } from "@/components/ui/rich-text";
 import { Select } from "@/components/ui/select";
 import { NumberInput } from "@/features/record/dynamic-form/dyn-field";
 import { fieldWidth, isBlank } from "@/features/record/dynamic-form/engine";
 import type { FieldValue } from "@/features/record/dynamic-form/models";
 import { idPart } from "@/lib/ids";
+import { dateDisplay } from "@/lib/format";
 import { attributes, useApi } from "@/lib/api";
 import {
   attributeErrors,
@@ -45,6 +47,7 @@ export function ObjectAttributes({
   objectId,
   editable,
   initial = {},
+  plain,
   ref,
 }: {
   /** The panel's page-unique id; fields take `${id}-attribute-n`. */
@@ -55,6 +58,8 @@ export function ObjectAttributes({
   editable: boolean;
   /** The record's `attribute_N` values (legacy getAttributeValues). */
   initial?: AttributeValues;
+  /** Inside the host's own panel (the award header): no border of its own. */
+  plain?: boolean;
   ref?: React.Ref<AttributesHandle>;
 }) {
   const { data, error, retry } = useApi(attributes.fields, {
@@ -185,8 +190,57 @@ export function ObjectAttributes({
         );
     }
   };
+  // Legacy readonly form: each field's label over its value as text, one under another; a blank value shows no line.
+  const text = (f: AttributeField) => {
+    const value = values[f.name] ?? null;
+    if (isBlank(value)) return null;
+    if (f.fieldType === "LOV")
+      return (
+        attributeOptions(f, values).find((o) => String(o.optionId) === value)
+          ?.optionValue ?? String(value)
+      );
+    return f.fieldType === "DATE" ? dateDisplay(String(value)) : String(value);
+  };
+  if (!editable)
+    return (
+      <section
+        id={id}
+        className={`${styles.readonly} ${plain ? "" : styles.panel}`}
+        aria-label="Attributes"
+      >
+        {fields.map((f) => {
+          const fieldId = `${id}-${idPart(f.name)}`;
+          const help = (
+            <HelpButton
+              id={`${fieldId}-help`}
+              html={f.helperText}
+              label={data.texts.moreInfo}
+            />
+          );
+          return f.fieldType === "RICHTEXTEDITOR" ? (
+            <div key={f.name} className={styles.row}>
+              {control(f, fieldId, false)}
+              {help}
+            </div>
+          ) : (
+            <ReadonlyField
+              key={f.name}
+              id={fieldId}
+              label={f.description}
+              value={text(f)}
+              help={help}
+              className={styles.readonlyField}
+            />
+          );
+        })}
+      </section>
+    );
   return (
-    <section id={id} className={styles.panel} aria-label="Attributes">
+    <section
+      id={id}
+      className={plain ? styles.plain : styles.panel}
+      aria-label="Attributes"
+    >
       {fields.map((f) => {
         const fieldId = `${id}-${idPart(f.name)}`,
           message = errors[f.name],

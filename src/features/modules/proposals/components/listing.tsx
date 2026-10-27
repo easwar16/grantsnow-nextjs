@@ -4,7 +4,7 @@ import { RecordSkeleton } from "@/components/feedback/skeleton";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { parseQuery, serializeQuery, type ProposalQuery } from "../schemas";
-import type { Column, ProposalPage } from "../types";
+import type { Column, FilterLabels, ProposalPage } from "../types";
 import { State } from "@/components/feedback/state";
 import { RecordCard } from "./record-card";
 import type { ListingChoices } from "../lookups";
@@ -16,14 +16,6 @@ import styles from "./listing.module.css";
 type Result =
   | { ok: true; data: ProposalPage }
   | { ok: false; error: { code: string; message: string; action?: string } };
-const LABELS = {
-  investigator: "Investigator",
-  department: "Department",
-  sponsor: "Primary Sponsor",
-  assignedTo: "Assigned to",
-  activityType: "Activity Type",
-  proposalCategory: "Proposal Type",
-} as const;
 /** A filter dropdown in the listing's form: its value submits through `name`, and a pick submits the form. */
 function FormSelect({
   id,
@@ -66,12 +58,14 @@ function FormSelect({
 export function Listing({
   initial,
   columns,
+  filters,
   initialQuery,
   choices,
   format,
 }: {
   initial: Result;
   columns: Column[];
+  filters: FilterLabels;
   initialQuery: ProposalQuery;
   choices: ListingChoices;
   format?: FormatSettings;
@@ -248,129 +242,157 @@ export function Listing({
               key={queryKey}
               className="filter-panel"
             >
-              <label className="inside-field">
-                <span className="floating-label">Investigator</span>
-                <FormSelect
-                  id="proposals-filter-investigator"
-                  name="investigator"
-                  label={LABELS.investigator}
-                  defaultValue={query.investigator}
-                  options={choices.investigators}
-                />
-              </label>
-              <fieldset className="category-options">
-                <legend>Category</legend>
-                {[
-                  { value: "", label: "All" },
-                  ...choices.categories.filter((c) =>
-                    [
-                      "PROPOSAL",
-                      "OUTLINE_PROPOSAL",
-                      "SUB_PROPOSAL",
-                      "EXTENSION_PROPOSAL",
-                    ].includes(c.value),
-                  ),
-                ].map((c) => (
-                  <label key={c.value}>
-                    <input
-                      type="radio"
-                      name="type"
-                      value={c.value}
-                      defaultChecked={query.type === c.value}
-                      onChange={() =>
-                        update(
-                          { type: c.value as ProposalQuery["type"], page: 1 },
-                          true,
-                        )
-                      }
-                    />
-                    {c.label}
-                  </label>
-                ))}
-              </fieldset>
-              <label className="inside-field">
-                <span className="floating-label">Proposal Number</span>
-                <input
-                  name="reference"
-                  aria-label="Reference"
-                  defaultValue={query.reference}
-                  placeholder=" "
-                  maxLength={200}
-                />
-              </label>
-              <label className="inside-field">
-                <span className="floating-label">Title</span>
-                <input
-                  name="search"
-                  aria-label="Search proposal titles"
-                  type="search"
-                  defaultValue={query.search}
-                  placeholder=" "
-                  maxLength={200}
-                />
-              </label>
-              <label className="inside-field">
-                <span className="floating-label">Department</span>
-                <FormSelect
-                  id="proposals-filter-department"
-                  name="department"
-                  label={LABELS.department}
-                  defaultValue={query.department}
-                  options={choices.departments}
-                />
-              </label>
-              <label className="inside-field">
-                <span className="floating-label">Primary Sponsor</span>
-                <FormSelect
-                  id="proposals-filter-sponsor"
-                  name="sponsor"
-                  label={LABELS.sponsor}
-                  defaultValue={query.sponsor}
-                  options={choices.sponsors}
-                />
-              </label>
-              <label className="inside-field">
-                <span className="floating-label">Assigned to</span>
-                <FormSelect
-                  id="proposals-filter-assignedTo"
-                  name="assignedTo"
-                  label={LABELS.assignedTo}
-                  defaultValue={query.assignedTo}
-                  options={choices.assignees}
-                />
-              </label>
-              <label className="inside-field">
-                <span className="floating-label">Activity Type</span>
-                <FormSelect
-                  id="proposals-filter-activityType"
-                  name="activityType"
-                  label={LABELS.activityType}
-                  defaultValue={query.activityType}
-                  options={choices.activities}
-                />
-              </label>
-              <label className="inside-field">
-                <span className="floating-label">Proposal Type</span>
-                <FormSelect
-                  id="proposals-filter-proposalCategory"
-                  name="proposalCategory"
-                  label={LABELS.proposalCategory}
-                  defaultValue={query.proposalCategory}
-                  options={choices.proposalTypes}
-                />
-              </label>
-              <label className="inside-field">
-                <span className="floating-label">Tags</span>
-                <input name="tags" defaultValue={query.tags} maxLength={200} />
-              </label>
-              <label className="inside-field">
-                <span className="floating-label">Created from</span>
-                <input name="from" type="date" defaultValue={query.from} />
-              </label>
-              <label className="inside-field">
-                <span className="floating-label">Created through</span>
-                <input name="to" type="date" defaultValue={query.to} />
-              </label>
+              {filters.investigator !== null && (
+                <label className="inside-field">
+                  <span className="floating-label">{filters.investigator}</span>
+                  <FormSelect
+                    id="proposals-filter-investigator"
+                    name="investigator"
+                    label={filters.investigator}
+                    defaultValue={query.investigator}
+                    options={choices.investigators}
+                  />
+                </label>
+              )}
+              {filters.category !== null && (
+                <fieldset className="category-options">
+                  <legend>{filters.category}</legend>
+                  {[
+                    { value: "", label: "All" },
+                    ...choices.categories.filter((c) =>
+                      [
+                        "PROPOSAL",
+                        "OUTLINE_PROPOSAL",
+                        "SUB_PROPOSAL",
+                        "EXTENSION_PROPOSAL",
+                      ].includes(c.value),
+                    ),
+                  ].map((c) => (
+                    <label key={c.value}>
+                      <input
+                        type="radio"
+                        name="type"
+                        value={c.value}
+                        defaultChecked={query.type === c.value}
+                        onChange={() =>
+                          update(
+                            { type: c.value as ProposalQuery["type"], page: 1 },
+                            true,
+                          )
+                        }
+                      />
+                      {c.label}
+                    </label>
+                  ))}
+                </fieldset>
+              )}
+              {filters.reference !== null && (
+                <label className="inside-field">
+                  <span className="floating-label">{filters.reference}</span>
+                  <input
+                    name="reference"
+                    defaultValue={query.reference}
+                    placeholder=" "
+                    maxLength={200}
+                  />
+                </label>
+              )}
+              {filters.search !== null && (
+                <label className="inside-field">
+                  <span className="floating-label">{filters.search}</span>
+                  <input
+                    name="search"
+                    type="search"
+                    defaultValue={query.search}
+                    placeholder=" "
+                    maxLength={200}
+                  />
+                </label>
+              )}
+              {filters.department !== null && (
+                <label className="inside-field">
+                  <span className="floating-label">{filters.department}</span>
+                  <FormSelect
+                    id="proposals-filter-department"
+                    name="department"
+                    label={filters.department}
+                    defaultValue={query.department}
+                    options={choices.departments}
+                  />
+                </label>
+              )}
+              {filters.sponsor !== null && (
+                <label className="inside-field">
+                  <span className="floating-label">{filters.sponsor}</span>
+                  <FormSelect
+                    id="proposals-filter-sponsor"
+                    name="sponsor"
+                    label={filters.sponsor}
+                    defaultValue={query.sponsor}
+                    options={choices.sponsors}
+                  />
+                </label>
+              )}
+              {filters.assignedTo !== null && (
+                <label className="inside-field">
+                  <span className="floating-label">{filters.assignedTo}</span>
+                  <FormSelect
+                    id="proposals-filter-assignedTo"
+                    name="assignedTo"
+                    label={filters.assignedTo}
+                    defaultValue={query.assignedTo}
+                    options={choices.assignees}
+                  />
+                </label>
+              )}
+              {filters.activityType !== null && (
+                <label className="inside-field">
+                  <span className="floating-label">{filters.activityType}</span>
+                  <FormSelect
+                    id="proposals-filter-activityType"
+                    name="activityType"
+                    label={filters.activityType}
+                    defaultValue={query.activityType}
+                    options={choices.activities}
+                  />
+                </label>
+              )}
+              {filters.proposalCategory !== null && (
+                <label className="inside-field">
+                  <span className="floating-label">
+                    {filters.proposalCategory}
+                  </span>
+                  <FormSelect
+                    id="proposals-filter-proposalCategory"
+                    name="proposalCategory"
+                    label={filters.proposalCategory}
+                    defaultValue={query.proposalCategory}
+                    options={choices.proposalTypes}
+                  />
+                </label>
+              )}
+              {filters.tags !== null && (
+                <label className="inside-field">
+                  <span className="floating-label">{filters.tags}</span>
+                  <input
+                    name="tags"
+                    defaultValue={query.tags}
+                    maxLength={200}
+                  />
+                </label>
+              )}
+              {filters.from !== null && (
+                <label className="inside-field">
+                  <span className="floating-label">{filters.from}</span>
+                  <input name="from" type="date" defaultValue={query.from} />
+                </label>
+              )}
+              {filters.to !== null && (
+                <label className="inside-field">
+                  <span className="floating-label">{filters.to}</span>
+                  <input name="to" type="date" defaultValue={query.to} />
+                </label>
+              )}
             </form>
             {formError && (
               <p className="notice" role="alert">

@@ -12,7 +12,6 @@ import {
   type AuditView,
 } from "@/features/record/objects/panel-types";
 import { panelHost } from "./panels";
-import { contractAudits } from "@/server/contracts/service";
 import { CONTRACT_AUDIT_EVENTS } from "@/features/record/objects/panel-types";
 
 /**
@@ -30,30 +29,12 @@ export async function auditView(q: URLSearchParams): Promise<AuditView> {
     .safeParse(q.get("event") ?? "ALL");
   if (!event.success)
     throw new AppError("BAD_REQUEST", "Invalid audit event.", 400);
-  const audits =
-    host.objectType === "CONTRACT"
-      ? (
-          await contractAudits(
-            host.objectId,
-            event.data === "ALL" ? "" : event.data,
-            host.page,
-          )
-        ).map((row) => ({
-          date_time: row.date,
-          event: row.event,
-          name: row.name,
-          field_values: row.fields.map((field) => ({
-            field_name: field.name,
-            field_value: field.value,
-            old_value: field.oldValue,
-          })),
-        }))
-      : await objects.audits({
-          objectType: host.objectType,
-          objectId: host.objectId,
-          page: host.page,
-          event: event.data === "ALL" ? "" : event.data,
-        });
+  const audits = await objects.audits({
+    objectType: host.objectType,
+    objectId: host.objectId,
+    page: host.page,
+    event: event.data === "ALL" ? "" : event.data,
+  });
   const seen = new Map<string, number>();
   const items = audits.map((a): AuditEntry => {
     // An entry has no id: its time and event name it, a repeat takes a count.
@@ -75,11 +56,12 @@ export async function auditView(q: URLSearchParams): Promise<AuditView> {
   });
   return {
     items,
+    // Each record's own key in its own bundle (EOI eoi-no-data; awards-detail-page no-data).
     noData: label(
       rows,
       host.bundle,
       "helper-texts",
-      host.bundle === "contract" ? "no-data" : "eoi-no-data",
+      host.bundle === "opportunities-eoi" ? "eoi-no-data" : "no-data",
       "No data to display.",
     ),
   };

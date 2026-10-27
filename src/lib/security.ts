@@ -1,5 +1,6 @@
 import { AppError } from "./errors";
 import { placeholderModules } from "./unavailable-modules";
+import { awardTabs } from "@/shared/awards/award-record";
 export function safeReturn(value: unknown) {
   if (typeof value !== "string" || /[\\\r\n]/.test(value)) return "/home";
   try {
@@ -13,6 +14,7 @@ export function safeReturn(value: unknown) {
           "/proposals",
           "/contracts",
           "/contracts/new",
+          "/awards",
           "/opportunities",
           "/opportunities/eoi",
           "/opportunities/analytics",
@@ -26,6 +28,9 @@ export function safeReturn(value: unknown) {
           url.pathname,
         ) ||
         /^\/opportunities\/[1-9]\d{0,14}$/.test(url.pathname) ||
+        new RegExp(`^/awards/[1-9]\\d{0,14}/(${awardTabs.join("|")})$`).test(
+          url.pathname,
+        ) ||
         /^\/proposals\/(PROPOSAL|OUTLINE_PROPOSAL|SUB_PROPOSAL|EXTENSION_PROPOSAL)\/[1-9]\d{0,14}$/.test(
           url.pathname,
         ) ||

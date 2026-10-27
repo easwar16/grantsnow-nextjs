@@ -9,7 +9,7 @@ import { ToastProvider } from "@/components/feedback/toast";
 import { AppStoreProvider } from "@/lib/store/app-store";
 import { applyAccessibility } from "@/features/modules/account/apply";
 import type { ShellLabels } from "@/features/modules/account/shell-labels";
-import type { FormatSettings } from "@/lib/format";
+import { TIME_ZONE_COOKIE, type FormatSettings } from "@/lib/format";
 import { UserMenu } from "./user-menu";
 import { SessionKeepAlive } from "./session-keepalive";
 import { NotificationBell } from "./notification-bell";
@@ -45,6 +45,11 @@ export function AppShell({
   useEffect(() => {
     applyAccessibility(accessibility);
   }, [accessibility]);
+  useEffect(() => {
+    // IANA names are cookie-safe (letters, digits, / _ + -).
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    document.cookie = `${TIME_ZONE_COOKIE}=${zone}; path=/; max-age=31536000; samesite=lax`;
+  }, []);
   return (
     // Motion follows prefers-reduced-motion, as the CSS motion tokens do.
     <MotionConfig reducedMotion="user">
@@ -154,7 +159,8 @@ export function AppShell({
                 className={
                   path.startsWith("/proposals") ||
                   path.startsWith("/opportunities") ||
-                  path.startsWith("/contracts")
+                  path.startsWith("/contracts") ||
+                  path.startsWith("/awards")
                     ? "proposal-workspace"
                     : "home-workspace"
                 }

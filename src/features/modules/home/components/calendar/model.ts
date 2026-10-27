@@ -40,7 +40,7 @@ export function viewLabel(provider: CalendarProvider) {
 const MODULE_PROVIDERS: [string, CalendarProvider][] = [
   ["/contracts", "CONTRACT"],
   ["/modules/ethics", "ETHICS"],
-  ["/modules/awards", "AWARD"],
+  ["/awards", "AWARD"],
   ["/opportunities/eoi", "AOI"],
 ];
 export function providerOf(row: AttentionRow): CalendarProvider {

@@ -1,14 +1,13 @@
 "use client";
 import { idPart } from "@/lib/ids";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { InsightChart } from "./insight-chart";
 import { chartIsEmpty, dynamicChartData } from "@/lib/chart-options";
 import { State } from "@/components/feedback/state";
 import { RecordSkeleton, ChartSkeleton } from "@/components/feedback/skeleton";
 import { useToast } from "@/components/feedback/toast";
-import { AnimatePresence } from "motion/react";
 import { Icon } from "@/components/ui/icon";
-import { Pop } from "@/components/ui/pop";
+import { ActionMenu } from "@/components/ui/action-menu";
 import { dateDisplay } from "@/lib/format";
 import { OpportunityCard } from "@/features/modules/opportunities/components/opportunity-card";
 import { home, isOffline, useApi, usePagedApi } from "@/lib/api";
@@ -226,74 +225,7 @@ function ChartMenu({
       : []),
     ...(link ? [{ key: "link", label: link, run: onLink }] : []),
   ];
-  const [open, setOpen] = useState(false),
-    host = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    host.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
-    const outside = (e: PointerEvent) => {
-      if (!host.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("pointerdown", outside);
-    return () => document.removeEventListener("pointerdown", outside);
-  }, [open]);
-  const move = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    const all = [
-      ...e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]'),
-    ];
-    const i = all.indexOf(document.activeElement as HTMLElement);
-    const step: Record<string, number> = { ArrowDown: 1, ArrowUp: -1 };
-    if (e.key === "Escape") {
-      setOpen(false);
-      host.current?.querySelector<HTMLElement>("button")?.focus();
-    } else if (e.key in step) {
-      e.preventDefault();
-      all[(i + step[e.key] + all.length) % all.length]?.focus();
-    }
-  };
-  return (
-    <div className="chart-menu" ref={host}>
-      <button
-        id={`${id}-button`}
-        type="button"
-        className="chart-menu-trigger"
-        aria-label={label}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={`${id}-list`}
-        onClick={() => setOpen((o) => !o)}
-      >
-        <Icon name="overflow" />
-      </button>
-      <AnimatePresence>
-        {open && (
-          <Pop
-            id={`${id}-list`}
-            role="menu"
-            aria-label={label}
-            className="chart-menu-list"
-            onKeyDown={move}
-          >
-            {items.map((item) => (
-              <button
-                key={item.key}
-                id={`${id}-${item.key}`}
-                type="button"
-                role="menuitem"
-                tabIndex={-1}
-                onClick={() => {
-                  setOpen(false);
-                  item.run();
-                }}
-              >
-                {item.label}
-              </button>
-            ))}
-          </Pop>
-        )}
-      </AnimatePresence>
-    </div>
-  );
+  return <ActionMenu id={id} label={label} items={items} />;
 }
 const validSize = (cols: string, rows: string) => {
   const c = Number(cols),
@@ -535,6 +467,7 @@ export function DynamicChartsPanel({
         ))}
       </div>
       <div
+        key={module}
         role="tabpanel"
         id={`dynamic-module-${module}`}
         aria-labelledby={`dynamic-selector-${module}`}

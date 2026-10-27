@@ -126,6 +126,7 @@ const HISTORY: Record<string, Record<string, unknown>[]> = {
 };
 const CONTRACT_STAGES = [
   {
+    stage_id: 701,
     approval_number: "C_1301",
     level_id: 701,
     level_name: "Stage 1",
@@ -137,6 +138,7 @@ const CONTRACT_STAGES = [
     remarks: "NA",
   },
   {
+    stage_id: 702,
     approval_number: "C_1301",
     level_id: 702,
     level_name: "Stage 2",

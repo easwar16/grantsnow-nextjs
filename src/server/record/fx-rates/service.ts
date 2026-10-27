@@ -208,7 +208,8 @@ const saveInput = z
           .object({
             currency: z.string().min(1).max(10),
             reset: z.boolean(),
-            rate: z.number().finite().optional(),
+            // An exchange rate of 0 or below would zero or flip every converted amount.
+            rate: z.number().finite().positive().optional(),
           })
           .strict(),
       )

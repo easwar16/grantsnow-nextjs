@@ -89,6 +89,12 @@
   border-color: var(--gn-danger);
 }
 .error,
+/* The control narrowed inside its cell (legacy oj-md-n on the input). */
+.controlBox {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
 .cellError {
   display: block;
   font-size: 11px;
@@ -167,45 +173,6 @@
   display: inline-flex;
   cursor: pointer;
 }
-.switch input {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-.track {
-  position: relative;
-  width: 36px;
-  height: 20px;
-  background: var(--gn-border-input);
-  border-radius: 10px;
-  transition: background var(--gn-dur-fast) var(--gn-ease);
-}
-.track::after {
-  content: "";
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  background: var(--gn-surface);
-  border-radius: 50%;
-  transition: transform var(--gn-dur-fast) var(--gn-ease);
-}
-.switch input:checked + .track {
-  background: var(--gn-brand);
-}
-.switch input:checked + .track::after {
-  transform: translateX(16px);
-}
-:global(:where(:root:not([data-input="pointer"])))
-  .switch
-  input:focus-visible
-  + .track {
-  box-shadow: 0 0 0 2px var(--gn-brand);
-}
 /* GRID. */
 .grid {
   display: flex;
@@ -224,30 +191,13 @@
 }
 .tableWrap {
   position: relative;
-  max-height: 400px;
-  overflow: auto;
   border: 1px solid var(--gn-divider);
 }
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-/* columns-default.header-class-name "bg-brand-color oj-color-invert". */
 .table th {
-  position: sticky;
-  top: 0;
-  padding: 6px 8px;
-  font-weight: 600;
-  text-align: start;
   white-space: nowrap;
-  color: var(--gn-on-brand);
-  background: var(--gn-brand);
 }
 .table td {
   min-width: 120px;
-  padding: 4px 8px;
-  vertical-align: top;
-  border-top: 1px solid var(--gn-divider);
 }
 .editing td {
   /* GN-Angular dyn-grid.css: tr.editing td is the 0.03 tint. */
@@ -274,8 +224,4 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .track,
-  .track::after {
-    transition: none;
-  }
 }

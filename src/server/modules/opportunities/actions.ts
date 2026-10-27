@@ -30,10 +30,10 @@ import {
   afterCheck,
   bundleOf,
   convertGates,
-  pageAccess,
   type ConvertKind,
   type Opener,
 } from "./gates";
+import { pageAccess } from "@/server/platform/permissions";
 import {
   applyInput,
   bookmarkInput,

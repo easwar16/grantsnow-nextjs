@@ -9,14 +9,13 @@ import {
   resourceVisible,
   type Resources,
 } from "@/server/platform/configuration/resources";
-import { displayFormat } from "@/server/platform/configuration/formatting";
 import { plainText, sanitizeHtml } from "@/server/platform/sanitize";
-import { dateDisplay, type FormatSettings } from "@/lib/format";
 import { AppError } from "@/lib/errors";
 import { mapApprovalGraph } from "./graph";
 import type { UserContext } from "@/shared/auth/types";
 import type { ApprovalRow } from "@/features/record/objects/types";
 import type {
+  ApprovalTreeNode,
   AddStageSetup,
   ApprovalStage,
   Choice,
@@ -127,6 +126,10 @@ const KEYS: Record<WorkflowTextKey, [string, string, string]> = {
   ],
   withdraw: ["button-labels", "approval-withdraw", "Withdraw"],
   history: ["header-labels", "approval-history", "Approval History"],
+  listView: ["labels", "approval-list-view", "List View"],
+  graphView: ["labels", "approval-graph-view", "Graph View"],
+  tableView: ["labels", "approval-table-view", "Table View"],
+  cardView: ["labels", "approval-card-view", "Card View"],
   historyName: ["table-headers", "approvals-full-name", "Full Name"],
   historyStatus: ["table-headers", "approval-status", "Status"],
   historyStage: ["table-headers", "approval-stage", "Stage"],
@@ -218,19 +221,10 @@ const doc = (host: ApprovalHost) => ({
 const readStages = (host: ApprovalHost) => approvals.stages(doc(host));
 const readUsers = (host: ApprovalHost, stageId: number) =>
   approvals.stageUsers({ ...doc(host), stageId });
-/** The timestamp in the configured date format plus its time, as legacy's `DEFAULT_DATE_FORMAT + " HH:mm:ss"`. */
-function stamp(value: string | null | undefined, format?: FormatSettings) {
-  if (!value) return "—";
-  const time = value.match(/T(\d{2}:\d{2}:\d{2})/)?.[1];
-  return time
-    ? `${dateDisplay(value, format)} ${time}`
-    : dateDisplay(value, format);
-}
-/** The document's approval history (getApprovalHistory), as the History panel's approval rows. */
+/** The document's approval history (getApprovalHistory); `updated` stays raw, the browser shows it in the viewer's zone. */
 export async function approvalHistoryRows(
   transaction: string,
   approvalType: string,
-  format?: FormatSettings,
 ): Promise<ApprovalRow[]> {
   const rows = await approvals.history({ transaction, approvalType });
   return rows.map((r, i) => ({
@@ -240,7 +234,7 @@ export async function approvalHistoryRows(
     stage: show(r.stage_desc),
     comments:
       typeof r.user_comments === "string" ? plainText(r.user_comments) : "",
-    updated: stamp(r.last_update_date, format),
+    updated: r.last_update_date ?? "",
   }));
 }
 
@@ -302,28 +296,20 @@ function stageView(s: StageRow, host: ApprovalHost): ApprovalStage {
       host.username !== null,
   };
 }
+const viewsOf = (rows: Resources, host: ApprovalHost) => ({
+  graph: resourceVisible(rows, host.bundle, "labels", "approval-graph-view"),
+  cards: resourceVisible(rows, host.bundle, "labels", "approval-card-view"),
+});
 /** Stages, history and gates for the Workflow tab; a history failure degrades only its table. */
 export async function workflowView(host: ApprovalHost): Promise<WorkflowView> {
-  const [rows, stages, history, graph] = await Promise.all([
+  const [rows, stages, history] = await Promise.all([
     resources(),
     readStages(host),
-    displayFormat()
-      .then((format) =>
-        approvalHistoryRows(host.docNum, host.approvalType, format),
-      )
-      .then(
-        (rows) => ({ rows }),
-        (e: unknown) => {
-          if (e instanceof AppError && e.status === 401) throw e;
-          return { error: "Approval history could not be loaded." };
-        },
-      ),
-    approvals.graph({ docNum: host.docNum, docType: host.docType }).then(
-      (raw) => ({ root: mapApprovalGraph(raw, host.docNum) }),
-      (error: unknown) => {
-        if (error instanceof AppError && [401, 403].includes(error.status ?? 0))
-          throw error;
-        return { error: "Approval graph could not be loaded." };
+    approvalHistoryRows(host.docNum, host.approvalType).then(
+      (rows) => ({ rows }),
+      (e: unknown) => {
+        if (e instanceof AppError && e.status === 401) throw e;
+        return { error: "Approval history could not be loaded." };
       },
     ),
   ]);
@@ -331,10 +317,15 @@ export async function workflowView(host: ApprovalHost): Promise<WorkflowView> {
     texts: workflowTexts(rows, host.bundle),
     stages: stages.map((s) => stageView(s, host)),
     history,
-    graph: "root" in graph ? graph.root : null,
-    graphError: "error" in graph ? graph.error : undefined,
+    views: viewsOf(rows, host),
     gates: routeGates(stages, host, rows),
   };
+}
+/** The route as a tree, read when Graph View is opened (legacy loads it on the tab); only where the RB shows it. */
+async function routeGraph(host: ApprovalHost): Promise<ApprovalTreeNode> {
+  if (!viewsOf(await resources(), host).graph)
+    throw new AppError("FORBIDDEN", "Graph View is not available.", 403);
+  return mapApprovalGraph(await approvals.graph(doc(host)), host.docNum);
 }
 
 /** A stage of this document's route; a stage id the route does not hold is refused. */
@@ -746,6 +737,8 @@ export async function workflowRead(
       return approverPeople();
     case "groups":
       return approverGroups(host, params.get("type"));
+    case "graph":
+      return routeGraph(host);
     default:
       return workflowView(host);
   }

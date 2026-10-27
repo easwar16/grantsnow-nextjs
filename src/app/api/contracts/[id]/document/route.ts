@@ -1,9 +1,9 @@
 import { AppError } from "@/lib/errors";
-import { contractId } from "@/features/contracts/schema";
+import { contractId } from "@/features/modules/contracts/schema";
 import {
   contractDocument,
   type ContractDocumentKind,
-} from "@/server/contracts/documents";
+} from "@/server/modules/contracts/documents";
 import { failure } from "@/server/http/response";
 
 type Context = { params: Promise<{ id: string }> };

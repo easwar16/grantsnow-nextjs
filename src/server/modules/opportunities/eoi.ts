@@ -1,5 +1,6 @@
 import "server-only";
 import { safeUrl } from "@/lib/security";
+import { containsClause } from "@/server/oracle/where";
 import { cache } from "react";
 import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
@@ -12,14 +13,18 @@ import {
   type Resources,
 } from "@/server/platform/configuration/resources";
 import { AppError } from "@/lib/errors";
+import {
+  nameChoices,
+  objectDateChoices,
+  statusChoices,
+} from "@/server/platform/configuration/choices";
 import { splitFunders } from "@/features/modules/opportunities/display";
 import {
   EOI_PAGE_SIZE,
   type EoiFilters,
 } from "@/features/modules/opportunities/eoi-list/schema";
+import { EOI_STATUS_TONE } from "@/shared/opportunities/eoi-record";
 import {
-  EOI_STATUS_TONE,
-  type EoiChoice,
   type EoiListGates,
   type EoiListPage,
   type EoiListRow,
@@ -104,9 +109,7 @@ export function gatedFilters(f: EoiFilters, g: EoiListGates): EoiFilters {
 const esc = (v: string) => v.replace(/'/g, "''");
 // Column names are fixed literals here; only values come from the browser, and every value is quote-doubled.
 const contains = (column: string, value: string) =>
-  value.trim()
-    ? `LOWER("${column}") LIKE LOWER('%${esc(value.trim())}%')`
-    : null;
+  value.trim() ? containsClause(`"${column}"`, value.trim()) : null;
 
 /** VBCS fetchFilterCriteria, in its order (GN-Angular eoiCriteria + whereClause); null when nothing applies. */
 export function eoiWhereClause(f: EoiFilters): string | null {
@@ -201,53 +204,8 @@ export function mapEoiPage(raw: unknown, g: EoiListGates): EoiListPage {
   };
 }
 
-const items = z.object({
-  items: z.array(z.record(z.string(), z.unknown())),
-});
-const str = (v: unknown) =>
-  typeof v === "string" && v.trim() !== "" ? v : undefined;
-
-/** EOI_STATUS with "All" (code '') first, as the original's loadLookups adds it. */
-export function eoiStatusChoices(raw: unknown): EoiChoice[] {
-  const rows = items
-    .parse(raw)
-    .items.filter(
-      (r) =>
-        (r.lookup_type_code ?? "EOI_STATUS") === "EOI_STATUS" &&
-        typeof r.lookup_code === "string" &&
-        /^[A-Z0-9_]{1,40}$/.test(r.lookup_code),
-    );
-  return [
-    { value: "", label: "All" },
-    ...rows.map((r) => ({
-      value: r.lookup_code as string,
-      label:
-        str(r.lookup_code_descr) ??
-        str(r.lookup_code_value) ??
-        (r.lookup_code as string),
-    })),
-  ];
-}
-
-/** getOppFunders values, de-duplicated (one funder appears once per site). */
-export function eoiFunderChoices(raw: unknown): EoiChoice[] {
-  const values = items.parse(raw).items.flatMap((r) => str(r.value) ?? []);
-  return [...new Set(values)].map((value) => ({ value, label: value }));
-}
-
-const sortColumn = /^[A-Za-z][A-Za-z0-9_]{0,62}$/;
-/** getObjectDates for OPPORTUNITIES-EOI; an unsafe column name is dropped. */
-export function eoiSortChoices(raw: unknown): EoiChoice[] {
-  return items.parse(raw).items.flatMap((r) => {
-    const value = str(r.column_name);
-    return value && sortColumn.test(value)
-      ? [{ value, label: str(r.column_description) ?? value }]
-      : [];
-  });
-}
-
 const sortChoices = cache(async () =>
-  eoiSortChoices(
+  objectDateChoices(
     await lookups.objectDates({ objectType: "OPPORTUNITIES-EOI" }),
   ),
 );
@@ -260,9 +218,13 @@ export async function eoiListView(): Promise<EoiListView> {
   const gates = eoiListGates(rows);
   const [statuses, funders, sorts] = await Promise.allSettled([
     gates.statusList
-      ? lookups.codes({ types: "EOI_STATUS" }).then(eoiStatusChoices)
+      ? lookups
+          .codes({ types: "EOI_STATUS" })
+          .then((raw) => statusChoices(raw, "EOI_STATUS"))
       : [],
-    gates.funder ? opportunities.funders().then(eoiFunderChoices) : [],
+    gates.funder
+      ? opportunities.funders().then((raw) => nameChoices(raw, "value"))
+      : [],
     gates.dateSort ? sortChoices() : [],
   ]);
   const errors: string[] = [];

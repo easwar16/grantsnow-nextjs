@@ -16,8 +16,9 @@
 }
 .head h2 {
   margin: 0;
-  font-size: 16px;
-  font-weight: 700;
+  /* oj-typography-heading-xs, measured: 15px extra-bold. */
+  font-size: 15px;
+  font-weight: 800;
 }
 .end {
   justify-content: flex-start;
@@ -33,26 +34,8 @@
 .tableWrap {
   overflow-x: auto;
 }
-.tableWrap table {
-  width: 100%;
-  border-collapse: collapse;
-  background: var(--surface);
-}
-.tableWrap th,
 .tableWrap td {
-  padding: 12px;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
   overflow-wrap: anywhere;
-}
-/* Legacy header cells: bg-brand-color oj-color-invert. */
-.tableWrap th {
-  font-weight: 600;
-  background: var(--gn-brand);
-  color: var(--on-accent);
-}
-.tableWrap tbody td {
-  background: #f1f0ef;
 }
 .link {
   min-height: 0;
@@ -83,6 +66,10 @@
   padding: 12px 0;
   font-weight: 700;
   cursor: pointer;
+}
+.section > summary {
+  font-size: 15px;
+  font-weight: 800;
 }
 .delegates,
 .pages {
@@ -130,51 +117,13 @@
   flex: 0 1 33%;
   min-width: 140px;
 }
-/* oj-switch with its label after it, as the record panel's Finalize switch (36x20). */
+/* oj-switch with its label after it; the switch itself is the global input[role="switch"]. */
 .switch {
   position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   cursor: pointer;
-}
-.switch input {
-  position: absolute;
-  opacity: 0;
-}
-.track {
-  position: relative;
-  width: 36px;
-  height: 20px;
-  background: var(--gn-border-input);
-  border-radius: 10px;
-  transition: background var(--gn-dur-fast) var(--gn-ease);
-}
-.track::after {
-  content: "";
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  background: var(--gn-surface);
-  border-radius: 50%;
-  transition: transform var(--gn-dur-fast) var(--gn-ease);
-}
-.switch input:checked + .track {
-  background: var(--gn-brand);
-}
-.switch input:checked + .track::after {
-  transform: translateX(16px);
-}
-:global(:where(:root:not([data-input="pointer"])))
-  .switch
-  input:focus-visible
-  + .track {
-  box-shadow: 0 0 0 2px var(--gn-brand);
-}
-.switch input:disabled + .track {
-  opacity: 0.6;
 }
 .rights {
   display: flex;

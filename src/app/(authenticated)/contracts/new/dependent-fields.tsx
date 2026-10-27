@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
-import { loadContractFormChoices } from "./actions";
+import { FormSelect } from "@/components/ui/form-select";
+import { useState } from "react";
+import { contracts, useApi } from "@/lib/api";
 
 type Choice = { value: string; label: string };
 export function DependentFields({
@@ -31,122 +32,84 @@ export function DependentFields({
   const [contractType, setContractType] = useState("");
   const [relationType, setRelationType] = useState("");
   const [orgId, setOrgId] = useState("");
-  const [dependent, setDependent] = useState<{
-    templates: Choice[];
-    items: Choice[];
-  }>({ templates: [], items: [] });
-  const [error, setError] = useState("");
-  useEffect(() => {
-    if (!contractType && !relationType) return;
-    let active = true;
-    loadContractFormChoices({ contractType, relationType, orgId })
-      .then((value) => {
-        if (active) {
-          setDependent(value);
-          setError("");
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setDependent({ templates: [], items: [] });
-          setError("Contract choices are unavailable.");
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, [contractType, relationType, orgId]);
+  const { data, error } = useApi(
+    contracts.choices,
+    contractType || relationType ? { contractType, relationType, orgId } : null,
+  );
+  const dependent = data ?? { templates: [], items: [] };
   return (
     <>
       {visible.type && (
         <label>
           {labels.type} <b>*</b>
-          <select
+          <FormSelect
+            id="contract-new-type"
             name="contract_type"
+            label={labels.type}
+            options={types}
             required
             value={contractType}
-            onChange={(event) => setContractType(event.target.value)}
-          >
-            <option value="">Select Contract Type</option>
-            {types.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </select>
+            onChange={setContractType}
+          />
         </label>
       )}
       {visible.relation && (
         <label>
           {labels.relation}
-          <select
+          <FormSelect
+            id="contract-new-relation"
             name="contract_level"
+            label={labels.relation}
+            options={relations}
             value={relationType}
-            onChange={(event) => setRelationType(event.target.value)}
-          >
-            <option value="">Select Contract Relation Type</option>
-            {relations.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </select>
+            onChange={setRelationType}
+          />
         </label>
       )}
       {visible.item && (
         <label>
           {labels.item}
-          <select
-            name="object_ref_id"
-            defaultValue=""
+          <FormSelect
             key={`item-${relationType}-${orgId}`}
+            id="contract-new-item"
+            name="object_ref_id"
+            label={labels.item}
+            options={dependent.items}
             disabled={!relationType}
-          >
-            <option value="">Select Relation Item</option>
-            {dependent.items.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </select>
+          />
         </label>
       )}
       {visible.template && (
         <label>
           {labels.template}
-          <select
-            name="template_id"
-            defaultValue=""
+          <FormSelect
             key={`template-${contractType}-${relationType}`}
+            id="contract-new-template"
+            name="template_id"
+            label={labels.template}
+            options={dependent.templates}
             disabled={!contractType}
-          >
-            <option value="">Select Contract template</option>
-            {dependent.templates.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </select>
+          />
         </label>
       )}
       {visible.org && (
         <label>
           {labels.org}
-          <select
+          <FormSelect
+            id="contract-new-org"
             name="org_id"
+            label={labels.org}
+            options={orgs}
             value={orgId}
-            onChange={(event) => setOrgId(event.target.value)}
-          >
-            <option value="">Select Org Unit</option>
-            {orgs.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </select>
+            onChange={setOrgId}
+          />
         </label>
       )}
-      {error && <p role="status">{error}</p>}
+      {error && (
+        <p id="contract-new-choices-error" role="status">
+          Contract choices are unavailable.
+        </p>
+      )}
     </>
   );
 }
