@@ -24,7 +24,7 @@ import { TabLock } from "./record-context";
 import { Summary } from "./summary";
 import { EoiObjectTab } from "./object-tabs";
 import { AttachmentsTab } from "@/features/record/attachments/attachments-tab";
-import styles from "./record.module.css";
+import styles from "@/features/record/shell/record-tab.module.css";
 const BUNDLE = "opportunities-eoi";
 async function applicationTexts() {
   const rows = await resources();

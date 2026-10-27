@@ -206,7 +206,12 @@ describe("route gates", () => {
       addStage: false,
     });
     expect(view.stages[0]).toMatchObject({ canDelete: false, canAct: false });
-    expect(view.graph?.children[0].name).toBe("Review");
+    // The graph is read only when Graph View opens.
+    expect(state.oracle.mock.calls.map(([op]) => op)).not.toContain(
+      "getApproval_setupApproval_stages_graph",
+    );
+    const graph = await GET(new Request(url("?view=graph")), params);
+    expect((await graph.json()).children[0].name).toBe("Review");
     for (const body of [
       { op: "act", action: "Submitted" },
       { op: "generate" },

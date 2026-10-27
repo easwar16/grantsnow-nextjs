@@ -6,6 +6,7 @@ import {
 import {
   mergeResourceDefaults,
   proposalColumns,
+  proposalFilters,
 } from "@/server/platform/configuration/resources";
 import { mapProposals } from "@/server/modules/proposals/service";
 import { parseQuery } from "@/features/modules/proposals/schemas";
@@ -48,6 +49,32 @@ it("inherits current VBCS resource defaults but honors explicit visibility overr
   ]);
   expect(proposalColumns(rows).some((c) => c.key === "value")).toBe(false);
   expect(() => mergeResourceDefaults({ response_msg: "ERROR" })).toThrow();
+});
+it("shows each listing filter only on its list-* entry's 'Y', labelled from the bundle", () => {
+  const rows = mergeResourceDefaults([
+    {
+      module_name: "PROPOSAL",
+      label_type: "labels",
+      label_name: "list-title",
+      label_value: "Project title",
+      is_visible: "Y",
+    },
+    {
+      module_name: "PROPOSAL",
+      label_type: "labels",
+      label_name: "list-tags",
+      label_value: "Tags",
+      is_visible: "N",
+    },
+  ]);
+  const filters = proposalFilters(rows);
+  expect(filters.search).toBe("Project title");
+  expect(filters.tags).toBeNull();
+  // A key missing from the bundle and the seed stays hidden (fail closed).
+  expect(
+    proposalFilters(rows.filter((r) => r.label_name !== "list-category"))
+      .category,
+  ).toBeNull();
 });
 it("ignores the unreliable ORDS hasMore flag: total_count, else a full page, decides", () => {
   const q = parseQuery(new URLSearchParams());

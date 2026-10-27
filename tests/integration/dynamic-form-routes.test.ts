@@ -31,6 +31,7 @@ vi.mock("@/server/oic/connection", () => ({
   oicUpload: state.oicUpload,
   oicDownload: state.oicDownload,
   oicDelete: state.oicDelete,
+  exclusiveLocation: (_: string, store: () => Promise<unknown>) => store(),
 }));
 vi.mock("@/server/platform/configuration/service", () => ({
   dashboardRoles: async () => state.dashboard,

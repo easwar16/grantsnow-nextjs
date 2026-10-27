@@ -34,7 +34,7 @@
   z-index: 30;
   display: flex;
   flex-direction: column;
-  width: min(520px, calc(100vw - 24px));
+  width: 33.333vw; /* legacy #popupNotifications oj-md-4 */
   color: var(--gn-text);
   background: var(--gn-surface);
   border: 1px solid var(--gn-divider);
@@ -86,4 +86,11 @@
 }
 .empty p {
   margin: 0 0 6px;
+}
+
+/* legacy oj-sm-12 below the JET md breakpoint */
+@media (max-width: 767px) {
+  .popup {
+    width: calc(100vw - 24px);
+  }
 }

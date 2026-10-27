@@ -35,7 +35,7 @@ it("sends the live initial-load contract: paging only, no where clause or sort",
 it("matches the live title-filter where clause exactly", () => {
   const p = oracleQuery(parseQuery(new URLSearchParams("search=test")));
   expect(p.get("p_where_clause")).toBe(
-    `(LOWER("proposal_title") LIKE LOWER('%test%'))`,
+    `(LOWER("proposal_title") LIKE LOWER('%test%') ESCAPE '\\')`,
   );
   expect([...p.keys()]).toEqual(["p_where_clause", "p_offset", "p_limit"]);
 });
@@ -48,18 +48,25 @@ it("builds legacy date bounds, equality, groups and paging in legacy order", () 
     ),
   );
   expect(p.get("p_where_clause")).toBe(
-    `(LOWER("proposal_number") LIKE LOWER('%P_1%') AND "proposal_status_code"='DRFT' AND "creation_date">='2026-01-01 00:00:00' AND "creation_date"<='2026-12-31 23:59:59' AND ("pi_employee_number"='E1'))`,
+    `(LOWER("proposal_number") LIKE LOWER('%P\\_1%') ESCAPE '\\' AND "proposal_status_code"='DRFT' AND "creation_date">='2026-01-01 00:00:00' AND "creation_date"<='2026-12-31 23:59:59' AND ("pi_employee_number"='E1'))`,
   );
   expect(p.get("p_offset")).toBe("20");
   expect(p.get("p_limit")).toBe("10");
 });
 it.each([
-  ["search=O'Brien", `(LOWER("proposal_title") LIKE LOWER('%O''Brien%'))`],
+  [
+    "search=O'Brien",
+    `(LOWER("proposal_title") LIKE LOWER('%O''Brien%') ESCAPE '\\')`,
+  ],
   [
     "search=x') OR 1=1 --",
-    `(LOWER("proposal_title") LIKE LOWER('%x'') OR 1=1 --%'))`,
+    `(LOWER("proposal_title") LIKE LOWER('%x'') OR 1=1 --%') ESCAPE '\\')`,
   ],
-  ["sponsor='", `(LOWER("primary_sponsorer") LIKE LOWER('%''%'))`],
+  ["sponsor='", `(LOWER("primary_sponsorer") LIKE LOWER('%''%') ESCAPE '\\')`],
+  [
+    "search=50%25 a_b c%5C",
+    `(LOWER("proposal_title") LIKE LOWER('%50\\% a\\_b c\\\\%') ESCAPE '\\')`,
+  ],
 ])("escapes quotes so %s stays one literal", (input, clause) =>
   expect(
     oracleQuery(parseQuery(new URLSearchParams(input))).get("p_where_clause"),
@@ -187,7 +194,7 @@ it("maps advanced codes and match-any tags without accepting raw query input", (
     ),
   );
   expect(p.get("p_where_clause")).toBe(
-    `("pi_dept_code"='42' AND "activity_type_lkp_code"='RESEARCH' AND "proposal_type_lkp_code"='GRANT' AND ("assigned_to"='17') AND (LOWER("tags") LIKE LOWER('%health%') OR LOWER("tags") LIKE LOWER('%climate%')))`,
+    `("pi_dept_code"='42' AND "activity_type_lkp_code"='RESEARCH' AND "proposal_type_lkp_code"='GRANT' AND ("assigned_to"='17') AND (LOWER("tags") LIKE LOWER('%health%') ESCAPE '\\' OR LOWER("tags") LIKE LOWER('%climate%') ESCAPE '\\'))`,
   );
   expect(p.toString()).not.toContain("evil");
   expect(p.has("q")).toBe(false);

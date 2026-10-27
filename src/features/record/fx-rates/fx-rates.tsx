@@ -64,15 +64,18 @@ export function FxRates({
   const { texts, editable } = data,
     saving = isActive("save"),
     column = editedColumn(data.mode),
-    rows = withEdits(data.rates, edits, data.mode);
+    rows = withEdits(data.rates, edits, data.mode),
+    invalid = (text?: string) =>
+      text !== undefined && text.trim() !== "" && !(Number(text) > 0),
+    blocked = Object.values(typed).some(invalid);
   const setRate = (currency: string, text: string) => {
     setTyped((t) => ({ ...t, [currency]: text }));
     const n = text.trim() === "" ? NaN : Number(text);
     setEdits((all) => {
       const reset = all[currency]?.reset ?? false,
         rest = without(all, currency);
-      // An empty or unreadable box changes nothing; legacy would have posted a null rate.
-      if (!Number.isFinite(n))
+      // An empty, unreadable or non-positive box changes nothing; legacy would have posted it.
+      if (!(n > 0))
         return reset ? { ...rest, [currency]: { currency, reset } } : rest;
       return { ...rest, [currency]: { currency, reset, rate: n } };
     });
@@ -102,6 +105,8 @@ export function FxRates({
         className={`gn-control ${styles.input}`}
         type="number"
         step="any"
+        min="0"
+        aria-invalid={invalid(typed[currency]) || undefined}
         aria-label={`${header} ${currency}`}
         value={typed[currency] ?? shown(value)}
         disabled={saving}
@@ -115,8 +120,8 @@ export function FxRates({
       {rows.length === 0 ? (
         <p id={`${id}-empty`}>{texts.noData}</p>
       ) : (
-        <div className={styles.scroll}>
-          <table id={`${id}-table`} className={styles.table}>
+        <div className={`gn-table-scroll ${styles.scroll}`}>
+          <table id={`${id}-table`} className={`gn-table ${styles.table}`}>
             <thead>
               <tr>
                 <th scope="col">{texts.currency}</th>
@@ -169,7 +174,7 @@ export function FxRates({
             type="button"
             id={`${id}-save`}
             className="gn-btn gn-btn--primary"
-            disabled={saving}
+            disabled={saving || blocked}
             onClick={save}
           >
             {texts.save}

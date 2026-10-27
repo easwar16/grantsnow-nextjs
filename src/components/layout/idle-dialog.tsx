@@ -1,4 +1,5 @@
 "use client";
+import { clearTabState } from "@/lib/tab-state";
 import { useEffect, useRef } from "react";
 import { useShell } from "./shell-context";
 import styles from "./idle-dialog.module.css";
@@ -54,6 +55,7 @@ export function IdleDialog() {
         id="idle-dialog-form"
         action="/api/auth/logout"
         method="post"
+        onSubmit={clearTabState}
         className={styles.foot}
       >
         <button id="idle-dialog-login" type="submit" className="primary">

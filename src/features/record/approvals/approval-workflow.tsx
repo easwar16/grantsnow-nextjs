@@ -1,20 +1,17 @@
 "use client";
-import {
-  memo,
-  useCallback,
-  useState,
-  useTransition,
-  type ReactNode,
-} from "react";
+import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
+import { memo, useCallback, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { State } from "@/components/feedback/state";
+import { Skeleton } from "@/components/feedback/skeleton";
+import { LocalTime } from "@/components/ui/local-time";
 import { useToast } from "@/components/feedback/toast";
 import { HelpButton } from "@/components/ui/help-button";
 import { Icon } from "@/components/ui/icon";
 import { useConfirm } from "@/components/dialog/action-dialog";
 import { useActionFailure } from "@/components/dialog/action-failure";
-import { approvals } from "@/lib/api";
+import { approvals, useApi } from "@/lib/api";
 import { useStoreApi } from "@/lib/store/app-store";
 import { idPart } from "@/lib/ids";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
@@ -29,7 +26,7 @@ import type {
 import styles from "./approval-workflow.module.css";
 
 /** Legacy oj-badge tones by stage status; any other status is the plain badge. */
-const TONE: Record<string, string> = {
+const TONE: Record<string, StatusTone> = {
   Rework: "warning",
   Notified: "info",
   Approved: "success",
@@ -93,9 +90,9 @@ const Stage = memo(function Stage({
           </li>
           {!stage.review && stage.status && (
             <li>
-              <span className="gn-status" data-tone={TONE[stage.status]}>
+              <StatusBadge tone={TONE[stage.status]}>
                 <strong>{texts.status}</strong> : {stage.status}
-              </span>
+              </StatusBadge>
             </li>
           )}
         </ul>
@@ -194,16 +191,10 @@ export function ApprovalWorkflow({
   id,
   api,
   view,
-  showHistory = true,
-  graphContent,
-  compactGraph = false,
 }: {
   id: string;
   api: string;
   view: WorkflowView;
-  showHistory?: boolean;
-  graphContent?: ReactNode;
-  compactGraph?: boolean;
 }) {
   const { texts, stages, gates, history } = view;
   const router = useRouter(),
@@ -274,10 +265,7 @@ export function ApprovalWorkflow({
     [ask, texts, write],
   );
   return (
-    <div
-      id={id}
-      className={`${styles.workflow} ${compactGraph ? styles.compactGraph : ""}`}
-    >
+    <div id={id} className={styles.workflow}>
       {stages.length > 0 && (
         <details
           id={`${id}-route`}
@@ -285,33 +273,41 @@ export function ApprovalWorkflow({
           open
         >
           <summary className={styles.head}>
-            <h3 id={`${id}-route-heading`}>{texts.route}</h3>
-            <span
-              className={styles.viewSwitch}
-              role="group"
-              aria-label={`${texts.route} view`}
-            >
-              <button
-                type="button"
-                aria-pressed={routeView === "list"}
-                onClick={(event) => {
-                  event.preventDefault();
-                  setRouteView("list");
-                }}
+            <h3 id={`${id}-route-heading`}>
+              <Icon name="chevron-down" size={16} className={styles.chevron} />
+              {texts.route}
+            </h3>
+            {/* Legacy tabBarApprovals: Graph View only where the bundle shows it. */}
+            {view.views.graph && (
+              <span
+                className={styles.viewSwitch}
+                role="group"
+                aria-label={`${texts.route} view`}
               >
-                List View
-              </button>
-              <button
-                type="button"
-                aria-pressed={routeView === "graph"}
-                onClick={(event) => {
-                  event.preventDefault();
-                  setRouteView("graph");
-                }}
-              >
-                Graph View
-              </button>
-            </span>
+                <button
+                  type="button"
+                  id={`${id}-list-view`}
+                  aria-pressed={routeView === "list"}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    setRouteView("list");
+                  }}
+                >
+                  {texts.listView}
+                </button>
+                <button
+                  type="button"
+                  id={`${id}-graph-view`}
+                  aria-pressed={routeView === "graph"}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    setRouteView("graph");
+                  }}
+                >
+                  {texts.graphView}
+                </button>
+              </span>
+            )}
             {gates.addStage && (
               <button
                 type="button"
@@ -329,14 +325,7 @@ export function ApprovalWorkflow({
             )}
           </summary>
           {routeView === "graph" ? (
-            (graphContent ??
-            (view.graphError ? (
-              <State title={view.graphError} code="UPSTREAM" />
-            ) : view.graph ? (
-              <ApprovalTree root={view.graph} />
-            ) : (
-              <State title={texts.noData} />
-            )))
+            <RouteGraph id={`${id}-graph`} api={api} texts={texts} />
           ) : (
             <ol id={`${id}-stages`} className={styles.stages}>
               {stages.map((stage) => (
@@ -355,9 +344,12 @@ export function ApprovalWorkflow({
           )}
         </details>
       )}
-      {showHistory && (
-        <ApprovalHistory id={id} history={history} texts={texts} />
-      )}
+      <ApprovalHistory
+        id={id}
+        history={history}
+        texts={texts}
+        cards={view.views.cards}
+      />
       <div id={`${id}-footer`} className={styles.footer}>
         {gates.generate && (
           <button
@@ -451,53 +443,87 @@ export function ApprovalWorkflow({
   );
 }
 
-/** The same history section can stream after its route and be reused by every approval host. */
-export function ApprovalHistory({
+/** Graph View: the route read as a tree when the view is first opened, then held. */
+function RouteGraph({
+  id,
+  api,
+  texts,
+}: {
+  id: string;
+  api: string;
+  texts: Texts;
+}) {
+  const { data, error, retry } = useApi(approvals.graph, api);
+  if (error)
+    return (
+      <State
+        id={`${id}-error`}
+        title="Approval graph could not be loaded."
+        message={error.message}
+        code={error.code}
+        action={error.action}
+        retry={retry}
+      />
+    );
+  if (!data) return <Skeleton kind="chart" label={texts.graphView} />;
+  return <ApprovalTree root={data} />;
+}
+
+/** The route's history section, shared by every approval host. */
+function ApprovalHistory({
   id,
   history,
   texts,
-  standalone = false,
+  cards,
 }: {
   id: string;
   history: WorkflowView["history"];
   texts: WorkflowView["texts"];
-  standalone?: boolean;
+  /** Legacy's Card View tab, RB-gated. */
+  cards: boolean;
 }) {
   const [historyView, setHistoryView] = useState<"table" | "card">("table");
   return (
     <details
       id={`${id}-history`}
-      className={`gn-collapsible ${styles.panel} ${standalone ? styles.historyStandalone : ""}`}
+      className={`gn-collapsible ${styles.panel}`}
       open
     >
       <summary className={styles.head}>
-        <h3 id={`${id}-history-heading`}>{texts.history}</h3>
-        <span
-          className={styles.viewSwitch}
-          role="group"
-          aria-label={`${texts.history} view`}
-        >
-          <button
-            type="button"
-            aria-pressed={historyView === "table"}
-            onClick={(event) => {
-              event.preventDefault();
-              setHistoryView("table");
-            }}
+        <h3 id={`${id}-history-heading`}>
+          <Icon name="chevron-down" size={16} className={styles.chevron} />
+          {texts.history}
+        </h3>
+        {cards && (
+          <span
+            className={styles.viewSwitch}
+            role="group"
+            aria-label={`${texts.history} view`}
           >
-            Table View
-          </button>
-          <button
-            type="button"
-            aria-pressed={historyView === "card"}
-            onClick={(event) => {
-              event.preventDefault();
-              setHistoryView("card");
-            }}
-          >
-            Card View
-          </button>
-        </span>
+            <button
+              type="button"
+              id={`${id}-history-table-view`}
+              aria-pressed={historyView === "table"}
+              onClick={(event) => {
+                event.preventDefault();
+                setHistoryView("table");
+              }}
+            >
+              {texts.tableView}
+            </button>
+            <button
+              type="button"
+              id={`${id}-history-card-view`}
+              aria-pressed={historyView === "card"}
+              onClick={(event) => {
+                event.preventDefault();
+                setHistoryView("card");
+              }}
+            >
+              {texts.cardView}
+            </button>
+          </span>
+        )}
       </summary>
       {"error" in history ? (
         <State
@@ -530,13 +556,15 @@ export function ApprovalHistory({
                 </span>
                 <span>{row.status}</span>
               </span>
-              <time>{row.created || row.updated}</time>
+              <time>
+                <LocalTime value={row.updated} />
+              </time>
             </li>
           ))}
         </ol>
       ) : (
-        <div className={styles.tableWrap}>
-          <table id={`${id}-history-table`}>
+        <div className={`gn-table-scroll ${styles.tableWrap}`}>
+          <table id={`${id}-history-table`} className="gn-table">
             <thead>
               <tr>
                 <th scope="col">{texts.historyName}</th>
@@ -559,7 +587,9 @@ export function ApprovalHistory({
                   <td className={styles.comment} title={row.comments}>
                     {row.comments}
                   </td>
-                  <td>{row.updated}</td>
+                  <td>
+                    <LocalTime value={row.updated} />
+                  </td>
                 </tr>
               ))}
             </tbody>

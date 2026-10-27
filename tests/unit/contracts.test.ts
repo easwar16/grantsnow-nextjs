@@ -2,12 +2,15 @@ import { expect, it } from "vitest";
 import {
   parseContractQuery,
   contractSearch,
-} from "@/features/contracts/schema";
-import { contractOracleQuery, mapContracts } from "@/server/contracts/service";
+} from "@/features/modules/contracts/schema";
+import {
+  contractOracleQuery,
+  mapContracts,
+} from "@/server/modules/contracts/service";
 import { resolveOperationPath } from "@/server/oracle/connection";
 import { safeReturn } from "@/lib/security";
 import { mapApprovalGraph } from "@/server/record/approvals/graph";
-import { contractSignerStamp } from "@/features/contracts/format";
+import { contractSignerStamp } from "@/features/modules/contracts/format";
 
 const q = () => parseContractQuery(new URLSearchParams());
 const record = {
@@ -52,7 +55,7 @@ it("quotes a pasted contract number and delegates pagination to Oracle", () => {
     new URLSearchParams({ number: " C_'1 ", page: "2", status: "DRFT" }),
   );
   const oracle = contractOracleQuery(query);
-  expect(oracle.get("p_where_clause")).toContain("%C_''1%");
+  expect(oracle.get("p_where_clause")).toContain("%C\\_''1%') ESCAPE");
   expect(oracle.get("p_offset")).toBe("10");
   expect(contractSearch(query)).toContain("page=2");
 });
@@ -81,7 +84,7 @@ it("builds a bounded remote query for the source sidebar filters", () => {
   );
   const oracle = contractOracleQuery(query);
   expect(oracle.get("p_where_clause")).toContain("object_number");
-  expect(oracle.get("p_where_clause")).toContain("%P_''100%");
+  expect(oracle.get("p_where_clause")).toContain("%P\\_''100%') ESCAPE");
   expect(oracle.get("p_where_clause")).toContain(
     "\"contract_type\"='RESEARCH'",
   );
@@ -103,7 +106,7 @@ it("maps only display fields and refuses a mismatched Oracle page", () => {
   expect(() => mapContracts({ items: [record], offset: 10 }, q())).toThrow();
   expect(() => mapContracts({ items: [record, record] }, q())).toThrow();
 });
-it("accepts live ORDS null status with a verified status code", () => {
+it("names a live ORDS null status from the configured lookup", () => {
   const result = mapContracts(
     {
       items: [{ ...record, status: null, status_lkp_code: "SUB" }],
@@ -112,6 +115,7 @@ it("accepts live ORDS null status with a verified status code", () => {
       hasMore: true,
     },
     q(),
+    { SUB: "Submitted for Signing" },
   );
   expect(result.rows[0].status).toBe("Submitted for Signing");
   expect(result.total).toBe(257);

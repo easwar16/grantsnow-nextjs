@@ -1,5 +1,5 @@
-/** Width rules for the resizable listing filter panel (owner request, 2026-10-22). */
-export const PANEL_WIDTH = { min: 200, max: 560, initial: 240, step: 16 };
+/** Width rules for the resizable listing filter panel (owner request, 2026-10-22), in px. */
+export const PANEL_WIDTH = { min: 200, max: 560, initial: 240, step: 16 }; // initial: legacy .drawer-start 20rem (1rem = 12px)
 /** The results column keeps at least this much room when the panel grows. */
 export const RESULTS_MIN_WIDTH = 320;
 

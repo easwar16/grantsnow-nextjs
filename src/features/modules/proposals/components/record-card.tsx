@@ -1,9 +1,10 @@
+import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import Link from "next/link";
 import { recordIdentity } from "../record";
 import { RecordMetadata } from "@/components/ui/record-metadata";
 import { dateDisplay, moneyDisplay, type FormatSettings } from "@/lib/format";
 import type { Column, ProposalRow } from "../types";
-function tone(code?: string) {
+function tone(code?: string): StatusTone {
   if (["REJ", "ABANDON", "HIGH", "CRITICAL"].includes(code || ""))
     return "danger";
   if (["AWARD", "LOW"].includes(code || "")) return "success";
@@ -48,13 +49,9 @@ export function RecordCard({
       <div className="record-overline">
         <span aria-hidden="true">▧</span>
         <strong>{row.reference}</strong>
-        <span className={`record-chip ${tone(row.statusCode)}`}>
-          {row.status}
-        </span>
+        <StatusBadge tone={tone(row.statusCode)}>{row.status}</StatusBadge>
         {row.risk && (
-          <span className={`record-chip ${tone(row.riskCode)}`}>
-            {row.risk}
-          </span>
+          <StatusBadge tone={tone(row.riskCode)}>{row.risk}</StatusBadge>
         )}
         <span className="sr-only">
           {row.type === "OUTLINE_PROPOSAL"

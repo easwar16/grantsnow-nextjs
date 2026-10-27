@@ -234,7 +234,223 @@ Its fixtures are in `src/test-support/eoi-writes.ts`. That lock store is held on
   - No focus ring on click anywhere, fields included; keyboard keeps every ring.
 - **Evidence:** typecheck clean; lint 0 errors (one React Compiler notice on the virtualised list); Prettier clean apart from the input-only migration spec; 711 unit and integration tests, the isolated production build and all 13 fixture Chromium journeys pass. On live DEV, switching between Others and Bookmarked shows each held list within 30 ms, with no skeleton. Live DEV, dev server: EOI Summary 449 ms cold, 357 ms held; Home 485 ms then 317 ms; the notifications read 2,088 ms cold, 35 ms held. No pre-change baseline was measured.
 
-### Proxy picker, date-picker Escape and ids — 2026-10-23 (latest)
+### Contracts brought onto the shared layers — 2026-10-26 (latest)
+
+- **Owner (2026-10-26):** bring whatever the Contracts merge diverted back in line with the KB and the rules, without breaking it.
+- **Layout:** `src/server/contracts` → `src/server/modules/contracts`, `src/features/contracts` → `src/features/modules/contracts`.
+- **API layer:** the generic `contractRead(op, headers…)` passthrough is gone. Contracts reads go through named functions: `contracts.list/byId/versions/signers/relationTypes/relationItems/templates/placeholderTags`, plus the shared `roles.record`, `lookups.codes/objectDates`, `people.all`, `dynamicForm.forms`, `eoi.finalizablePages/lockedModules/lockStatus`. New Contract's two server actions are API routes (`/api/contracts/choices`, `/api/contracts/assignees`) read with `useApi`; document downloads use `contracts.documentUrl`.
+- **One record context:** `contractRecordContext` (roles through `objectAccessOf`, fail closed, plus the finalize state) replaces four hand-rolled grant checks. Comments and audit use the shared `recordHost` (writing a comment needs the page's edit, as on every record); the audit reads `objects.audits` like every host.
+- **Workflow on the shared approval host:** `contractApprovalHost` with the legacy fragment's keys (`contracts-workflow`, `contract-add-stage`, `contracts-add-approver`, `contracts-change-approver`), `/api/contracts/[id]/workflow`, and the shared `ApprovalWorkflow`. Easwar's read-only copy (its own stages/graph/approvers/history reads, a `?stage=` approvers dialog, `Asia/Kolkata` times) is removed. Contract approvals now offer the same actions as EOI and Awards, gated by the record's roles. No live approval was run.
+- **Workflow and Signers tabs:** legacy getTabs: past draft and rework, or every finalizable page finalized. Easwar hid them in draft and rework unconditionally. An unreadable finalize state keeps them closed.
+- **Graph View is lazy on every host:** `?view=graph` is read when the view is first opened (legacy loads it on the tab), not with every route read.
+- **Approval history times:** `approvalHistoryRows` passes the raw time and `LocalTime` (new, `components/ui/local-time.tsx`) shows it in the viewer's zone after hydration. Before, the shared workflow printed the raw clock time and Easwar's page printed IST. The Contract Version (`name - date hh:mm a`) uses it too.
+- **Record header:** built from the service's RB-gated, RB-labelled field list in legacy order (status as `StatusBadge`, Created by as `CreatorLink`) plus Contract Version under `contract-version`. Before, eight labels were hard-coded and the RB list was built but unused.
+- **Status names and tabs:** the listing's status tabs and any blank status name come from the configured `CONTRACT_STATUS` lookup (`statusChoices`), replacing two hard-coded lists. An unreadable lookup leaves only All.
+- **Smaller fixes:** text filters use `containsClause` (LIKE escaping); New Contract's dynamic fields hide unless `Y`/`C`; the deadline dialog is `ActionDialog` with `DateInput`; about 50 Contracts elements got ids; the Select loading state carries `aria-busy`.
+- **Removed as dead:** `contractDelegations`, `contractHistory`, `contractComments`, `contractAudits`, `parseContractAuditEvent`, `requireContractTab`, the approval `graphContent`/`compactGraph`/`showHistory`/`standalone` props and their CSS. Easwar's per-response "another contract's rows" checks on stages, approvers, history and comments went with them: the shared reads used by EOI and Awards do not make them.
+- **Checked against legacy and kept:** the read-only file field's disabled drop box (legacy `oj-file-picker` with drag-and-drop text) and the plain-text delegations empty state (legacy noData slot).
+- **Still open (Easwar's module):** the Summary tab lacks legacy's editable Contract Detail form (`summary-*` fields); New Contract is a disabled preview with its own dynamic-field renderer and native date inputs, so it should mount the shared `DynamicForm` when Create is built; the listing's date filters are native date inputs in a GET form.
+- **For the owner:** `exceljs` (placeholder-tags workbook) and vendored Treant/Raphael (legacy's graph renderer) were added without the agreement the rules ask for; Easwar's measured colours are left for the theme pass; the doubled Playwright timeout is kept.
+- **Approvals layout (owner, measured on DEV):** the shared workflow is legacy's `oj-sm-10` column (83.333%, centred, no 1000px cap), with Route and History stacked without a gap, oj-collapsible chevrons, and content-sized stage card columns. Ours is x=158, 1427px; live is x=155, 1434px; the stage card is 87 vs 86px.
+- **Agent context (owner):** `docs/agent-guide.md`, a mandatory block at the top of `AGENTS.md`, `CLAUDE.md` importing both, and `docs/changes/` (one record per change set, read before touching the same files). They make Codex and Claude Code load the rules, the reuse catalogue and the override record (§8) before changing or rebasing.
+- **Layout rule:** app-wide, layout uses vw/vh first and %/fr otherwise (foundations, Look and feel). The conversion is part done; see `docs/changes/2026-10-26-titiksh-contracts-onto-framework.md` for what is converted, unverified and left.
+- **Evidence:** typecheck, lint (one existing warning), 820 unit/integration tests (Contracts access rewritten per operation, plus draft/finalize gates, unknown lock, configured status names, the lazy graph). Isolated production build passes. Full e2e with both slow-fixture Contracts journeys on: 21 passed, 1 failed. All Contracts and approval journeys passed. The failure was the Awards listing journey timing out under load; it passed on its own before, and was not re-run after the dialog edits. Live DEV reads: contract 1386 (RB header, version time in the viewer's zone, shared workflow with 4 stages, lazy graph with 5 nodes, the approvers dialog, 5 history rows in viewer time), the Contracts listing's 9 lookup tabs (they match live), and the EOI 4034 approvals layout against live.
+
+### Rebased onto origin/main (Easwar's Contracts module) — 2026-10-26
+
+- **Upstream (d77fd6e, three commits):** the Contracts module (listing, new, record tabs: summary, workflow, signers, history, delegation), contracts on the shared comments/audit panels and object history, approval List/Graph/Table/Card views, an exceljs export, a doubled Playwright timeout, and an allowlist trimmed to what the server named at the time.
+- **Kept as is:** the Contracts module and its flows, the shared panel hosts (union with eoi/award), the delegations `.end` alignment (matches legacy), the e2e waits.
+- **Fixed on top:**
+  - The allowlist dropped 8 operations Contracts still calls (`getGetAllContracts`, `getContractsContract_id`, signers, versions, relation type, template name, placeholder tags, approval graph); they are back, and placeholder tags go through `contracts.placeholderTags`.
+  - Easwar's history stamped times on the server in `Asia/Kolkata`; history now passes the ISO time and the browser formats it in the viewer's zone (`stampDisplay`).
+  - Approval view labels come from the RB (`approval-*-view`); Graph and Card show only when their key is visible, and the graph is read only then.
+  - Contracts routes moved into `(list)`/`(record)` so a record opens on the record skeleton, not the listing's.
+  - All 10 native `<select>`s in Contracts are `FormSelect`/`Select`.
+  - Contract Created by uses the shared `CreatorLink` (`/api/contracts/[id]/creator`).
+  - Contract status uses `StatusBadge` (`CONTRACT_STATUS_TONE`). DEV has `SUBMIT_SIGN` rows with no status name; legacy rendered an empty pill for those, and the badge is now left out when there is no text. `SUB` ("Submitted for Signing") is success.
+  - `exceljs` pinned to 4.4.0; duplicate icon keys removed; the dead `contract-resource-defaults.json` deleted; the contracts relation-item fixture no longer shadows the award one.
+- **Noted at the time:** these were closed by the follow-up above.
+- **Evidence:** typecheck, lint (one existing warning), 825 unit/integration tests. Live DEV reads: Contracts listing (no empty pills, no native selects), record 1386 (Created by card, Graph and Card views), award 1183 history, delegations, comments and audit drawers, EOI 4034 history and approvals graph. DEV Oracle was slow (contract read 44 s). Isolated production build passes; full e2e 20 passed, and Easwar's two slow-fixture Contracts journeys (skipped unless their delay variables are set) pass when run with them. They caught one regression from the Select conversion: the loading filter lost `aria-busy`; `Select`/`FormSelect` now take `busy`.
+
+### Award record — 2026-10-26
+
+- **Shell** (`/awards/[id]/[tab]`, legacy awards-detail-page):
+  - **Access:** the Awards grant, then the award's roles. No `awards-header` read denies the award, with legacy's toast and a return to the listing.
+  - **Data:** AwardDetails, with the dates spanned by AwardPeriodDetails (legacy blanked the whole award when the period read failed; here the award keeps its own dates). Finalized ticks come from `locked_modules`.
+  - **Tabs:** legacy getTabs. Each needs read on its page (fail closed). Approvals also needs AIA, IA or SUB, or every finalizable page finalized.
+  - **Panel:** each cell shown only with a value and its `labels.*` visible.
+  - **Toolbar:** Finalize (`insertModuleLock`, module AWARD), and Comments / Audit Trail per page.
+  - **Not offered:** Send to ERP, because its OIC flow has no path in the contract.
+- **Shared frame:** `features/record/shell` (`RecordFrame`, `useLeaveGuard`, `record-tab.module.css`) now carries both the EOI record and the award record. EOI keeps its ids; its browser journeys pass.
+- **Shared tabs**, hosted for AWARD:
+  - Attachments (the award number as the folder; editable in a draft with page edit and an open lock).
+  - Approvals (the award number under AWARD; Withdraw also needs `awards-approvals-withdraw` read and edit).
+  - History (AWARD_STATUS; the `award-add-status` and `award-history-abandon-button` roles).
+  - Delegation (defaults to the header).
+  - Comments and Audit (`recordHost`, one generic panel host).
+  - Dynamic Form 1–5 and the Header's AWARDS-HEADER form (`authorizeAwardForm`: roles, draft, lock; the award bundle).
+- **Header:**
+  - The form, gated by RB and required from it; Billing Party is editable only with `awards-header-billing-party`.
+  - Attributes (host `award-header`), the AWARDS-HEADER form, and the award periods table with its edit dialog.
+  - Edit Award Header / Save / Cancel sit in the shell, as legacy.
+  - The save is an explicit PascalCase pick: hidden or read-only fields keep the award's own values.
+  - Legacy defects fixed: the billing party is no longer the funder when none is set, and the proposal is the award's own, not the URL's.
+- **Budget Periods:**
+  - The table with totals, and one Add / Edit dialog using legacy's recalculation (`recalc`).
+  - Legacy defects fixed: a zero total gives 0, not Infinity; a new period no longer computes NaN; direct and indirect may raise the total.
+  - The save is an UPPER_SNAKE pick, with dates kept inside the award's dates.
+- **Project Report:** the award's own first project (legacy always reported project 1 and printed PRJ_200): totals, the yearly chart and table, actuals by month.
+- **Due Diligence:** the linked records, with the `dd-list-*` gates. Create, View and Link wait for the Due Diligence module.
+- **Installments, Milestones:** not available. Legacy kept Installments in the browser tab only, and Milestones never saved.
+- **Projects** (legacy awards-projects), with inner tabs Projects / Project Costs / Project Team:
+  - **Projects:** the RB-gated table, plus Add / Edit in one dialog (Add Project needs the `awards-projects-add-project` role, a draft, the editable award, page edit and an open lock). The save is legacy's PascalCase pick; ids, number, ERP id and schedules come from the award, never the browser.
+  - **Project Costs:** the global funder / institution split (`globalChange`) and legacy's cost tree per project (section → category → costing group, STAFF first, `costTree`). Section and category Edit post the split (`AwardPrjCostLine`). A line's Edit / Clone / Delete use the line dialog (`splitChange`), with its category's items and its periods; Add Row appears with `SPLIT_AWARD_COST_ITEM_BY_PERIOD`.
+  - **Project Team:** one table per project, plus Add / Edit; the only project and role are pre-filled when required.
+  - **Legacy defects fixed:**
+    - Share caps compared a fraction with 100, so they never held; they are now enforced (D1).
+    - NaN and negative input is refused (D3).
+    - A changed GL nominal is sent; legacy kept the first one (D11).
+    - Period rows now send hours and months (D12).
+    - The global edit checks the lock and the award (D15).
+    - Section and category edits need the line's `is_editable` (D24).
+    - Choosing a cost item brings its GL nominal (D10).
+    - The server checks every chosen value is offered, dates stay inside the award (periods inside their line), and the line written is found in the award's own lines.
+  - **Kept as legacy:** delete has no confirmation, and deletes the whole costing group.
+- **Evidence:**
+  - **Mocks:** `tests/unit/award-record.test.ts` (recalc, periodBound, costTree, splitChange, globalChange, withPeriodDates). `tests/integration/award-record.test.ts` (access, tab read, budget gate, finalize, and every Projects write with its gates). E2E "Award record Projects" against the labelled `test-support/award-record.ts` fixture. The listing journey now opens the record.
+  - **Live DEV, read only:** Projects, Project Costs, Project Team and the project and cost dialogs on awards 1180 (AIA, gated read-only) and 1179 (draft).
+  - **Live DEV writes (2026-10-26, approved by the owner, DEV data only; `WRITES_ENABLED=true` set for the dev server process, `.env.local` untouched):** on draft 1179:
+    - Header save (Actual Award Date, Billing Cycle).
+    - Award period amount.
+    - Budget period add and edit (recalc verified: 300 + 100 with funder 250 gives institution 150; then 350 / 450).
+    - Project edit.
+    - Team member dates.
+    - Global split 50%.
+    - Staff category split 60/40.
+    - Line clone and delete.
+    - New Materials line (the item brought its GL nominal).
+    - Period row edit to 300.
+
+    From the listing: Create Award (AW_20230806) and Clone with Budget Periods (AW_20230807). Each saved and re-read correctly.
+    - **Not run:** Link. DEV's `getSharedObjectLinked2` timed out at 60 s on every try, so the dialog could not open.
+    - **One transient 403** on a cost add: the lock read failed, so the page was treated as locked (fail closed). It saved on retry.
+- **Look matched to live (measured 2026-10-26):**
+  - **One table style for the app (`gn-table`):** a 40px brand header, 12px cells padded 9px 12px on #f1efed, a 15px bold footer, and a start-aligned "No data to display.".
+  - **Table heights (`gn-table-scroll`):** legacy's max heights, with the rows scrolling under a pinned header: 31.25rem by default; 300px for the award header and Projects tables; 70vh for the cost tree; 55vh for cost periods.
+  - **Record view mode:** fields are read-only text (`ReadonlyField`) in four columns, in one panel with the attributes, as legacy `readonly` forms render. Editing uses inside labels in four columns.
+  - **Projects tab:** a centred inner tab bar; the global split as a read-only start-label form; tree expanders with warning-coloured group names; group amounts bold and percentages 15px bold; the ≡ line menu (shared `ActionMenu`, also used by the home chart menu); animated project collapsibles (shared `Collapsible`).
+  - **Detail pages:** the action bar and tab bar are a fixed head; only the body below scrolls, so its scroll bar starts under the tabs (every RecordFrame page: EOI, opportunity, award).
+  - **Cost tree indent (measured):** text starts 30px (section), 49px (category) and 60px (line) into the first cell, as legacy's `padding-left: 60px` leaf cell.
+  - **Project Report tree:** legacy tMonthlySplit's group row (expander, warning-coloured name over all but the last two columns, total in those two); child rows are not indented. The earlier invented 24px indent and tinted group row are gone.
+  - **Loading:** a `loading.tsx` cannot cover the `layout.tsx` beside it, so opening a record showed the parent listing's skeleton. Listings and records now sit in `(list)` / `(record)` route groups (awards, opportunities, EOI); verified on DEV: opening an award shows "Loading award".
+  - **Motion (owner rule, every interaction):** table rows fade in (loads, added rows, expanded levels); record tabs, keyed tab panels (Projects inner tabs, audit, home modules) and the widget calendar fade in; the comments / audit drawer slides open to 400px and closed, pushing the page.
+- **Legacy defect noted:** the live header's Award Periods table shows "No data to display." even though AwardPeriodDetails returns rows. The page assigns them from a shell event that fires before the page listens. The rebuild shows the rows.
+- **Column visibility:** as legacy. The Projects table and the cost tree gate by RB; Budget Periods, Award Periods, Team and Report columns have no RB gate in legacy, so none was added.
+
+### Award record — live E2E on AW_20230801 (award 1176), 2026-10-26
+
+- **Compared tab by tab with live.** The data matches on Header, Budget Periods, Projects, Project Costs, Project Team, History, Delegations and Documents.
+- **Live DEV writes, each re-read:**
+  - Header save: Actual Award Date 26-Oct-2026 and Billing Cycle Quarterly; live shows both.
+  - Comment posted, and the audit trail lists it.
+  - Finalize ticked (the tab gets its mark), then unticked.
+  - Budget period: institution 20.00, funder recalculated to 300.51.
+  - Team member dates.
+- **Fixed against live:**
+  - **History times:** they were UTC on the server; they now show in the viewer's zone, as legacy's datetime converter (`stampDisplay`). Both history tables keep their header when empty, and the headings are 15px/800.
+  - **Record panel:** three columns filled 4/3/3 as JET (`columnPlace`), 1.15rem labels, a 50px pitch, a bordered panel. Each label has its More Info. The Finalize control is a checkbox (legacy `oj-sample-checkbox-switch`), here and on EOI.
+  - **Created by** opens the creator's card (new read `getProposalContactDtls`, through the API layer: `GET /api/awards/[id]/creator`).
+  - **Award icons:** `edit` instead of `pen`. No plus icon on Add Project, Add Project Cost or Add Team Member. Edit Global is centred and quarter-width, with its icon, and so are Cancel and Save.
+  - **Documents:** the tree is content-width with folder icons, and empty detail values stay blank.
+  - **Tab icon:** the legacy favicon (`/images/gn.ico`).
+- **Installments and Milestones, built as legacy has them (owner, 2026-10-26):**
+  - **Installments:** all browser-side, per-tab sessionStorage under the legacy key `awards-installments:<id>`. It has the progress bar and legend, Total Funder Contribution and Balance, New / Edit / Delete, Amount or Percentage, and statuses with Overdue past the due date. Each installment is prorated over the cost lines; the largest line absorbs rounding (`installments-model.ts`). On DEV award 1176 a £50,000 installment gives the same table as live, row for row.
+  - **Milestones:** an always-empty table and Add Milestone, enabled only on a draft. It opens the `AWARDS-MILESTONES` dynamic form; that slot is now allowed for the award, on the Milestones page's rights. Its Submit has no action, as in legacy.
+- **Kept, by decision:**
+  - Create Governance (Risk Assessment) opens the Due Diligence module, which is not rebuilt.
+  - The shared Documents panel keeps its Download button (legacy downloads on double-click).
+- **Recheck (EOI panel, dynamic-form tabs):**
+  - **Record panel:** the EOI panel uses the same legacy style (two columns, filled downwards), so it now applies to every record frame. The award and EOI **Created by** both open the creator card (shared `personCard`, `CreatorDialog`). The EOI one was empty until the EOI record kept the person's `org_unit_id`; its own person schema had dropped it.
+  - **Dynamic forms:**
+    - A null colspan is one column, as the fragment's `calcColSpan`; only a missing one is a full row. GN-Angular had made null a full row.
+    - Controls narrow to `colspan × maxColumns` twelfths of their cell, as legacy's `oj-md-n`; rich text and files stay full.
+    - Dynamic Forms 1–4 on award 1176 now place every field as live, except the legacy defect below.
+  - **Switches:** one global style on `input[role="switch"]`, measured on live: 27×15, grey off, darkseagreen on with a brand border (legacy redwood-overrides), a 12px thumb. The two copied track styles are gone. The attachments New Folder toggle now draws as a switch (legacy `oj-switch`); the configure drawer keeps its own.
+  - **Legacy defect, not copied:** a hidden dynamic-form field (`isVisible` N, or a false condition) still holds its cell in JET's form layout. That leaves a hole (DF2 beside Rich Text Editor, DF4 beside Check box). Here hidden fields take no space.
+- **One status bubble, one Created by flow (owner, 2026-10-26):**
+  - **`StatusBadge`** (`src/components/ui/status-badge.tsx`, text + tone + optional solid) is the only status bubble. It follows legacy oj-badge, measured: 12px on an 18px line, 0 9px padding, a 9px radius; subtle tones are text-coloured on a translucent tint, solid is white on the tone. It is used by:
+    - the award and EOI lists and record panels;
+    - Due Diligence, linked records, the audit trail and approval stages;
+    - Proposals cards and the record page;
+    - installments (Overdue is solid danger).
+  - Removed: `.record-chip` tones, the listing's own size override, the installments badge, and the duplicate award / EOI tone maps (one map per module in `src/shared`). The opportunity card keeps legacy's own `opp-status-badge` (with its dot). Legacy's approval stage badge is 14px inline; it now takes the common size.
+  - **Created by:** the record frame owns it. A panel cell marked `creator` becomes the link, and the frame opens `CreatorDialog` from the host's creator endpoint. Each module adds one access-checked route over the shared `personCard` (awards and EOI today).
+- **Checked against the awards prompt pack and the GrantsNow vault (2026-10-26):**
+  - The prompt pack is input only. Where it differs from legacy, legacy holds:
+    - the PI filter is `pi_pid` and the funder / billing party are matched by name, not employee number or ids;
+    - the tab order is legacy's fixed `getTabs` (getProposalPages only supplies page ids for finalize);
+    - cost delete has no confirm in legacy (left as is, for the owner to decide).
+  - **Fixed from the vault's pitfalls / improvements:**
+    - Installments now follows every other tab's change rule: a draft, the page's edit right, not locked or finalized (pitfall 10; legacy ignored all three).
+    - Signing out (user menu or the idle dialog) clears the tab's sessionStorage, as legacy endSessionHandler does, so one user's installments never reach the next.
+    - Every award dialog field (project, team, cost split, budget period, award period) shows its RB More Info when the key has a description (improvement 6, ticket 8886).
+  - **Open, for the owner:**
+    - **Send to ERP:** legacy takes the OIC path at run time from `custErpDetails.oic_endpoint` and posts the user's DB token in the body. It is not built; it needs an allowlisted endpoint and the ERP side-effect policy.
+    - **Due Diligence Link:** it could be built on its own; Create and View need the Due Diligence module.
+    - **Credit allocation:** stays out; the vault records it as orphaned in legacy, with four bugs.
+- **Send to ERP, cost delete confirmation, Credit allocation (owner, 2026-10-26):**
+  - **Send to ERP:**
+    - Where: a red button on every tab of an internally approved award, for users who can edit its header. Legacy gated on the status alone.
+    - Server: it reads `getSharedCustErpDetails2` (module AWARD). On DEV that returns `/UNIT4_ERP_FLOW/1.0/unit4integration`.
+    - Call: it posts `{AwardId, Token}` server to server to that OIC REST flow. The flow is now a `/{flow}/{version}/{resource}` template in the generated catalogue (`RUNTIME_PATH` in `scripts/oracle-catalogue.mjs`), so only a flow path on the configured OIC host can be reached.
+    - Refused, with a message: an unknown `erp_type`, which legacy ignored silently; and an address of any other shape.
+    - Defect fixed in the shared OIC client: a `.` / `..` path segment was accepted and would have climbed the URL.
+    - Evidence: fixtures and integration tests only. It is not run on DEV, because it hands the award to ERP.
+  - **Cost delete:** deleting a cost line or a cost-period row now asks first (dialog-titles.warning, warning-messages.permanent-delete). Legacy deleted on the first click.
+  - **Credit allocation:**
+    - Legacy built the page but never listed the tab. DEV grants `awards-credit-allocation`, and awards carry `Award Credit Allocation` rows.
+    - The tab follows Projects: Person, Project Role, Credit Allocation %, Project Effort %, and per-row Edit.
+    - Save: `postProposalCreditAllocation` on the award's `proposal_period_version_id`, with `[{credit_alloc_id, credit_pct, prj_effort}]`.
+    - Legacy defects fixed:
+      - Add is gone: the operation updates existing rows only and ignored the person and role legacy sent.
+      - Values are typed as percentages (legacy: a fraction with step 1).
+      - Credit over 100% is refused, checked in basis points.
+      - The lock applies.
+- **Matches legacy, flagged:**
+  - A header save posts AwardAmount from AwardDetails, and the audit shows that column moving (the same as legacy's own saves).
+  - A team member with a date before the award start cannot be re-saved until both dates are inside the award.
+
+### Awards listing actions — 2026-10-26
+
+- **Built (legacy awards-start, now complete):**
+  - **Create Award** (RB `create-award`): the RB-gated dialog fields with `maxLength` preferences. The org unit is the chosen PI's (legacy awPIChange); the server never takes it from the browser. With a proposal that has no award yet the backend generates it (`GenerateAward`, a GET write, now on the reviewed list); otherwise the legacy PascalCase header is posted. Empty values are left out, as legacy's undefined ones were.
+  - **Clone** (RB `list-clone` + `clone`, and the `award-clone` role): legacy's parts tree with its parent/child ticking (`toggleClonePart`); parts the backend always copies start ticked and locked. Only offered parts are sent.
+  - **Link**: the shared Linked Objects dialog (`features/record/linked`, `server/record/linked`), with legacy's eight module groups from the ETHICS bundle, the award itself left out, and each record's legacy link mapped to its in-app route (H26). An award with no proposal can be linked to one (legacy toasted "No Linked Data Found" and could not).
+  - **Advanced Query** (RB `advanced-query`): the end drawer with attribute, operator and value, Add Condition, the read-only conditions table, and Edit and Delete. While rows exist the list reads `advanced-search`. Only probe columns (or described `attribute_N`) may be named; the column list is held per session.
+- **Legacy defects fixed:** with Advanced Query rows, legacy silently dropped Proposal Name, Billing Party and Assigned To; each now applies wherever the advanced view has its column. Clone, Link and the dialogs check the award is visible to the user (AwardHeader by id) and the gate on every write.
+- **Shared:** `pageAccess` and `RoleRow` moved to `platform/permissions`.
+- **Evidence:** typecheck, lint (one existing warning), 754 unit/integration tests. Live DEV (reads only): create setup (123 proposals, 26 PIs, 1,706 funders, 6 currencies), clone parts (award-header fixed; projects with costs and team), links (in-app routes), and an Advanced Query `award_number` contains `2023080` (6 rows). **Not run live:** Create, Clone and Link writes (they create or change DEV records; waiting for the owner's go-ahead).
+
+### Awards listing — 2026-10-26
+
+- **Built:** `/awards` (legacy awards-start): status tabs, the RB-gated drawer filters (number, name, proposal, org unit, assigned to, funder, billing party, date sort, start/end date, principal investigators), list and card layouts behind `listing-card-view`, the gated record fields, the count line and Clear. Home's award-status chart opens it with `?status&org`; legacy `shell=awards` links land on it. Rows open the `awards-detail` placeholder with the legacy params (`awardHref`) until the record pages exist.
+- **Server:** `awards.list` (`getPost_awardsAwardHeader`, added to the allowlist) with a server-built clause in legacy order; hidden filters cannot be applied; drawer choices load in parallel and degrade to empty with a toast.
+- **Legacy defects fixed:** several principal investigators are an OR group (legacy sent `'12,34'`); text is LIKE-escaped.
+- **Kept from legacy:** start and end dates match the day exactly (`$eq`); a zero amount is not shown; filters (not the date sort) outlive the page for the tab, as legacy's app-scoped `filterAwardListing`.
+- **Shared:** `StatusList`, `components/ui/listing.module.css` (now also the EOI list's), `configuration/choices.ts` (status, object-date and name choices), `orgUnitRows`; `lookups.orgUnits` takes a module.
+- **Opening fast:** the page renders with the bundle, status tabs and date sorts (held reference data) and the first page; org units, people and funders come from `/api/awards/choices` after it shows, as legacy loads them beside the list. `/awards` has its own loading and error boundaries, so a drawer click shows the skeleton at once (before, it showed nothing for up to a minute while DEV's org-unit read ran, and the click looked dead). Live DEV: page 0.4 s; choices 54 s cold (org units), 24 ms held.
+- **Not built:** Create Award, Clone, Link and Advanced Query (writes and the end drawer); record pages.
+- **Evidence:** typecheck, lint (one existing warning), Prettier, 742 unit/integration tests, the isolated production build and 15 fixture Chromium journeys (one new for Awards) pass. Live DEV: 10 of 321, Draft 10 of 133, labels and fields match VBCS side by side (Billing PARTY, no £0.00); the AWARD org-unit read timed out on DEV, as it was slow on VBCS too.
+
+### Owner open items closed — 2026-10-26
+
+- **Fixed:** LIKE escaping (`containsClause`), overdue on the viewer's day (`gn-tz` cookie, `viewerToday`), FX rates above 0, the cache bounded by size (64 MB), one upload per object path at a time (`exclusiveLocation`).
+- **Removed:** the generated ORDS catalogue; the allowlist is the 103 operations the server names.
+- **Built:** the Proposal listing's `list-*` filter gates and bundle labels.
+- **Kept, with reasons:** see grantsnow-foundations.md § _Decisions 2026-10-26_.
+- **Evidence:** typecheck, lint (one existing warning), Prettier, 730 unit/integration tests, the isolated production build and all 14 fixture Chromium journeys pass. Live DEV, after a fresh token: ESCAPE accepted, `total_count` filtered, no `appr_deadline_date` on the award queues.
+
+### Proxy picker, date-picker Escape and ids — 2026-10-23
 
 - **Proxy picker:** Profile → Manage reads an organisation's people through `people.inOrg`, read whole. `account.proxyDirectory` (first page, 25 people) is gone, and the proxy check before a status save uses the same list.
 - **Escape:** the card dialogs and the Advanced filter ignore Escape while a native date picker inside them is open (`pickerOpen` in `date-input.tsx`, `input:open`). Automation cannot press keys in Chrome's native picker, so the original bug was not reproduced and the guard is unconfirmed by a real key press.

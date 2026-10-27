@@ -1,6 +1,7 @@
 // Builds the backend API catalogues from the legacy VBCS service definitions (read-only, `origin/development`):
-// - every ORDS `apps` / `base` operation becomes an allowlist entry in src/server/oracle/operations.json and one
-//   function in src/server/oracle/api/catalogue/<area>.ts (entries already allowlisted keep their name and fields);
+// - every ORDS `apps` / `base` operation becomes an allowlist entry and one function, written only to the preview
+//   (--out): copy the operations a module uses into src/server/oracle/operations.json and api/<area>.ts, so the
+//   allowlist holds only what the app calls;
 // - every OIC `ics` flow becomes an entry in src/server/oic/operations.json and one function in
 //   src/server/oic/api/catalogue.ts (object storage maps to the byte-safe oicUpload / oicDownload / oicDelete).
 //
@@ -36,6 +37,7 @@ const GET_WRITES = new Set([
   "getApproval_setupGenerate_stages",
   "getApproval_setupGenerate_stages_dynForm",
   "getContractsConvertContract",
+  "postPost_awardsGenerateAward",
 ]);
 // Identity the client fills from the verified session; never a parameter.
 const IDENTITY = ["legal_id", "org_id", "user_id"];
@@ -156,7 +158,8 @@ const fnFor = (op) => {
   const doc = `${op.method} ${op.path}${op.legacyId !== op.name ? ` (legacy id ${op.legacyId})` : ""}${op.summary ? ` — ${op.summary.slice(0, 120)}` : ""}`;
   return `/** ${op.write ? "WRITES: " : ""}${doc.replace(/\*\//g, "* /")} */\nexport const ${op.name} = ${op.write ? "write" : "read"}<${params}>({\n  ${lines.join("\n  ")}\n});`;
 };
-const dir = join(out, "src/server/oracle/api/catalogue");
+const preview = resolve(flag("--out", join(root, ".catalogue-preview")));
+const dir = join(preview, "src/server/oracle/api/catalogue");
 rmSync(dir, { recursive: true, force: true });
 mkdirSync(dir, { recursive: true });
 const header = (area) =>
@@ -188,8 +191,8 @@ writeFileSync(
       .join("\n") +
     "\n",
 );
-const opsOut = join(out, "src/server/oracle/operations.json");
-mkdirSync(join(out, "src/server/oracle"), { recursive: true });
+const opsOut = join(preview, "src/server/oracle/operations.json");
+mkdirSync(join(preview, "src/server/oracle"), { recursive: true });
 writeFileSync(opsOut, JSON.stringify(operations, null, 2) + "\n");
 console.log(
   JSON.stringify(
@@ -202,7 +205,7 @@ console.log(
       renamed: catalogue
         .filter((o) => o.name !== o.legacyId)
         .map((o) => `${o.legacyId} -> ${o.name}`),
-      out,
+      out: preview,
     },
     null,
     1,
@@ -216,13 +219,19 @@ const STORAGE = {
   "/GET_OBJECT/1.0/objectstorage": "download",
   "/DELETE_OBJECT/1.0/objectstorage": "delete",
 };
+// Flows whose path legacy supplies at run time (sendToERP: `uriParams.path` = custErpDetails.oic_endpoint, e.g.
+// /UNIT4_ERP_FLOW/1.0/unit4integration): a flow / version / resource template, each segment validated by the client.
+const RUNTIME_PATH = {
+  getIcApiIntegrationV1FlowsRestUNIT4_MAIN_FLOW1_0Unit4integration:
+    "/{flow}/{version}/{resource}",
+};
 const ics = JSON.parse(show("services/ics/openapi3.json"));
 const flows = [];
 for (const [rawPath, item] of Object.entries(ics.paths ?? {}))
   for (const method of METHODS) {
     const o = item[method];
     if (!o) continue;
-    const path = rawPath.trim();
+    const path = RUNTIME_PATH[o.operationId] ?? rawPath.trim();
     const params = [...(item.parameters ?? []), ...(o.parameters ?? [])];
     const uniq = (xs) => [...new Set(xs)];
     flows.push({
@@ -231,9 +240,10 @@ for (const [rawPath, item] of Object.entries(ics.paths ?? {}))
       method: method.toUpperCase(),
       headers: uniq(params.filter((p) => p.in === "header").map((p) => p.name)),
       query: uniq(params.filter((p) => p.in === "query").map((p) => p.name)),
-      pathParams: uniq(
-        params.filter((p) => p.in === "path").map((p) => p.name),
-      ),
+      pathParams: uniq([
+        ...params.filter((p) => p.in === "path").map((p) => p.name),
+        ...[...path.matchAll(/\{(\w+)\}/g)].map((m) => m[1]),
+      ]),
       required: new Set(params.filter((p) => p.required).map((p) => p.name)),
       body: Boolean(o.requestBody),
       write: method !== "get",

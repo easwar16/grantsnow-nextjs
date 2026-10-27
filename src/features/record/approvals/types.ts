@@ -74,6 +74,10 @@ export interface AddStageSetup {
   };
 }
 export type WorkflowTextKey =
+  | "listView"
+  | "graphView"
+  | "tableView"
+  | "cardView"
   | "route"
   | "addStage"
   | "stageName"
@@ -138,8 +142,8 @@ export interface WorkflowView {
   texts: Record<WorkflowTextKey, string>;
   stages: ApprovalStage[];
   history: { rows: ApprovalRow[] } | { error: string };
-  graph?: ApprovalTreeNode | null;
-  graphError?: string;
+  /** Legacy's RB-gated tabs: Graph View beside the route list, Card View beside the history table. */
+  views: { graph: boolean; cards: boolean };
   gates: {
     /** Generate Approval Route: no route yet on an editable record. */
     generate: boolean;

@@ -38,7 +38,11 @@ const DEFAULTS: Record<CommentLabel, string> = {
 const MAX_LENGTH = 2500;
 const WARNING = "Comment must be less than {num} characters";
 /** The keys each host passes as `labels` (KB Shared-Features § object-comments label matrix). */
-const BUNDLE_KEYS: Record<string, Record<CommentLabel, [string, string]>> = {
+// A label a host does not configure keeps the legacy literal (DEFAULTS).
+const BUNDLE_KEYS: Record<
+  string,
+  Partial<Record<CommentLabel, [string, string]>>
+> = {
   "opportunities-eoi": {
     noData: ["helper-texts", "eoi-no-data"],
     edit: ["button-labels", "eoi-comment-edit"],
@@ -57,6 +61,14 @@ const BUNDLE_KEYS: Record<string, Record<CommentLabel, [string, string]>> = {
     submit: ["button-labels", "contract-submit-edit"],
     editTitle: ["dialog-titles", "contract-edit-your-comment"],
   },
+  // awards-detail-page.html: delete and the edit title are literals there.
+  award: {
+    noData: ["helper-texts", "no-data"],
+    edit: ["button-labels", "edit"],
+    send: ["button-labels", "send"],
+    cancel: ["button-labels", "cancel"],
+    submit: ["button-labels", "submit"],
+  },
 };
 function settings(rows: Resources, bundle: string) {
   const keys = BUNDLE_KEYS[bundle];
@@ -67,7 +79,7 @@ function settings(rows: Resources, bundle: string) {
     labels: Object.fromEntries(
       COMMENT_LABELS.map((name) => [
         name,
-        keys
+        keys?.[name]
           ? label(rows, bundle, keys[name][0], keys[name][1], DEFAULTS[name])
           : DEFAULTS[name],
       ]),

@@ -13,13 +13,9 @@ import {
   type Resources,
 } from "@/server/platform/configuration/resources";
 import type { CardActions } from "@/features/modules/opportunities/types";
+import { pageAccess, type RoleRow } from "@/server/platform/permissions";
 export type Opener = CardActions["opener"];
 export type ConvertKind = "OUTLINE_PROPOSAL" | "PROPOSAL";
-export type RoleRow = {
-  page_name: string;
-  read_access: string | null;
-  edit_access?: string | null;
-};
 /**
  * Runs `data` alongside `check` but settles it only once the check has passed, so nothing is returned before the
  * check and a denial is always the error reported (a later failure of `data` is never left unhandled).
@@ -34,14 +30,6 @@ export async function afterCheck<T>(
 }
 export const bundleOf = (opener: Opener) =>
   opener === "finder" ? "opportunities-eoi" : "dashboard";
-/** Role based: every row for the page must grant it; no rows (or no roles read) denies. */
-export function pageAccess(roles: RoleRow[] | null, page: string) {
-  const rows = (roles ?? []).filter((r) => r.page_name === page);
-  return {
-    read: rows.length > 0 && rows.every((r) => r.read_access === "Y"),
-    edit: rows.length > 0 && rows.every((r) => r.edit_access === "Y"),
-  };
-}
 /** GN-Angular's two CardViews: the finder reads opportunities-eoi rows, Home the dashboard's (and shows status, no pills or More Info). */
 export function cardActions(
   rows: Resources,

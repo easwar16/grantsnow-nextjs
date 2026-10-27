@@ -1,0 +1,107 @@
+/* Awards' own parts (measured on live); the drawer, rows and count are the shared listing styles. */
+.toolbar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 12px 0;
+}
+/* oj-buttonset-one, borderless: the chosen layout is outlined. */
+.layouts {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+.layouts button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 0 8px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gn-text);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.layouts button.chosen {
+  border-color: var(--control-border);
+}
+/* oj-panel list-item-layout (measured on live): 5px radius, 6px padding around a 9/12px grid. */
+li.row {
+  padding: 15px 18px;
+  border-radius: 5px;
+}
+/* Card layout: each record keeps its content's width and the records wrap. */
+.cards {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-content: flex-start;
+}
+.cards > li {
+  max-width: calc(100% - 24px);
+}
+/* The list beside the Advanced Query drawer (legacy end drawer, 30rem). */
+.content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.column {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.advanced {
+  display: flex;
+  flex: 0 0 min(30rem, 100%);
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 12px 12px;
+  overflow-y: auto;
+  background: var(--gn-surface);
+  border-left: 1px solid var(--gn-divider);
+}
+.advanced > button:not(:first-child) {
+  align-self: flex-start;
+}
+.advancedHead {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 6px;
+}
+.advancedForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.conditions td {
+  overflow-wrap: anywhere;
+}
+.conditionActions {
+  white-space: nowrap;
+  text-align: center;
+}
+.rowActions {
+  display: flex;
+  flex: none;
+  align-self: center;
+  gap: 3px;
+}
+@media (max-width: 768px) {
+  .content {
+    flex-direction: column;
+  }
+  .advanced {
+    flex-basis: auto;
+    border-left: 0;
+    border-top: 1px solid var(--gn-divider);
+  }
+}
+.push {
+  margin-left: auto;
+}

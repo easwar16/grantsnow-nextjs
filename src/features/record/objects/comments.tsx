@@ -219,7 +219,7 @@ export function ObjectComments(props: ObjectPanelProps) {
         <ActionDialog
           id={`${id}-edit-dialog`}
           title={labels.editTitle}
-          width={640}
+          width="50vw" /* legacy EditCommentsPopUp oj-md-width-1/2 */
           busy={isActive("edit")}
           closeLabel={labels.cancel}
           onClose={() => setEditing(null)}

@@ -19,10 +19,14 @@ export const objectDates = read<{ objectType: string }>({
   headers: (p) => ({ p_obj_type: p.objectType }),
   ttl: TTL.config,
 });
-/** A person's org units with their depth (legacy fetchOrgUnitsData). */
-export const orgUnits = read<{ personId: string }>({
+/**
+ * Org units with their depth (legacy fetchOrgUnitsData): a person's (`person_id`), a module's (`p_obj_type`, e.g.
+ * AWARD), or with neither the global list.
+ */
+export const orgUnits = read<{ personId?: string; module?: string }>({
   op: "getPre_awardGetLkpOrgUnitType",
-  headers: (p) => ({ person_id: p.personId }),
+  headers: (p) =>
+    p.personId ? { person_id: p.personId } : { p_obj_type: p.module },
   ttl: TTL.config,
 });
 /** Every sponsor (GetSponsorList). */

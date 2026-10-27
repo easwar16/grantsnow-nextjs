@@ -154,3 +154,8 @@ export const undelegate = write<
     delegation_id: p.delegationId,
   }),
 });
+/** The records linked to an object (shared objectLinked): `ObjectLinks` rows by MODULE_NAME, each with its legacy link. */
+export const linked = read<{ objectType: string; objectId: number }>({
+  op: "getSharedObjectLinked2",
+  headers: (p) => ({ object_type: p.objectType, object_id: p.objectId }),
+});

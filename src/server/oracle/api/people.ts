@@ -8,6 +8,7 @@ const rows = z.object({
   items: z.array(
     z.object({
       person_id: z.coerce.number().int().positive(),
+      org_unit_id: z.coerce.number().nullish(),
       full_name: text,
       org_unit_name: text,
       email_address: text,
@@ -35,4 +36,14 @@ export const inOrg = read<{ orgId?: string }>({
   headers: (p) => ({ p_org_id: p.orgId }),
   pages: "all",
   ttl: TTL.config,
+});
+/** One person's contact card (legacy getContactDetails, record type PI): read fresh on each open, as legacy did. */
+export const contact = read<{ personId: number; orgId: number }>({
+  op: "getProposalContactDtls",
+  tokenHeader: "p_token",
+  headers: (p) => ({
+    p_record_type: "PI",
+    p_person_id: String(p.personId),
+    p_dept_id: String(p.orgId),
+  }),
 });

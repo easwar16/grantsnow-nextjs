@@ -14,7 +14,7 @@ import { useActionFailure } from "../../../../components/dialog/action-failure";
 import { RECORD_SAVE, useRecord } from "./record-context";
 import { eoi } from "@/lib/api";
 import type { PageLock } from "./types";
-import styles from "./record.module.css";
+import styles from "@/features/record/shell/record-tab.module.css";
 /**
  * The Application tab (GN-Angular eoi-application): a new application is created only once its form validates
  * (insertRequest), then its answers are saved against it; an existing one is edited through the header's

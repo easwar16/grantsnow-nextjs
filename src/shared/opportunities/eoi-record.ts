@@ -1,3 +1,4 @@
+import type { StatusTone } from "@/components/ui/status-badge";
 import type { IconName } from "@/components/ui/icon";
 import type { ObjectAccess } from "@/server/platform/permissions";
 /** The record's backend object type: roles, finalizable pages and module locks. */
@@ -69,7 +70,7 @@ export interface PageLock {
   known: boolean;
   locked: boolean;
 }
-/** The record panel's Finalize switch: a draft's finalizable page whose lock is known; on when it is finalized. */
+/** The record panel's Finalize checkbox: a draft's finalizable page whose lock is known; on when it is finalized. */
 export function finalizeSwitch(
   statusCode: string | null | undefined,
   finalizable: string[] | null,
@@ -117,7 +118,7 @@ export function formOf(tab: "application" | FormTab) {
     : { objectType: EOI_MODULE, slot: pageOf(tab).toUpperCase() };
 }
 /** The original's oj-badge colours by status code; any other status is the plain badge. */
-export const EOI_STATUS_TONE: Record<string, string> = {
+export const EOI_STATUS_TONE: Record<string, StatusTone> = {
   IA: "info",
   REJ: "danger",
   AWARD: "success",

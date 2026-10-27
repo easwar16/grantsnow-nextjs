@@ -4,6 +4,7 @@ import { pageIdentity } from "@/server/identity/auth/page";
 import {
   resources,
   proposalColumns,
+  proposalFilters,
 } from "@/server/platform/configuration/resources";
 import { listProposals } from "@/server/modules/proposals/service";
 import { parseQuery } from "@/features/modules/proposals/schemas";
@@ -44,7 +45,8 @@ export default async function Proposals({
       />
     );
   }
-  const columns = proposalColumns(await resources());
+  const rows = await resources();
+  const columns = proposalColumns(rows);
   let initial;
   try {
     initial = { ok: true as const, data: await listProposals(query, columns) };
@@ -60,6 +62,7 @@ export default async function Proposals({
       <Listing
         initial={initial}
         columns={columns}
+        filters={proposalFilters(rows)}
         initialQuery={query}
         choices={await listingChoices()}
         format={await displayFormat()}

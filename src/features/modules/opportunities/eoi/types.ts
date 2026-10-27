@@ -1,3 +1,4 @@
+import type { StatusTone } from "@/components/ui/status-badge";
 import type { IconName } from "@/components/ui/icon";
 import type { EoiTab, PageLock } from "@/shared/opportunities/eoi-record";
 export type { EoiTab, PageLock };
@@ -61,7 +62,13 @@ export interface RecordShellModel {
   opportunityId?: string;
   opportunityHeading?: string;
   tabs: RecordTabLink[];
-  panel: { key: string; label: string; value: string; tone?: string }[];
+  panel: {
+    key: string;
+    label: string;
+    value: string;
+    tone?: StatusTone;
+    creator?: boolean;
+  }[];
   /** Finalizable tabs (null: the list could not be read, so no switch). */
   finalizable: EoiTab[] | null;
   converts: { outline: string | null; full: string | null };

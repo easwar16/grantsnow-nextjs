@@ -5,6 +5,10 @@
   padding: 18px 20px 20px;
   overflow-y: auto;
 }
+/* Legacy dialogs with no width class: Redwood's 600px default (measured live, 2026-10-27), owner height cap. */
+.standard {
+  max-height: 70vh;
+}
 .dialog[open] {
   display: flex;
   flex-direction: column;

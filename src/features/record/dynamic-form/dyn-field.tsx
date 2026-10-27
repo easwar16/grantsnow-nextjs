@@ -7,7 +7,13 @@ import { Icon } from "@/components/ui/icon";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { RichText } from "@/components/ui/rich-text";
 import { Select } from "@/components/ui/select";
-import { fileNameOf, isBlank, optionsFor, roundTo } from "./engine";
+import {
+  controlWidth,
+  fileNameOf,
+  isBlank,
+  optionsFor,
+  roundTo,
+} from "./engine";
 import type { DynamicFormModel } from "./model";
 import type {
   DynamicFormData,
@@ -96,6 +102,11 @@ export function DynFieldView({
     { texts, settings } = data,
     [dragging, setDragging] = useState(false);
   const set = (v: FieldValue) => model.setValue(formId, sectionId, fieldId, v);
+  // Legacy's oj-md class narrows the control, except rich text (whose component ignores it) and file pickers.
+  const width =
+    field.fieldType === "RICHTEXTEDITOR" || field.fieldType === "FILE"
+      ? undefined
+      : controlWidth(field.colspan, section.maxColumns);
   const touch = () => model.touch(formId, sectionId, fieldId);
   const parent = field.parent_header_attr;
   const options = optionsFor(
@@ -399,7 +410,13 @@ export function DynFieldView({
           label={texts.moreInfo}
         />
       </span>
-      {control()}
+      {width ? (
+        <div className={styles.controlBox} style={{ width }}>
+          {control()}
+        </div>
+      ) : (
+        control()
+      )}
       {error && (
         <span id={errorId} className={styles.error} role="alert">
           {error}

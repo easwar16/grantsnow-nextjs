@@ -116,7 +116,7 @@ export function AttachmentsPanel({ view }: { view: AttachmentsView }) {
         ).map(([key, name, value]) => (
           <div key={key} id={`${id}-${key}`} className={styles.field}>
             <dt>{name}</dt>
-            <dd>{value === undefined || value === "" ? "—" : value}</dd>
+            <dd>{value ?? ""}</dd>
           </div>
         ))}
       </dl>
@@ -284,6 +284,7 @@ const FolderBranch = memo(function FolderBranch({
           onClick={() => setOpen((o) => !o)}
         >
           <Icon name={open ? "chevron-down" : "chevron-right"} size={14} />
+          <Icon name="folder" size={15} />
           <span className={styles.name} title={node.label}>
             {node.label}
           </span>
@@ -402,7 +403,7 @@ function AddDocumentDialog({
     <ActionDialog
       id={id}
       title={labels.addNewDocumentTitle}
-      width={640}
+      width="60vw" /* legacy dialogAddNewDocument oj-md-width-3/5 */
       busy={busy}
       closeLabel={labels.cancel}
       onClose={onClose}

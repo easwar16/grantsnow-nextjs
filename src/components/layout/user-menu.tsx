@@ -1,4 +1,5 @@
 "use client";
+import { clearTabState } from "@/lib/tab-state";
 import { useEffect, useRef, useState } from "react";
 import { ProfileDialog } from "@/features/modules/account/profile-dialog";
 import { Icon } from "@/components/ui/icon";
@@ -116,6 +117,7 @@ export function UserMenu({
             id="user-menu-sign-out-form"
             action="/api/auth/logout"
             method="post"
+            onSubmit={clearTabState}
           >
             <button id="user-menu-sign-out" role="menuitem" type="submit">
               <Icon name="logout" />

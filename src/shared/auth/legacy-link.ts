@@ -1,4 +1,5 @@
 import { placeholderModules } from "@/lib/unavailable-modules";
+import { awardHref } from "@/features/modules/awards/links";
 const recordId = /^[1-9]\d{0,14}$/;
 const proposalTypes = [
   "PROPOSAL",
@@ -46,6 +47,12 @@ export function legacyDeepLink(search: string): string | null {
       proposalTypes.includes(type)
       ? `/proposals/${type}/${id}`
       : "/proposals";
+  }
+  if (flow === "awards") {
+    const id = params.get("award_id") ?? "";
+    return page === "awards-detail" && recordId.test(id)
+      ? awardHref(id)
+      : "/awards";
   }
   if (flow === "opportunities") {
     const id = params.get("request_id") ?? "";

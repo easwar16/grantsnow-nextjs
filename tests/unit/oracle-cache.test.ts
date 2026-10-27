@@ -67,3 +67,17 @@ it("is one cache across module instances, so a route handler's write clears what
   await memo("lock|1", 60_000, load);
   expect(load).toHaveBeenCalledTimes(2);
 });
+it("holds an answer by its size, and never one larger than the whole budget", async () => {
+  const small = vi.fn().mockResolvedValue({ rows: [1, 2] });
+  await memo("small", 60_000, small);
+  await memo("small", 60_000, small);
+  expect(small).toHaveBeenCalledTimes(1);
+  const huge = vi.fn().mockResolvedValue("x".repeat(65 * 1024 * 1024));
+  await memo("huge", 60_000, huge);
+  // The size is charged once the answer lands (a microtask after it resolves).
+  await Promise.resolve();
+  await memo("huge", 60_000, huge);
+  expect(huge).toHaveBeenCalledTimes(2);
+  expect(await memo("small", 60_000, small)).toEqual({ rows: [1, 2] });
+  expect(small).toHaveBeenCalledTimes(1);
+});

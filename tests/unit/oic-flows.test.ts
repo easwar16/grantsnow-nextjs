@@ -66,12 +66,25 @@ it("keeps every write behind the writes gate and simulates it under fixtures", a
   ).resolves.toEqual({});
   expect(fetchMock).not.toHaveBeenCalled();
 });
-it("refuses the flow whose path the legacy contract leaves empty", async () => {
+it("posts the ERP flow to its run-time path only as flow / version / resource segments", async () => {
+  const erp =
+    oic.getIcApiIntegrationV1FlowsRestUNIT4_MAIN_FLOW1_0Unit4integration;
+  await erp({
+    flow: "UNIT4_ERP_FLOW",
+    version: "1.0",
+    resource: "unit4integration",
+    body: { AwardId: 1 },
+  });
+  expect(String(fetchMock.mock.calls[0][0])).toBe(
+    "https://oic.example/ic/api/integration/v1/flows/rest/UNIT4_ERP_FLOW/1.0/unit4integration",
+  );
+  fetchMock.mockClear();
   await expect(
-    oic.getIcApiIntegrationV1FlowsRestUNIT4_MAIN_FLOW1_0Unit4integration({
-      body: {},
-    }),
-  ).rejects.toMatchObject({ code: "CONTRACT" });
+    erp({ flow: "..", version: "1.0", resource: "x", body: {} }),
+  ).rejects.toMatchObject({ status: 400 });
+  await expect(
+    erp({ flow: "a/b", version: "1.0", resource: "x", body: {} }),
+  ).rejects.toMatchObject({ status: 400 });
   expect(fetchMock).not.toHaveBeenCalled();
 });
 it("reports a business failure inside a 200 reply", async () => {

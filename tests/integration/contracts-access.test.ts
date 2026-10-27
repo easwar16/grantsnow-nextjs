@@ -2,6 +2,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({
   user: { modules: { CONTRACTS: true } },
   oracle: vi.fn(),
+  answers: {} as Record<string, unknown>,
   choices: vi.fn(),
   roles: vi.fn(),
   organizations: vi.fn(),
@@ -13,7 +14,12 @@ vi.mock("@/server/identity/session/service", () => ({
   }),
 }));
 vi.mock("@/server/oracle/connection", () => ({ oracle: state.oracle }));
-vi.mock("@/server/contracts/lookups", () => ({
+// Every read is fresh: the per-session cache would carry one test's roles into the next.
+vi.mock("@/server/oracle/cache", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/server/oracle/cache")>()),
+  memo: (_key: string, _ttl: number, load: () => Promise<unknown>) => load(),
+}));
+vi.mock("@/server/modules/contracts/lookups", () => ({
   contractListingChoices: state.choices,
 }));
 vi.mock("@/server/platform/configuration/service", () => ({
@@ -31,101 +37,109 @@ vi.mock("@/server/platform/configuration/resources", () => ({
   ) => fallback,
   resourceVisible: () => true,
 }));
+vi.mock("@/server/platform/configuration/formatting", () => ({
+  displayFormat: async () => undefined,
+}));
 import {
   canCreateContract,
-  contractComments,
-  contractAudits,
-  parseContractAuditEvent,
-  contractHistory,
-  contractHistoryHost,
-  contractDelegationHost,
-  contractPanelHost,
-  contractSigners,
-  contractWorkflow,
-  contractStageUsers,
   contractActiveVersion,
-  contractApprovalHistory,
-  loadContract,
+  contractDelegationHost,
+  contractHistoryHost,
+  contractSigners,
+  contractVisibleTabs,
   listContracts,
-} from "@/server/contracts/service";
-import { parseContractQuery } from "@/features/contracts/schema";
+  loadContract,
+} from "@/server/modules/contracts/service";
+import { contractApprovalHost } from "@/server/modules/contracts/workflow";
+import { panelHost } from "@/server/record/objects/panels";
+import { auditView } from "@/server/record/objects/audit";
+import { parseContractQuery } from "@/features/modules/contracts/schema";
 import { authorizeForm, pageOf } from "@/server/record/dynamic-form/access";
+
+const grants = (...pages: (string | [string, "edit"])[]) => ({
+  items: pages.map((p) =>
+    typeof p === "string"
+      ? { page_id: pages.indexOf(p) + 1, page_name: p, read_access: "Y" }
+      : {
+          page_id: pages.indexOf(p) + 1,
+          page_name: p[0],
+          read_access: "Y",
+          edit_access: "Y",
+        },
+  ),
+});
+const contract = (fields: Record<string, unknown> = {}) => ({
+  contract_id: 1300,
+  contract_number: "C_1300",
+  contract_title: "Scoped",
+  status_lkp_code: "IA",
+  org_id: 202,
+  ...fields,
+});
+const ops = () => state.oracle.mock.calls.map(([op]) => op as string);
 
 beforeEach(() => {
   state.user = { modules: { CONTRACTS: true } };
+  // Finalize state, locks and status names answer empty unless a test sets them.
+  state.answers = {
+    getSharedFinalizablePages: { items: [] },
+    getProposalGetLockedModules: { items: [] },
+    getPre_awardGetLookupTypesCodes: { items: [] },
+  };
   state.oracle.mockReset();
+  state.oracle.mockImplementation(async (op: string) => {
+    if (!(op in state.answers)) throw new Error(`Unexpected operation: ${op}`);
+    return state.answers[op];
+  });
   state.choices.mockReset();
   state.choices.mockResolvedValue({ types: [], orgs: [], sorts: [] });
   state.roles.mockReset();
   state.organizations.mockReset();
   state.organizations.mockResolvedValue([{ id: "202" }]);
 });
-it("scopes shared Contract panels to the granted page and rejects other pages", async () => {
-  state.oracle.mockImplementation(async (operation: string) => {
-    if (operation === "getSecurityUser_roles")
-      return {
-        items: [
-          { page_name: "contracts-summary", read_access: "Y" },
-          { page_name: "contracts-delegation", read_access: "Y" },
-        ],
-      };
-    if (operation === "getContractsContract_id")
-      return {
-        contract_id: 1420,
-        contract_number: "C_1420",
-        contract_title: "Scoped",
-        status_lkp_code: "IA",
-        org_id: 202,
-      };
-    throw new Error(`Unexpected operation: ${operation}`);
-  });
+const panel = (page: string) =>
+  new URLSearchParams({ type: "CONTRACT", id: "1300", page });
+
+it("scopes the shared panels to a readable Contract page; writing needs its edit", async () => {
+  state.answers.getSecurityUser_roles = grants("contracts-summary", [
+    "contracts-delegation",
+    "edit",
+  ]);
   await expect(
-    contractPanelHost("1420", "contracts-delegation", "write"),
+    panelHost(panel("contracts-delegation"), "write"),
   ).resolves.toMatchObject({
     objectType: "CONTRACT",
-    objectId: "1420",
-    page: "contracts-delegation",
+    objectId: "1300",
+    bundle: "contract",
     canComment: true,
   });
   await expect(
-    contractPanelHost("1420", "contracts-workflow", "read"),
+    panelHost(panel("contracts-summary"), "write"),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
   await expect(
-    contractPanelHost("1420", "contracts-unknown", "read"),
+    panelHost(panel("contracts-workflow"), "read"),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  await expect(
+    panelHost(panel("contracts-unknown"), "read"),
   ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 });
-it("maps Contract fragment hosts to the scoped record and denies missing write grants", async () => {
-  state.oracle.mockImplementation(async (operation: string) => {
-    if (operation === "getSecurityUser_roles")
-      return {
-        items: [
-          { page_name: "contracts-summary", read_access: "Y" },
-          { page_name: "contracts-history", read_access: "Y" },
-          { page_name: "contracts-delegation", read_access: "Y" },
-        ],
-      };
-    if (operation === "getContractsContract_id")
-      return {
-        contract_id: 1420,
-        contract_number: "C_1420",
-        contract_title: "Scoped",
-        status_lkp_code: "IA",
-        org_id: 202,
-      };
-    throw new Error(`Unexpected operation: ${operation}`);
-  });
-  const history = await contractHistoryHost("1420");
-  expect(history).toMatchObject({
+it("maps the history and delegation hosts to the scoped record and denies missing edit grants", async () => {
+  state.answers.getSecurityUser_roles = grants(
+    "contracts-summary",
+    "contracts-history",
+    "contracts-delegation",
+  );
+  state.answers.getContractsContract_id = contract();
+  await expect(contractHistoryHost("1300")).resolves.toMatchObject({
     objectType: "CONTRACT",
-    objectId: "1420",
-    objectNumber: "C_1420",
+    objectId: "1300",
+    objectNumber: "C_1300",
     approvalType: "CONTRACT",
     rights: { addStatus: false, abandon: false },
   });
-  const delegation = await contractDelegationHost("1420");
-  expect(delegation).toMatchObject({
+  await expect(contractDelegationHost("1300")).resolves.toMatchObject({
     objectType: "CONTRACT",
-    objectId: "1420",
+    objectId: "1300",
     rights: { edit: false, delete: false },
   });
 });
@@ -134,27 +148,17 @@ it("allows Contract Header form reads only through a scoped Summary record", asy
     "contracts-summary",
   );
   expect(pageOf({ objectType: "CONTRACT", slot: "OTHER" })).toBeNull();
-  state.oracle.mockImplementation(async (operation: string) => {
-    if (operation === "getSecurityUser_roles")
-      return { items: [{ page_name: "contracts-summary", read_access: "Y" }] };
-    if (operation === "getContractsContract_id")
-      return {
-        contract_id: 1423,
-        contract_number: "C_1423",
-        contract_title: "Scoped",
-        org_id: 202,
-      };
-    throw new Error(`Unexpected operation: ${operation}`);
-  });
+  state.answers.getSecurityUser_roles = grants("contracts-summary");
+  state.answers.getContractsContract_id = contract();
   const target = {
     objectType: "CONTRACT",
     slot: "CONTRACTS-SUMMARY",
-    objectId: "1423",
-    parentId: "1423",
+    objectId: "1300",
+    parentId: "1300",
   };
   await expect(authorizeForm(target, "read")).resolves.toMatchObject({
     page: "contracts-summary",
-    record: { id: "1423", number: "C_1423" },
+    record: { id: "1300", number: "C_1300" },
   });
   await expect(authorizeForm(target, "edit")).rejects.toMatchObject({
     code: "FORBIDDEN",
@@ -163,20 +167,15 @@ it("allows Contract Header form reads only through a scoped Summary record", asy
     authorizeForm({ ...target, parentId: "999" }, "read"),
   ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 });
-it("denies a Contract fragment before its object read when the tab grant is absent", async () => {
-  state.oracle.mockResolvedValue({
-    items: [{ page_name: "contracts-summary", read_access: "Y" }],
-  });
-  await expect(contractHistoryHost("1421")).rejects.toMatchObject({
+it("denies a tab before the contract read when its grant is absent", async () => {
+  state.answers.getSecurityUser_roles = grants("contracts-summary");
+  await expect(contractHistoryHost("1300")).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
-  await expect(contractDelegationHost("1422")).rejects.toMatchObject({
+  await expect(contractDelegationHost("1300")).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
-  expect(state.oracle).not.toHaveBeenCalledWith(
-    "getContractsContract_id",
-    expect.anything(),
-  );
+  expect(ops()).not.toContain("getContractsContract_id");
 });
 it("shows creation only for an explicit unanimous dashboard grant", async () => {
   state.roles
@@ -192,175 +191,83 @@ it("shows creation only for an explicit unanimous dashboard grant", async () => 
   await expect(canCreateContract()).resolves.toBe(false);
   await expect(canCreateContract()).resolves.toBe(true);
 });
-it("denies Contract History before either history endpoint when the tab grant is missing", async () => {
-  state.oracle.mockResolvedValueOnce({
-    items: [{ page_name: "contracts-summary", read_access: "Y" }],
-  });
-  await expect(contractHistory("1300", "C_1300")).rejects.toMatchObject({
-    code: "FORBIDDEN",
-  });
-  expect(state.oracle).toHaveBeenCalledTimes(1);
-});
-it("blocks Signers in Draft before any Oracle call", async () => {
-  await expect(contractSigners("1300", "DRFT")).rejects.toMatchObject({
-    code: "FORBIDDEN",
-  });
-  expect(state.oracle).not.toHaveBeenCalled();
-});
-it("blocks Workflow in Draft before any Oracle call", async () => {
-  await expect(
-    contractWorkflow("1300", "C_1300", "DRFT"),
-  ).rejects.toMatchObject({ code: "FORBIDDEN" });
-  expect(state.oracle).not.toHaveBeenCalled();
-});
-it("does not trust a caller-supplied Signers status", async () => {
-  const grants = {
-    items: [
-      { page_name: "contracts-signers", read_access: "Y" },
-      { page_name: "contracts-summary", read_access: "Y" },
-    ],
+it("keeps Workflow and Signers closed on a draft until every finalizable page is finalized", async () => {
+  state.answers.getSecurityUser_roles = grants(
+    "contracts-summary",
+    "contracts-workflow",
+    "contracts-signers",
+  );
+  state.answers.getContractsContract_id = contract({ status_lkp_code: "DRFT" });
+  state.answers.getSharedFinalizablePages = {
+    items: [{ page_name: "contracts-summary" }],
   };
-  state.oracle
-    .mockResolvedValueOnce(grants)
-    .mockResolvedValueOnce(grants)
-    .mockResolvedValueOnce({
-      contract_id: 1300,
-      contract_number: "C_1300",
-      contract_title: "Draft",
-      status_lkp_code: "DRFT",
-      org_id: 202,
-    });
-  await expect(contractSigners("1300", "AIA")).rejects.toMatchObject({
+  await expect(contractSigners("1300")).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
-  expect(state.oracle).not.toHaveBeenCalledWith(
-    "getContractsSignerDetails",
-    expect.anything(),
-  );
-});
-it("rejects approval stages belonging to another contract", async () => {
-  state.oracle
-    .mockResolvedValueOnce({
-      items: [
-        { page_name: "contracts-workflow", read_access: "Y" },
-        { page_name: "contracts-summary", read_access: "Y" },
-      ],
-    })
-    .mockResolvedValueOnce({
-      items: [
-        { page_name: "contracts-workflow", read_access: "Y" },
-        { page_name: "contracts-summary", read_access: "Y" },
-      ],
-    })
-    .mockResolvedValueOnce({
-      contract_id: 1300,
-      contract_number: "C_1300",
-      contract_title: "Scoped",
-      org_id: 202,
-    })
-    .mockResolvedValueOnce({
-      items: [{ approval_number: "C_999", level_id: 1 }],
-    });
-  await expect(contractWorkflow("1300", "C_1300", "AIA")).rejects.toMatchObject(
-    { code: "FORBIDDEN" },
-  );
-});
-it("rejects approvers returned for another approval stage", async () => {
-  state.oracle.mockImplementation(async (operation: string) => {
-    if (operation === "getSecurityUser_roles")
-      return {
-        items: [
-          { page_name: "contracts-summary", read_access: "Y" },
-          { page_name: "contracts-workflow", read_access: "Y" },
-        ],
-      };
-    if (operation === "getContractsContract_id")
-      return {
-        contract_id: 1300,
-        contract_number: "C_1300",
-        contract_title: "Scoped",
-        status_code: "AIA",
-        org_id: 202,
-      };
-    if (operation === "getApproval_setupApproval_stages")
-      return {
-        items: [
-          { approval_number: "C_1300", level_id: 42, level_name: "Stage 1" },
-        ],
-      };
-    if (operation === "getApproval_setupGet_stage_users")
-      return {
-        items: [{ stage_id: 99, name: "Other approver" }],
-      };
-    throw new Error(`Unexpected operation: ${operation}`);
-  });
-  await expect(contractStageUsers("1300", "C_1300", 42)).rejects.toMatchObject({
+  await expect(contractApprovalHost("1300")).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
-  expect(
-    state.oracle.mock.calls.map(([op, headers]) => [op, headers]),
-  ).toContainEqual([
-    "getApproval_setupGet_stage_users",
-    {
-      token: "test-token",
-      p_approval_number: "C_1300",
-      stage_id: "42",
-      doc_type: "CONTRACT",
-    },
-  ]);
+  await expect(contractVisibleTabs("1300")).resolves.toMatchObject({
+    workflow: false,
+    signers: false,
+  });
+  expect(ops()).not.toContain("getContractsSignerDetails");
+  // Summary finalized (its lock on page id 1): legacy getTabs opens both.
+  state.answers.getProposalGetLockedModules = {
+    items: [{ id: 9, page_id: 1 }],
+  };
+  await expect(contractVisibleTabs("1300")).resolves.toMatchObject({
+    workflow: true,
+    signers: true,
+  });
+});
+it("keeps Workflow closed on a draft whose finalize state cannot be read", async () => {
+  state.answers.getSecurityUser_roles = grants(
+    "contracts-summary",
+    "contracts-workflow",
+  );
+  state.answers.getContractsContract_id = contract({ status_lkp_code: "DRFT" });
+  state.answers.getSharedFinalizablePages = { unexpected: true };
+  await expect(contractVisibleTabs("1300")).resolves.toMatchObject({
+    workflow: false,
+  });
+});
+it("hosts the shared workflow with the legacy fragment's keys; an unknown lock closes Add Stage", async () => {
+  state.answers.getSecurityUser_roles = grants(
+    "contracts-summary",
+    ["contracts-workflow", "edit"],
+    ["contract-add-stage", "edit"],
+  );
+  state.answers.getContractsContract_id = contract({ status_lkp_code: "AIA" });
+  // A lock that cannot be read.
+  state.answers.getProposalGetLockStatus = null;
+  const host = await contractApprovalHost("1300");
+  expect(host).toMatchObject({
+    docNum: "C_1300",
+    docType: "CONTRACT",
+    approvalType: "CONTRACT",
+    bundle: "contract",
+    state: { inApproval: true, withdraw: true, showAddStage: false },
+    rights: { route: true, addStage: true, addApprover: false },
+  });
+  state.answers.getProposalGetLockStatus = { status: "UNLOCK" };
+  expect((await contractApprovalHost("1300")).state.showAddStage).toBe(true);
 });
 it("rejects a version list containing another contract", async () => {
-  state.oracle.mockImplementation(async (operation: string) => {
-    if (operation === "getSecurityUser_roles")
-      return { items: [{ page_name: "contracts-summary", read_access: "Y" }] };
-    if (operation === "getContractsContract_id")
-      return {
-        contract_id: 1300,
-        contract_number: "C_1300",
-        contract_title: "Scoped",
-        org_id: 202,
-      };
-    if (operation === "getContractsGetContractVersions")
-      return {
-        items: [
-          {
-            contract_id: 999,
-            object_str_ref: "other.pdf",
-            active_version_flag: "Y",
-          },
-        ],
-      };
-    throw new Error(`Unexpected operation: ${operation}`);
-  });
+  state.answers.getSecurityUser_roles = grants("contracts-summary");
+  state.answers.getContractsContract_id = contract();
+  state.answers.getContractsGetContractVersions = {
+    items: [
+      {
+        contract_id: 999,
+        object_str_ref: "other.pdf",
+        active_version_flag: "Y",
+      },
+    ],
+  };
   await expect(contractActiveVersion("1300")).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
-});
-it("rejects approval history returned for another contract", async () => {
-  state.oracle.mockImplementation(async (operation: string) => {
-    if (operation === "getSecurityUser_roles")
-      return {
-        items: [
-          { page_name: "contracts-summary", read_access: "Y" },
-          { page_name: "contracts-workflow", read_access: "Y" },
-        ],
-      };
-    if (operation === "getContractsContract_id")
-      return {
-        contract_id: 1300,
-        contract_number: "C_1300",
-        contract_title: "Scoped",
-        org_id: 202,
-      };
-    if (operation === "getPre_awardGetApprovalHistory")
-      return {
-        items: [{ transaction_number: "C_999", full_name: "Other approver" }],
-      };
-    throw new Error(`Unexpected operation: ${operation}`);
-  });
-  await expect(contractApprovalHistory("1300", "C_1300")).rejects.toMatchObject(
-    { code: "FORBIDDEN" },
-  );
 });
 it("rejects unconfigured sort and organization choices before listing", async () => {
   await expect(
@@ -380,137 +287,68 @@ it("denies listing before Oracle when module access is absent", async () => {
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
   expect(state.oracle).not.toHaveBeenCalled();
 });
-it("denies a contract when its summary grant is missing before fetching the record", async () => {
-  state.oracle.mockResolvedValueOnce({
-    items: [{ page_name: "contracts-history", read_access: "Y" }],
+it("names a status the row leaves blank from the configured CONTRACT_STATUS lookup", async () => {
+  state.answers.getGetAllContracts = {
+    items: [contract({ status: null, status_lkp_code: "SUBMIT_SIGN" })],
+    offset: 0,
+    total_count: 1,
+  };
+  state.answers.getPre_awardGetLookupTypesCodes = {
+    items: [
+      { lookup_code: "SUBMIT_SIGN", lookup_code_descr: "Sent for Signing" },
+    ],
+  };
+  const page = await listContracts(parseContractQuery(new URLSearchParams()));
+  expect(page.rows[0]).toMatchObject({
+    status: "Sent for Signing",
+    statusCode: "SUBMIT_SIGN",
   });
+});
+it("denies a contract without its summary grant before reading the record", async () => {
+  state.answers.getSecurityUser_roles = grants("contracts-history");
   await expect(loadContract("1300")).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
-  expect(state.oracle).toHaveBeenCalledTimes(1);
+  expect(ops()).not.toContain("getContractsContract_id");
   expect(
-    state.oracle.mock.calls.map(([op, headers]) => [op, headers]),
-  ).toContainEqual([
-    "getSecurityUser_roles",
-    {
-      token: "test-token",
-      p_obj_type: "CONTRACT",
-      p_obj_id: "1300",
-    },
-  ]);
+    state.oracle.mock.calls.find(([op]) => op === "getSecurityUser_roles")?.[1],
+  ).toMatchObject({ p_obj_type: "CONTRACT", p_obj_id: "1300" });
 });
 it("rejects a different contract returned after an authorized role check", async () => {
-  state.oracle.mockResolvedValueOnce({
-    items: [{ page_name: "contracts-summary", read_access: "Y" }],
-  });
-  state.oracle.mockResolvedValueOnce({
-    contract_id: 1301,
-    contract_number: "C_1301",
-    contract_title: "Other",
-    status: "Draft",
-  });
+  state.answers.getSecurityUser_roles = grants("contracts-summary");
+  state.answers.getContractsContract_id = contract({ contract_id: 1301 });
   await expect(loadContract("1300")).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
 });
 it("denies a Contract outside the person's organization scope", async () => {
-  state.oracle
-    .mockResolvedValueOnce({
-      items: [{ page_name: "contracts-summary", read_access: "Y" }],
-    })
-    .mockResolvedValueOnce({
-      contract_id: 1300,
-      contract_number: "C_1300",
-      contract_title: "Scoped",
-      org_id: 999,
-    });
+  state.answers.getSecurityUser_roles = grants("contracts-summary");
+  state.answers.getContractsContract_id = contract({ org_id: 999 });
   await expect(loadContract("1300")).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
-  expect(state.organizations).toHaveBeenCalledOnce();
 });
-it("rejects comments belonging to another Contract", async () => {
-  state.oracle
-    .mockResolvedValueOnce({
-      items: [{ page_name: "contracts-summary", read_access: "Y" }],
-    })
-    .mockResolvedValueOnce({
-      contract_id: 1300,
-      contract_number: "C_1300",
-      contract_title: "Scoped",
-      org_id: 202,
-    })
-    .mockResolvedValueOnce({
-      items: [{ page_name: "contracts-summary", read_access: "Y" }],
-    })
-    .mockResolvedValueOnce({
-      items: [{ comment_id: 1, object_id: 1301, comments: "Other" }],
-    });
-  await expect(contractComments("1300")).rejects.toMatchObject({
-    code: "FORBIDDEN",
+it("reads the Contract audit through the shared panel, with its page key and NEW VERSION CREATED", async () => {
+  state.answers.getSecurityUser_roles = grants(
+    "contracts-summary",
+    "contracts-delegation",
+  );
+  state.answers.getSharedGetObjectAudits2 = {
+    items: [{ event: "NEW VERSION CREATED", field_values: [] }],
+  };
+  const q = panel("contracts-delegation");
+  q.set("event", "NEW VERSION CREATED");
+  await expect(auditView(q)).resolves.toMatchObject({
+    items: [{ event: "NEW VERSION CREATED" }],
   });
-});
-it("validates Audit Trail filters and rejects another Contract's events", async () => {
-  expect(() => parseContractAuditEvent("APPROVED")).toThrow();
-  expect(parseContractAuditEvent(undefined)).toBe("");
-  state.oracle
-    .mockResolvedValueOnce({
-      items: [{ page_name: "contracts-summary", read_access: "Y" }],
-    })
-    .mockResolvedValueOnce({
-      contract_id: 1300,
-      contract_number: "C_1300",
-      contract_title: "Scoped",
-      org_id: 202,
-    })
-    .mockResolvedValueOnce({
-      items: [{ page_name: "contracts-summary", read_access: "Y" }],
-    })
-    .mockResolvedValueOnce({
-      items: [{ object_id: 1301, object_type: "CONTRACT", event: "UPDATED" }],
-    });
-  await expect(contractAudits("1300", "UPDATED")).rejects.toMatchObject({
-    code: "FORBIDDEN",
-  });
-});
-it("reads Contract audits with the current page key", async () => {
-  state.oracle.mockImplementation(async (operation: string) => {
-    if (operation === "getSecurityUser_roles")
-      return {
-        items: [
-          { page_name: "contracts-summary", read_access: "Y" },
-          { page_name: "contracts-delegation", read_access: "Y" },
-        ],
-      };
-    if (operation === "getContractsContract_id")
-      return {
-        contract_id: 1420,
-        contract_number: "C_1420",
-        contract_title: "Scoped",
-        org_id: 202,
-      };
-    if (operation === "getSharedGetObjectAudits2")
-      return {
-        items: [
-          {
-            object_id: 1420,
-            object_type: "CONTRACT",
-            event: "NEW VERSION CREATED",
-            field_values: [],
-          },
-        ],
-      };
-    throw new Error(`Unexpected operation: ${operation}`);
-  });
-  await expect(
-    contractAudits("1420", "NEW VERSION CREATED", "contracts-delegation"),
-  ).resolves.toHaveLength(1);
   expect(
     state.oracle.mock.calls.find(
-      ([operation]) => operation === "getSharedGetObjectAudits2",
+      ([op]) => op === "getSharedGetObjectAudits2",
     )?.[1],
   ).toMatchObject({
     p_page_name: "contracts-delegation",
     p_event: "NEW VERSION CREATED",
   });
+  q.set("event", "APPROVED");
+  await expect(auditView(q)).rejects.toMatchObject({ code: "BAD_REQUEST" });
 });

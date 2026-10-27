@@ -1,0 +1,194 @@
+/* A record page (GN-Angular eoi-record.css, legacy *-detail-page): action bar, full-width tabs, record panel, routed tab,
+   400px end drawer. */
+.record {
+  /* oj-bg-neutral-30, the record panel's ground. */
+  --record-panel-bg: #f1efed;
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* The fixed head (action bar and tabs) over the body, which alone scrolls, so its scroll bar starts below the tabs. */
+.head {
+  flex: none;
+  padding: 0 16px;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0 16px;
+  overflow-y: auto;
+}
+
+/* page-action-bar: List on the start edge, the record actions on the end, a divider beneath. */
+.actionBar {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--gn-divider);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* GN-Angular eoi-record.css: .toolbar .active is the 0.08 tint, scoped to outrank .gn-btn's background. */
+.toolbar .active {
+  background: var(--gn-solid-tint);
+}
+
+/* oj-navigation-list edge=top: icon + name, a brand underline on the current tab; the tabs share the full width. */
+.tabs {
+  display: flex;
+  flex: none;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--gn-divider);
+}
+
+.tabs a {
+  display: flex;
+  flex: 1 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 12px;
+  white-space: nowrap;
+  color: var(--gn-text-secondary);
+  text-decoration: none;
+  border-bottom: 3px solid transparent;
+}
+
+.tabs a:hover {
+  color: var(--gn-text);
+}
+
+.tabs a.selected {
+  font-weight: 600;
+  color: var(--gn-text);
+  border-bottom-color: var(--gn-brand);
+}
+
+.finalized {
+  color: var(--gn-success);
+}
+
+/* The record panel (legacy readonly oj-form-layout, direction column; measured on the award and EOI panels
+   2026-10-26): columns filled downwards, 1.15rem semibold labels in the text colour, a 50px row pitch, in a bordered
+   neutral panel padded 12px 6px 6px. The column count is the host's (award 3, EOI 2). */
+.panel {
+  display: grid;
+  flex: none;
+  grid-template-columns: repeat(var(--columns, 2), minmax(0, 1fr));
+  gap: 0;
+  margin: 0 0 9px;
+  padding: 12px 6px 6px;
+  background: var(--record-panel-bg);
+  border: 1px solid var(--gn-divider);
+  border-radius: 4px;
+}
+
+.panel > div {
+  min-width: 0;
+  padding: 0 0 12px;
+}
+
+.panel dt {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  /* One label line; a More Info button overflows it, as legacy's, without moving the row. */
+  height: 1.2em;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--gn-text);
+}
+
+.panel dd {
+  margin: 6px 0 0;
+}
+
+@media (max-width: 768px) {
+  .panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* One column on a phone: the cells' inline column placement is set aside. */
+  .panel > div {
+    grid-row: auto !important;
+    grid-column: auto !important;
+  }
+}
+
+.content {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+}
+
+/* The end drawer (comments / audit trail), pushing the page as the original's drawer layout does. */
+.drawer {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: 30rem; /* legacy .drawer-end, for Comments and Audit alike (owner, 2026-10-27) */
+  max-width: 100%;
+  overflow: hidden;
+  background: var(--gn-surface);
+  border-left: 1px solid var(--gn-divider);
+}
+
+/* The content keeps its width while the drawer's width animates, so it slides rather than reflows. */
+.drawer > * {
+  min-width: min(calc(30rem - 1px), 100vw); /* less the 1px border */
+}
+
+.drawerHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--gn-divider);
+}
+
+.drawerHead h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .drawer {
+    position: absolute;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    bottom: 0;
+  }
+
+  .tabName {
+    display: none;
+  }
+}
+
+/* Legacy dialogCreatorDetails: one compact read-only column. */
+.creatorFields {
+  display: grid;
+  gap: 8px;
+}

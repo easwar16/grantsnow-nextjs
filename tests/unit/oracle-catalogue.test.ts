@@ -7,55 +7,45 @@ type Op = {
   method?: string;
   write?: boolean;
   headers: string[];
-  catalogue?: boolean;
 };
 const allowlist = operations as Record<string, Op>;
 const api = join(process.cwd(), "src/server/oracle/api");
-const generated = join(api, "catalogue");
-/** `export const <name> = read|write<…>({ op: "<op>"` pairs in a source file. */
-const definitions = (file: string) =>
-  [
-    ...readFileSync(file, "utf8").matchAll(
-      /export const (\w+) = (read|write)<[\s\S]*?op: "(\w+)"/g,
-    ),
-  ].map(([, name, kind, op]) => ({ name, kind, op }));
-const catalogue = readdirSync(generated)
-  .filter((f) => f.endsWith(".ts") && f !== "index.ts")
-  .flatMap((f) => definitions(join(generated, f)));
-
-it("has one generated function per allowlisted operation, each named after it", () => {
-  expect(catalogue.every((d) => d.name === d.op)).toBe(true);
-  expect(new Set(catalogue.map((d) => d.op)).size).toBe(catalogue.length);
-  expect(catalogue.map((d) => d.op).sort()).toEqual(
-    Object.keys(allowlist).sort(),
+/** Every source file under src/server, read once. */
+const sources = (dir: string): string[] =>
+  readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+    e.isDirectory()
+      ? sources(join(dir, e.name))
+      : e.name.endsWith(".ts")
+        ? [readFileSync(join(dir, e.name), "utf8")]
+        : [],
   );
+
+it("allowlists only operations the server names, so the allowlist cannot widen unused", () => {
+  const code = sources(join(process.cwd(), "src/server")).join("\n");
+  expect(
+    Object.keys(allowlist).filter((op) => !code.includes(`"${op}"`)),
+  ).toEqual([]);
 });
-it("generates writes exactly for the allowlist's writes, so every one goes through the writes gate", () => {
-  for (const d of catalogue)
-    expect([d.op, d.kind]).toEqual([
-      d.op,
-      allowlist[d.op].write ? "write" : "read",
-    ]);
+it("marks every non-GET operation a write, so each goes through the writes gate", () => {
   expect(
     Object.entries(allowlist)
       .filter(([, o]) => o.write !== true && (o.method ?? "GET") !== "GET")
       .map(([k]) => k),
   ).toEqual([]);
 });
-it("treats only the reviewed GETs as writes", () => {
-  expect(
-    Object.entries(allowlist)
-      .filter(([, o]) => o.write && (o.method ?? "GET") === "GET")
-      .map(([k]) => k)
-      .sort(),
-  ).toEqual(
-    [
-      "getApproval_setupGenerate_stages",
-      "getApproval_setupGenerate_stages_dynForm",
-      "getContractsConvertContract",
-      "getDynamicFormsInsertRequest",
-    ].sort(),
-  );
+// GETs that change data, reviewed from their legacy chains (scripts/oracle-catalogue.mjs GET_WRITES).
+const GET_WRITES = [
+  "getApproval_setupGenerate_stages",
+  "getApproval_setupGenerate_stages_dynForm",
+  "getContractsConvertContract",
+  "getDynamicFormsInsertRequest",
+  // GenerateAward is declared GET but creates the award (legacy createAward).
+  "postPost_awardsGenerateAward",
+];
+it("treats exactly the reviewed GETs as writes", () => {
+  for (const [op, o] of Object.entries(allowlist))
+    if ((o.method ?? "GET") === "GET")
+      expect([op, o.write === true]).toEqual([op, GET_WRITES.includes(op)]);
 });
 it("uses only allowlisted operations in the hand-written API modules", () => {
   const used = readdirSync(api)

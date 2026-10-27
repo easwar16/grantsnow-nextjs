@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
+  exclusiveLocation,
   oicDelete,
   oicDownload,
   oicUpload,
@@ -96,5 +97,28 @@ it("percent-encodes only non-Latin-1 characters in the header name", () => {
   expect(storageSafeName("a/Résumé.pdf")).toBe("a/Résumé.pdf");
   expect(storageSafeName("a/报告.pdf")).toBe(
     `a/${encodeURIComponent("报")}${encodeURIComponent("告")}.pdf`,
+  );
+});
+it("refuses a second upload to the same object while the first runs, and frees it after", async () => {
+  let finish = () => {};
+  const first = exclusiveLocation(
+    "I/1/A/1/f.pdf",
+    () => new Promise<void>((resolve) => (finish = resolve)),
+  );
+  await expect(
+    exclusiveLocation("I/1/A/1/f.pdf", async () => "second"),
+  ).rejects.toMatchObject({ status: 409 });
+  expect(await exclusiveLocation("I/1/A/1/g.pdf", async () => "other")).toBe(
+    "other",
+  );
+  finish();
+  await first;
+  await expect(
+    exclusiveLocation("I/1/A/1/f.pdf", async () => {
+      throw new Error("upload failed");
+    }),
+  ).rejects.toThrow("upload failed");
+  expect(await exclusiveLocation("I/1/A/1/f.pdf", async () => "again")).toBe(
+    "again",
   );
 });

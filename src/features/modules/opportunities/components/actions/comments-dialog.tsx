@@ -45,7 +45,7 @@ export function CommentsDialog({
       id={id}
       title={texts.title}
       subtitle={`${heading} · ${comment ? 1 : 0} ${comment ? texts.singular : texts.plural}`}
-      width={640}
+      width="36.676vw" /* legacy .opp-share-comments-dialog min(640px, 92vw) at 1745px */
       closeLabel={texts.close}
       onClose={onClose}
     >

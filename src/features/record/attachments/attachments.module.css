@@ -15,16 +15,16 @@
 .main {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
   padding: 12px 0;
 }
 
-/* oj-tree-view: 300px tall, its own scroll; the detail pane (oj-md-8) takes the rest. */
+/* oj-tree-view: 300px tall at 1043px, its own scroll, as wide as its names (each capped at 200px, measured 218px); the detail
+   pane (oj-md-8, padded 12px) follows. */
 .treeBox {
   position: relative;
-  flex: 1 1 260px;
+  flex: 0 0 auto;
   max-width: 100%;
-  height: 300px;
+  height: 28.763vh;
   overflow-x: hidden;
   overflow-y: auto;
 }

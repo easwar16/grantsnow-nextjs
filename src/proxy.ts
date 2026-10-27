@@ -46,6 +46,7 @@ export const config = {
     "/",
     "/home",
     "/proposals/:path*",
+    "/awards/:path*",
     "/opportunities/:path*",
     {
       source: "/((?!api/|_next/).*)",

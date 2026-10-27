@@ -15,7 +15,7 @@ import {
 } from "@/features/modules/opportunities/display";
 import { dateDisplay, type FormatSettings } from "@/lib/format";
 import { AppError } from "@/lib/errors";
-import { pageAccess, type RoleRow } from "../gates";
+import { pageAccess, type RoleRow } from "@/server/platform/permissions";
 import type {
   SummaryField,
   SummaryView,

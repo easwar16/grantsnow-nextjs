@@ -115,7 +115,7 @@ export function ShareDialog({
   const options = useMemo(() => (Array.isArray(list) ? list : []), [list]);
   if (!setup)
     return (
-      <ActionDialog id={id} title="" width={600} onClose={onClose}>
+      <ActionDialog id={id} title="" onClose={onClose}>
         <Skeleton kind="lines" count={4} label="Loading share options" />
       </ActionDialog>
     );
@@ -142,14 +142,8 @@ export function ShareDialog({
     }, "share");
   };
   return (
-    // Live: no subtitle, 600px, every field a Redwood inside-label box.
-    <ActionDialog
-      id={id}
-      title={texts.title}
-      width={600}
-      busy={saving}
-      onClose={onClose}
-    >
+    // Live: no subtitle, every field a Redwood inside-label box.
+    <ActionDialog id={id} title={texts.title} busy={saving} onClose={onClose}>
       <div id={`${id}-form`} className={styles.form}>
         <InsideField
           htmlFor={`${id}-send-to-trigger`}

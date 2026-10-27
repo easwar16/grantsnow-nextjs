@@ -61,8 +61,8 @@ import {
   cardActions,
   convertGates,
   deadlineWarningDays,
-  pageAccess,
 } from "@/server/modules/opportunities/gates";
+import { pageAccess } from "@/server/platform/permissions";
 import {
   endDateAfter,
   monthsBetween,

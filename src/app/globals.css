@@ -16,6 +16,16 @@
   --gn-spark: #2c5aa0;
   --gn-divider: rgba(22, 21, 19, 0.12);
   --gn-gridline: rgba(22, 21, 19, 0.1);
+  /* oj-table body rows (live DEV 2026-10-26). */
+  --gn-table-row: #f1efed;
+  --gn-switch-off: rgba(49, 45, 42, 0.6);
+  /* oj-badge-subtle tones. */
+  --gn-status-neutral: rgba(22, 21, 19, 0.08);
+  --gn-status-info: rgba(143, 191, 208, 0.4);
+  --gn-status-success: rgba(138, 201, 79, 0.4);
+  --gn-status-warning: rgba(240, 169, 87, 0.4);
+  --gn-status-danger: rgba(255, 157, 144, 0.4);
+  --gn-switch-on: darkseagreen;
   --gn-border-input: rgba(22, 21, 19, 0.5);
   /* Button tints: borderless/outlined hover, solid rest and hover. */
   --gn-hover-tint: rgba(22, 21, 19, 0.06);
@@ -24,7 +34,6 @@
   /* oj-badge-subtle tones (record statuses). Provisional: measure against the live app (D8). */
   --gn-tone-neutral-bg: rgba(22, 21, 19, 0.08);
   --gn-tone-info-bg: #dfeaf5;
-  --gn-tone-info-text: #24578a;
   --gn-tone-success-bg: #e4f0d9;
   --gn-tone-warning-bg: #fcefd9;
   /* Unlike --gn-danger-bg (overdue rows), the danger tone keeps its light fill in dark mode, as the others do. */
@@ -73,11 +82,6 @@
   --danger-bg: var(--gn-danger-bg);
   --warning: var(--gn-warning);
   --spark: var(--gn-spark);
-  --chip-neutral: var(--gn-tone-neutral-bg);
-  --chip-info: var(--gn-tone-info-bg);
-  --chip-success: var(--gn-tone-success-bg);
-  --chip-danger: var(--gn-tone-danger-bg);
-  --chip-warning: var(--gn-tone-warning-bg);
 }
 :root {
   --accent-light: #e4f1f7;
@@ -269,6 +273,16 @@ button:disabled,
 .primary:disabled {
   background: var(--accent);
 }
+/* oj-button chroming="danger": an irreversible hand-off (Send to ERP). */
+.gn-btn--danger {
+  color: #fff;
+  background: var(--gn-danger);
+  border-color: var(--gn-danger);
+}
+.gn-btn--danger:hover:not(:disabled) {
+  color: #fff;
+  background: color-mix(in srgb, var(--gn-danger) 85%, #000);
+}
 .gn-btn--solid {
   background: var(--gn-solid-tint);
 }
@@ -374,6 +388,22 @@ input[type="radio"] {
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+}
+/* A button that reads as a link (legacy <a on-click>): the link colour, no chrome. */
+.gn-link {
+  display: inline;
+  min-height: 0;
+  padding: 0;
+  font: inherit;
+  line-height: inherit;
+  color: var(--link);
+  text-align: start;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.gn-link:hover {
+  text-decoration: underline;
 }
 .skip-link {
   position: fixed;
@@ -495,7 +525,7 @@ input[type="radio"] {
   inset: 0 auto 0 0;
   z-index: 50;
   margin: 0;
-  width: 240px;
+  width: 20rem; /* legacy .vb-nav-drawer min-width */
   max-width: 90vw;
   height: 100dvh;
   max-height: none;
@@ -701,42 +731,46 @@ main {
   line-height: 1.3;
   margin: 8px 0 5px;
 }
-.record-chip {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 11px;
-  line-height: 1.2;
-  background: var(--chip-neutral);
-}
-/* Status tones (oj-badge-subtle): data-tone on .gn-status, a tone class on .record-chip. */
+/* The status bubble (StatusBadge; legacy oj-badge, measured on live DEV 2026-10-26): text-coloured on a translucent
+   tone, or white on the tone when solid. */
 .gn-status {
-  padding: 2px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text);
-  background: var(--gn-tone-neutral-bg);
-  border-radius: var(--gn-radius-menu);
+  display: inline-block;
+  padding: 0 9px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  white-space: nowrap;
+  color: var(--gn-text);
+  background: var(--gn-status-neutral);
+  border-radius: 9px;
 }
-.record-chip.info,
 .gn-status[data-tone="info"] {
-  color: var(--gn-tone-info-text);
-  background: var(--chip-info);
+  background: var(--gn-status-info);
 }
-.record-chip.success,
 .gn-status[data-tone="success"] {
-  color: var(--gn-success);
-  background: var(--chip-success);
+  background: var(--gn-status-success);
 }
-.record-chip.danger,
-.gn-status[data-tone="danger"] {
-  color: var(--gn-danger);
-  background: var(--chip-danger);
-}
-.record-chip.warning,
 .gn-status[data-tone="warning"] {
-  color: var(--gn-warning);
-  background: var(--chip-warning);
+  background: var(--gn-status-warning);
+}
+.gn-status[data-tone="danger"] {
+  background: var(--gn-status-danger);
+}
+.gn-status[data-solid] {
+  color: #fff;
+  background: rgb(123 117 112);
+}
+.gn-status[data-solid][data-tone="info"] {
+  background: rgb(0 104 140);
+}
+.gn-status[data-solid][data-tone="success"] {
+  background: var(--gn-success);
+}
+.gn-status[data-solid][data-tone="warning"] {
+  background: var(--gn-warning);
+}
+.gn-status[data-solid][data-tone="danger"] {
+  background: var(--gn-danger);
 }
 .record-tags {
   display: flex;
@@ -839,6 +873,11 @@ main {
   --gn-text-secondary: rgba(245, 244, 242, 0.7);
   --gn-divider: rgba(245, 244, 242, 0.16);
   --gn-gridline: rgba(245, 244, 242, 0.12);
+  --gn-table-row: rgba(245, 244, 242, 0.06);
+  /* Legacy dark theme: the selected track takes the brand colour, not darkseagreen. */
+  --gn-switch-off: rgba(245, 244, 242, 0.3);
+  --gn-status-neutral: rgba(245, 244, 242, 0.12);
+  --gn-switch-on: var(--gn-brand);
   --gn-border-input: rgba(245, 244, 242, 0.5);
   --gn-danger-bg: #4a2420;
   --gn-link: #7cc4e0;
@@ -1104,11 +1143,6 @@ main {
 .record-tags {
   margin-top: 10px;
 }
-.record-chip {
-  font-size: 12px;
-  line-height: 14px;
-  padding: 2px 8px;
-}
 .category-options {
   border: 0;
   padding: 0;
@@ -1277,11 +1311,6 @@ a.sr-only:focus {
   }
 }
 
-.opportunity-information {
-  max-width: 800px;
-  width: 90vw;
-  padding: 25px;
-}
 .dialog-close,
 .drawer-heading button {
   float: right;
@@ -1396,24 +1425,76 @@ a.sr-only:focus {
     flex-basis: 100%;
   }
 }
-.eoi-table-wrap {
-  overflow-x: auto;
-}
-.eoi-table-wrap table {
+/* oj-table as every legacy table renders it (header-class-name "bg-brand-color oj-color-invert"), measured on DEV
+   award tables 2026-10-26: a 40px brand header, 12px cells padded 9px 12px on the row tint, a 15px bold footer. */
+.gn-table {
   width: 100%;
   border-collapse: collapse;
-  background: var(--surface);
+  font-size: 12px;
+  color: var(--gn-text);
 }
-.eoi-table-wrap th,
-.eoi-table-wrap td {
-  border-bottom: 1px solid var(--border);
-  padding: 12px;
-  text-align: left;
-  overflow-wrap: anywhere;
+/* Alignment at zero specificity, so a module's number class can right-align a column. */
+:where(.gn-table) :where(th, td) {
+  text-align: start;
 }
-.eoi-table-wrap th {
+.gn-table thead th {
+  height: 40px;
+  padding: 0 12px;
+  vertical-align: middle;
   font-weight: 600;
-  background: var(--table-head-bg);
+  line-height: 15px;
+  color: var(--gn-on-brand);
+  background: var(--gn-brand);
+  border-bottom: 1px solid var(--gn-gridline);
+}
+.gn-table td,
+.gn-table tbody th {
+  padding: 9px 12px;
+  vertical-align: middle;
+  background: var(--gn-table-row);
+  border-bottom: 1px solid var(--gn-divider);
+}
+.gn-table tfoot td {
+  font-size: 15px;
+  font-weight: 700;
+  background: transparent;
+  border-top: 1px solid var(--gn-gridline);
+  border-bottom: 0;
+}
+/* The table's own scroller (legacy default-table-max-height 31.25rem; post-award-table-height 300px;
+   scale-table-display 70vh / -55 55vh): the rows scroll under a pinned header, never the page. */
+.gn-table-scroll {
+  max-height: 31.25rem;
+  overflow: auto;
+}
+.gn-table-scroll[data-height="short"] {
+  max-height: 300px;
+}
+.gn-table-scroll[data-height="tall"] {
+  max-height: 70vh;
+}
+.gn-table-scroll[data-height="dialog"] {
+  max-height: 55vh;
+}
+.gn-table-scroll[data-height="none"] {
+  max-height: none;
+}
+.gn-table-scroll .gn-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.gn-table-scroll .gn-table tfoot td {
+  position: sticky;
+  bottom: 0;
+  background: var(--gn-bg);
+}
+/* oj-table-body-message: "No data to display." at the start, on the page. */
+.gn-table td.gn-table-empty {
+  padding: 6px;
+  font-weight: 400;
+  background: transparent;
+  border-bottom: 0;
 }
 .eoi-form > section {
   margin: 24px 0;
@@ -1505,7 +1586,7 @@ a.sr-only:focus {
   display: flex;
 }
 .listing-page-skeleton > aside {
-  flex: 0 0 241px;
+  flex: 0 0 calc(20rem + 1px); /* the filter panel and its border */
   padding: 24px 16px;
   border-right: 1px solid var(--border);
 }
@@ -1652,6 +1733,14 @@ a.sr-only:focus {
   overflow: hidden;
   animation: motion-collapse var(--dur-fast) var(--ease) forwards;
 }
+/* A tab's panel fades in as it mounts or is unhidden (keyed panels remount on a tab change). */
+[role="tabpanel"]:not([hidden]) {
+  animation: motion-fade-in var(--dur) var(--ease);
+}
+/* Table rows fade in as they mount: loads, added rows and expanded tree levels (owner, 2026-10-26). */
+.gn-table tbody tr {
+  animation: motion-fade-in var(--dur) var(--ease);
+}
 /* Each routed page rises in as it mounts. */
 .shell-frame > main > * {
   animation: motion-rise-in var(--dur) var(--ease);
@@ -1754,7 +1843,10 @@ dialog[open]::backdrop {
     transform: scale(1.2);
   }
 }
-:where(input[type="checkbox"], input[type="radio"]):checked {
+:where(
+  input[type="checkbox"]:not([role="switch"]),
+  input[type="radio"]
+):checked {
   animation: motion-check var(--dur-fast) var(--ease);
 }
 /* A region refreshing its data dims until the new rows arrive. */
@@ -1799,6 +1891,49 @@ input.gn-check:checked {
 input.gn-check:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
+}
+/* oj-switch, measured on live DEV 2026-10-26: a 27x15 track (4.5px radius), grey off, darkseagreen on with a brand
+   border (legacy redwood-overrides), a 12px white thumb with a 3px radius. Outranks the plain checkbox rule; the
+   configure drawer restyles its own with a more specific selector. */
+input[type="checkbox"][role="switch"] {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 27px;
+  height: 15px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  background: var(--gn-switch-off);
+  border: 1px solid transparent;
+  border-radius: 4.5px;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
+}
+input[type="checkbox"][role="switch"]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0.5px;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-radius: 3px;
+  transform: translateY(-50%);
+  transition: left var(--dur-fast) var(--ease);
+}
+input[type="checkbox"][role="switch"]:checked {
+  background: var(--gn-switch-on);
+  border-color: var(--gn-brand);
+}
+input[type="checkbox"][role="switch"]:checked::after {
+  left: 12.5px;
+}
+input[type="checkbox"][role="switch"]:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 /* Collapsible sections (filter groups and the like) slide open and closed. A <details class="gn-collapsible">
    animates its content's height where ::details-content exists (others just open), and must stay display: block
@@ -2025,7 +2160,10 @@ input.gn-check:focus-visible {
   outline: none;
 }
 .chart-dimension-dialog {
-  width: min(420px, calc(100vw - 32px));
+  width: min(
+    34.384vw,
+    calc(100vw - 32px)
+  ); /* legacy #dialogChangeDimension: Redwood's default 600px */
   padding: 18px 20px 20px;
 }
 .chart-dimension-head {
@@ -2138,7 +2276,7 @@ input.gn-check:focus-visible {
   width: 100%;
 }
 .insight-chart.expanded .insight-chart-host {
-  height: 500px;
+  height: 47.94vh; /* legacy #chartDialog chart 500px at 1043px */
 }
 .chart-loading-overlay {
   position: absolute;
@@ -2186,7 +2324,7 @@ input.gn-check:focus-visible {
   height: 153px;
 }
 .insight-chart.expanded .insight-chart-host {
-  height: 500px;
+  height: 47.94vh; /* legacy #chartDialog chart 500px at 1043px */
 }
 .chart-empty {
   min-height: 153px;
@@ -2215,7 +2353,7 @@ input.gn-check:focus-visible {
 
 /* Manage profile (GN-Angular header openProfile): min(960px, 100vw - 32px); the content styles itself. */
 .profile-dialog {
-  width: min(960px, calc(100vw - 32px));
+  width: 66.667vw; /* legacy #dialogManageProfile oj-md-8 */
   max-width: none;
   padding: 0;
 }
@@ -2654,7 +2792,7 @@ html.accContrastTheme-100 {
   background: none;
 }
 .attention-calendar {
-  height: 500px;
+  height: 47.94vh; /* legacy .calendar-section 500px at 1043px */
   padding: 15px 0;
   overflow-x: hidden;
   overflow-y: auto;
@@ -2667,7 +2805,7 @@ html.accContrastTheme-100 {
   gap: 6px;
 }
 .insight-filter {
-  flex: 0 0 240px;
+  flex: 0 0 13.754vw; /* legacy style="width:240px" at 1745px */
 }
 .insight-clear {
   min-height: 0;

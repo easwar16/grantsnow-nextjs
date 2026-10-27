@@ -1,19 +1,11 @@
-export type EoiTone = "info" | "danger" | "success" | "warning";
-
-/** The original's oj-badge colours by status code (GN-Angular eoi.ts); any other status is the plain badge. */
-export const EOI_STATUS_TONE: Record<string, EoiTone> = {
-  IA: "info",
-  REJ: "danger",
-  AWARD: "success",
-  AIA: "warning",
-};
+import type { StatusTone } from "@/components/ui/status-badge";
 
 /** One request as the list shows it; a field is absent when empty or when its RB gate hides it. */
 export interface EoiListRow {
   id: string;
   number?: string;
   status?: string;
-  tone?: EoiTone;
+  tone?: StatusTone;
   title?: string;
   funders: string[];
   createdBy?: string;

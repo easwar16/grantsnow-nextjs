@@ -4,10 +4,11 @@ import { cache } from "react";
 import { memo, memoKey, TTL } from "@/server/oracle/cache";
 import { z } from "zod";
 import merge from "lodash/merge";
+import mapValues from "lodash/mapValues";
 import { configuration } from "@/server/oracle/api";
 import { sanitizeHtml } from "@/server/platform/sanitize";
 import { authenticate } from "@/server/identity/session/service";
-import type { Column } from "@/features/modules/proposals/types";
+import type { Column, FilterLabels } from "@/features/modules/proposals/types";
 import sourceDefaults from "./resource-defaults.json";
 const resource = z.object({
   module_name: z.string(),
@@ -47,13 +48,42 @@ export function mergeResourceDefaults(raw: unknown) {
     merged.set(key(row), overRow(merged.get(key(row)), row));
   return [...merged.values()];
 }
+/** Legacy shell-page findModuleAccess: the bundles a user's modules need, DASHBOARD always. */
+const MODULE_BUNDLES: Record<string, string[]> = {
+  "opportunities-group": ["OPPORTUNITIES-EOI"],
+  // Outline proposals are reached through EOI Convert and shared links, so their bundle loads with PROPOSALS (8336).
+  PROPOSALS: [
+    "PROPOSAL",
+    "SUB_PROPOSAL",
+    "EXTENSION_PROPOSAL",
+    "OUTLINE_PROPOSAL",
+  ],
+  OUTLINE_PROPOSAL: ["OUTLINE_PROPOSAL"],
+  ETHICS: ["ETHICS"],
+  AWARDS: ["AWARD"],
+  CONTRACTS: ["CONTRACT"],
+  "DUE-DILIGENCE": ["DUE_DILIGENCE"],
+};
+export function labelBundles(modules: Record<string, boolean>) {
+  return [
+    ...new Set([
+      "DASHBOARD",
+      ...Object.keys(modules)
+        .filter((m) => modules[m] === true)
+        .flatMap((m) => MODULE_BUNDLES[m] ?? []),
+    ]),
+  ].join(",");
+}
 export const resources = cache(async () => {
-  const { session } = await authenticate();
+  const { session, user } = await authenticate();
   // The merged bundle (seeds included, or seeds alone) is held for a few minutes: labels change only by admin edits.
   return memo(memoKey("labels", session.token), TTL.config, async () => {
     let rows: unknown = [];
     try {
-      rows = await configuration.labels(undefined, { token: session.token });
+      rows = await configuration.labels(
+        { bundles: labelBundles(user.modules) },
+        { token: session.token },
+      );
     } catch (e) {
       // Legacy merges backend rows over the seeds; with the labels call unreachable the seeds alone render.
       if (!(e instanceof AppError && e.code === "UPSTREAM")) throw e;
@@ -151,6 +181,28 @@ export function resourcePreference(
       ? Number((prefs as Record<string, unknown>)[name])
       : NaN;
   return Number.isFinite(value) && value > 0 ? value : undefined;
+}
+/** Legacy proposals-start-page gates each filter on its `list-*` entry and labels it from the bundle. */
+export function proposalFilters(rows: Resources): FilterLabels {
+  const keys: Record<keyof FilterLabels, [string, string]> = {
+    investigator: ["list-investigator", "Investigator"],
+    category: ["list-category", "Category"],
+    reference: ["list-proposal-number", "Proposal Number"],
+    search: ["list-title", "Title"],
+    department: ["list-department", "Department"],
+    sponsor: ["list-primary-sponsor", "Primary Sponsor"],
+    assignedTo: ["list-assigned-to", "Assigned to"],
+    activityType: ["list-activity-type", "Activity Type"],
+    proposalCategory: ["list-proposal-type", "Proposal Type"],
+    tags: ["list-tags", "Tags"],
+    from: ["list-created-on", "Created from"],
+    to: ["list-created-on-or-before", "Created through"],
+  };
+  return mapValues(keys, ([key, fallback]) =>
+    resourceVisible(rows, "proposal", "labels", key)
+      ? label(rows, "proposal", "labels", key, fallback)
+      : null,
+  );
 }
 export function proposalColumns(rows: Resources): Column[] {
   const mandatory: Column[] = [

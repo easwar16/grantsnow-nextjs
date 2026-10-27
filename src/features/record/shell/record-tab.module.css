@@ -1,0 +1,31 @@
+/* A record tab's own parts (EOI, Awards): empty states, a form's actions, notices; the frame is record-frame. */
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--gn-text-secondary);
+}
+
+/* The Application tab's own Create / Save, and a form tab's Submit. */
+.formActions {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0;
+}
+
+.tab {
+  display: block;
+  padding-bottom: 40px;
+}
+
+.notice {
+  margin: 12px 0 0;
+  color: var(--gn-warning);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}

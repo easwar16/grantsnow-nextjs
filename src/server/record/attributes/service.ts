@@ -54,6 +54,16 @@ const HOSTS: Record<AttributeHost, Host> = {
         "read",
       ),
   },
+  // The award Header (awards-header-start-page.html object-attributes: AWARD, the award bundle).
+  "award-header": {
+    objectType: "AWARD",
+    bundle: "award",
+    authorize: (q) =>
+      authorizeForm(
+        { objectType: "AWARD", slot: "AWARDS-HEADER", objectId: q.objectId },
+        "read",
+      ),
+  },
 };
 const TEXTS: Record<AttributeText, [string, string, string]> = {
   moreInfo: ["button-labels", "more_info", "More Info"],

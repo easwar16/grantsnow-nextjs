@@ -5,7 +5,7 @@ import { fixtureUser, proposals, contracts } from "./fixtures";
 import { widgets } from "@/server/modules/home/widgets";
 /**
  * Evaluates the p_where_clause grammar that src/server/proposals/where-clause.ts emits:
- * `( atom (AND|OR atom)* )`, atoms `LOWER("c") LIKE LOWER('%v%')`, `"c"='v'`, `"c">='v'`, `"c"<='v'`.
+ * `( atom (AND|OR atom)* )`, atoms `LOWER("c") LIKE LOWER('%v%') ESCAPE '\'`, `"c"='v'`, `"c">='v'`, `"c"<='v'`.
  */
 function whereMatcher(
   clause: string,
@@ -22,8 +22,8 @@ function whereMatcher(
     const like = /^LOWER\("(\w+)"\) LIKE LOWER\(/.exec(clause.slice(i));
     if (like) {
       i += like[0].length;
-      const want = literal().replaceAll("%", "").toLowerCase();
-      i += 1;
+      const want = literal().slice(1, -1).replace(/\\(.)/g, "$1").toLowerCase();
+      i += ") ESCAPE '\\'".length;
       return (row) =>
         String(row[like[1]] ?? "")
           .toLowerCase()
@@ -59,6 +59,37 @@ function whereMatcher(
       any ? parts.some((p) => p(row)) : parts.every((p) => p(row));
   };
   return group();
+}
+/** Synthetic awards, one per fixture proposal; every fifth has no proposal (so it can be linked to one). */
+function awardRows(advanced: boolean) {
+  const statuses = [
+    ["DRFT", "Draft"],
+    ["AIA", "Awaiting Internal Approval"],
+    ["IA", "Internally Approved"],
+    ["REJ", "Rejected"],
+  ];
+  return proposals.map((p, i) => ({
+    award_id: 5000 + i,
+    proposal_id: i % 5 === 4 ? null : p.proposal_id,
+    award_number: `AW_${String(i + 1).padStart(4, "0")}`,
+    award_name: p.proposal_title,
+    award_status_code: statuses[i % statuses.length][0],
+    award_status: statuses[i % statuses.length][1],
+    proposal_title: p.proposal_title,
+    award_start_date: "2026-10-01T00:00:00Z",
+    award_end_date: "2027-09-30T00:00:00Z",
+    actual_award_date: null,
+    creation_date: p.creation_date,
+    last_update_date: p.last_update_date,
+    sponsor_party_name: p.primary_sponsorer,
+    billing_party_name: p.primary_sponsorer,
+    org_unit_name: p.org_unit_name,
+    award_pi_full_name: p.full_name,
+    award_amount: i % 3 === 0 ? null : 10000 * (i + 1),
+    ...(advanced
+      ? { attribute_1: i % 2 ? "P1" : "P2", amount: 10000 * (i + 1) }
+      : {}),
+  }));
 }
 export async function mockOracle(
   op: Operation,
@@ -98,6 +129,11 @@ export async function mockOracle(
         setTimeout(resolve, Math.min(delay, 5000)),
       );
   }
+  const award = (await import("./award-record")).awardRecordFixture(
+    op,
+    headers,
+  );
+  if (award !== undefined) return award;
   if (op === "getPre_awardGetLookupTypesCodes") {
     const types: Record<string, [string, string][]> = {
       PROPOSAL_STATUS: [
@@ -127,12 +163,22 @@ export async function mockOracle(
         ["NULL", "Null"],
         ["NOT_NULL", "Not Null"],
       ],
+      CURRENCY_CODES: [
+        ["GBP", "Pound Sterling"],
+        ["USD", "US Dollar"],
+      ],
       EOI_STATUS: [
         ["DRFT", "Draft"],
         ["AIA", "Awaiting Internal Approval"],
         ["IA", "Internally Approved"],
         ["REJ", "Rejected"],
         ["AWARD", "Awarded"],
+      ],
+      AWARD_STATUS: [
+        ["DRFT", "Draft"],
+        ["AIA", "Awaiting Internal Approval"],
+        ["IA", "Internally Approved"],
+        ["REJ", "Rejected"],
       ],
       // The approval workflow's Add Stage choices.
       APPROVAL_TYPE: [
@@ -142,6 +188,14 @@ export async function mockOracle(
       APPR_GRP_DETAIL_TYPE: [
         ["GROUP", "Group"],
         ["INDIVIDUAL", "Individual"],
+      ],
+      CONTRACT_STATUS: [
+        ["DRFT", "Draft"],
+        ["AIA", "Awaiting Internal Approval"],
+        ["IA", "Internally Approved"],
+        ["REJ", "Rejected"],
+        ["SUB", "Submitted for Signing"],
+        ["SIGNED", "Signed"],
       ],
       CONTRACT_TYPE: [["RESEARCH", "Research Contract"]],
       CTR_DEADLINE_TYPE: [["SIGNING", "Signing deadline"]],
@@ -1069,7 +1123,8 @@ export async function mockOracle(
         { object_type: "PROPOSAL", object_desc: "Proposal" },
       ],
     };
-  if (op === "getContractsGetRelationItem")
+  // Contracts' relation lookup; the awards dialogs (object_status AWARD) have their own fixture below.
+  if (op === "getContractsGetRelationItem" && headers.object_status !== "AWARD")
     return {
       items: [
         {
@@ -1315,7 +1370,9 @@ export async function mockOracle(
         ...clause.matchAll(
           new RegExp(`LOWER\\("${column}"\\) LIKE LOWER\\('%([^']*)%'\\)`, "g"),
         ),
-      ].map((m) => m[1].replaceAll("''", "'").toLowerCase());
+      ].map((m) =>
+        m[1].replaceAll("''", "'").replace(/\\(.)/g, "$1").toLowerCase(),
+      );
     const search = like("opp_heading");
     if (search.length)
       rows = rows.filter((r) =>
@@ -1383,6 +1440,85 @@ export async function mockOracle(
       hasMore: offset + limit < rows.length,
     };
   }
+  if (
+    op === "getPost_awardsAwardHeader" ||
+    op === "getPost_awardsAdvancedSearch"
+  ) {
+    const offset = Number(query?.get("p_offset") || 0),
+      limit = Number(query?.get("p_limit") || 25);
+    let rows = awardRows(op === "getPost_awardsAdvancedSearch");
+    const where = query?.get("p_where_clause");
+    if (where) rows = rows.filter(whereMatcher(where));
+    return {
+      items: rows.slice(offset, offset + limit),
+      total_count: rows.length,
+      hasMore: String(offset + limit < rows.length),
+    };
+  }
+  // Awards listing dialogs: proposals open for an award, clone parts, a proposal's awards, linked records.
+  if (op === "getContractsGetRelationItem")
+    return {
+      items: proposals.slice(0, 5).map((p) => ({
+        object_id: p.proposal_id,
+        object_number: p.proposal_number,
+        object_title: p.proposal_title,
+      })),
+    };
+  if (op === "getPost_awardsAwardhierarchy")
+    return { count: Number(headers.proposal_id) % 2 === 0 ? 1 : 0, items: [] };
+  if (op === "getPost_awardsCopyAwardObjList")
+    return {
+      items: [
+        {
+          r: "award-header",
+          d: "Award Header",
+          parent_object: null,
+          default_value: true,
+        },
+        {
+          r: "award-projects",
+          d: "Projects",
+          parent_object: null,
+          default_value: false,
+        },
+        {
+          r: "award-project-team",
+          d: "Project Team",
+          parent_object: "award-projects",
+          default_value: false,
+        },
+        {
+          r: "award-attachments",
+          d: "Attachments",
+          parent_object: null,
+          default_value: false,
+        },
+      ],
+    };
+  if (op === "getSharedObjectLinked2")
+    return {
+      ObjectLinks:
+        Number(headers.object_id) % 5 === 4
+          ? null
+          : [
+              {
+                MODULE_NAME: "PROPOSAL",
+                OBJECT_ID: 1000,
+                OBJECT_NAME: "P_0001",
+                OBJECT_STATUS: "Draft",
+                OBJECT_TITLE: "Climate resilient communities — study 1",
+                LAST_UPDATED_BY: "Alex Morgan",
+                LAST_UPDATE_DATE: "2026-10-10",
+                OBJECT_LINK:
+                  "https://vbcs.example/app/?mode=view&proposal_id=1000&proposal_type=PROPOSAL&page=shell&shell=proposals&proposals=proposals-info-start",
+              },
+              {
+                MODULE_NAME: "AWARD",
+                OBJECT_ID: Number(headers.object_id),
+                OBJECT_NAME: "itself",
+              },
+            ],
+    };
   if (op === "getSharedGetOppStatistics")
     return {
       items: [

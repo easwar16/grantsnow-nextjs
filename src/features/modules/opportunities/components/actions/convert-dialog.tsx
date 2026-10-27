@@ -142,7 +142,7 @@ export function ConvertDialog({
   }, [opener, kind, opportunityId, requestId]);
   if (!setup)
     return (
-      <ActionDialog id={id} title="" width={960} onClose={onClose}>
+      <ActionDialog id={id} title="" width="66.667vw" onClose={onClose}>
         <Skeleton kind="lines" count={4} label="Loading convert options" />
       </ActionDialog>
     );
@@ -283,7 +283,7 @@ export function ConvertDialog({
       id={id}
       title={texts.title}
       subtitle={setup.heading}
-      width={960}
+      width="66.667vw" /* legacy dialogProposal oj-md-8 */
       busy={saving}
       onClose={onClose}
     >

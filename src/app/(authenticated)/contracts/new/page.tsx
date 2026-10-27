@@ -2,14 +2,14 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/feedback/skeleton";
 import { pageIdentity } from "@/server/identity/auth/page";
-import { canCreateContract } from "@/server/contracts/service";
+import { canCreateContract } from "@/server/modules/contracts/service";
 import {
   contractTypeChoices,
   contractOrgChoices,
   contractRelationChoices,
   contractDeadlineChoices,
   contractDynamicForms,
-} from "@/server/contracts/lookups";
+} from "@/server/modules/contracts/lookups";
 import {
   resources,
   label,
@@ -30,7 +30,7 @@ export default async function NewContract() {
   return (
     <main className={styles.createPage}>
       <div className={styles.createTop}>
-        <Link href="/contracts" prefetch={false}>
+        <Link id="contract-new-back" href="/contracts" prefetch={false}>
           List
         </Link>
         <h1>Contract Detail</h1>
@@ -80,11 +80,12 @@ async function NewContractForm() {
     resourceVisible(rb, "contract", "labels", key);
   return (
     <section
+      id="contract-new"
       className={styles.createPanel}
       aria-labelledby="contract-detail-heading"
     >
       <h2 id="contract-detail-heading">Contract Detail</h2>
-      <form className={styles.createForm}>
+      <form id="contract-new-form" className={styles.createForm}>
         <div className={styles.createGrid}>
           <Suspense
             fallback={
@@ -106,6 +107,7 @@ async function NewContractForm() {
             <label>
               {field("summary-contract-title", "Contract Title")} <b>*</b>
               <input
+                id="contract-new-title"
                 name="contract_title"
                 required
                 maxLength={200}
@@ -116,23 +118,37 @@ async function NewContractForm() {
           {visible("summary-start-date") && (
             <label>
               {field("summary-start-date", "Start date")} <b>*</b>
-              <input name="contract_start_date" type="date" required />
+              <input
+                id="contract-new-start"
+                name="contract_start_date"
+                type="date"
+                required
+              />
             </label>
           )}
           {visible("summary-end-date") && (
             <label>
               {field("summary-end-date", "End date")} <b>*</b>
-              <input name="contract_end_date" type="date" required />
+              <input
+                id="contract-new-end"
+                name="contract_end_date"
+                type="date"
+                required
+              />
             </label>
           )}
           {visible("summary-deadline-date") && (
             <label>
               {field("summary-deadline-date", "Deadline date")}
-              <input name="deadline_date" type="date" />
+              <input
+                id="contract-new-deadline"
+                name="deadline_date"
+                type="date"
+              />
             </label>
           )}
         </div>
-        <section className={styles.createSection}>
+        <section id="contract-new-deadlines" className={styles.createSection}>
           <Suspense
             fallback={
               <Skeleton
@@ -145,12 +161,13 @@ async function NewContractForm() {
             <CreateDeadlineFields />
           </Suspense>
         </section>
-        <section className={styles.createSection}>
+        <section id="contract-new-document" className={styles.createSection}>
           <h2>Contract Document</h2>
-          <fieldset>
+          <fieldset id="contract-new-standard-template">
             <legend>Use standard template</legend>
             <label>
               <input
+                id="contract-new-standard-template-yes"
                 type="radio"
                 name="uses_standard_templ"
                 value="Y"
@@ -159,10 +176,16 @@ async function NewContractForm() {
               Yes
             </label>
             <label>
-              <input type="radio" name="uses_standard_templ" value="N" /> No
+              <input
+                id="contract-new-standard-template-no"
+                type="radio"
+                name="uses_standard_templ"
+                value="N"
+              />{" "}
+              No
             </label>
           </fieldset>
-          <button type="button" disabled>
+          <button type="button" id="contract-new-placeholder-tags" disabled>
             Get Placeholder Tags
           </button>
         </section>
@@ -178,7 +201,7 @@ async function NewContractForm() {
           <CreateDynamicFields />
         </Suspense>
         <div className={styles.createActions}>
-          <button type="submit" disabled>
+          <button type="submit" id="contract-new-create" disabled>
             Create
           </button>
         </div>

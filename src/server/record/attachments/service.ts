@@ -6,6 +6,7 @@ import {
   oicConnected,
   oicDelete,
   oicDownload,
+  exclusiveLocation,
   oicUpload,
 } from "@/server/oic/connection";
 import { fixtureMode } from "@/server/platform/configuration/environment";
@@ -147,8 +148,6 @@ export async function uploadFile(
 ) {
   const settings = early(formGlobals());
   const { user, scope } = await scoped(t, "edit");
-  // Read while the file is checked; the name check below still runs before it is used.
-  const attached = early(listAttachments(scope));
   const globals = await settings;
   const problem =
     fileNameProblem(file.name) ??
@@ -158,43 +157,49 @@ export async function uploadFile(
       globals.accept,
     );
   if (problem) throw new AppError("BAD_REQUEST", problem, 400);
-  // One object per name per record: storing a taken name would overwrite another attachment's bytes.
-  if ((await attached).some((a) => a.fileName === file.name))
-    throw new AppError(
-      "BAD_REQUEST",
-      "A file with this name is already attached",
-      409,
-    );
   const location = storageLocation(
     globals.instance,
     user.legalId,
     scope,
     file.name,
   );
-  await oicUpload(location, file.bytes);
-  const type = /^[\w.+-]{1,60}\/[\w.+-]{1,80}$/.test(file.type)
-    ? file.type
-    : "";
-  const reply = recorded.safeParse(
-    await recordAttachment({
-      file_size: (file.bytes.byteLength / 1024).toFixed(1),
-      file_type: type,
-      file_name: file.name,
-      file_location: location,
-      document_type: type,
-      obj_ref_type: scope.objectType,
-      obj_ref_id: scope.objectId,
-      sec_obj_ref_type: scope.secondaryType,
-      sec_obj_ref_id: null,
-    }),
-  );
-  if (
-    !reply.success ||
-    reply.data.attachment_id === null ||
-    reply.data.attachment_id === undefined
-  )
-    throw new AppError("CONTRACT", `${file.name} was stored but not recorded`);
-  return { attachmentId: reply.data.attachment_id };
+  return exclusiveLocation(location, async () => {
+    // Read under the hold, so an upload that just finished is seen.
+    // One object per name per record: storing a taken name would overwrite another attachment's bytes.
+    if ((await listAttachments(scope)).some((a) => a.fileName === file.name))
+      throw new AppError(
+        "BAD_REQUEST",
+        "A file with this name is already attached",
+        409,
+      );
+    await oicUpload(location, file.bytes);
+    const type = /^[\w.+-]{1,60}\/[\w.+-]{1,80}$/.test(file.type)
+      ? file.type
+      : "";
+    const reply = recorded.safeParse(
+      await recordAttachment({
+        file_size: (file.bytes.byteLength / 1024).toFixed(1),
+        file_type: type,
+        file_name: file.name,
+        file_location: location,
+        document_type: type,
+        obj_ref_type: scope.objectType,
+        obj_ref_id: scope.objectId,
+        sec_obj_ref_type: scope.secondaryType,
+        sec_obj_ref_id: null,
+      }),
+    );
+    if (
+      !reply.success ||
+      reply.data.attachment_id === null ||
+      reply.data.attachment_id === undefined
+    )
+      throw new AppError(
+        "CONTRACT",
+        `${file.name} was stored but not recorded`,
+      );
+    return { attachmentId: reply.data.attachment_id };
+  });
 }
 async function owned(scope: FileScope, id: number) {
   const hit = (await listAttachments(scope)).find((a) => a.id === id);

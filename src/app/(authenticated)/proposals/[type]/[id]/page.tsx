@@ -1,3 +1,4 @@
+import { StatusBadge } from "@/components/ui/status-badge";
 import { displayFormat } from "@/server/platform/configuration/formatting";
 import Link from "next/link";
 import { pageIdentity } from "@/server/identity/auth/page";
@@ -42,7 +43,7 @@ export default async function Summary({
         </Link>
         <div>
           <strong>{summary.reference}</strong>
-          <span className="record-chip">{summary.status}</span>
+          <StatusBadge>{summary.status}</StatusBadge>
         </div>
         <h1>{summary.title}</h1>
       </header>

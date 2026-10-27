@@ -1,4 +1,5 @@
 "use client";
+import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import { useState } from "react";
 import { Skeleton } from "@/components/feedback/skeleton";
 import { State } from "@/components/feedback/state";
@@ -12,7 +13,7 @@ import {
 import styles from "./panels.module.css";
 
 // The drawer's oj-badge per event (success, info, danger).
-const TONES: Record<string, string> = {
+const TONES: Record<string, StatusTone> = {
   INSERTED: "success",
   UPDATED: "info",
   "NEW VERSION CREATED": "info",
@@ -79,6 +80,7 @@ export function ObjectAudit(props: ObjectPanelProps) {
         ))}
       </div>
       <div
+        key={event}
         id={`${id}-list`}
         role="tabpanel"
         aria-labelledby={`${id}-tab-${event.toLowerCase()}`}
@@ -112,9 +114,7 @@ export function ObjectAudit(props: ObjectPanelProps) {
                     data-tone={TONES[a.event]}
                   >
                     <div className={styles.auditHead}>
-                      <span className="gn-status" data-tone={TONES[a.event]}>
-                        {a.event}
-                      </span>
+                      <StatusBadge tone={TONES[a.event]}>{a.event}</StatusBadge>
                       <span className={styles.who}>
                         {a.name}
                         <span>{a.at}</span>

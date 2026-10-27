@@ -130,15 +130,14 @@ test("Contracts status and results stream before a slow filter lookup", async ({
   await expect(
     page.getByRole("link", { name: "Draft", exact: true }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("combobox", { name: "Contract Type" }),
-  ).toHaveAttribute("aria-busy", "true");
+  // Lookups are held per session (as VBCS holds them), so an earlier journey may already have read this one; the
+  // list must not wait for it either way.
   await expect(page.getByText("10 of 24")).toBeVisible();
   await expect(
     page.getByRole("combobox", { name: "Contract Type" }),
   ).not.toHaveAttribute("aria-busy", "true");
 });
-test("Contract approval route streams before slow approval history", async ({
+test("Contract workflow keeps the record header and loads its route with a slow history", async ({
   page,
 }) => {
   test.skip(
@@ -159,18 +158,13 @@ test("Contract approval route streams before slow approval history", async ({
       .getByRole("navigation", { name: "Contract sections" })
       .locator('[aria-current="page"]'),
   ).toContainText("Contracts Workflow");
+  // The shared workflow reads the route and its history together, as the legacy fragment does.
   await expect(
     page.getByRole("heading", { name: "Approval Route" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("status", { name: "Loading Approval History" }),
-  ).toBeVisible();
-  await expect(
     page.locator("#contract-1301-workflow-history-table tbody tr"),
   ).toHaveCount(2);
-  await expect(
-    page.getByRole("status", { name: "Loading Approval History" }),
-  ).toBeHidden();
 });
 test("Contracts creation fields and scoped Workflow navigation", async ({
   page,
@@ -189,9 +183,9 @@ test("Contracts creation fields and scoped Workflow navigation", async ({
   await expect(
     dialog.getByRole("textbox", { name: "Deadline Date *" }),
   ).toBeDisabled();
-  await dialog
-    .getByRole("combobox", { name: "Deadline Type *" })
-    .selectOption({ index: 1 });
+  // The searchable Select (every dropdown): open it and pick the first type.
+  await dialog.getByRole("combobox", { name: /Deadline Type/ }).click();
+  await page.getByRole("option").first().click();
   await expect(
     dialog.getByRole("textbox", { name: "Deadline Date *" }),
   ).toBeEnabled();
@@ -434,13 +428,9 @@ test("listing search, filter, reset, paging, back, reload, masked values", async
   ).toBeVisible();
   await expect(page.locator(".proposal-card")).toHaveCount(10);
   await page.reload();
-  await expect(
-    page
-      .getByRole("region", { name: "Proposal listing" })
-      .getByText("Page 2", { exact: true }),
-  ).toBeVisible();
-  await page.getByLabel("Search proposal titles").first().fill("Climate");
-  await page.getByLabel("Search proposal titles").first().press("Enter");
+  await expect(page.getByText("Page 2", { exact: true })).toBeVisible();
+  await page.getByLabel("Title", { exact: true }).fill("Climate");
+  await page.getByLabel("Title", { exact: true }).press("Enter");
   await expect(page).toHaveURL(/search=Climate/);
   await expect(
     page.locator(".listing-count").filter({ hasText: "10 of 10" }),
@@ -461,8 +451,8 @@ test("listing search, filter, reset, paging, back, reload, masked values", async
   await expect(
     page.locator(".listing-count").filter({ hasText: "10 of 37" }),
   ).toBeVisible();
-  await page.getByLabel("Reference", { exact: true }).first().fill("NO-MATCH");
-  await page.getByLabel("Reference", { exact: true }).first().press("Enter");
+  await page.getByLabel("Proposal Number", { exact: true }).fill("NO-MATCH");
+  await page.getByLabel("Proposal Number", { exact: true }).press("Enter");
   await expect(
     page.getByRole("heading", { name: "No matching proposals" }),
   ).toBeVisible();
@@ -485,8 +475,8 @@ test("failed listing recovery and late responses cannot replace current query", 
       });
     else await route.continue();
   });
-  await page.getByLabel("Search proposal titles").fill("Climate");
-  await page.getByLabel("Search proposal titles").press("Enter");
+  await page.getByLabel("Title", { exact: true }).fill("Climate");
+  await page.getByLabel("Title", { exact: true }).press("Enter");
   await expect(page.getByText("Test listing failure")).toBeVisible();
   fail = false;
   await page.getByRole("button", { name: "Retry", exact: true }).click();
@@ -504,13 +494,13 @@ test("failed listing recovery and late responses cannot replace current query", 
       }
     } else await route.continue();
   });
-  await page.getByLabel("Search proposal titles").fill("Digital");
-  await page.getByLabel("Search proposal titles").press("Enter");
+  await page.getByLabel("Title", { exact: true }).fill("Digital");
+  await page.getByLabel("Title", { exact: true }).press("Enter");
   await page.waitForRequest(
     (r) => r.url().includes("/api/proposals?") && r.url().includes("Digital"),
   );
-  await page.getByLabel("Search proposal titles").fill("Sustainable");
-  await page.getByLabel("Search proposal titles").press("Enter");
+  await page.getByLabel("Title", { exact: true }).fill("Sustainable");
+  await page.getByLabel("Title", { exact: true }).press("Enter");
   await expect(
     page.locator(".listing-count").filter({ hasText: "9 of 9" }),
   ).toBeVisible();
@@ -544,8 +534,8 @@ test("narrow layout keyboard, private cache and no tokens in client payload; log
   await expect(
     page.getByRole("radio", { name: "Outline Proposal", exact: true }),
   ).toBeVisible();
-  await page.getByLabel("Search proposal titles").fill("health");
-  await page.getByLabel("Search proposal titles").press("Enter");
+  await page.getByLabel("Title", { exact: true }).fill("health");
+  await page.getByLabel("Title", { exact: true }).press("Enter");
   await expect(
     page.locator(".listing-count").filter({ hasText: "9 of 9" }),
   ).toBeVisible();
@@ -660,8 +650,8 @@ test("Proposal scroll loading preserves records, retries failures and resets on 
   await page.getByRole("button", { name: "Retry load more" }).click();
   await expect(page.locator(".proposal-card")).toHaveCount(20);
   await expect(page.locator(".listing-count")).toHaveText("20 of 37");
-  await page.getByLabel("Search proposal titles").fill("Climate");
-  await page.getByLabel("Search proposal titles").press("Enter");
+  await page.getByLabel("Title", { exact: true }).fill("Climate");
+  await page.getByLabel("Title", { exact: true }).press("Enter");
   await expect(page.locator(".proposal-card")).toHaveCount(10);
   await expect(page.locator(".listing-count")).toHaveText("10 of 10");
 });
@@ -676,14 +666,12 @@ test("preview-style desktop drawer, user menu and Opportunities routes", async (
   await page
     .getByRole("button", { name: "Application Navigation Drawer" })
     .click();
+  // The shell's margin transitions, so poll until it settles.
   await expect
-    .poll(
-      async () =>
-        (await page
-          .locator("main")
-          .evaluate((e) => e.getBoundingClientRect().x)) - before,
+    .poll(() =>
+      page.locator("main").evaluate((e) => e.getBoundingClientRect().x),
     )
-    .toBe(240);
+    .toBe(before + 240);
   await page.keyboard.press("Escape");
   await expect(
     page.getByRole("dialog", { name: "Application Navigation Drawer" }),
@@ -867,8 +855,8 @@ test("record skeletons remain visible during delayed refresh and honor reduced m
     await new Promise((resolve) => setTimeout(resolve, 800));
     await route.continue();
   });
-  await page.getByLabel("Search proposal titles").fill("research");
-  await page.getByLabel("Search proposal titles").press("Enter");
+  await page.getByLabel("Title", { exact: true }).fill("research");
+  await page.getByLabel("Title", { exact: true }).press("Enter");
   await expect(
     page.getByRole("status", { name: "Loading proposals", exact: true }),
   ).toBeVisible();
@@ -1088,11 +1076,10 @@ test("EOI create, finalize with the unsaved-changes refusal, and an attachment u
   const pages = page.getByRole("navigation", { name: "Application pages" });
   const workflow = pages.getByRole("link", { name: "Workflow", exact: true });
   const finalize = page.locator("#eoi-record-finalize");
-  // The track covers the transparent input, as a user sees it; the click lands on the switch's label.
-  const toggle = () => finalize.locator("..").click();
+  const toggle = () => finalize.click();
   await expect(finalize).not.toBeChecked();
   await expect(workflow).toHaveCount(0);
-  // Unsaved answers refuse Finalize and leave the switch off.
+  // Unsaved answers refuse Finalize and leave the box unticked.
   await page
     .getByRole("button", { name: "Edit Application", exact: true })
     .click();
@@ -1207,4 +1194,70 @@ test.describe("audit fixes in the browser", () => {
       today,
     );
   });
+});
+
+test("Awards listing: drawer link, status tab, text filter, card layout and the record", async ({
+  page,
+}) => {
+  await login(page);
+  await page
+    .getByRole("button", { name: "Application Navigation Drawer" })
+    .click();
+  await page.getByRole("link", { name: "Awards", exact: true }).click();
+  await expect(page).toHaveURL(/\/awards$/);
+  const rows = page.locator("#awards-rows > li[id^='award-']");
+  await expect(rows.first()).toBeVisible();
+  await expect(page.locator("#awards-count")).toContainText("10 of 37");
+  await page.locator("#awards-status-ia").click();
+  await expect(page.locator("#awards-status-ia")).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
+  await expect(page.locator("#awards-count")).toContainText(/of 9|Total/);
+  await expect(
+    page.locator("[id^='award-'][id$='-status']").first(),
+  ).toHaveText("Internally Approved");
+  await page.locator("#awards-filter-number").fill("AW_0003");
+  await page.locator("#awards-filter-number").press("Enter");
+  await expect(rows).toHaveCount(1);
+  await page.locator("#awards-layout-card").click();
+  await expect(page.locator("#awards-layout-card")).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await page.locator("[id^='award-'][id$='-title']").first().click();
+  await expect(page).toHaveURL(/\/awards\/5002\/header$/);
+  await expect(page.locator("#award-record-header")).toBeVisible();
+});
+
+test("Award record Projects: inner tabs, cost tree, the cost dialog's periods and the project dialog", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/awards/5000/projects");
+  await expect(page.locator("#award-project-31")).toContainText("PRJ_31");
+  await page.locator("#award-project-31-edit").click();
+  await expect(page.locator("#award-project-name")).toHaveValue(
+    "Fixture project",
+  );
+  await page.locator("#award-project-cancel").click();
+  await page.locator("#award-projects-tab-costs").click();
+  // Global split: 850 of 1,250 from the funder.
+  await expect(page.locator("#award-costs-global-funder-pct")).toHaveText(
+    "68.00%",
+  );
+  const staff = page.locator("[id^='award-cost-31-direct-staff-9']").first();
+  await expect(staff).toContainText("Alex Morgan");
+  await page.locator("#award-cost-31-direct-staff-9-menu-button").click();
+  await page.locator("#award-cost-31-direct-staff-9-menu-edit").click();
+  await expect(page.locator("#award-cost-periods-table tbody tr")).toHaveCount(
+    2,
+  );
+  // A share above 100% is refused (legacy compared the fraction with 100).
+  await page.locator("#award-cost-institution-pct").fill("150");
+  await page.locator("#award-cost-institution-pct").press("Enter");
+  await expect(page.locator("#award-cost-institution-pct")).toHaveValue("40");
+  await page.locator("#award-cost-cancel").click();
+  await page.locator("#award-projects-tab-team").click();
+  await expect(page.locator("#award-team-61")).toContainText("Alex Morgan");
 });

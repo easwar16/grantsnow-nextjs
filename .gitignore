@@ -12,3 +12,6 @@ coverage/
 .next-e2e/
 .next-check/
 .validation/
+
+# scripts/oracle-catalogue.mjs preview
+.catalogue-preview/

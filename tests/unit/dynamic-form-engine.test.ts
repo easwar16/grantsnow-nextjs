@@ -3,8 +3,10 @@ import {
   acceptOf,
   decodeEntities,
   fieldError,
+  controlWidth,
   fieldSpan,
   fieldWidth,
+  formFieldSpan,
   fileIdOf,
   fileNameOf,
   fileNameTaken,
@@ -341,6 +343,19 @@ describe("layout and loading helpers", () => {
     expect(fieldWidth(6, 2)).toBe("calc(50% - 16px)");
     expect(sectionWidth(6)).toBe("50%");
     expect(sectionWidth(null)).toBe("100%");
+  });
+  it("spans a dynamic-form field as the fragment's calcColSpan: a null colspan is one column, a missing one a row", () => {
+    expect(formFieldSpan(3, 2)).toBe(1);
+    expect(formFieldSpan(6, 2)).toBe(1);
+    expect(formFieldSpan(12, 2)).toBe(2);
+    expect(formFieldSpan(null, 2)).toBe(1);
+    expect(formFieldSpan(undefined, 2)).toBe(2);
+  });
+  it("narrows a control to colspan x maxColumns twelfths only below a full row", () => {
+    expect(controlWidth(3, 2)).toBe("50%");
+    expect(controlWidth(6, 2)).toBeUndefined();
+    expect(controlWidth(null, 2)).toBeUndefined();
+    expect(controlWidth(12, 2)).toBeUndefined();
   });
   it("starts a section on when answered or mandatory", () => {
     const s = section(10, []);

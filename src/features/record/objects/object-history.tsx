@@ -3,6 +3,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { State } from "@/components/feedback/state";
 import { DateInput } from "@/components/ui/date-input";
+import { useFormat } from "@/components/layout/shell-context";
+import { stampDisplay } from "@/lib/format";
 import { InsideField } from "@/components/ui/inside-field";
 import { Select } from "@/components/ui/select";
 import { idPart } from "@/lib/ids";
@@ -37,6 +39,7 @@ export function ObjectHistory({
   view: HistoryView;
 }) {
   const { texts, gates } = view;
+  const format = useFormat();
   const router = useRouter(),
     [, startTransition] = useTransition(),
     { run, isActive } = useInFlight(),
@@ -87,49 +90,53 @@ export function ObjectHistory({
           )}
         </div>
       </div>
-      {view.rows.length ? (
-        <div className={styles.tableWrap}>
-          <table id={`${id}-table`}>
-            <thead>
-              <tr>
-                <th scope="col">{texts.status}</th>
-                <th scope="col">{texts.mode}</th>
-                <th scope="col">{texts.comments}</th>
-                <th scope="col">{texts.user}</th>
-                <th scope="col">{texts.date}</th>
+      {/* Legacy oj-table: the header stays, an empty table says so in its body. */}
+      <div className={`gn-table-scroll ${styles.tableWrap}`}>
+        <table id={`${id}-table`} className="gn-table">
+          <thead>
+            <tr>
+              <th scope="col">{texts.status}</th>
+              <th scope="col">{texts.mode}</th>
+              <th scope="col">{texts.comments}</th>
+              <th scope="col">{texts.user}</th>
+              <th scope="col">{texts.date}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {view.rows.map((r) => (
+              <tr
+                key={r.id}
+                id={`${id}-row-${idPart(r.id)}`}
+                className="enter-rise"
+              >
+                <td>{r.status}</td>
+                <td>{r.mode}</td>
+                <td>
+                  {r.comments && (
+                    <button
+                      type="button"
+                      id={`${id}-row-${idPart(r.id)}-comments`}
+                      className={styles.link}
+                      onClick={() => setComment(r.comments)}
+                    >
+                      {preview(r.comments)}
+                    </button>
+                  )}
+                </td>
+                <td>{r.user}</td>
+                <td>{stampDisplay(r.date, format)}</td>
               </tr>
-            </thead>
-            <tbody>
-              {view.rows.map((r) => (
-                <tr
-                  key={r.id}
-                  id={`${id}-row-${idPart(r.id)}`}
-                  className="enter-rise"
-                >
-                  <td>{r.status}</td>
-                  <td>{r.mode}</td>
-                  <td>
-                    {r.comments && (
-                      <button
-                        type="button"
-                        id={`${id}-row-${idPart(r.id)}-comments`}
-                        className={styles.link}
-                        onClick={() => setComment(r.comments)}
-                      >
-                        {preview(r.comments)}
-                      </button>
-                    )}
-                  </td>
-                  <td>{r.user}</td>
-                  <td>{r.date}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <State id={`${id}-empty`} title={texts.noData} />
-      )}
+            ))}
+            {view.rows.length === 0 && (
+              <tr>
+                <td id={`${id}-empty`} colSpan={5} className="gn-table-empty">
+                  {texts.noData}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
       {view.approvals && (
         <details
           id={`${id}-approvals`}
@@ -143,9 +150,9 @@ export function ObjectHistory({
               title={view.approvals.error}
               code="UPSTREAM"
             />
-          ) : view.approvals.rows.length ? (
-            <div className={styles.tableWrap}>
-              <table id={`${id}-approvals-table`}>
+          ) : (
+            <div className={`gn-table-scroll ${styles.tableWrap}`}>
+              <table id={`${id}-approvals-table`} className="gn-table">
                 <thead>
                   <tr>
                     <th scope="col">{texts.approvalName}</th>
@@ -181,14 +188,23 @@ export function ObjectHistory({
                         )}
                       </td>
                       {view.approvalTransaction && <td>{r.transaction}</td>}
-                      <td>{r.updated}</td>
+                      <td>{stampDisplay(r.updated, format)}</td>
                     </tr>
                   ))}
+                  {view.approvals.rows.length === 0 && (
+                    <tr>
+                      <td
+                        id={`${id}-approvals-empty`}
+                        colSpan={5}
+                        className="gn-table-empty"
+                      >
+                        {texts.approvalNoData}
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
-          ) : (
-            <State id={`${id}-approvals-empty`} title={texts.approvalNoData} />
           )}
         </details>
       )}
@@ -207,7 +223,7 @@ export function ObjectHistory({
         <ActionDialog
           id={`${id}-comment`}
           title={texts.commentsTitle}
-          width={640}
+          width="50vw" /* legacy commentPopUp oj-md-width-1/2 */
           onClose={() => setComment(null)}
         >
           <p id={`${id}-comment-text`} className={styles.comment}>
@@ -261,7 +277,6 @@ function StatusDialog({
     <ActionDialog
       id={id}
       title={texts.dialogTitle}
-      width={480}
       busy={saving}
       closeLabel={texts.cancel}
       onClose={onClose}

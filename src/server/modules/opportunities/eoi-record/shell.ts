@@ -84,6 +84,7 @@ export function recordShell(
   if (shown("eoi-created-by"))
     panel.push({
       key: "created-by",
+      creator: true,
       label: t("labels", "eoi-created-by", "Created by"),
       value: context.createdBy ?? "—",
     });

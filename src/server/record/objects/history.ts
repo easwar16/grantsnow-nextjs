@@ -7,9 +7,7 @@ import {
   resourceVisible,
   type Resources,
 } from "@/server/platform/configuration/resources";
-import { displayFormat } from "@/server/platform/configuration/formatting";
 import { plainText } from "@/server/platform/sanitize";
-import { dateDisplay, type FormatSettings } from "@/lib/format";
 import { AppError } from "@/lib/errors";
 import type { UserContext } from "@/shared/auth/types";
 import {
@@ -127,26 +125,6 @@ const lookupRows = z.object({
 });
 const show = (v: string | null | undefined) =>
   v === null || v === undefined || v === "" ? "—" : v;
-/** The timestamp in the configured date format plus its time, as legacy's `DEFAULT_DATE_FORMAT + " HH:mm:ss"`. */
-function stamp(value: string | null | undefined, format?: FormatSettings) {
-  if (!value) return "—";
-  if (Number.isNaN(Date.parse(value))) return dateDisplay(value, format);
-  const date = new Date(value);
-  const time = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Kolkata",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  }).format(date);
-  const localDate = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Kolkata",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
-  return `${dateDisplay(localDate, format)} ${time}`;
-}
 /** Lookup codes → descriptions (legacy loadLookups); a failed read degrades to the row's own text. */
 async function descriptions(codes: string[]) {
   const map = new Map<string, string>();
@@ -199,9 +177,8 @@ export async function historyView(host: HistoryHost): Promise<HistoryView> {
         )
       : null,
   );
-  const [rows, format, history, codes, staff, approved] = await Promise.all([
+  const [rows, history, codes, staff, approved] = await Promise.all([
     rowsRead,
-    displayFormat(),
     objects.statuses({ objectType: host.objectType, objectId: host.objectId }),
     settled(descriptions([host.statusLookup, "STATUS_UPDATE_MODE"])),
     settled(people.all()),
@@ -241,7 +218,7 @@ export async function historyView(host: HistoryHost): Promise<HistoryView> {
       ),
       comments: r.comments ?? "",
       user: show(person(r.created_by) ?? r.created_by_name),
-      date: stamp(r.creation_date, format),
+      date: r.creation_date ?? "",
     })),
     approvals:
       approved === null
@@ -259,7 +236,7 @@ export async function historyView(host: HistoryHost): Promise<HistoryView> {
                   typeof r.user_comments === "string"
                     ? plainText(r.user_comments)
                     : "",
-                updated: stamp(r.last_update_date, format),
+                updated: r.last_update_date ?? "",
               })),
             },
     approvalTransaction: host.objectType === "CONTRACT",

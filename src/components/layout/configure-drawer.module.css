@@ -1,6 +1,6 @@
 /*
  * GN-Angular configure-drawer.css (the original .vb-configure-drawer): the nav drawer's brand colour and pattern,
- * inverted text. GN-Angular's rem is 12px, so its 26/20/31.25rem width is 312/240/375px here.
+ * inverted text. Legacy and GN-Angular size it in rem (owner, 2026-10-27).
  */
 .drawer {
   position: fixed;
@@ -8,9 +8,9 @@
   z-index: 50;
   display: flex;
   flex-direction: column;
-  width: 312px;
-  min-width: min(240px, 100vw);
-  max-width: min(375px, 100vw);
+  width: 26rem;
+  min-width: min(20rem, 100vw);
+  max-width: min(31.25rem, 100vw);
   height: 100dvh;
   color: var(--gn-on-brand);
   background: var(--gn-brand) url("/brand/sidebar-background-pattern.png")
@@ -186,7 +186,7 @@
 .children .switch {
   flex: 1 1 calc(50% - 8px);
 }
-.switch input {
+.switch input[type="checkbox"][role="switch"] {
   appearance: none;
   position: relative;
   flex: none;
@@ -200,7 +200,7 @@
   cursor: pointer;
   transition: background var(--dur-fast) var(--ease);
 }
-.switch input::after {
+.switch input[type="checkbox"][role="switch"]::after {
   content: "";
   position: absolute;
   top: 2px;
@@ -211,14 +211,14 @@
   border-radius: 50%;
   transition: left var(--dur-fast) var(--ease);
 }
-.switch input:checked {
+.switch input[type="checkbox"][role="switch"]:checked {
   background: rgba(255, 255, 255, 0.85);
 }
-.switch input:checked::after {
+.switch input[type="checkbox"][role="switch"]:checked::after {
   left: 18px;
   background: var(--gn-brand);
 }
-.switch input:focus-visible {
+.switch input[type="checkbox"][role="switch"]:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 2px;
   box-shadow: none;

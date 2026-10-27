@@ -4,6 +4,8 @@ export interface FormatSettings {
   decimals?: number | null;
   dateFormat?: string;
 }
+/** The viewer's IANA time zone, set by the shell, so the server can count calendar days on the viewer's day. */
+export const TIME_ZONE_COOKIE = "gn-tz";
 const DEFAULT_DATE_FORMAT = "DD-MMM-YYYY";
 type DateParts = { year: number; month: number; day: number };
 // The tokens a user can type and read back; a pattern with any other falls back to the default.
@@ -56,6 +58,17 @@ export function dateTimeDisplay(
   if (!/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(value)) return value;
   const m = moment(value, moment.ISO_8601);
   return m.isValid() ? m.format(`${patternOf(settings)} hh:mm a`) : value;
+}
+/**
+ * A timestamp as legacy's datetime converter (`DEFAULT_DATE_FORMAT + " HH:mm:ss"`): an instant in the viewer's time
+ * zone, a wall-clock value as written, a bare date as a date. Call it in the browser, where the zone is the viewer's.
+ */
+export function stampDisplay(value?: string | null, settings?: FormatSettings) {
+  if (!value) return "—";
+  if (!/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(value))
+    return dateDisplay(value, settings);
+  const m = moment(value, moment.ISO_8601);
+  return m.isValid() ? m.format(`${patternOf(settings)} HH:mm:ss`) : value;
 }
 export function moneyDisplay(
   value?: string,

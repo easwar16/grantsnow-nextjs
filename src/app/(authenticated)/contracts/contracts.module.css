@@ -1,6 +1,6 @@
 .workspace {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: 20rem minmax(0, 1fr); /* legacy .drawer-start, as FilterPanel */
   height: 100%;
   min-height: 0;
   background: var(--bg);
@@ -417,7 +417,6 @@
   border-top: 1px solid var(--border);
 }
 .createPage dialog {
-  width: min(520px, calc(100vw - 32px));
   border: 1px solid #aaa;
   border-radius: 4px;
   padding: 18px;
@@ -493,10 +492,6 @@
   border-radius: 5px;
   padding: 12px 7px 15px;
 }
-.card :global(.record-chip) {
-  background: #efefef;
-  color: #242424;
-}
 .overline {
   display: flex;
   align-items: center;
@@ -522,7 +517,6 @@
 }
 .metadata div {
   min-width: max-content;
-  max-width: 250px;
   padding: 0 8px;
   border-right: 1px solid var(--border);
 }
@@ -676,10 +670,6 @@
   margin: 5px 0 0;
   font-size: 12px;
 }
-.contractFacts {
-  background: #f2f2f1;
-  min-height: 225px;
-}
 .documentChoice {
   border: 0;
   margin: 0;
@@ -815,50 +805,6 @@
   padding: 12px;
   border-bottom: 1px solid var(--border);
   overflow-wrap: anywhere;
-}
-.workflowDialogBackdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: grid;
-  place-items: center;
-  background: #0006;
-}
-.workflowDialog {
-  width: min(600px, calc(100vw - 32px));
-  max-height: 85vh;
-  overflow: auto;
-  background: white;
-  padding: 14px;
-  box-shadow: 0 8px 28px #0004;
-}
-.workflowDialog header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.workflowDialog header h2 {
-  font-size: 17px;
-}
-.workflowDialog header a {
-  font-size: 24px;
-  color: var(--text);
-  text-decoration: none;
-}
-.workflowDialog table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-.workflowDialog th,
-.workflowDialog td {
-  border: 1px solid #ddd;
-  padding: 9px;
-  text-align: left;
-}
-.workflowDialog th {
-  background: #345257;
-  color: white;
 }
 @media (max-width: 760px) {
   .workspace {

@@ -1,6 +1,7 @@
 "use client";
 import type {
   AddStageSetup,
+  ApprovalTreeNode,
   Choice,
   PersonChoice,
   StageUsers,
@@ -35,6 +36,11 @@ export const groups = endpoint<{ api: string; type: string }, Choice[]>(
   (p) => ({ path: p.api, query: { view: "groups", type: p.type } }),
   { ttl: REFERENCE_TTL },
 );
+/** The route as a tree, read when Graph View opens. */
+export const graph = endpoint<string, ApprovalTreeNode>((api) => ({
+  path: api,
+  query: { view: "graph" },
+}));
 /** WRITES one change to the route; `body` is the route's own request (`op` and its fields). */
 export const write = (api: string, body: unknown) =>
   post<{ message?: string }>(api, body);

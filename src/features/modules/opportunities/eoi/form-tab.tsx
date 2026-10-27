@@ -12,7 +12,7 @@ import {
 } from "@/shared/opportunities/eoi-record";
 import { RECORD_SAVE, useRecord } from "./record-context";
 import type { PageLock } from "./types";
-import styles from "./record.module.css";
+import styles from "@/features/record/shell/record-tab.module.css";
 /**
  * Dynamic Form 1–5 (GN-Angular eoi-form-tab): one component for the five tabs. Editable while a draft, read-only once
  * the page is locked or finalized, with its own Submit.

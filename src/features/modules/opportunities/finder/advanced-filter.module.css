@@ -6,8 +6,7 @@
   left: 0;
   display: flex;
   flex-direction: column;
-  width: min(40vw, 760px);
-  min-width: min(560px, calc(100vw - 32px));
+  width: 40vw; /* legacy #popupAdvancedFilter oj-md-width-2/5 */
   max-height: 70vh;
   padding: 16px;
   overflow-y: auto;

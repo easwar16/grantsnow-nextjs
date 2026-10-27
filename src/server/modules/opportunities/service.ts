@@ -36,8 +36,8 @@ import {
   cardLabelTexts,
   opportunityGlobals,
   type Opener,
-  type RoleRow,
 } from "./gates";
+import type { RoleRow } from "@/server/platform/permissions";
 import { AppError, publicError } from "@/lib/errors";
 const text = z.string().nullish();
 const amount = z.union([z.number(), z.string()]).nullish();

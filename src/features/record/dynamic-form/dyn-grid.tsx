@@ -120,8 +120,8 @@ export function DynGrid({
           </button>
         </div>
       )}
-      <div className={styles.tableWrap}>
-        <table id={`${id}-table`} className={styles.table}>
+      <div className={`gn-table-scroll ${styles.tableWrap}`}>
+        <table id={`${id}-table`} className={`gn-table ${styles.table}`}>
           <thead>
             <tr>
               {section.fields.map((f) => (

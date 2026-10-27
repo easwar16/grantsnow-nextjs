@@ -108,6 +108,31 @@ export async function oicUpload(location: string, bytes: Uint8Array) {
   assertWritesEnabled();
   await call("UPLOAD_OBJECT", "PUT", location, "stored", bytes);
 }
+// On globalThis: route handlers can load this module as separate instances.
+const storing = ((globalThis as { __gnStoring?: Set<string> }).__gnStoring ??=
+  new Set());
+/**
+ * Runs `store` (check the name is free, upload, record) holding `location`: a second upload to the same object while it
+ * runs is refused, since the object path is the file name and it would overwrite the first one's bytes.
+ * shortcut: held per server process; several app instances need a shared lock (or unique object names).
+ */
+export async function exclusiveLocation<T>(
+  location: string,
+  store: () => Promise<T>,
+) {
+  if (storing.has(location))
+    throw new AppError(
+      "BAD_REQUEST",
+      "A file with this name is already being uploaded",
+      409,
+    );
+  storing.add(location);
+  try {
+    return await store();
+  } finally {
+    storing.delete(location);
+  }
+}
 export async function oicDownload(location: string) {
   checkLocation(location);
   if (fixtureMode()) {

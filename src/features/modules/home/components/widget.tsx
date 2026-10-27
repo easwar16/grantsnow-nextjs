@@ -129,7 +129,7 @@ export function Widget({
         ) : shown === "calendar" ? (
           <div
             id={`widget-${idPart(id)}-calendar`}
-            className="attention-calendar"
+            className="attention-calendar enter-fade"
           >
             <DeadlineCalendar
               widgetId={id}

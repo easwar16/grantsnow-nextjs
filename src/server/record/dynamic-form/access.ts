@@ -1,18 +1,27 @@
 import "server-only";
 import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
-import { requireModule } from "@/server/platform/permissions";
-import { eoi, opportunities, roles as recordRoles } from "@/server/oracle/api";
+import {
+  requireDrawerAccess,
+  requireModule,
+} from "@/server/platform/permissions";
+import {
+  awards,
+  eoi,
+  opportunities,
+  roles as recordRoles,
+} from "@/server/oracle/api";
 import { dashboardRoles } from "@/server/platform/configuration/service";
-import { pageAccess } from "@/server/modules/opportunities/gates";
+import { pageAccess } from "@/server/platform/permissions";
 import { canCreate } from "@/features/modules/opportunities/display";
 import { AppError } from "@/lib/errors";
 import { early } from "@/server/platform/async";
-import { loadContract } from "@/server/contracts/service";
+import { loadContract } from "@/server/modules/contracts/service";
 /**
  * Who may read or change a dynamic form (and its files), decided on the server and failing closed. Today only the EOI
  * hosts: the Application tab (OPPORTUNITIES / OPPORTUNITIES-EOI-APPLICATION) and Dynamic Form 1–5
- * (OPPORTUNITIES-EOI / OPPORTUNITIES-EOI-DYNAMIC-FORM-N). Other object types are refused until their hosts exist.
+ * (OPPORTUNITIES-EOI / OPPORTUNITIES-EOI-DYNAMIC-FORM-N); the award record (AWARD / AWARDS-HEADER and
+ * AWARDS-DYNAMIC-FORM-N). Other object types are refused until their hosts exist.
  */
 const recordId = z.string().regex(/^[1-9]\d{0,14}$/);
 export const formTarget = z
@@ -54,6 +63,13 @@ export function pageOf(t: Pick<FormTarget, "objectType" | "slot">) {
   if (
     t.objectType === "OPPORTUNITIES-EOI" &&
     /^OPPORTUNITIES-EOI-DYNAMIC-FORM-[1-5]$/.test(t.slot)
+  )
+    return t.slot.toLowerCase();
+  // The award record: Dynamic Form 1–5, the Header's form (legacy moduleName AWARDS-HEADER) and the Add Milestone
+  // dialog's form (AWARDS-MILESTONES).
+  if (
+    t.objectType === "AWARD" &&
+    /^AWARDS-(HEADER|MILESTONES|DYNAMIC-FORM-[1-5])$/.test(t.slot)
   )
     return t.slot.toLowerCase();
   return null;
@@ -127,6 +143,7 @@ async function pageLocked(
   requestId: string,
   roles: z.infer<typeof rolesSchema>["items"],
   page: string,
+  module = "OPPORTUNITIES-EOI",
 ) {
   const pageRow = roles.find((r) => r.page_name === page && r.page_id !== null);
   if (!pageRow) return true;
@@ -135,7 +152,7 @@ async function pageLocked(
       await eoi.lockStatus({
         recordId: requestId,
         pageId: pageRow.page_id!,
-        module: "OPPORTUNITIES-EOI",
+        module,
       }),
     );
     return b.status !== "UNLOCK";
@@ -156,6 +173,7 @@ export async function authorizeForm(t: FormTarget, mode: "read" | "edit") {
     const contract = await loadContract(t.objectId);
     return { user, page, record: { id: contract.id, number: contract.number } };
   }
+  if (t.objectType === "AWARD") return authorizeAwardForm(t, mode, user, page);
   requireModule(user, "opportunities-group");
   if (t.objectId === undefined) {
     if (mode === "edit" || t.objectType !== "OPPORTUNITIES")
@@ -201,5 +219,48 @@ export async function authorizeForm(t: FormTarget, mode: "read" | "edit") {
   if (lock && (await lock))
     throw denied("This page is finalized; unlock it to make changes.");
   const record: FormRecord = { id: t.objectId, number: r.request_number };
+  return { user, page, record };
+}
+
+const awardSchema = z.object({
+  award_id: z.coerce.number().int().positive(),
+  award_number: z.string().nullish(),
+  award_status: z.string().nullish(),
+});
+/**
+ * An award's form: the Awards grant, the award's roles on the page (edit for a change), a draft award and an open
+ * page lock. Legacy checked only the tab's read; the edit rules are the record's own (Header and Dynamic Form tabs).
+ */
+async function authorizeAwardForm(
+  t: FormTarget,
+  mode: "read" | "edit",
+  user: Awaited<ReturnType<typeof authenticate>>["user"],
+  page: string,
+) {
+  requireDrawerAccess(user, "awards");
+  if (t.objectId === undefined)
+    throw new AppError("BAD_REQUEST", "Invalid form request.", 400);
+  const details = early(awards.details({ awardId: t.objectId }));
+  const roles = rolesSchema.parse(
+    await recordRoles.record({ objectType: "AWARD", objectId: t.objectId }),
+  ).items;
+  const access = pageAccess(roles, page);
+  if (!access.read || (mode === "edit" && !access.edit)) throw denied();
+  const lock =
+    mode === "edit"
+      ? early(pageLocked(t.objectId, roles, page, "AWARD"))
+      : null;
+  const a = awardSchema.parse(await details);
+  if (String(a.award_id) !== t.objectId)
+    throw new AppError("CONTRACT", "Oracle returned a different award.");
+  if (mode === "edit" && a.award_status !== "DRFT")
+    throw denied("Only a draft award can be changed.");
+  if (lock && (await lock))
+    throw denied("This page is finalized; unlock it to make changes.");
+  // Legacy files award form documents under the award number.
+  const record: FormRecord = {
+    id: t.objectId,
+    number: a.award_number ?? t.objectId,
+  };
   return { user, page, record };
 }

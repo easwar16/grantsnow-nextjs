@@ -40,7 +40,10 @@ export type AttributesView =
     };
 export type AttributeValues = Record<string, FieldValue>;
 /** The hosts the server knows, each with its own object type, bundle and access rule. */
-export const ATTRIBUTE_HOSTS = ["opportunities-eoi-application"] as const;
+export const ATTRIBUTE_HOSTS = [
+  "opportunities-eoi-application",
+  "award-header",
+] as const;
 export type AttributeHost = (typeof ATTRIBUTE_HOSTS)[number];
 /** A dependent LOV's choices follow its parent attribute's current value. */
 export const attributeOptions = (f: AttributeField, values: AttributeValues) =>

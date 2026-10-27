@@ -1,6 +1,8 @@
 import { insightRows, fundingEfficiency } from "./insight-mapping";
 import { formattingConfiguration } from "@/server/platform/configuration/formatting";
 import "server-only";
+import { cookies } from "next/headers";
+import { TIME_ZONE_COOKIE } from "@/lib/format";
 import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
 import {
@@ -22,6 +24,7 @@ import type {
 } from "@/features/modules/home/types";
 import { calendarDaysUntil } from "@/features/modules/home/deadline";
 import { recordIdentity } from "@/features/modules/proposals/record";
+import { awardHref } from "@/features/modules/awards/links";
 import { AppError, publicError } from "@/lib/errors";
 import { early } from "@/server/platform/async";
 const CHART_PAGE = 100;
@@ -72,10 +75,23 @@ export function rowHref(
       access_type: str(r, "access_type"),
       setup_flow_id: str(r, "setup_flow_id"),
     });
-  return link("/modules/awards", {
-    award_id: str(r, "award_id"),
-    mode: "view",
-  });
+  const awardId = str(r, "award_id");
+  return awardId ? awardHref(awardId) : "/awards";
+}
+/** Today on the viewer's calendar (the shell's time-zone cookie); the server's day until the cookie is set. */
+export async function viewerToday(now = new Date()) {
+  try {
+    const zone = (await cookies()).get(TIME_ZONE_COOKIE)?.value;
+    if (!zone) return now;
+    const [y, m, d] = new Intl.DateTimeFormat("en-CA", { timeZone: zone })
+      .format(now)
+      .split("-")
+      .map(Number);
+    return new Date(y, m - 1, d);
+  } catch {
+    // Outside a request (no viewer) or an unknown zone name: the server's day.
+    return now;
+  }
 }
 export function mapWidget(
   raw: unknown,
@@ -143,7 +159,6 @@ export function mapWidget(
         str(r, keys[2]) ||
         (w.kind === "award" ? str(r, "proposal_title") : undefined) ||
         reference;
-      // ponytail: server-local calendar day; the user's timezone is not known server-side.
       const due = w.dueBy ? calendarDaysUntil(str(r, w.dueBy), today) : null;
       return {
         id: `${str(r, keys[0]) || reference}:${str(r, "deadline_id") || str(r, "stage_id") || filters.offset + i}`,
@@ -283,7 +298,7 @@ export async function loadWidget(
       : w.kind === "statistics"
         ? await chartRows(page)
         : await page(filters.offset, QUEUE_PAGE);
-  const mapped = mapWidget(raw, w, filters);
+  const mapped = mapWidget(raw, w, filters, await viewerToday());
   const formatting = await format;
   if (w.renderType)
     mapped.presentation = {

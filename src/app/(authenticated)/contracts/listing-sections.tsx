@@ -1,13 +1,22 @@
 import Link from "next/link";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { CONTRACT_STATUS_TONE } from "@/features/modules/contracts/format";
+import { FormSelect } from "@/components/ui/form-select";
 import { Suspense } from "react";
-import type { ContractQuery } from "@/features/contracts/schema";
-import { contractSearch, contractLevels } from "@/features/contracts/schema";
-import { canCreateContract, listContracts } from "@/server/contracts/service";
+import type { ContractQuery } from "@/features/modules/contracts/schema";
+import {
+  contractSearch,
+  contractLevels,
+} from "@/features/modules/contracts/schema";
+import {
+  canCreateContract,
+  listContracts,
+} from "@/server/modules/contracts/service";
 import {
   contractSortChoices,
   contractTypeChoices,
   contractOrgChoices,
-} from "@/server/contracts/lookups";
+} from "@/server/modules/contracts/lookups";
 import { State } from "@/components/feedback/state";
 import { publicError } from "@/lib/errors";
 import { dateDisplay } from "@/lib/format";
@@ -25,11 +34,12 @@ export function ContractFilters({ query }: { query: ContractQuery }) {
   return (
     <ContractFilterForm key={contractSearch(query)}>
       <input type="hidden" name="status" value={query.status} />
-      <fieldset className={styles.levels}>
+      <fieldset id="contracts-filter-levels" className={styles.levels}>
         <legend>Reference Object</legend>
         {contractLevels.map(([value, text]) => (
           <label key={value}>
             <input
+              id={`contracts-filter-level-${value.toLowerCase()}`}
               type="checkbox"
               name="level"
               value={value}
@@ -42,6 +52,7 @@ export function ContractFilters({ query }: { query: ContractQuery }) {
       <label className={styles.insideField}>
         <span>Contract Number</span>
         <input
+          id="contracts-filter-number"
           name="number"
           defaultValue={query.number}
           aria-label="Contract Number"
@@ -64,6 +75,7 @@ export function ContractFilters({ query }: { query: ContractQuery }) {
         <input type="hidden" name="direction" value={query.direction} />
         <button
           type="submit"
+          id="contracts-filter-direction"
           className={styles.sortDirection}
           name="direction"
           value={query.direction === "DESC" ? "ASC" : "DESC"}
@@ -114,6 +126,7 @@ export function ContractFilters({ query }: { query: ContractQuery }) {
       <label className={styles.insideField}>
         <span>Reference Object Number</span>
         <input
+          id="contracts-filter-reference"
           name="referenceNumber"
           defaultValue={query.referenceNumber}
           aria-label="Reference Object Number"
@@ -123,6 +136,7 @@ export function ContractFilters({ query }: { query: ContractQuery }) {
       <label className={styles.insideField}>
         <span>Start Date</span>
         <input
+          id="contracts-filter-from"
           type="date"
           name="from"
           defaultValue={query.from}
@@ -132,6 +146,7 @@ export function ContractFilters({ query }: { query: ContractQuery }) {
       <label className={styles.insideField}>
         <span>End Date</span>
         <input
+          id="contracts-filter-to"
           type="date"
           name="to"
           defaultValue={query.to}
@@ -147,20 +162,26 @@ type SelectProps = {
   title: string;
   value: string;
 };
-function SelectLoading({ name, title, value }: SelectProps) {
+function SelectLoading({
+  name,
+  title,
+  value,
+  busy = true,
+}: SelectProps & { busy?: boolean }) {
   return (
     <label
       className={`${styles.insideField} ${value ? "" : styles.emptySelect}`}
     >
       <span>{title}</span>
-      <select
+      <FormSelect
+        id={`contracts-filter-${name}`}
         name={name}
-        aria-label={title}
+        label={title}
+        options={value ? [{ value, label: value }] : []}
         defaultValue={value}
-        aria-busy="true"
-      >
-        <option value={value}>{value || title}</option>
-      </select>
+        disabled
+        busy={busy}
+      />
     </label>
   );
 }
@@ -176,7 +197,7 @@ async function FilterSelect({
   } catch {
     return (
       <>
-        <SelectLoading name={name} title={title} value={value} />
+        <SelectLoading name={name} title={title} value={value} busy={false} />
         <p className={styles.lookupError} role="status">
           {title} choices are unavailable.
         </p>
@@ -188,14 +209,16 @@ async function FilterSelect({
       className={`${styles.insideField} ${value ? "" : styles.emptySelect}`}
     >
       <span>{title}</span>
-      <select name={name} defaultValue={value} aria-label={title}>
-        <option value="">{title}</option>
-        {options.map((choice) => (
-          <option key={choice.value} value={choice.value}>
-            {choice.label}
-          </option>
-        ))}
-      </select>
+      {/* Keyed on the URL value, so Clear and back / forward show the query's choice. */}
+      <FormSelect
+        key={value}
+        id={`contracts-filter-${name}`}
+        name={name}
+        label={title}
+        options={options}
+        defaultValue={value}
+        submitOnChange
+      />
     </label>
   );
 }
@@ -210,7 +233,12 @@ export async function NewContractAction() {
   }
   return canCreate &&
     resourceVisible(rb, "contract", "button-labels", "listing-new-contract") ? (
-    <Link href="/contracts/new" className={styles.newContract} prefetch={false}>
+    <Link
+      id="contracts-new"
+      href="/contracts/new"
+      className={styles.newContract}
+      prefetch={false}
+    >
       <span aria-hidden="true">＋</span>
       {label(
         rb,
@@ -287,13 +315,15 @@ export async function ContractResults({ query }: { query: ContractQuery }) {
               <div className={styles.overline}>
                 <Icon name="data-document" />
                 <strong>{row.number}</strong>
-                <span
-                  className={`record-chip ${row.statusCode === "REJ" ? "danger" : row.statusCode === "AIA" ? "warning" : row.statusCode === "SIGNED" ? "success" : "neutral"}`}
-                >
-                  {row.status}
-                </span>
+                {/* Legacy showed the badge on any code, so a code without a name gave an empty pill. */}
+                {row.status && (
+                  <StatusBadge tone={CONTRACT_STATUS_TONE[row.statusCode]}>
+                    {row.status}
+                  </StatusBadge>
+                )}
               </div>
               <Link
+                id={`contract-${row.id}-view`}
                 className={styles.view}
                 href={`/contracts/${row.id}`}
                 aria-label={`View ${row.number}`}
@@ -303,7 +333,11 @@ export async function ContractResults({ query }: { query: ContractQuery }) {
                 <Icon name="link" />
               </Link>
               <h2>
-                <Link href={`/contracts/${row.id}`} prefetch={false}>
+                <Link
+                  id={`contract-${row.id}-title`}
+                  href={`/contracts/${row.id}`}
+                  prefetch={false}
+                >
                   {row.title}
                 </Link>
               </h2>
@@ -328,6 +362,7 @@ export async function ContractResults({ query }: { query: ContractQuery }) {
         <div>
           {query.page > 1 && (
             <Link
+              id="contracts-previous"
               href={`/contracts?${contractSearch({ ...query, page: query.page - 1 })}`}
             >
               Previous
@@ -336,6 +371,7 @@ export async function ContractResults({ query }: { query: ContractQuery }) {
           <span>Page {query.page}</span>
           {result.hasMore && (
             <Link
+              id="contracts-next"
               href={`/contracts?${contractSearch({ ...query, page: query.page + 1 })}`}
             >
               Next

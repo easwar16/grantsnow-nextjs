@@ -18,7 +18,6 @@ export interface ApprovalRow {
   stage: string;
   comments: string;
   updated: string;
-  created?: string;
   transaction?: string;
 }
 export type HistoryTextKey =

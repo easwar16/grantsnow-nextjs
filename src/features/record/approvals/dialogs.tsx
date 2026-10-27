@@ -44,7 +44,7 @@ export function CommentsDialog({
     <ActionDialog
       id={id}
       title={title}
-      width={560}
+      width="50vw" /* legacy submitPopUp oj-md-width-1/2 */
       busy={busy}
       closeLabel={texts.cancel}
       onClose={onClose}
@@ -128,7 +128,7 @@ export function ApproversDialog({
     <ActionDialog
       id={id}
       title={texts.approversTitle}
-      width={720}
+      width="50vw" /* legacy dialogStageUsers oj-md-width-1/2 */
       busy={busy}
       closeLabel={texts.cancel}
       onClose={onClose}
@@ -171,8 +171,8 @@ export function ApproversDialog({
       ) : users.data.users.length === 0 ? (
         <State id={`${id}-empty`} title={texts.noData} />
       ) : (
-        <div className={styles.tableWrap}>
-          <table id={`${id}-table`}>
+        <div className={`gn-table-scroll ${styles.tableWrap}`}>
+          <table id={`${id}-table`} className="gn-table">
             <thead>
               <tr>
                 <th scope="col">{texts.userName}</th>
@@ -371,7 +371,7 @@ export function AddStageDialog({
     <ActionDialog
       id={id}
       title={texts.addStageTitle}
-      width={720}
+      width="50vw" /* legacy dialogAddStage oj-md-width-1/2 */
       busy={busy}
       closeLabel={texts.addStageCancel}
       onClose={onClose}
