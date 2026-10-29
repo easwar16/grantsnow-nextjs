@@ -1,11 +1,11 @@
 import "server-only";
 import { read, write, type PageParams } from "../client";
-import { TTL } from "../cache";
+import { serverConstants } from "@/server/constants";
 
 /** The user's notifications as legacy loads them for the bell (no paging parameters), held briefly. */
 export const latest = read<void, unknown>({
   op: "getNotificationsNotifications",
-  ttl: TTL.access,
+  ttl: serverConstants.ttl.access,
 });
 /** One page of the dashboard's Notifications tab (`p_offset` / `p_limit`). */
 export const page = read<PageParams, unknown>({

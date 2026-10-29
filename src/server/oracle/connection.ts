@@ -8,6 +8,7 @@ import {
 } from "@/server/platform/configuration/environment";
 import { AppError } from "@/lib/errors";
 import { Agent, fetch as poolFetch, type Response } from "undici";
+import { serverConstants } from "@/server/constants";
 export type Operation = keyof typeof operations;
 /**
  * One connection pool for Oracle. Node's default drops an idle connection after 4 s, so most clicks opened new ones,
@@ -16,8 +17,11 @@ export type Operation = keyof typeof operations;
  * so the pool matches it on any Node version.
  */
 const pool = new Agent({
-  keepAliveTimeout: 30_000,
-  keepAliveMaxTimeout: 60_000,
+  keepAliveTimeout: serverConstants.pool.keepAliveMs,
+  keepAliveMaxTimeout: serverConstants.pool.keepAliveMaxMs,
+  // undici stops waiting for headers or body after 5 minutes by default; the call's own limit decides.
+  headersTimeout: serverConstants.timeouts.oracle,
+  bodyTimeout: serverConstants.timeouts.oracle,
 });
 /** A connect that timed out never reached Oracle, so a read may be sent again once; writes never are. */
 const connectTimedOut = (e: unknown) =>
@@ -178,27 +182,18 @@ async function send(
   );
   if (query) url.search = query.toString();
   let response: Response;
-  // DEV answers slowly (awardPendingApproval ~27 s, KPI statistics 40–60 s, GrantsNow-Dashboard.md); legacy sets no
-  // limit. Bounded anyway: reads 60 s, aggregations 90 s. Each widget's own Suspense boundary keeps Home usable.
-  const aggregates: Operation[] = [
-    "getSharedGetKpiStatistics",
-    "getProposalGetProposalStatistics",
-    "getPost_awardsAwardStatistics",
-    "getPost_awardsAwardVsCostStatistics",
-    "getDynamicFormsApplicationStatistics",
-    "getSharedGetOppCategoryStat",
-    "getSharedGetTopOppCategoryStat",
-    "getSharedGetWidgetParameters",
-    "getSharedGetDynamicCharts",
-  ];
-  const timeout = aggregates.includes(operation) ? 90000 : 60000;
+  // DEV answers slowly (Awards org units ~52 s, KPI statistics up to 75 s); legacy sets no limit. Bounded at the
+  // owner's maximum, 10 minutes (2026-10-29); each section streams, so a slow call never holds the page.
   const started = performance.now();
   try {
     // One deadline for both attempts.
     const read = !writes(operation),
       deadline = signal
-        ? AbortSignal.any([signal, AbortSignal.timeout(timeout)])
-        : AbortSignal.timeout(timeout),
+        ? AbortSignal.any([
+            signal,
+            AbortSignal.timeout(serverConstants.timeouts.oracle),
+          ])
+        : AbortSignal.timeout(serverConstants.timeouts.oracle),
       fetchOnce = () =>
         poolFetch(url, {
           method: op.method ?? "GET",
@@ -229,7 +224,7 @@ async function send(
     devTrace(
       operation,
       e instanceof Error && e.name === "TimeoutError"
-        ? `timed out after ${timeout / 1000}s`
+        ? `timed out after ${serverConstants.timeouts.oracle / 1000}s`
         : `network error ${e instanceof Error ? `${e.name} ${String((e.cause as { code?: string } | undefined)?.code ?? "")}` : ""}`,
     );
     // A write that reached Oracle may have committed, so a blind retry could save it twice.

@@ -6,7 +6,8 @@ import { displayFormat } from "@/server/platform/configuration/formatting";
 import { State } from "@/components/feedback/state";
 import { DeniedRedirect } from "@/features/modules/opportunities/eoi/denied-redirect";
 import { AwardRecordShell } from "@/features/modules/awards/record/record-shell";
-import { publicError } from "@/lib/errors";
+import { functions } from "@/lib/functions";
+
 /** The award record container (legacy awards-detail-page): the award, the user's rights and its finalize state. */
 export default async function AwardLayout({
   children,
@@ -23,7 +24,7 @@ export default async function AwardLayout({
   try {
     context = await awardRecordContext(id);
   } catch (error) {
-    const e = publicError(error);
+    const e = functions.errors.publicError(error);
     // No rights on the award: legacy's toast and back to the listing.
     if (e.code === "FORBIDDEN")
       return (

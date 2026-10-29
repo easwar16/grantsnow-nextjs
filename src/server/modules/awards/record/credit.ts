@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { awards } from "@/server/oracle/api";
-import { label, resources } from "@/server/platform/configuration/resources";
+import { resources } from "@/server/platform/configuration/resources";
 import { AppError } from "@/lib/errors";
 import { pageOf } from "@/shared/awards/award-record";
 import type { CreditView } from "@/features/modules/awards/record/credit-types";
@@ -11,6 +11,7 @@ import {
   isDraft,
   type AwardRecordContext,
 } from "../record";
+import { serverFunctions } from "@/server/functions";
 
 const BUNDLE = "award";
 const num = z.coerce.number().nullish();
@@ -49,7 +50,7 @@ export async function creditView(id: string): Promise<CreditView> {
     resources(),
   ]);
   const t = (group: string, key: string, fallback: string) =>
-    label(rows, BUNDLE, group, key, fallback);
+    serverFunctions.resources.label(rows, BUNDLE, group, key, fallback);
   return {
     awardId: id,
     canEdit,

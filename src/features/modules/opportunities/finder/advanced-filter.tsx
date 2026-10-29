@@ -1,6 +1,5 @@
 "use client";
 import { DateInput, pickerOpen } from "@/components/ui/date-input";
-import { idPart } from "@/lib/ids";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import { Pop } from "@/components/ui/pop";
@@ -14,6 +13,7 @@ import {
   type FinderFilters,
 } from "./state";
 import styles from "./advanced-filter.module.css";
+import { functions } from "@/lib/functions";
 type DateField = "publication" | "opening" | "closing";
 const DATES: DateField[] = ["publication", "opening", "closing"];
 const KEY_SEP = "\u001f";
@@ -317,7 +317,7 @@ export function AdvancedFilter({
               {options.status.map((s) => (
                 <label key={s.value}>
                   <input
-                    id={`advanced-filter-status-${idPart(s.value)}`}
+                    id={`advanced-filter-status-${functions.ids.idPart(s.value)}`}
                     className="gn-check"
                     type="checkbox"
                     checked={draft.status.includes(s.value)}

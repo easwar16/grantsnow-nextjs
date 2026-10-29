@@ -1,13 +1,14 @@
 import "server-only";
 import { z } from "zod";
 import { objects } from "@/server/oracle/api";
-import { label, resources } from "@/server/platform/configuration/resources";
+import { resources } from "@/server/platform/configuration/resources";
 import { legacyDeepLink } from "@/shared/auth/legacy-link";
 import type {
   LinkedGroup,
   LinkedObjects,
   LinkedTextKey,
 } from "@/features/record/linked/model";
+import { serverFunctions } from "@/server/functions";
 
 /** Legacy linkedModulesDialog reads the ETHICS bundle wherever it opens (awards, ethics, contracts). */
 const BUNDLE = "ethics";
@@ -104,7 +105,7 @@ export async function linkedObjects(
     resources(),
   ]);
   const t = (group: string, key: string, fallback: string) =>
-    label(rows, BUNDLE, group, key, fallback);
+    serverFunctions.resources.label(rows, BUNDLE, group, key, fallback);
   return {
     groups: linkedGroups(raw, self, (key, fallback) =>
       t("labels", key, fallback),
@@ -116,7 +117,13 @@ export async function linkedObjects(
           t(group, key, fallback),
         ]),
       ) as Record<LinkedTextKey, string>),
-      none: label(rows, none.bundle, "labels", none.key, none.fallback),
+      none: serverFunctions.resources.label(
+        rows,
+        none.bundle,
+        "labels",
+        none.key,
+        none.fallback,
+      ),
     },
   };
 }

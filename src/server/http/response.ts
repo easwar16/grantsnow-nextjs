@@ -1,5 +1,6 @@
 import "server-only";
-import { publicError } from "@/lib/errors";
+import { functions } from "@/lib/functions";
+
 export function json(data: unknown, status = 200) {
   return Response.json(data, {
     status,
@@ -7,6 +8,6 @@ export function json(data: unknown, status = 200) {
   });
 }
 export function failure(e: unknown) {
-  const { status, ...error } = publicError(e);
+  const { status, ...error } = functions.errors.publicError(e);
   return json({ error }, status);
 }

@@ -9,13 +9,15 @@ import { ToastProvider } from "@/components/feedback/toast";
 import { AppStoreProvider } from "@/lib/store/app-store";
 import { applyAccessibility } from "@/features/modules/account/apply";
 import type { ShellLabels } from "@/features/modules/account/shell-labels";
-import { TIME_ZONE_COOKIE, type FormatSettings } from "@/lib/format";
+import { type FormatSettings } from "@/lib/format";
 import { UserMenu } from "./user-menu";
 import { SessionKeepAlive } from "./session-keepalive";
 import { NotificationBell } from "./notification-bell";
 import { IdleDialog } from "./idle-dialog";
+import { TruncatedTitles } from "./truncated-titles";
 import { ConfigureDrawer, type ConfigureMode } from "./configure-drawer";
 import { ShellProvider, type ShellUser } from "./shell-context";
+import { constants } from "@/lib/constants";
 export function AppShell({
   children,
   accessibility,
@@ -40,8 +42,12 @@ export function AppShell({
     trigger = useRef<HTMLButtonElement>(null);
   const [drawerOpen, setDrawerOpen] = useState(false),
     [configure, setConfigure] = useState<ConfigureMode | null>(null);
-  const path = usePathname();
+  const path = usePathname(),
+    shownPath = useRef(path);
+  // Only a navigation closes the drawer: on mount this would close one opened by a click replayed during hydration.
   useEffect(() => {
+    if (shownPath.current === path) return;
+    shownPath.current = path;
     drawer.current?.close();
   }, [path]);
   useEffect(() => {
@@ -50,7 +56,7 @@ export function AppShell({
   useEffect(() => {
     // IANA names are cookie-safe (letters, digits, / _ + -).
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    document.cookie = `${TIME_ZONE_COOKIE}=${zone}; path=/; max-age=31536000; samesite=lax`;
+    document.cookie = `${constants.cookies.timeZone}=${zone}; path=/; max-age=31536000; samesite=lax`;
   }, []);
   return (
     // Motion follows prefers-reduced-motion, as the CSS motion tokens do.
@@ -126,6 +132,7 @@ export function AppShell({
               </header>
               <SessionKeepAlive />
               <IdleDialog />
+              <TruncatedTitles />
               <dialog
                 ref={drawer}
                 id="navigation-drawer"

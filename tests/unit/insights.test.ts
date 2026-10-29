@@ -1,3 +1,4 @@
+import { constants } from "@/lib/constants";
 import { expect, it } from "vitest";
 import {
   insightRows,
@@ -5,19 +6,11 @@ import {
   drillHref,
   drillRows,
 } from "@/server/modules/home/insight-mapping";
-import {
-  pieLabel,
-  insightOptions,
-  oracleChartColors,
-  chartIsEmpty,
-  pointRow,
-  legendTextWidth,
-  dynamicChartData,
-} from "@/lib/chart-options";
 import type { WidgetData } from "@/features/modules/home/types";
 import { homeFilters } from "@/features/modules/home/schemas";
+import { functions } from "@/lib/functions";
 it("labels pie shares to two significant digits, as Redwood does", () => {
-  expect([13.04, 8, 1, 0].map(pieLabel)).toEqual([
+  expect([13.04, 8, 1, 0].map(functions.charts.pieLabel)).toEqual([
     "13%",
     "8.0%",
     "1.0%",
@@ -68,8 +61,8 @@ it("supports verified comma-separated date filters and rejects injected values",
   expect(() => homeFilters(new URLSearchParams("month=0,13"))).toThrow();
 });
 it("uses the observed VBCS palette and disables chart motion when requested", () => {
-  expect(oracleChartColors.slice(0, 2)).toEqual(["#245d63", "#d7790f"]);
-  const options = insightOptions(
+  expect(constants.charts.palette.slice(0, 2)).toEqual(["#245d63", "#d7790f"]);
+  const options = functions.charts.insightOptions(
     {
       attention: [],
       statistics: [{ id: "1", label: "2026", series: "Draft", value: 12 }],
@@ -199,17 +192,19 @@ it("draws pies from counts with percentage labels and finds the clicked slice", 
     { id: "a", label: "Draft", value: 3, href: "/proposals?status=DRFT" },
     { id: "b", label: "Submitted", value: 1 },
   ]);
-  const options = insightOptions(data);
+  const options = functions.charts.insightOptions(data);
   const [pie] = options.series as { data: unknown[]; cursor: string }[];
   expect(pie.data).toEqual([
     { name: "Draft", value: 3 },
     { name: "Submitted", value: 1 },
   ]);
   expect(pie.cursor).toBe("pointer");
-  expect(pointRow(data, "Draft", "")?.href).toBe("/proposals?status=DRFT");
+  expect(functions.charts.pointRow(data, "Draft", "")?.href).toBe(
+    "/proposals?status=DRFT",
+  );
 });
 it("stacks the gap chart, puts the combo amount on the second axis and keeps gaps", () => {
-  const gap = insightOptions(
+  const gap = functions.charts.insightOptions(
     chart(
       "bar",
       [
@@ -224,7 +219,7 @@ it("stacks the gap chart, puts the combo amount on the second axis and keeps gap
   expect(awarded.stack).toBe("total");
   expect(awarded.data).toEqual([5, null]);
   expect(gap.xAxis).toMatchObject({ name: "Grant Category" });
-  const combo = insightOptions(
+  const combo = functions.charts.insightOptions(
     chart("combo", [
       { id: "1", label: "Health", series: "Awarded Proposals", value: 2 },
       { id: "2", label: "Health", series: "Awarded Amount", value: 900 },
@@ -235,7 +230,7 @@ it("stacks the gap chart, puts the combo amount on the second axis and keeps gap
   ).toEqual([0, 1]);
 });
 it("marks only isolated line points and truncates the legend to its column", () => {
-  const line = insightOptions(
+  const line = functions.charts.insightOptions(
     chart("line", [
       { id: "1", label: "2024", series: "Total", value: 1 },
       { id: "2", label: "2025", series: "Total", value: 2 },
@@ -245,20 +240,27 @@ it("marks only isolated line points and truncates the legend to its column", () 
   const [total, award] = line.series as { data: { symbol: string }[] }[];
   expect(total.data.map((d) => d.symbol)).toEqual(["none", "none", "none"]);
   expect(award.data.map((d) => d.symbol)).toEqual(["none", "none", "circle"]);
-  expect(legendTextWidth(line, 600)).toBe(156);
+  expect(functions.charts.legendTextWidth(line, 600)).toBe(156);
   expect(
-    legendTextWidth(insightOptions(chart("scatter", [])), 600),
+    functions.charts.legendTextWidth(
+      functions.charts.insightOptions(chart("scatter", [])),
+      600,
+    ),
   ).toBeUndefined();
 });
 it("treats all-zero data and a missing gauge as empty, and clamps gauge bands", () => {
-  expect(chartIsEmpty(chart("pie", [{ id: "1", label: "x", value: 0 }]))).toBe(
-    true,
-  );
-  expect(chartIsEmpty(chart("bar", [{ id: "1", label: "x", value: -1 }]))).toBe(
-    false,
-  );
-  expect(chartIsEmpty(chart("gauge", []))).toBe(true);
-  const gauge = insightOptions({
+  expect(
+    functions.charts.chartIsEmpty(
+      chart("pie", [{ id: "1", label: "x", value: 0 }]),
+    ),
+  ).toBe(true);
+  expect(
+    functions.charts.chartIsEmpty(
+      chart("bar", [{ id: "1", label: "x", value: -1 }]),
+    ),
+  ).toBe(false);
+  expect(functions.charts.chartIsEmpty(chart("gauge", []))).toBe(true);
+  const gauge = functions.charts.insightOptions({
     ...chart("gauge", []),
     gauge: { value: 5, low: 20, medium: 30, target: 10 },
   });
@@ -270,7 +272,7 @@ it("treats all-zero data and a missing gauge as empty, and clamps gauge bands", 
   ]);
 });
 it("maps dynamic charts as legacy: unknown type is a pie and null points are gaps", () => {
-  const data = dynamicChartData({
+  const data = functions.charts.dynamicChartData({
     type: "RADAR",
     columns: 4,
     points: [
@@ -281,6 +283,7 @@ it("maps dynamic charts as legacy: unknown type is a pie and null points are gap
   expect(data.presentation?.type).toBe("pie");
   expect(data.statistics.map((r) => r.label)).toEqual(["Draft"]);
   expect(
-    dynamicChartData({ type: "LA", columns: 4, points: [] }).presentation?.type,
+    functions.charts.dynamicChartData({ type: "LA", columns: 4, points: [] })
+      .presentation?.type,
   ).toBe("area");
 });

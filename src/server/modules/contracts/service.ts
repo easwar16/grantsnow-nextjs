@@ -2,21 +2,11 @@ import "server-only";
 import { cache } from "react";
 import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
-import {
-  finalizedOf,
-  objectAccessOf,
-  requireModule,
-} from "@/server/platform/permissions";
 import { contracts, eoi, lookups, roles } from "@/server/oracle/api";
 import { orNull, recordRoleRows } from "@/server/record/shared";
-import { statusChoices } from "@/server/platform/configuration/choices";
 import { containsClause } from "@/server/oracle/where";
 import { AppError } from "@/lib/errors";
-import {
-  label,
-  resourceVisible,
-  resources,
-} from "@/server/platform/configuration/resources";
+import { resources } from "@/server/platform/configuration/resources";
 import {
   contractId,
   type ContractQuery,
@@ -33,6 +23,7 @@ import type {
 } from "@/features/modules/contracts/types";
 import type { HistoryHost } from "@/server/record/objects/history";
 import type { DelegationHost } from "@/server/record/objects/delegations";
+import { serverFunctions } from "@/server/functions";
 
 export const CONTRACT_MODULE = "CONTRACT";
 /** The record's pages (legacy contracts pagesList), each a tab and a comments/audit page. */
@@ -58,7 +49,7 @@ const lockRows = z.object({
 export const contractRecordContext = cache(async (id: string) => {
   const validId = contractId.parse(id);
   const { user, session } = await authenticate();
-  requireModule(user, "CONTRACTS");
+  serverFunctions.permissions.requireModule(user, "CONTRACTS");
   const [rows, finalizable, locks] = await Promise.all([
     roles
       .record({ objectType: CONTRACT_MODULE, objectId: validId })
@@ -76,14 +67,17 @@ export const contractRecordContext = cache(async (id: string) => {
         .then((raw) => lockRows.parse(raw).items),
     ),
   ]);
-  const access = objectAccessOf(rows);
+  const access = serverFunctions.permissions.objectAccessOf(rows);
   return {
     id: validId,
     session,
     user,
     access,
     finalizable,
-    finalized: finalizedOf(access.pages, locks ?? []),
+    finalized: serverFunctions.permissions.finalizedOf(
+      access.pages,
+      locks ?? [],
+    ),
   };
 });
 export type ContractRecordContext = Awaited<
@@ -111,7 +105,7 @@ function requirePage(context: ContractRecordContext, page: string) {
 /** VBCS grants the listing action through the DASHBOARD user_roles response. */
 export async function canCreateContract() {
   const { user } = await authenticate();
-  requireModule(user, "CONTRACTS");
+  serverFunctions.permissions.requireModule(user, "CONTRACTS");
   const roles = await dashboardRoles();
   const grants = roles.filter((role) => role.page_name === "create-contract");
   return grants.length > 0 && grants.every((role) => role.read_access === "Y");
@@ -165,7 +159,7 @@ const list = z.object({
 });
 /** The listing's status tabs: the configured CONTRACT_STATUS codes with "All" first (legacy getLookupADP). */
 export const contractStatusChoices = cache(async () =>
-  statusChoices(
+  serverFunctions.choices.statusChoices(
     await lookups.codes({ types: "CONTRACT_STATUS" }),
     "CONTRACT_STATUS",
   ),
@@ -263,7 +257,7 @@ export function mapContracts(
 }
 export async function listContracts(q: ContractQuery) {
   const { user } = await authenticate();
-  requireModule(user, "CONTRACTS");
+  serverFunctions.permissions.requireModule(user, "CONTRACTS");
   if (q.sort || q.contractType || q.orgUnit) {
     const choices = await contractListingChoices();
     if (
@@ -331,11 +325,18 @@ export const loadContract = cache(
       value: string,
       kind: ContractDetail["fields"][number]["kind"] = "text",
     ) =>
-      value && resourceVisible(rb, "contract", "labels", key)
+      value &&
+      serverFunctions.resources.resourceVisible(rb, "contract", "labels", key)
         ? [
             {
               key,
-              label: label(rb, "contract", "labels", key, fallback),
+              label: serverFunctions.resources.label(
+                rb,
+                "contract",
+                "labels",
+                key,
+                fallback,
+              ),
               value,
               kind,
             },
@@ -445,7 +446,14 @@ const versionRows = z.object({
 export async function contractActiveVersion(id: string) {
   const contract = await loadContract(id);
   const rb = await resources();
-  if (!resourceVisible(rb, "contract", "labels", "contract-version"))
+  if (
+    !serverFunctions.resources.resourceVisible(
+      rb,
+      "contract",
+      "labels",
+      "contract-version",
+    )
+  )
     return null;
   const versions = versionRows.parse(
     await contracts.versions({ id: contract.id }),
@@ -461,7 +469,7 @@ export async function contractActiveVersion(id: string) {
   );
   return active
     ? {
-        label: label(
+        label: serverFunctions.resources.label(
           rb,
           "contract",
           "labels",
@@ -491,7 +499,7 @@ export async function contractVisibleTabs(id: string) {
     labels: Object.fromEntries(
       CONTRACT_PAGES.map((key) => [
         key,
-        label(rb, "contract", "page-name", key, key),
+        serverFunctions.resources.label(rb, "contract", "page-name", key, key),
       ]),
     ),
   };

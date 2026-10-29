@@ -3,20 +3,15 @@ import { cache } from "react";
 import { z } from "zod";
 import uniqBy from "lodash/uniqBy";
 import { authenticate } from "@/server/identity/session/service";
-import { pageAccess, requireDrawerAccess } from "@/server/platform/permissions";
 import { attributes, awards, lookups, people } from "@/server/oracle/api";
 import {
-  label,
-  resourcePreference,
-  resourceRequired,
-  resourceVisible,
   resources,
   type Resources,
 } from "@/server/platform/configuration/resources";
 import { dashboardRoles } from "@/server/platform/configuration/service";
 import { linkedObjects } from "@/server/record/linked/linked";
 import { AppError } from "@/lib/errors";
-import { memo, memoKey, TTL } from "@/server/oracle/cache";
+import { memo, memoKey } from "@/server/oracle/cache";
 import { fixtureMode } from "@/server/platform/configuration/environment";
 import {
   AWARD_OPERATORS,
@@ -28,6 +23,8 @@ import type {
   CreateAwardField,
   CreateAwardSetup,
 } from "@/features/modules/awards/listing/actions";
+import { serverConstants } from "@/server/constants";
+import { serverFunctions } from "@/server/functions";
 
 const BUNDLE = "award";
 const DRAWER = "awards";
@@ -39,23 +36,28 @@ const items = <T extends z.ZodTypeAny>(row: T) =>
 /** The listing's action gates: RB everywhere, and Clone also needs the `award-clone` role (legacy dashboard_access). */
 export function awardActionGates(
   rows: Resources,
-  roles: Parameters<typeof pageAccess>[0],
+  roles: Parameters<typeof serverFunctions.permissions.pageAccess>[0],
 ): AwardActionGates {
   const button = (key: string) =>
-    resourceVisible(rows, BUNDLE, "button-labels", key);
+    serverFunctions.resources.resourceVisible(
+      rows,
+      BUNDLE,
+      "button-labels",
+      key,
+    );
   return {
     create: button("create-award"),
     link: button("list-link"),
     clone:
       button("list-clone") &&
       button("clone") &&
-      pageAccess(roles, "award-clone").read,
+      serverFunctions.permissions.pageAccess(roles, "award-clone").read,
     advanced: button("advanced-query"),
   };
 }
 async function actor() {
   const { user } = await authenticate();
-  requireDrawerAccess(user, DRAWER);
+  serverFunctions.permissions.requireDrawerAccess(user, DRAWER);
   const [rows, roles] = await Promise.all([resources(), dashboardRoles()]);
   return { user, rows, gates: awardActionGates(rows, roles) };
 }
@@ -115,10 +117,33 @@ function createFields(rows: Resources) {
     CREATE_FIELDS.map(([field, key, fallback]) => [
       field,
       {
-        show: resourceVisible(rows, BUNDLE, "labels", key),
-        required: resourceRequired(rows, BUNDLE, "labels", key, false),
-        label: label(rows, BUNDLE, "labels", key, fallback),
-        maxLength: resourcePreference(rows, BUNDLE, "labels", key, "maxLength"),
+        show: serverFunctions.resources.resourceVisible(
+          rows,
+          BUNDLE,
+          "labels",
+          key,
+        ),
+        required: serverFunctions.resources.resourceRequired(
+          rows,
+          BUNDLE,
+          "labels",
+          key,
+          false,
+        ),
+        label: serverFunctions.resources.label(
+          rows,
+          BUNDLE,
+          "labels",
+          key,
+          fallback,
+        ),
+        maxLength: serverFunctions.resources.resourcePreference(
+          rows,
+          BUNDLE,
+          "labels",
+          key,
+          "maxLength",
+        ),
       },
     ]),
   ) as CreateAwardSetup["fields"];
@@ -174,13 +199,13 @@ export async function createSetup(): Promise<CreateAwardSetup> {
   requireGate(gates.create);
   const lists = await createLists();
   const t = (group: string, key: string, fallback: string) =>
-    label(rows, BUNDLE, group, key, fallback);
+    serverFunctions.resources.label(rows, BUNDLE, group, key, fallback);
   return {
     fields: createFields(rows),
     texts: {
       title: t("dialog-titles", "create-award", "Create New Award"),
       // Legacy's Save reads the opportunities-eoi bundle's Create.
-      create: label(
+      create: serverFunctions.resources.label(
         rows,
         "opportunities-eoi",
         "button-labels",
@@ -274,7 +299,7 @@ export async function createAward(raw: unknown) {
   if (missing)
     throw new AppError(
       "BAD_REQUEST",
-      label(
+      serverFunctions.resources.label(
         rows,
         BUNDLE,
         "error-msg",
@@ -354,7 +379,7 @@ export async function cloneSetup(params: URLSearchParams) {
   requireGate(gates.clone);
   const [parts] = await Promise.all([cloneParts(), visibleAward(awardId)]);
   const t = (group: string, key: string, fallback: string) =>
-    label(rows, BUNDLE, group, key, fallback);
+    serverFunctions.resources.label(rows, BUNDLE, group, key, fallback);
   return {
     parts: parts.map((p) => ({
       value: p.r,
@@ -435,8 +460,14 @@ export async function awardLinks(params: URLSearchParams) {
       lists === null
         ? null
         : {
-            label: label(rows, BUNDLE, "labels", "award-proposal", "Proposal"),
-            button: label(
+            label: serverFunctions.resources.label(
+              rows,
+              BUNDLE,
+              "labels",
+              "award-proposal",
+              "Proposal",
+            ),
+            button: serverFunctions.resources.label(
               rows,
               BUNDLE,
               "button-labels",
@@ -491,10 +522,10 @@ const titleCase = (key: string) =>
  */
 export const advancedAttributes = cache(async (): Promise<AwardAttribute[]> => {
   const { session } = await authenticate();
-  // Held as the attribute definitions are (TTL.config): every filtered read checks its rows against these columns.
+  // Held as the attribute definitions are (serverConstants.ttl.config): every filtered read checks its rows against these columns.
   return memo(
     memoKey("award-advanced-columns", session.token),
-    TTL.config,
+    serverConstants.ttl.config,
     () => probeAttributes(),
   );
 });
@@ -520,7 +551,7 @@ export async function advancedSetup() {
   const { rows, gates } = await actor();
   requireGate(gates.advanced);
   const t = (group: string, key: string, fallback: string) =>
-    label(rows, BUNDLE, group, key, fallback);
+    serverFunctions.resources.label(rows, BUNDLE, group, key, fallback);
   return {
     attributes: await advancedAttributes(),
     operators: [

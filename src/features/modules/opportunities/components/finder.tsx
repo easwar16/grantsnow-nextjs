@@ -1,5 +1,4 @@
 "use client";
-import { idPart } from "@/lib/ids";
 import {
   useCallback,
   useEffect,
@@ -8,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { FormatSettings } from "@/lib/format";
+import { type FormatSettings } from "@/lib/format";
 import { RecordSkeleton } from "@/components/feedback/skeleton";
 import { State } from "@/components/feedback/state";
 import { useToast } from "@/components/feedback/toast";
@@ -25,7 +24,12 @@ import { AnimatePresence } from "motion/react";
 import { Icon } from "@/components/ui/icon";
 import { Select } from "@/components/ui/select";
 import { Announcements } from "@/features/modules/home/components/announcements";
-import type { FinderContext } from "@/server/modules/opportunities/service";
+import type {
+  FinderContext,
+  FinderOptions,
+  FinderShell,
+} from "@/server/modules/opportunities/service";
+import { useStreamed } from "@/lib/hooks/use-streamed";
 import { opportunities, usePagedApi } from "@/lib/api";
 import { isOffline } from "@/lib/api/http";
 import { listKey, type OpportunityQuery } from "../schemas";
@@ -43,7 +47,6 @@ import {
   fromQuery,
   hasUrlFilters,
   MAX_FUNDER_KEYS,
-  PAGE_SIZE,
   panelCleared,
   queryString,
   resolveTab,
@@ -54,6 +57,8 @@ import {
 } from "../finder/state";
 import { OpportunityCard } from "./opportunity-card";
 import styles from "./finder.module.css";
+import { constants } from "@/lib/constants";
+import { functions } from "@/lib/functions";
 type Failure = { code: string; message: string; action?: string };
 type Page = {
   rows: OpportunityRow[];
@@ -67,28 +72,56 @@ const UNREACHABLE: Failure = {
   code: "UPSTREAM",
   message: "Opportunities could not be loaded. Please retry.",
 };
-// The list loads its next page within this distance of the bottom (GN-Angular LOAD_MORE_PX).
-const LOAD_MORE_PX = 80;
+// The list loads its next page within this distance of the bottom (GN-Angular constants.paging.loadMorePx).
 const TOO_MANY = "Cannot add these many filter options";
 type Section = keyof typeof remembered.sections;
 /**
  * "All Opportunities" (opportunities-finder): the filter panel, search with Match All / Any, the advanced filter,
  * the tabs and the infinite card list. Every filter change applies at once; the server builds the SQL.
  */
+// Stable empties while the streamed parts load, so effects and memoised children see no change.
+const NO_OPTIONS: FinderOptions = {
+    status: [],
+    fundingType: [],
+    funders: [],
+    funderTypes: [],
+    callCodes: [],
+    operators: [],
+  },
+  NO_BANNER: FinderContext["announcements"] = { messages: [] },
+  NO_FAILURES: string[] = [];
 export function Finder({
   initial,
   initialRequest,
   urlQuery,
-  context,
+  shell,
+  optionsRead,
+  bannerRead,
   format,
 }: {
-  initial: FinderResult;
+  /** The first page, streaming from the server. */
+  initial: Promise<FinderResult>;
   /** The request the server rendered `initial` for. */
   initialRequest: Pick<OpportunityQuery, "tab" | "filters">;
   urlQuery: Partial<FinderQuery>;
-  context: FinderContext;
+  /** What draws first: labels, gates, the Featured preference and the new-dots. */
+  shell: FinderShell;
+  /** The filter panel's options and the banner stream in after the shell; neither holds the page. */
+  optionsRead: Promise<{ options: FinderOptions; failures: string[] }>;
+  bannerRead: Promise<FinderContext["announcements"]>;
   format?: FormatSettings;
 }) {
+  const streamed = useStreamed(optionsRead),
+    banner = useStreamed(bannerRead);
+  const context: FinderContext = useMemo(
+    () => ({
+      ...shell,
+      options: streamed?.options ?? NO_OPTIONS,
+      announcements: banner ?? NO_BANNER,
+      failures: streamed?.failures ?? NO_FAILURES,
+    }),
+    [shell, streamed, banner],
+  );
   const { labels: t, gates, options } = context;
   const toast = useToast();
   // A link's filters replace the remembered ones; search, match and sort start over on entry (FinderState.enter).
@@ -110,28 +143,35 @@ export function Finder({
   const tab = resolveTab(chosenTab, context.hasPreferences),
     key = listKey({ tab, filters });
   // Held per tab and filters: a tab already seen shows at once and refreshes in the background. The server's first
-  // page seeds only the request it was rendered for; a failed one reads nothing until Retry.
-  const rendered = key === listKey(initialRequest),
-    [retried, setRetried] = useState(false),
-    held = !(rendered && !initial.ok && !retried),
-    paged = usePagedApi(opportunities.finder, held ? { tab, filters } : null, {
-      initial:
-        rendered && initial.ok
-          ? {
-              ...initial.data,
-              hasMore: initial.data.rows.length >= PAGE_SIZE,
-            }
-          : undefined,
-    });
+  // page (still streaming) seeds only the request it was rendered for.
+  const [seed] = useState(() =>
+    key === listKey(initialRequest)
+      ? initial.then((r) =>
+          r.ok
+            ? {
+                ok: r.ok,
+                data: {
+                  ...r.data,
+                  hasMore: r.data.rows.length >= constants.paging.opportunities,
+                },
+              }
+            : r,
+        )
+      : undefined,
+  );
+  const paged = usePagedApi(
+    opportunities.finder,
+    { tab, filters },
+    { initial: seed },
+  );
   const seen = new Set<string>(),
     // Rows can move between pages while the list grows; each shows once.
     rows = paged.rows.filter((r) => !seen.has(r.id) && !!seen.add(r.id)),
-    failed = !held
-      ? (initial as { ok: false; error: Failure }).error
-      : paged.error && isOffline({ ok: false, error: paged.error })
+    failed =
+      paged.error && isOffline({ ok: false, error: paged.error })
         ? UNREACHABLE
         : paged.error,
-    retry = held ? paged.retry : () => setRetried(true);
+    retry = paged.retry;
   const renderedInitial = useRef(initial),
     matchName = useId();
   // Clear and the advanced popup can change the search; the box follows the state.
@@ -143,15 +183,15 @@ export function Finder({
     () => funderTree(options.funders, funderSearch),
     [options.funders, funderSearch],
   );
-  // Each failure of a client read toasts once, as the original's toast.degrade (the server's is toasted below).
+  // Each failure of the list read toasts once, as the original's toast.degrade.
   useEffect(() => {
-    if (held && failed) toast.error(failed);
-  }, [held, failed, toast]);
+    if (failed) toast.error(failed);
+  }, [failed, toast]);
   // A preference save refreshes the page (router.refresh): Featured is re-read and the list reloads.
   useEffect(() => {
     if (renderedInitial.current === initial) return;
     renderedInitial.current = initial;
-    if (held) paged.reload();
+    paged.reload();
     // Only a new server render reloads; paged.reload is a new function each render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initial]);
@@ -172,8 +212,7 @@ export function Finder({
   // Read failures toast, as the original's toast.degrade (once per server render).
   useEffect(() => {
     for (const failure of context.failures) toast.show("error", failure);
-    if (!initial.ok) toast.error(initial.error);
-  }, [context.failures, initial, toast]);
+  }, [context.failures, toast]);
   // Stable (functional updates only), so memoised children such as the funder tree skip re-rendering on every click.
   const patch = useCallback(
     (change: Partial<FinderFilters>) =>
@@ -199,7 +238,7 @@ export function Finder({
     if (text !== filters.search) patch({ search: text });
   };
   const section = (name: Section) => ({
-    id: `finder-${idPart(name)}`,
+    id: `finder-${functions.ids.idPart(name)}`,
     open: sections[name],
     onToggle: (open: boolean) => setSections((s) => ({ ...s, [name]: open })),
   });
@@ -210,7 +249,8 @@ export function Finder({
       !paged.stale &&
       paged.total !== undefined &&
       rows.length < paged.total &&
-      el.scrollHeight - el.scrollTop - el.clientHeight < LOAD_MORE_PX
+      el.scrollHeight - el.scrollTop - el.clientHeight <
+        constants.paging.loadMorePx
     )
       paged.loadMore();
   };
@@ -473,7 +513,7 @@ export function Finder({
             inert={paged.stale}
             onScroll={onScroll}
           >
-            {held && paged.loading && !paged.last ? (
+            {paged.loading && !paged.last ? (
               <li id="finder-list-loading">
                 <RecordSkeleton
                   variant="opportunity"

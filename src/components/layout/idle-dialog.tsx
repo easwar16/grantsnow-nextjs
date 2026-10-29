@@ -3,8 +3,8 @@ import { clearTabState } from "@/lib/tab-state";
 import { useEffect, useRef } from "react";
 import { useShell } from "./shell-context";
 import styles from "./idle-dialog.module.css";
+import { constants } from "@/lib/constants";
 // The original signs out after 30 minutes without mouse, keyboard or scroll activity.
-export const IDLE_MS = 30 * 60 * 1000;
 const ACTIVITY = ["mousemove", "click", "scroll", "keypress"] as const;
 /**
  * GN-Angular SessionDialog: after 30 idle minutes a dialog with no way to close it; Login drops the session
@@ -22,7 +22,7 @@ export function IdleDialog() {
       timer = setTimeout(() => {
         expired.current = true;
         dialog.current?.showModal();
-      }, IDLE_MS);
+      }, constants.timing.idleMs);
     };
     // Capture, so scrolling inside <main> (the one scroll container) counts as activity too.
     for (const name of ACTIVITY)

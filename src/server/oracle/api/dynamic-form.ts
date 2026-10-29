@@ -1,7 +1,8 @@
 import "server-only";
 import { read, write } from "../client";
-import { TTL } from "../cache";
+
 import { oracleContext } from "../context";
+import { serverConstants } from "@/server/constants";
 
 /**
  * A record's dynamic forms (dynForms) and their answers (dynFormResponse). Bodies come back as read: the form service
@@ -11,7 +12,7 @@ type Slot = { objectId: string; objectType: string; slot: string };
 /** The definitions for a slot; `p_id` / `p_obj_id` are the record, empty for a new application (as the original). */
 export const forms = read<Slot>({
   op: "getProposalEthical_dynFormsP_ref_module",
-  ttl: TTL.config,
+  ttl: serverConstants.ttl.config,
   headers: (p) => ({
     p_id: p.objectId,
     p_obj_id: p.objectId,

@@ -6,11 +6,11 @@ import {
   headerConverts,
   visibleTabs,
 } from "@/shared/opportunities/eoi-record";
-import { finalizedOf, objectAccessOf } from "@/server/platform/permissions";
 import {
   inAppDestination,
   mustAsk,
 } from "@/features/modules/opportunities/eoi/unsaved";
+import { serverFunctions } from "@/server/functions";
 const rows = (...pages: [string, number, string?][]) =>
   pages.map(([page, id, read = "Y"]) => ({
     page_id: id,
@@ -18,7 +18,7 @@ const rows = (...pages: [string, number, string?][]) =>
     read_access: read,
     edit_access: "Y",
   }));
-const all = objectAccessOf(
+const all = serverFunctions.permissions.objectAccessOf(
   rows(
     ["opportunities-eoi-summary", 1],
     ["opportunities-eoi-application", 2],
@@ -50,7 +50,7 @@ describe("EOI tabs (getTabs)", () => {
       "approvals",
     );
     expect(visibleTabs(all, null, new Set())).not.toContain("approvals");
-    const noRead = objectAccessOf(
+    const noRead = serverFunctions.permissions.objectAccessOf(
       rows(["opportunities-eoi-approvals", 4, "N"]),
     );
     expect(visibleTabs(noRead, [], new Set())).toEqual([]);
@@ -58,8 +58,8 @@ describe("EOI tabs (getTabs)", () => {
 });
 describe("object access (D38)", () => {
   it("fails closed: no rows, an N row or a duplicate N row denies", () => {
-    expect(objectAccessOf([]).roles.size).toBe(0);
-    const a = objectAccessOf(
+    expect(serverFunctions.permissions.objectAccessOf([]).roles.size).toBe(0);
+    const a = serverFunctions.permissions.objectAccessOf(
       rows(["p", 1], ["p", 1, "N"], ["q", 2, "N"], ["r", 3]),
     );
     expect(a.roles.get("p")?.read).toBe(false);
@@ -67,7 +67,7 @@ describe("object access (D38)", () => {
     expect(a.pages).toEqual([{ id: 3, name: "r" }]);
   });
   it("maps locks to readable pages only", () => {
-    const f = finalizedOf(all.pages, [
+    const f = serverFunctions.permissions.finalizedOf(all.pages, [
       { id: 9, page_id: 2 },
       { id: 10, page_id: 99 },
     ]);
@@ -101,7 +101,9 @@ describe("finalize switch and converts", () => {
     ).toBeNull();
   });
   it("converts only an approved application with the record role", () => {
-    const a = objectAccessOf(rows(["eoi-convert-outline-proposal", 7]));
+    const a = serverFunctions.permissions.objectAccessOf(
+      rows(["eoi-convert-outline-proposal", 7]),
+    );
     expect(headerConverts("IA", a)).toEqual({ outline: true, full: false });
     expect(headerConverts("DRFT", a)).toEqual({ outline: false, full: false });
   });

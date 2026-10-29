@@ -63,8 +63,9 @@
 .panel {
   z-index: 30;
   max-height: min(280px, var(--panel-room, 280px));
-  display: flex;
-  flex-direction: column;
+  /* The panel scrolls, not the list: the option window pads the list to its full height. */
+  overflow-x: hidden;
+  overflow-y: auto;
   color: var(--gn-text);
   background: var(--gn-surface);
   border: 1px solid var(--gn-divider);
@@ -72,11 +73,8 @@
   box-shadow: var(--gn-shadow-menu);
 }
 .panel ul {
-  flex: 1;
   margin: 0;
   padding: 6px 0;
-  overflow-x: hidden;
-  overflow-y: auto;
   list-style: none;
 }
 /* GN-Angular gn-select rows: 6/12 padding; long codes end in an ellipsis, indent spaces are kept. */

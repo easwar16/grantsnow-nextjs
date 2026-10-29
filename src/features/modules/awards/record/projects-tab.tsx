@@ -12,8 +12,7 @@ import { ActionDialog } from "@/components/dialog/action-dialog";
 import { useActionFailure } from "@/components/dialog/action-failure";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
 import { awards } from "@/lib/api";
-import { dateDisplay, type FormatSettings } from "@/lib/format";
-import { idPart } from "@/lib/ids";
+import { type FormatSettings } from "@/lib/format";
 import { periodBound } from "./budget-model";
 import { ProjectCostsPanel } from "./project-costs";
 import type {
@@ -25,6 +24,7 @@ import type {
 } from "./projects-types";
 import dialog from "@/components/dialog/dialog.module.css";
 import styles from "./tabs.module.css";
+import { functions } from "@/lib/functions";
 
 export type Money = FormatSettings & { currency?: string };
 const INNER = ["projects", "costs", "team"] as const;
@@ -342,7 +342,7 @@ function ProjectsPanel({
   const f = view.projectFields;
   const cell = (p: ProjectRow, k: (typeof PROJECT_COLUMNS)[number]) =>
     k === "start" || k === "end"
-      ? dateDisplay(p[k], format)
+      ? functions.format.dateDisplay(p[k], format)
       : k === "orgId"
         ? p.orgName
         : p[k];
@@ -377,14 +377,14 @@ function ProjectsPanel({
           </thead>
           <tbody>
             {view.projects.map((p) => (
-              <tr key={p.id} id={`award-project-${idPart(p.id)}`}>
+              <tr key={p.id} id={`award-project-${functions.ids.idPart(p.id)}`}>
                 {shown.map((k) => (
                   <td key={k}>{cell(p, k)}</td>
                 ))}
                 <td>
                   <button
                     type="button"
-                    id={`award-project-${idPart(p.id)}-edit`}
+                    id={`award-project-${functions.ids.idPart(p.id)}-edit`}
                     className="gn-btn gn-btn--borderless gn-btn--icon"
                     aria-label={`${view.texts.editProject} ${p.name}`}
                     title={view.texts.editProject}
@@ -538,7 +538,7 @@ function ProjectDialog({
             f[k].show && (
               <TextCell
                 key={k}
-                id={`award-project-${idPart(k)}`}
+                id={`award-project-${functions.ids.idPart(k)}`}
                 field={f[k]}
                 value={d[k as keyof ProjectDraft]}
                 invalid={invalid(k)}
@@ -617,7 +617,7 @@ function TeamPanel({
         return (
           <Collapsible
             key={p.id}
-            id={`award-team-project-${idPart(p.id)}`}
+            id={`award-team-project-${functions.ids.idPart(p.id)}`}
             className={styles.collapsible}
             heading={<span>{p.number || p.name}</span>}
           >
@@ -638,17 +638,20 @@ function TeamPanel({
                 </thead>
                 <tbody>
                   {members.map((m) => (
-                    <tr key={m.id} id={`award-team-${idPart(m.id)}`}>
+                    <tr
+                      key={m.id}
+                      id={`award-team-${functions.ids.idPart(m.id)}`}
+                    >
                       <td>{p.number}</td>
                       <td>{m.projectName || p.name}</td>
                       <td>{m.person}</td>
                       <td>{m.role}</td>
-                      <td>{dateDisplay(m.start, format)}</td>
-                      <td>{dateDisplay(m.end, format)}</td>
+                      <td>{functions.format.dateDisplay(m.start, format)}</td>
+                      <td>{functions.format.dateDisplay(m.end, format)}</td>
                       <td>
                         <button
                           type="button"
-                          id={`award-team-${idPart(m.id)}-edit`}
+                          id={`award-team-${functions.ids.idPart(m.id)}-edit`}
                           className="gn-btn gn-btn--borderless gn-btn--icon"
                           aria-label={`${view.texts.editTeam} ${m.person}`}
                           title={view.texts.editTeam}

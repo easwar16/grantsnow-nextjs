@@ -2,13 +2,9 @@ import "server-only";
 import { z } from "zod";
 import { objects, people, roles } from "@/server/oracle/api";
 import {
-  label,
-  resourceRequired,
   resources,
-  resourceVisible,
   type Resources,
 } from "@/server/platform/configuration/resources";
-import { plainText } from "@/server/platform/sanitize";
 import { AppError } from "@/lib/errors";
 import type { UserContext } from "@/shared/auth/types";
 import {
@@ -19,6 +15,7 @@ import {
   type DelegationTextKey,
   type DelegationView,
 } from "@/features/record/objects/types";
+import { serverFunctions } from "@/server/functions";
 
 /**
  * One host of the shared object delegations (legacy `object-delegations` fragment). Rights are the host's delegation
@@ -76,9 +73,15 @@ const componentOf = (v: string | null | undefined): ComponentType =>
 /** RB visibility (fail closed), RB mandatory flags (missing is optional, as legacy) and the host's rights. */
 export function delegationGates(rows: Resources, host: DelegationHost) {
   const on = (group: string, key: string) =>
-    resourceVisible(rows, host.bundle, group, key);
+    serverFunctions.resources.resourceVisible(rows, host.bundle, group, key);
   const required = (key: string) =>
-    resourceRequired(rows, host.bundle, "labels", key, false);
+    serverFunctions.resources.resourceRequired(
+      rows,
+      host.bundle,
+      "labels",
+      key,
+      false,
+    );
   return {
     edit: host.rights.edit,
     delete: host.rights.delete,
@@ -104,7 +107,7 @@ function pageLabel(
   return (
     named.find((r) => r.module_name.toLowerCase() === bundle)?.label_value ||
     named.find((r) => r.label_value)?.label_value ||
-    plainText(description ?? "") ||
+    serverFunctions.sanitize.plainText(description ?? "") ||
     name
   );
 }
@@ -176,7 +179,13 @@ export async function delegationView(
   const texts = Object.fromEntries(
     (Object.keys(KEYS) as DelegationTextKey[]).map((k) => [
       k,
-      label(rows, host.bundle, KEYS[k][0], KEYS[k][1], KEYS[k][2]),
+      serverFunctions.resources.label(
+        rows,
+        host.bundle,
+        KEYS[k][0],
+        KEYS[k][1],
+        KEYS[k][2],
+      ),
     ]),
   ) as Record<DelegationTextKey, string>;
   const delegates = new Map<string, Delegate>();

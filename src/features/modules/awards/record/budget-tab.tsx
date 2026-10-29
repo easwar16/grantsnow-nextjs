@@ -9,8 +9,7 @@ import { ActionDialog } from "@/components/dialog/action-dialog";
 import { useActionFailure } from "@/components/dialog/action-failure";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
 import { awards } from "@/lib/api";
-import { dateDisplay, moneyDisplay, type FormatSettings } from "@/lib/format";
-import { idPart } from "@/lib/ids";
+import { type FormatSettings } from "@/lib/format";
 import type { BudgetView } from "@/server/modules/awards/record/budget";
 import {
   budgetTotals,
@@ -21,6 +20,7 @@ import {
 } from "./budget-model";
 import dialog from "@/components/dialog/dialog.module.css";
 import styles from "./tabs.module.css";
+import { functions } from "@/lib/functions";
 
 const AMOUNTS: BudgetAmount[] = [
   "direct",
@@ -55,7 +55,7 @@ export function BudgetTab({
     [, startTransition] = useTransition();
   const totals = budgetTotals(view.rows);
   const money = (n: number) =>
-    moneyDisplay(String(n), format?.currency, format);
+    functions.format.moneyDisplay(String(n), format?.currency, format);
   const c = view.columns;
   return (
     <div id="award-record-budget-periods" className={styles.tab}>
@@ -91,9 +91,12 @@ export function BudgetTab({
           </thead>
           <tbody>
             {view.rows.map((r) => (
-              <tr key={r.key} id={`award-budget-${idPart(r.key)}`}>
-                <td>{dateDisplay(r.start, format)}</td>
-                <td>{dateDisplay(r.end, format)}</td>
+              <tr
+                key={r.key}
+                id={`award-budget-${functions.ids.idPart(r.key)}`}
+              >
+                <td>{functions.format.dateDisplay(r.start, format)}</td>
+                <td>{functions.format.dateDisplay(r.end, format)}</td>
                 <td>{r.type}</td>
                 {AMOUNTS.map((k) => (
                   <td key={k} className={styles.number}>
@@ -103,7 +106,7 @@ export function BudgetTab({
                 <td>
                   <button
                     type="button"
-                    id={`award-budget-${idPart(r.key)}-edit`}
+                    id={`award-budget-${functions.ids.idPart(r.key)}-edit`}
                     className="gn-btn gn-btn--borderless gn-btn--icon"
                     aria-label={`${view.texts.edit} ${r.key}`}
                     title={view.texts.edit}

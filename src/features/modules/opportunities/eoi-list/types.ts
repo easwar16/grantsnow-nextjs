@@ -69,8 +69,13 @@ export interface EoiListView {
   gates: EoiListGates;
   texts: Record<EoiListTextKey, string>;
   statuses: EoiChoice[];
-  funders: EoiChoice[];
   sorts: EoiChoice[];
   /** Choices that failed to load and should be reported (the original toasts statuses and funders only). */
+  errors: string[];
+}
+
+/** The funder dropdown's options, read on their own after the page shows; a failure is empty and reported. */
+export interface EoiFunders {
+  options: EoiChoice[];
   errors: string[];
 }

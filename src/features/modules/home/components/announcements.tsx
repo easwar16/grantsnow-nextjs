@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Icon } from "@/components/ui/icon";
+import { constants } from "@/lib/constants";
+
 // Legacy updateAnnouncementCurrentItem (app-flow.js) advances the film strip every 5 s and loops.
-export const ADVANCE_MS = 5000;
 /** The next slide index, wrapping at both ends like the legacy film strip's looping="page". */
 export const stepSlide = (index: number, delta: number, count: number) =>
   count < 1 ? 0 : (((index + delta) % count) + count) % count;
@@ -29,7 +30,7 @@ export function Announcements({
     if (!expanded || paused || count < 2) return;
     const timer = setInterval(
       () => setIndex((i) => stepSlide(i, 1, count)),
-      ADVANCE_MS,
+      constants.timing.announcementAdvanceMs,
     );
     return () => clearInterval(timer);
   }, [expanded, paused, count]);

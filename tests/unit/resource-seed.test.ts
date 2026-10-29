@@ -1,11 +1,5 @@
 import { expect, it } from "vitest";
-import {
-  label,
-  mergeResourceDefaults,
-  resourceDescription,
-  resourcePreference,
-  resourceVisible,
-} from "@/server/platform/configuration/resources";
+import { serverFunctions } from "@/server/functions";
 
 // A seed row (legacy strings.js) with a description, a required flag and preferences.
 const KEY = {
@@ -13,7 +7,9 @@ const KEY = {
   label_type: "warning-messages",
   label_name: "dynamic-less-than",
 } as const;
-const find = (rows: ReturnType<typeof mergeResourceDefaults>) =>
+const find = (
+  rows: ReturnType<typeof serverFunctions.resources.mergeResourceDefaults>,
+) =>
   rows.find(
     (r) =>
       r.module_name === KEY.module_name &&
@@ -22,7 +18,7 @@ const find = (rows: ReturnType<typeof mergeResourceDefaults>) =>
   );
 
 it("renders from the legacy seed alone when the backend sends nothing (every legacy bundle)", () => {
-  const rows = mergeResourceDefaults([]);
+  const rows = serverFunctions.resources.mergeResourceDefaults([]);
   for (const bundle of [
     "dashboard",
     "proposal",
@@ -35,10 +31,16 @@ it("renders from the legacy seed alone when the backend sends nothing (every leg
   ])
     expect(rows.some((r) => r.module_name.toLowerCase() === bundle)).toBe(true);
   expect(
-    label(rows, "extension_proposal", KEY.label_type, KEY.label_name, "x"),
+    serverFunctions.resources.label(
+      rows,
+      "extension_proposal",
+      KEY.label_type,
+      KEY.label_name,
+      "x",
+    ),
   ).toBe("The length should be less than {num} characters!");
   expect(
-    resourcePreference(
+    serverFunctions.resources.resourcePreference(
       rows,
       "extension_proposal",
       KEY.label_type,
@@ -50,7 +52,7 @@ it("renders from the legacy seed alone when the backend sends nothing (every leg
 it("lays a backend row over its seed field by field, as legacy's lodash merge does", () => {
   // The backend renames the label and hides it, but sends no description, flag or preferences.
   const row = find(
-    mergeResourceDefaults([
+    serverFunctions.resources.mergeResourceDefaults([
       {
         ...KEY,
         label_value: "Too long",
@@ -68,8 +70,8 @@ it("lays a backend row over its seed field by field, as legacy's lodash merge do
   // An empty description keeps the seed's More Info text.
   expect(row?.label_description).toContain("would be replaced dynamically");
 });
-it("lets the backend's own values win, a null label falling to the use site's literal", () => {
-  const rows = mergeResourceDefaults([
+it("lets the backend's own values win, a null serverFunctions.resources.label falling to the use site's literal", () => {
+  const rows = serverFunctions.resources.mergeResourceDefaults([
     {
       ...KEY,
       label_value: null,
@@ -78,7 +80,7 @@ it("lets the backend's own values win, a null label falling to the use site's li
     },
   ]);
   expect(
-    label(
+    serverFunctions.resources.label(
       rows,
       "extension_proposal",
       KEY.label_type,
@@ -87,10 +89,15 @@ it("lets the backend's own values win, a null label falling to the use site's li
     ),
   ).toBe("Literal");
   expect(
-    resourceVisible(rows, "extension_proposal", KEY.label_type, KEY.label_name),
+    serverFunctions.resources.resourceVisible(
+      rows,
+      "extension_proposal",
+      KEY.label_type,
+      KEY.label_name,
+    ),
   ).toBe(true);
   expect(
-    resourcePreference(
+    serverFunctions.resources.resourcePreference(
       rows,
       "extension_proposal",
       KEY.label_type,
@@ -99,7 +106,7 @@ it("lets the backend's own values win, a null label falling to the use site's li
     ),
   ).toBe(40);
   expect(
-    resourceDescription(
+    serverFunctions.resources.resourceDescription(
       rows,
       "extension_proposal",
       KEY.label_type,
@@ -108,11 +115,21 @@ it("lets the backend's own values win, a null label falling to the use site's li
   ).not.toBeNull();
 });
 it("keeps a key the backend does not know hidden unless the seed says 'Y'", () => {
-  const rows = mergeResourceDefaults([]);
-  expect(resourceVisible(rows, "dashboard", "button-labels", "more_info")).toBe(
-    false,
-  );
-  expect(resourceVisible(rows, "dashboard", "labels", "no-such-key")).toBe(
-    false,
-  );
+  const rows = serverFunctions.resources.mergeResourceDefaults([]);
+  expect(
+    serverFunctions.resources.resourceVisible(
+      rows,
+      "dashboard",
+      "button-labels",
+      "more_info",
+    ),
+  ).toBe(false);
+  expect(
+    serverFunctions.resources.resourceVisible(
+      rows,
+      "dashboard",
+      "labels",
+      "no-such-key",
+    ),
+  ).toBe(false);
 });

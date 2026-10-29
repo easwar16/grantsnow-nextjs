@@ -1,8 +1,5 @@
 import { z } from "zod";
 
-/** The original's fetch size for allRequests (opportunity.service.ts EOI_PAGE_SIZE). */
-export const EOI_PAGE_SIZE = 10;
-
 const text = z.string().max(200).default("");
 const day = z
   .string()

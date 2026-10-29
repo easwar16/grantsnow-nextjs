@@ -1,10 +1,10 @@
 import dns from "node:dns";
+import { serverConstants } from "@/server/constants";
 type Callback = (
   err: NodeJS.ErrnoException | null,
   address: string | dns.LookupAddress[],
   family?: number,
 ) => void;
-const TTL_MS = 60_000;
 /**
  * Development only. Some home routers stall on IPv6 (AAAA) lookups: Node then waits ~6 s per lookup and
  * parallel Home reads hit its 10 s connect timeout. The Oracle hosts publish no IPv6, so resolve them over
@@ -38,7 +38,7 @@ export function preferIpv4Lookup(hosts: string[]) {
     const reply = (address: string) =>
       opts.all ? done(null, [{ address, family: 4 }]) : done(null, address, 4);
     const hit = cache.get(hostname);
-    if (hit && Date.now() - hit.at < TTL_MS)
+    if (hit && Date.now() - hit.at < serverConstants.ttl.devDns)
       return process.nextTick(reply, hit.address);
     original(hostname, { family: 4 }, (err, address) => {
       if (err) return passThrough();

@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { read, write } from "../client";
 import { figureOperations } from "./home";
-import { TTL } from "../cache";
+import { serverConstants } from "@/server/constants";
 
 /**
  * A document's approval route (approval_setup): its stages and their users, the approval history, the approver
@@ -95,7 +95,7 @@ export const groups = read<
   z.infer<typeof groupRows>["items"][number][]
 >({
   op: "getApproval_groupApproval_group_m",
-  ttl: TTL.config,
+  ttl: serverConstants.ttl.config,
   headers: (p) => ({ approver_type: p.type }),
   parse: (b) => groupRows.parse(b).items,
 });

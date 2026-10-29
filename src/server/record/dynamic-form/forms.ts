@@ -1,7 +1,6 @@
 import "server-only";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
-import { sanitizeHtml } from "@/server/platform/sanitize";
 import { decodeEntities } from "@/features/record/dynamic-form/engine";
 import {
   FIELD_TYPES,
@@ -11,6 +10,7 @@ import {
   type DynResponse,
   type FieldType,
 } from "@/features/record/dynamic-form/models";
+import { serverFunctions } from "@/server/functions";
 /**
  * The dynForms / dynFormResponse bodies mapped to the allowlisted display model (zod strips every other key), and the
  * save body checked against that definition. Helper text and rich-text answers are sanitised here, once.
@@ -47,7 +47,7 @@ const conditions = z
     }),
   );
 const helper = text.transform((v) => {
-  const html = sanitizeHtml(decodeEntities(v)).trim();
+  const html = serverFunctions.sanitize.sanitizeHtml(decodeEntities(v)).trim();
   return html === "" ? null : html;
 });
 const field = z.object({
@@ -152,7 +152,8 @@ const response = z.array(
 );
 /** A stored value as the form reads it: text, a number, a list of text; anything else is no answer. */
 function storedValue(value: unknown, rich: boolean): unknown {
-  if (typeof value === "string") return rich ? sanitizeHtml(value) : value;
+  if (typeof value === "string")
+    return rich ? serverFunctions.sanitize.sanitizeHtml(value) : value;
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (Array.isArray(value))
     return value
@@ -284,7 +285,7 @@ function checkValue(def: DynField, grid: boolean, value: unknown) {
       return value;
     case "RICHTEXTEDITOR":
       if (typeof value !== "string") throw mismatch();
-      return sanitizeHtml(value);
+      return serverFunctions.sanitize.sanitizeHtml(value);
     default:
       if (typeof value !== "string") throw mismatch();
       return value;

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "@/lib/errors";
+import { serverFunctions } from "@/server/functions";
 type Rights = { read: boolean; edit: boolean; delete: boolean };
 const state = vi.hoisted(() => ({
   oracle: vi.fn(),
@@ -59,7 +60,8 @@ vi.mock("@/server/platform/configuration/resources", async (importOriginal) => {
   return {
     ...actual,
     // The seeds as the backend would merge them; a test may replace them.
-    resources: async () => state.labels ?? actual.mergeResourceDefaults([]),
+    resources: async () =>
+      state.labels ?? serverFunctions.resources.mergeResourceDefaults([]),
   };
 });
 import { GET, POST } from "@/app/api/opportunities/eoi/[id]/workflow/route";
@@ -226,9 +228,11 @@ describe("route gates", () => {
     const view = await workflowView(await eoiApprovalHost("12"));
     expect(view.gates).toMatchObject({ submit: true, addStage: true });
     expect(view.stages[0].canDelete).toBe(true);
-    expect("rows" in view.history && view.history.rows[0].comments).toBe(
-      "Ready",
-    );
+    // The history reads on its own, beside the route.
+    const history = await (
+      await GET(new Request(url("?view=history")), params)
+    ).json();
+    expect(history.rows[0].comments).toBe("Ready");
     expect((await post({ op: "act", action: "Submitted" })).status).toBe(200);
     expect(state.forget).toHaveBeenCalledWith(
       "getSecurityUser_roles",
@@ -247,10 +251,7 @@ describe("route gates", () => {
       (await workflowView(await eoiApprovalHost("12"))).gates.addStage,
     ).toBe(false);
     state.locked = false;
-    const { mergeResourceDefaults } = await vi.importActual<
-      typeof import("@/server/platform/configuration/resources")
-    >("@/server/platform/configuration/resources");
-    state.labels = mergeResourceDefaults([
+    state.labels = serverFunctions.resources.mergeResourceDefaults([
       {
         module_name: "OPPORTUNITIES-EOI",
         label_type: "button-labels",

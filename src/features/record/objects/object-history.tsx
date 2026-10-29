@@ -4,10 +4,8 @@ import { useRouter } from "next/navigation";
 import { State } from "@/components/feedback/state";
 import { DateInput } from "@/components/ui/date-input";
 import { useFormat } from "@/components/layout/shell-context";
-import { stampDisplay } from "@/lib/format";
 import { InsideField } from "@/components/ui/inside-field";
 import { Select } from "@/components/ui/select";
-import { idPart } from "@/lib/ids";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
 import { ActionDialog } from "@/components/dialog/action-dialog";
 import { useActionFailure } from "@/components/dialog/action-failure";
@@ -21,6 +19,7 @@ import {
   type HistoryView,
 } from "./types";
 import styles from "./history-delegations.module.css";
+import { functions } from "@/lib/functions";
 /** Legacy convertUserComments: the table shows the first 15 characters, the popup the whole comment. */
 const preview = (c: string) => (c.length >= 15 ? `${c.slice(0, 15)}...` : c);
 /**
@@ -106,7 +105,7 @@ export function ObjectHistory({
             {view.rows.map((r) => (
               <tr
                 key={r.id}
-                id={`${id}-row-${idPart(r.id)}`}
+                id={`${id}-row-${functions.ids.idPart(r.id)}`}
                 className="enter-rise"
               >
                 <td>{r.status}</td>
@@ -115,7 +114,7 @@ export function ObjectHistory({
                   {r.comments && (
                     <button
                       type="button"
-                      id={`${id}-row-${idPart(r.id)}-comments`}
+                      id={`${id}-row-${functions.ids.idPart(r.id)}-comments`}
                       className={styles.link}
                       onClick={() => setComment(r.comments)}
                     >
@@ -124,7 +123,7 @@ export function ObjectHistory({
                   )}
                 </td>
                 <td>{r.user}</td>
-                <td>{stampDisplay(r.date, format)}</td>
+                <td>{functions.format.stampDisplay(r.date, format)}</td>
               </tr>
             ))}
             {view.rows.length === 0 && (
@@ -169,7 +168,7 @@ export function ObjectHistory({
                   {view.approvals.rows.map((r) => (
                     <tr
                       key={r.id}
-                      id={`${id}-approval-${idPart(r.id)}`}
+                      id={`${id}-approval-${functions.ids.idPart(r.id)}`}
                       className="enter-rise"
                     >
                       <td>{r.name}</td>
@@ -179,7 +178,7 @@ export function ObjectHistory({
                         {r.comments && (
                           <button
                             type="button"
-                            id={`${id}-approval-${idPart(r.id)}-comments`}
+                            id={`${id}-approval-${functions.ids.idPart(r.id)}-comments`}
                             className={`${styles.link} ${styles.clamp}`}
                             onClick={() => setComment(r.comments)}
                           >
@@ -188,7 +187,9 @@ export function ObjectHistory({
                         )}
                       </td>
                       {view.approvalTransaction && <td>{r.transaction}</td>}
-                      <td>{stampDisplay(r.updated, format)}</td>
+                      <td>
+                        {functions.format.stampDisplay(r.updated, format)}
+                      </td>
                     </tr>
                   ))}
                   {view.approvals.rows.length === 0 && (

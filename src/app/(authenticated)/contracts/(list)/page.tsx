@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { pageIdentity } from "@/server/identity/auth/page";
-import { requireModule } from "@/server/platform/permissions";
 import {
   parseContractQuery,
   contractSearch,
@@ -13,11 +12,12 @@ import {
   ContractFilters,
   ContractResults,
   NewContractAction,
-} from "../listing-sections";
-import styles from "../contracts.module.css";
+} from "@/features/modules/contracts/listing/listing-sections";
+import styles from "@/features/modules/contracts/contracts.module.css";
 import { contractStatusChoices } from "@/server/modules/contracts/service";
 import { orNull } from "@/server/record/shared";
-import { idPart } from "@/lib/ids";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 
 export const metadata = { title: "Contracts" };
 
@@ -28,7 +28,7 @@ export default async function Contracts({
 }) {
   const { user } = await pageIdentity("/contracts");
   try {
-    requireModule(user, "CONTRACTS");
+    serverFunctions.permissions.requireModule(user, "CONTRACTS");
   } catch {
     return (
       <State
@@ -76,7 +76,7 @@ export default async function Contracts({
           {statuses.map(({ value, label }) => (
             <Link
               key={value}
-              id={`contracts-status-${idPart(value || "all")}`}
+              id={`contracts-status-${functions.ids.idPart(value || "all")}`}
               href={`/contracts?${contractSearch({ ...query, status: value, page: 1 })}`}
               aria-current={query.status === value ? "page" : undefined}
               prefetch={false}

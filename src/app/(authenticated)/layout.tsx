@@ -1,19 +1,13 @@
 import { pageIdentity } from "@/server/identity/auth/page";
 import { dashboardConfiguration } from "@/server/platform/configuration/service";
-import {
-  resources,
-  label,
-  resourceDescription,
-} from "@/server/platform/configuration/resources";
+import { resources } from "@/server/platform/configuration/resources";
 import {
   displayFormat,
   globalVariables,
 } from "@/server/platform/configuration/formatting";
-import { safeImageUrl } from "@/lib/security";
 import { availableThemes } from "@/server/modules/account/themes";
 import { AppShell } from "@/components/layout/app-shell";
 import { Navigation } from "@/components/layout/navigation";
-import { visibleNavigation } from "@/server/platform/permissions";
 import type { NavDefinition, NavEntry } from "@/lib/unavailable-modules";
 import {
   findTheme,
@@ -29,6 +23,8 @@ import { ChatbotMount } from "@/components/chatbot/chatbot-mount";
 import { GuideMount } from "@/features/guides/guide-mount";
 import { opportunities } from "@/server/oracle/api";
 import { AppError } from "@/lib/errors";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 type Labels = Awaited<ReturnType<typeof resources>>;
 // GN-Angular marks the Opportunities group and the finder when getOpportunitiesNewFlags reports anything new.
 const flagged = new Set(["opportunities-group", "opportunities-finder"]);
@@ -49,7 +45,13 @@ function navigationEntries(
     return [
       {
         id: item.id,
-        label: label(labels, "dashboard", "module-name", item.id, item.name),
+        label: serverFunctions.resources.label(
+          labels,
+          "dashboard",
+          "module-name",
+          item.id,
+          item.name,
+        ),
         icon: item.icon,
         href,
         external: item.external === true,
@@ -71,11 +73,22 @@ function shellLabels(rows: Labels): ShellLabels {
     ...(Object.fromEntries(
       Object.entries(shellLabelKeys).map(([name, [group, key, fallback]]) => [
         name,
-        label(rows, "dashboard", group, key, fallback),
+        serverFunctions.resources.label(
+          rows,
+          "dashboard",
+          group,
+          key,
+          fallback,
+        ),
       ]),
     ) as Record<keyof typeof shellLabelKeys, string>),
-    themeHelp: resourceDescription(rows, "dashboard", "header-labels", "theme"),
-    infoletsHelp: resourceDescription(
+    themeHelp: serverFunctions.resources.resourceDescription(
+      rows,
+      "dashboard",
+      "header-labels",
+      "theme",
+    ),
+    infoletsHelp: serverFunctions.resources.resourceDescription(
       rows,
       "dashboard",
       "header-labels",
@@ -98,7 +111,7 @@ export default async function AuthLayout({
   children: React.ReactNode;
 }) {
   const { user, session } = await pageIdentity("/home");
-  const items = visibleNavigation(user.modules);
+  const items = serverFunctions.permissions.visibleNavigation(user.modules);
   // The new-opportunities dot streams in; it starts with the shell's reads, never fails, and is awaited by Navigation.
   const isNew = items.some((i) => i.id === "opportunities-group")
     ? opportunitiesNew()
@@ -117,7 +130,7 @@ export default async function AuthLayout({
     // Legacy header: the configured APPLICATION_LOGO_URL, else the GrantsNow logo; the logo is decoration, so a failure shows ours.
     globalVariables().then(
       (items) =>
-        safeImageUrl(
+        functions.security.safeImageUrl(
           items.find((v) => v.var_key === "APPLICATION_LOGO_URL")?.var_value,
         ),
       () => undefined,

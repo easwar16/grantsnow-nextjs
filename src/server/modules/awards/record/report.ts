@@ -1,13 +1,14 @@
 import "server-only";
 import { z } from "zod";
 import { awards } from "@/server/oracle/api";
-import { label, resources } from "@/server/platform/configuration/resources";
+import { resources } from "@/server/platform/configuration/resources";
 import { orNull } from "@/server/record/shared";
 import type {
   ReportMonth,
   ReportView,
 } from "@/features/modules/awards/record/report-model";
 import { awardRecordRead } from "../record";
+import { serverFunctions } from "@/server/functions";
 
 const BUNDLE = "award";
 const n = z.coerce.number().finite().catch(0);
@@ -82,7 +83,7 @@ export async function reportView(id: string): Promise<ReportView> {
   const project = projects.parse(context.raw["Award Projects"] ?? [])[0];
   const rows = await resources();
   const t = (group: string, key: string, fallback: string) =>
-    label(rows, BUNDLE, group, key, fallback);
+    serverFunctions.resources.label(rows, BUNDLE, group, key, fallback);
   const texts = {
     projectNumber: "Project Number",
     totalBudget: t("labels", "total-budget", "Total Budget"),

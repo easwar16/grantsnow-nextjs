@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "@/components/ui/icon";
-import styles from "../../contracts.module.css";
+import styles from "../contracts.module.css";
 
 type Tab = "summary" | "workflow" | "signers" | "history" | "delegation";
 type Grants = {

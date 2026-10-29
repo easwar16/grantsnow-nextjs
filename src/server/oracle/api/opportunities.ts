@@ -1,6 +1,6 @@
 import "server-only";
 import { read, write } from "../client";
-import { TTL } from "../cache";
+import { serverConstants } from "@/server/constants";
 
 /**
  * Funding opportunities: the finder's list and filters, a card's bookmark / notes / share, and the convert's
@@ -15,7 +15,7 @@ type Search = {
 /** One page of getOpportunities: the sort as headers, the clause and page as query (as the original). */
 export const search = read<Search>({
   op: "getSharedGetOpportunities",
-  ttl: TTL.access,
+  ttl: serverConstants.ttl.access,
   headers: (p) => ({ p_order_by: p.orderBy, p_sort_order: p.sortOrder }),
   query: (p) => p.query,
 });
@@ -33,27 +33,30 @@ export const byId = (id: number) =>
 /** The user's research preferences (VBCS app-level userPreference), shared with the profile. */
 export const userPreference = read({
   op: "getSharedUserPreference",
-  ttl: TTL.config,
+  ttl: serverConstants.ttl.config,
 });
 /** Whether anything is new on Featured / Others; held briefly, shared with the shell's nav dot. */
 export const newFlags = read({
   op: "getSharedGetOpportunitiesNewFlags",
-  ttl: TTL.access,
+  ttl: serverConstants.ttl.access,
 });
 /** The finder's status and funding-type options. */
 export const filterOptions = read({
   op: "getSharedOpportunitiesFilter",
-  ttl: TTL.config,
+  ttl: serverConstants.ttl.config,
 });
 /** Funders by site, for the funder tree and the EOI list's funder choice. */
-export const funders = read({ op: "getSharedGetOppFunders", ttl: TTL.config });
+export const funders = read({
+  op: "getSharedGetOppFunders",
+  ttl: serverConstants.ttl.session,
+});
 export const funderTypes = read({
   op: "getSharedGetOppFunderTypes",
-  ttl: TTL.config,
+  ttl: serverConstants.ttl.session,
 });
 export const callCodes = read({
   op: "getSharedGetOppCallCodes",
-  ttl: TTL.config,
+  ttl: serverConstants.ttl.session,
 });
 /** Analytics' chart data (`TOP_FUNDERS`, `FUNDING_TYPE`). */
 export const statistics = read<{ chartType: string }>({

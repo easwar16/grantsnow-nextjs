@@ -1,6 +1,5 @@
 import "server-only";
 import { State } from "@/components/feedback/state";
-import { publicError } from "@/lib/errors";
 import { historyView } from "@/server/record/objects/history";
 import { delegationView } from "@/server/record/objects/delegations";
 import {
@@ -13,6 +12,7 @@ import type {
   DelegationView,
   HistoryView,
 } from "@/features/record/objects/types";
+import { functions } from "@/lib/functions";
 /** The History or Delegation tab: the shared panel with EOI as its host; a failed read shows in place of it. */
 export async function EoiObjectTab({
   id,
@@ -32,7 +32,7 @@ export async function EoiObjectTab({
     (error: unknown) => ({ error }),
   );
   if ("error" in result) {
-    const e = publicError(result.error);
+    const e = functions.errors.publicError(result.error);
     return (
       <State
         id={`opportunities-eoi-${tab}-error`}

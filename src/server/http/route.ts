@@ -1,8 +1,8 @@
 import "server-only";
 import { json, failure } from "@/server/http/response";
-import { sameOrigin } from "@/lib/security";
 import { appOrigin } from "@/server/platform/configuration/environment";
 import { asWrite } from "@/server/oracle/scope";
+import { functions } from "@/lib/functions";
 
 /**
  * One API route handler: the result as a private, uncached JSON reply, or its public error. A `write` route refuses a
@@ -16,7 +16,7 @@ export function route<C = unknown>(
   return async (request: Request, context?: C) => {
     try {
       if (!options.write) return json(await handler(request, context as C));
-      sameOrigin(request, appOrigin());
+      functions.security.sameOrigin(request, appOrigin());
       // Inside a write, every Oracle read is fresh: a held copy never decides whether a write may go ahead.
       return json(await asWrite(() => handler(request, context as C)));
     } catch (e) {

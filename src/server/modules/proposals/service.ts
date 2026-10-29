@@ -2,7 +2,6 @@ import { formattingConfiguration } from "@/server/platform/configuration/formatt
 import "server-only";
 import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
-import { requireModule } from "@/server/platform/permissions";
 import { proposals } from "@/server/oracle/api";
 import type { ProposalQuery } from "@/features/modules/proposals/schemas";
 import { oracleQuery } from "./where-clause";
@@ -13,6 +12,7 @@ import type {
   ProposalRow,
 } from "@/features/modules/proposals/types";
 import { AppError } from "@/lib/errors";
+import { serverFunctions } from "@/server/functions";
 const optional = z.string().nullish();
 const rowSchema = z.object({
   proposal_id: z.number().int(),
@@ -112,7 +112,7 @@ export async function listProposals(
   signal?: AbortSignal,
 ) {
   const { user } = await authenticate();
-  requireModule(user, "PROPOSALS");
+  serverFunctions.permissions.requireModule(user, "PROPOSALS");
   if (q.sort !== "" && !(await sortChoices()).some((c) => c.value === q.sort))
     throw new AppError("BAD_REQUEST", "Unsupported listing sort.", 400);
   const formatting = await formattingConfiguration();

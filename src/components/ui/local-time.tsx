@@ -1,7 +1,7 @@
 "use client";
 import { useSyncExternalStore } from "react";
 import { useFormat } from "@/components/layout/shell-context";
-import { dateTimeDisplay, stampDisplay } from "@/lib/format";
+import { functions } from "@/lib/functions";
 
 const noop = () => () => {};
 /**
@@ -25,8 +25,8 @@ export function LocalTime({
   return (
     <>
       {kind === "stamp"
-        ? stampDisplay(value, format)
-        : dateTimeDisplay(value, format)}
+        ? functions.format.stampDisplay(value, format)
+        : functions.format.dateTimeDisplay(value, format)}
     </>
   );
 }

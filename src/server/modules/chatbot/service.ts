@@ -6,10 +6,10 @@ import { AppError } from "@/lib/errors";
 import { authenticate } from "@/server/identity/session/service";
 import { businessError } from "@/server/oracle/connection";
 import { globalVariables } from "@/server/platform/configuration/formatting";
-import { sanitizeHtml } from "@/server/platform/sanitize";
+import { serverConstants } from "@/server/constants";
+import { serverFunctions } from "@/server/functions";
 
 /** Answers from the model take seconds; a hung server must not hold the request. */
-const TIMEOUT_MS = 60000;
 const MAX_ANSWER_CHARS = 512 * 1024;
 const unavailable = () =>
   new AppError(
@@ -75,7 +75,10 @@ export function toAnswer(raw: string) {
     b.remove();
     return text ? [text] : [];
   });
-  return { html: sanitizeHtml(doc.body.innerHTML), options };
+  return {
+    html: serverFunctions.sanitize.sanitizeHtml(doc.body.innerHTML),
+    options,
+  };
 }
 
 const answerBody = z.object({ response: z.string() });
@@ -99,7 +102,7 @@ export async function askChatbot(text: string) {
       headers: { token: session.token, "user-query": text },
       cache: "no-store",
       redirect: "error",
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(serverConstants.timeouts.chatbot),
     });
     const raw = await response.text();
     if (raw.length > MAX_ANSWER_CHARS) throw unavailable();

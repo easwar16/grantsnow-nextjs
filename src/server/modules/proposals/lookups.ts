@@ -2,13 +2,16 @@ import "server-only";
 import { cache } from "react";
 import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
-import { requireModule } from "@/server/platform/permissions";
 import { lookups, people } from "@/server/oracle/api";
 import { organizations } from "@/server/platform/configuration/service";
-import type {
-  Choice,
-  ListingChoices,
+import { AppError } from "@/lib/errors";
+import {
+  CHOICE_GROUPS,
+  type Choice,
+  type ChoiceGroup,
+  type ChoiceGroupResult,
 } from "@/features/modules/proposals/lookups";
+import { serverFunctions } from "@/server/functions";
 const envelope = z.object({
   items: z.array(z.record(z.string(), z.unknown())),
 });
@@ -36,84 +39,81 @@ export const sortChoices = cache(async (): Promise<Choice[]> => {
     "column_description",
   ).filter((c) => sortColumn.test(c.value));
 });
-export const listingChoices = cache(async (): Promise<ListingChoices> => {
+const FAILURES: Record<ChoiceGroup, string> = {
+  codes: "Status/category choices could not be loaded.",
+  people: "Investigator/assigned-to choices could not be loaded.",
+  sponsors: "Sponsor choices could not be loaded.",
+  departments: "Department choices could not be loaded.",
+  sorts: "Date sort choices could not be loaded.",
+};
+/** One group's choices, with its failures; the other groups' keys are absent. */
+export async function listingChoices(
+  group: string,
+): Promise<ChoiceGroupResult> {
   const { user } = await authenticate();
-  requireModule(user, "PROPOSALS");
-  const settled = await Promise.allSettled([
-    lookups.codes({
-      types: "PROPOSAL_STATUS,PROPOSAL_TYPES,ACTIVITY_TYPE,PROPOSAL_TYPE",
-    }),
-    // The listing sends no organisation: everyone, every page.
-    people.inOrg({}),
-    lookups.sponsors(),
-    organizations(),
-    sortChoices(),
-  ]);
-  const result: ListingChoices = {
-    statuses: [],
-    categories: [],
-    investigators: [],
-    assignees: [],
-    departments: [],
-    sponsors: [],
-    activities: [],
-    proposalTypes: [],
-    sorts: [],
-    errors: [],
-  };
-  const labels = [
-    "Status/category",
-    "Investigator/assigned-to",
-    "Sponsor",
-    "Department",
-    "Date sort",
-  ];
-  settled.forEach((r, i) => {
-    if (r.status === "rejected")
-      result.errors.push(`${labels[i]} choices could not be loaded.`);
-  });
+  serverFunctions.permissions.requireModule(user, "PROPOSALS");
+  if (!(CHOICE_GROUPS as readonly string[]).includes(group))
+    throw new AppError("BAD_REQUEST", "Unknown choice group.", 400);
+  const g = group as ChoiceGroup;
+  let raw: unknown;
   try {
-    if (settled[0].status === "fulfilled") {
-      const rows = envelope.parse(settled[0].value).items;
-      for (const [type, key, description] of [
-        ["PROPOSAL_STATUS", "statuses", false],
-        ["PROPOSAL_TYPES", "categories", true],
-        ["ACTIVITY_TYPE", "activities", false],
-        ["PROPOSAL_TYPE", "proposalTypes", false],
-      ] as const) {
-        result[key] = choices(
-          { items: rows.filter((r) => r.lookup_type_code === type) },
-          "lookup_code",
-          description ? "lookup_code_descr" : "lookup_code_value",
-        );
-      }
-    }
+    raw = await {
+      codes: () =>
+        lookups.codes({
+          types: "PROPOSAL_STATUS,PROPOSAL_TYPES,ACTIVITY_TYPE,PROPOSAL_TYPE",
+        }),
+      // The listing sends no organisation: everyone, every page.
+      people: () => people.inOrg({}),
+      sponsors: () => lookups.sponsors(),
+      departments: () => organizations(),
+      sorts: () => sortChoices(),
+    }[g]();
   } catch {
-    result.errors.push("Status/category choices returned an invalid contract.");
+    return { errors: [FAILURES[g]] };
   }
+  if (g === "sorts") return { sorts: raw as Choice[], errors: [] };
+  if (g === "departments")
+    return {
+      departments: (raw as Awaited<ReturnType<typeof organizations>>).map(
+        (r) => ({ value: r.id, label: r.name }),
+      ),
+      errors: [],
+    };
   try {
-    if (settled[1].status === "fulfilled") {
-      result.investigators = choices(
-        settled[1].value,
-        "employee_number",
-        "full_name",
+    if (g === "people")
+      return {
+        investigators: choices(raw, "employee_number", "full_name"),
+        assignees: choices(raw, "person_id", "full_name"),
+        errors: [],
+      };
+    if (g === "sponsors")
+      return {
+        sponsors: choices(raw, "party_name", "party_name"),
+        errors: [],
+      };
+    const rows = envelope.parse(raw).items;
+    const result: ChoiceGroupResult = {
+      errors: [],
+    };
+    for (const [type, key, description] of [
+      ["PROPOSAL_STATUS", "statuses", false],
+      ["PROPOSAL_TYPES", "categories", true],
+      ["ACTIVITY_TYPE", "activities", false],
+      ["PROPOSAL_TYPE", "proposalTypes", false],
+    ] as const) {
+      result[key] = choices(
+        { items: rows.filter((r) => r.lookup_type_code === type) },
+        "lookup_code",
+        description ? "lookup_code_descr" : "lookup_code_value",
       );
-      result.assignees = choices(settled[1].value, "person_id", "full_name");
     }
+    return result;
   } catch {
-    result.errors.push("Person choices returned an invalid contract.");
+    const what = {
+      codes: "Status/category",
+      people: "Person",
+      sponsors: "Sponsor",
+    }[g];
+    return { errors: [`${what} choices returned an invalid contract.`] };
   }
-  try {
-    if (settled[2].status === "fulfilled")
-      result.sponsors = choices(settled[2].value, "party_name", "party_name");
-  } catch {
-    result.errors.push("Sponsor choices returned an invalid contract.");
-  }
-  if (settled[4].status === "fulfilled") result.sorts = settled[4].value;
-  if (settled[3].status === "fulfilled")
-    result.departments = settled[3].value.map((r) => ({
-      value: r.id,
-      label: r.name,
-    }));
-  return result;
-});
+}

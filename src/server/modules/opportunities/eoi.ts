@@ -1,28 +1,17 @@
 import "server-only";
-import { safeUrl } from "@/lib/security";
 import { containsClause } from "@/server/oracle/where";
 import { cache } from "react";
 import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
-import { requireDrawerAccess } from "@/server/platform/permissions";
 import { eoi, lookups, opportunities } from "@/server/oracle/api";
 import {
-  label,
   resources,
-  resourceVisible,
   type Resources,
 } from "@/server/platform/configuration/resources";
 import { AppError } from "@/lib/errors";
-import {
-  nameChoices,
-  objectDateChoices,
-  statusChoices,
-} from "@/server/platform/configuration/choices";
+import { type ChoiceList } from "@/server/platform/configuration/choices";
 import { splitFunders } from "@/features/modules/opportunities/display";
-import {
-  EOI_PAGE_SIZE,
-  type EoiFilters,
-} from "@/features/modules/opportunities/eoi-list/schema";
+import { type EoiFilters } from "@/features/modules/opportunities/eoi-list/schema";
 import { EOI_STATUS_TONE } from "@/shared/opportunities/eoi-record";
 import {
   type EoiListGates,
@@ -31,6 +20,9 @@ import {
   type EoiListTextKey,
   type EoiListView,
 } from "@/features/modules/opportunities/eoi-list/types";
+import { constants } from "@/lib/constants";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 
 const BUNDLE = "opportunities-eoi";
 const DRAWER = "opportunities-eoi-list";
@@ -38,7 +30,7 @@ const DRAWER = "opportunities-eoi-list";
 /** Every gate the page and the row read, as GN-Angular's `visible(key)` (missing row or flag hides). */
 export function eoiListGates(rows: Resources): EoiListGates {
   const v = (group: string, key: string) =>
-    resourceVisible(rows, BUNDLE, group, key);
+    serverFunctions.resources.resourceVisible(rows, BUNDLE, group, key);
   return {
     statusList: v("aria-labels", "eoi-list-choose-navigation-item"),
     number: v("labels", "eoi-list-opportunity-name"),
@@ -85,7 +77,7 @@ export function eoiListTexts(rows: Resources) {
   return Object.fromEntries(
     Object.entries(TEXTS).map(([k, [group, key, fallback]]) => [
       k,
-      label(rows, BUNDLE, group, key, fallback),
+      serverFunctions.resources.label(rows, BUNDLE, group, key, fallback),
     ]),
   ) as Record<EoiListTextKey, string>;
 }
@@ -131,7 +123,7 @@ export function eoiOracleQuery(f: EoiFilters) {
   const where = eoiWhereClause(f);
   return new URLSearchParams({
     p_offset: String(f.offset),
-    p_limit: String(EOI_PAGE_SIZE),
+    p_limit: String(constants.paging.eoi),
     ...(where ? { p_where_clause: where } : {}),
     ...(f.sortBy
       ? {
@@ -184,7 +176,7 @@ export function mapEoiRow(
     department: present(g.department, r.org_unit_name),
     created: present(g.createdOn, r.creation_date),
     updated: present(g.updatedOn, r.last_update_date),
-    logo: safeUrl(r.logo),
+    logo: functions.security.safeUrl(r.logo),
   };
 }
 
@@ -199,13 +191,13 @@ export function mapEoiPage(raw: unknown, g: EoiListGates): EoiListPage {
     // The original pages on while a page comes back full; ORDS' own flag wins when present.
     hasMore:
       b.hasMore === undefined
-        ? b.items.length >= EOI_PAGE_SIZE
+        ? b.items.length >= constants.paging.eoi
         : b.hasMore === true || b.hasMore === "true",
   };
 }
 
 const sortChoices = cache(async () =>
-  objectDateChoices(
+  serverFunctions.choices.objectDateChoices(
     await lookups.objectDates({ objectType: "OPPORTUNITIES-EOI" }),
   ),
 );
@@ -213,36 +205,49 @@ const sortChoices = cache(async () =>
 /** Gates, texts and drawer choices; a failed choice list degrades to empty, as the original's. */
 export async function eoiListView(): Promise<EoiListView> {
   const { user } = await authenticate();
-  requireDrawerAccess(user, DRAWER);
+  serverFunctions.permissions.requireDrawerAccess(user, DRAWER);
   const rows = await resources();
   const gates = eoiListGates(rows);
-  const [statuses, funders, sorts] = await Promise.allSettled([
+  // The funders are a dropdown's options and load on their own (eoiFunders), never holding the page.
+  const [statuses, sorts] = await Promise.allSettled([
     gates.statusList
       ? lookups
           .codes({ types: "EOI_STATUS" })
-          .then((raw) => statusChoices(raw, "EOI_STATUS"))
-      : [],
-    gates.funder
-      ? opportunities.funders().then((raw) => nameChoices(raw, "value"))
+          .then((raw) =>
+            serverFunctions.choices.statusChoices(raw, "EOI_STATUS"),
+          )
       : [],
     gates.dateSort ? sortChoices() : [],
   ]);
   const errors: string[] = [];
   if (statuses.status === "rejected")
     errors.push("Application statuses could not be loaded.");
-  if (funders.status === "rejected")
-    errors.push("Funders could not be loaded.");
   const value = <T>(r: PromiseSettledResult<T[]>) =>
     r.status === "fulfilled" ? r.value : [];
   return {
     gates,
     texts: eoiListTexts(rows),
     statuses: value(statuses),
-    funders: value(funders),
     // fetchDateTypes leaves the select empty on a failure, without a message.
     sorts: value(sorts),
     errors,
   };
+}
+
+/** The funder dropdown's options, read after the page shows; empty without the funder filter. */
+export async function eoiFunders(): Promise<ChoiceList> {
+  const { user } = await authenticate();
+  serverFunctions.permissions.requireDrawerAccess(user, DRAWER);
+  const gates = eoiListGates(await resources());
+  return serverFunctions.choices.choiceList(
+    () =>
+      gates.funder
+        ? opportunities
+            .funders()
+            .then((raw) => serverFunctions.choices.nameChoices(raw, "value"))
+        : [],
+    "Funders could not be loaded.",
+  );
 }
 
 /** One page of requests; the session, the drawer grant and every filter gate are checked here. */
@@ -251,7 +256,7 @@ export async function listEois(
   signal?: AbortSignal,
 ): Promise<EoiListPage> {
   const { user } = await authenticate();
-  requireDrawerAccess(user, DRAWER);
+  serverFunctions.permissions.requireDrawerAccess(user, DRAWER);
   const gates = eoiListGates(await resources());
   const f = gatedFilters(filters, gates);
   if (f.sortBy && !(await sortChoices()).some((c) => c.value === f.sortBy))

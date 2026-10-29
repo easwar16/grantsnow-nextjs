@@ -1,8 +1,9 @@
 import "server-only";
 import { chatbotEnabled } from "@/server/modules/chatbot/service";
-import { resources, label } from "@/server/platform/configuration/resources";
+import { resources } from "@/server/platform/configuration/resources";
 import { authenticate } from "@/server/identity/session/service";
 import { Chatbot } from "./chatbot";
+import { serverFunctions } from "@/server/functions";
 
 /** Server gate for the launcher: only the enabled flag and labels reach the client, never the chatbot URL. */
 export async function ChatbotMount() {
@@ -17,14 +18,14 @@ export async function ChatbotMount() {
   return (
     <Chatbot
       userName={user.name}
-      title={label(
+      title={serverFunctions.resources.label(
         labels,
         "dashboard",
         "dialog-titles",
         "grants-now-chatbot",
         "GrantsNow Chatbot",
       )}
-      placeholder={label(
+      placeholder={serverFunctions.resources.label(
         labels,
         "dashboard",
         "placeholders",

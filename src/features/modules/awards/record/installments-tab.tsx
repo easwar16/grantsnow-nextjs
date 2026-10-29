@@ -7,8 +7,6 @@ import { HelpButton } from "@/components/ui/help-button";
 import { Select } from "@/components/ui/select";
 import { DateInput } from "@/components/ui/date-input";
 import { ActionDialog, useConfirm } from "@/components/dialog/action-dialog";
-import { dateDisplay, moneyDisplay } from "@/lib/format";
-import { idPart } from "@/lib/ids";
 import {
   STATUSES,
   balance,
@@ -28,6 +26,7 @@ import type { InstallmentsView } from "./installments-types";
 import type { Money } from "./projects-tab";
 import styles from "./tabs.module.css";
 import own from "./installments.module.css";
+import { functions } from "@/lib/functions";
 
 /** A draft in the dialog: `index` -1 for a new installment (legacy draftInstallment). */
 type Draft = Installment & { index: number };
@@ -57,7 +56,7 @@ export function InstallmentsTab({
 }) {
   const { lines, decimals, texts: t } = view;
   const money = (n: number) =>
-    moneyDisplay(String(n), format?.currency, format);
+    functions.format.moneyDisplay(String(n), format?.currency, format);
   // The tab's session exists only in the browser: null on the server, the stored text once hydrated.
   const stored = useSyncExternalStore(
       noStore,
@@ -198,7 +197,10 @@ export function InstallmentsTab({
                 <span className={own.spacer} />
                 {s.installment.due_date && (
                   <span className={own.hint}>
-                    {dateDisplay(s.installment.due_date, format)}
+                    {functions.format.dateDisplay(
+                      s.installment.due_date,
+                      format,
+                    )}
                   </span>
                 )}
                 <span className={own.total}>{money(s.total)}</span>
@@ -311,7 +313,7 @@ function InstallmentTable({
       <span className={styles.node}>
         <button
           type="button"
-          id={`${id}-${idPart(r.key)}-toggle`}
+          id={`${id}-${functions.ids.idPart(r.key)}-toggle`}
           className={styles.expander}
           aria-expanded={!closed.has(r.key)}
           aria-label={r.name}
@@ -346,7 +348,7 @@ function InstallmentTable({
         <tbody>
           {rows.map((section) => (
             <Fragment key={section.key}>
-              <tr id={`${id}-${idPart(section.key)}`}>
+              <tr id={`${id}-${functions.ids.idPart(section.key)}`}>
                 {node(section)}
                 {amounts(section, true)}
               </tr>
@@ -354,7 +356,7 @@ function InstallmentTable({
                 section.children.map((category) => (
                   <Fragment key={category.key}>
                     <tr
-                      id={`${id}-${idPart(category.key)}`}
+                      id={`${id}-${functions.ids.idPart(category.key)}`}
                       className={styles.level1}
                     >
                       {node(category)}
@@ -364,7 +366,7 @@ function InstallmentTable({
                       category.children.map((item) => (
                         <tr
                           key={item.key}
-                          id={`${id}-${idPart(item.key)}`}
+                          id={`${id}-${functions.ids.idPart(item.key)}`}
                           className={styles.level2}
                         >
                           <td>{item.name}</td>

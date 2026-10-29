@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { read } from "../client";
-import { TTL } from "../cache";
+import { serverConstants } from "@/server/constants";
 
 const text = z.string().nullish();
 const rows = z.object({
@@ -24,7 +24,7 @@ export type PersonRow = z.infer<typeof rows>["items"][number];
 export const all = read<void, PersonRow[]>({
   op: "getPre_awardGetPersonListAll",
   pages: "all",
-  ttl: TTL.config,
+  ttl: serverConstants.ttl.config,
   parse: (b) => rows.parse(b).items,
 });
 /**
@@ -35,7 +35,7 @@ export const inOrg = read<{ orgId?: string }>({
   op: "getPre_awardGetPersonList",
   headers: (p) => ({ p_org_id: p.orgId }),
   pages: "all",
-  ttl: TTL.config,
+  ttl: serverConstants.ttl.config,
 });
 /** One person's contact card (legacy getContactDetails, record type PI): read fresh on each open, as legacy did. */
 export const contact = read<{ personId: number; orgId: number }>({

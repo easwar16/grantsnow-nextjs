@@ -1,5 +1,4 @@
 "use client";
-import { idPart } from "@/lib/ids";
 import { useEffect, useId, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { account, useApi } from "@/lib/api";
@@ -24,6 +23,7 @@ import {
 } from "@/features/modules/account/apply";
 import { useShell } from "./shell-context";
 import styles from "./configure-drawer.module.css";
+import { functions } from "@/lib/functions";
 export type ConfigureMode = "preferences" | "accessibility";
 // GN-Angular PANELS: the original's tile images and widths.
 const tiles = [
@@ -175,7 +175,7 @@ function Settings({
               const level = draft.accessibility[key] || 0;
               return (
                 <button
-                  id={`configure-accessibility-${idPart(key)}`}
+                  id={`configure-accessibility-${functions.ids.idPart(key)}`}
                   type="button"
                   key={key}
                   className={styles.panel}
@@ -254,11 +254,14 @@ function Settings({
                   />
                 </h3>
                 {(["needAttention", "insights"] as const).map((group) => (
-                  <div key={group} id={`configure-group-${idPart(group)}`}>
+                  <div
+                    key={group}
+                    id={`configure-group-${functions.ids.idPart(group)}`}
+                  >
                     <label className={styles.switch}>
                       <span>{labels[group]}</span>
                       <input
-                        id={`configure-group-${idPart(group)}-switch`}
+                        id={`configure-group-${functions.ids.idPart(group)}-switch`}
                         type="checkbox"
                         role="switch"
                         checked={Object.values(draft[group]).some(Boolean)}
@@ -270,7 +273,7 @@ function Settings({
                         <label className={styles.switch} key={key}>
                           <span>{initial.labels[key]}</span>
                           <input
-                            id={`configure-infolet-${idPart(key)}`}
+                            id={`configure-infolet-${functions.ids.idPart(key)}`}
                             type="checkbox"
                             role="switch"
                             checked={on}

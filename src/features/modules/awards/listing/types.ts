@@ -94,10 +94,9 @@ export interface AwardListView {
   errors: string[];
 }
 
-/** The drawer's slower choice lists, read after the page shows (legacy loads them beside the list, not before it). */
-export interface AwardChoices {
-  orgs: AwardChoice[];
-  people: AwardChoice[];
-  parties: AwardChoice[];
+/** One of the drawer's slower choice lists (`orgs`, `people`, `parties`), read after the page shows (legacy loads them
+ * beside the list, not before it); a failed read is empty and reported. */
+export interface AwardChoiceList {
+  options: AwardChoice[];
   errors: string[];
 }

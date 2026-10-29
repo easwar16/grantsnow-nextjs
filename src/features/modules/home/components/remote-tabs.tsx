@@ -1,19 +1,17 @@
 "use client";
-import { idPart } from "@/lib/ids";
 import { useMemo, useRef, useState } from "react";
 import { InsightChart } from "./insight-chart";
-import { chartIsEmpty, dynamicChartData } from "@/lib/chart-options";
 import { State } from "@/components/feedback/state";
 import { RecordSkeleton, ChartSkeleton } from "@/components/feedback/skeleton";
 import { useToast } from "@/components/feedback/toast";
 import { Icon } from "@/components/ui/icon";
 import { ActionMenu } from "@/components/ui/action-menu";
-import { dateDisplay } from "@/lib/format";
 import { OpportunityCard } from "@/features/modules/opportunities/components/opportunity-card";
 import { home, isOffline, useApi, usePagedApi } from "@/lib/api";
 import type { PagedEndpoint } from "@/lib/api/hooks";
-import type { FormatSettings } from "@/lib/format";
+import { type FormatSettings } from "@/lib/format";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
+import { functions } from "@/lib/functions";
 type Failure = { code: string; message: string; action?: string };
 export type ChartData = {
   id: string;
@@ -68,7 +66,7 @@ export function localDateTime(iso: string, format?: FormatSettings) {
   const pad = (n: number) => String(n).padStart(2, "0");
   const day = `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`;
   const hours = at.getHours() % 12 || 12;
-  return `${dateDisplay(day, format)} ${pad(hours)}:${pad(at.getMinutes())} ${at.getHours() < 12 ? "AM" : "PM"}`;
+  return `${functions.format.dateDisplay(day, format)} ${pad(hours)}:${pad(at.getMinutes())} ${at.getHours() < 12 ? "AM" : "PM"}`;
 }
 /** The dashboard's Notifications tab. Unlike the bell popup, it never marks anything read (as in the original). */
 export function NotificationsPanel({ format }: { format?: FormatSettings }) {
@@ -187,15 +185,15 @@ export function ChartGraphic({
   rows: number;
 }) {
   // A stable object, so a re-render does not rebuild the chart.
-  const data = useMemo(() => dynamicChartData(chart), [chart]);
-  return chartIsEmpty(data) ? (
+  const data = useMemo(() => functions.charts.dynamicChartData(chart), [chart]);
+  return functions.charts.chartIsEmpty(data) ? (
     <div className="chart-empty" role="status">
       {chart.texts.empty}
     </div>
   ) : (
     // The tile is 150 × rows + 56: less its 8px padding, 28px head and borders.
     <InsightChart
-      id={`dynamic-chart-${idPart(chart.id)}-graphic`}
+      id={`dynamic-chart-${functions.ids.idPart(chart.id)}-graphic`}
       title={chart.name}
       height={150 * rows + 10}
       showData
@@ -253,7 +251,7 @@ function RemoteChart({
     organization,
   });
   const dialog = useRef<HTMLDialogElement>(null),
-    base = `dynamic-chart-${idPart(descriptor.id)}`;
+    base = `dynamic-chart-${functions.ids.idPart(descriptor.id)}`;
   const [dimensions, setDimensions] = useState<{
       columns: number;
       rows: number;

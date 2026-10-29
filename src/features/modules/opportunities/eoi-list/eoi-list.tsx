@@ -4,8 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { FormatSettings } from "@/lib/format";
-import { dateDisplay } from "@/lib/format";
+import { type FormatSettings } from "@/lib/format";
 import { Icon } from "@/components/ui/icon";
 import { FilterPanel } from "@/components/ui/filter-panel";
 import { Select } from "@/components/ui/select";
@@ -16,7 +15,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Skeleton } from "@/components/feedback/skeleton";
 import { State } from "@/components/feedback/state";
 import { useToast } from "@/components/feedback/toast";
-import { eoi, usePagedApi } from "@/lib/api";
+import { eoi, useApi, usePagedApi } from "@/lib/api";
 import { isOffline } from "@/lib/api/http";
 import {
   DEFAULT_EOI_FILTERS,
@@ -26,13 +25,13 @@ import {
 } from "./schema";
 import type { EoiListPage, EoiListRow, EoiListView } from "./types";
 import styles from "./eoi-list.module.css";
+import { constants } from "@/lib/constants";
+import { functions } from "@/lib/functions";
 
 type PublicError = { code: string; message: string; action?: string };
 export type EoiListResult =
   { ok: true; data: EoiListPage } | { ok: false; error: PublicError };
 
-/** Within this many pixels of the end, the next page loads (as the original's LOAD_MORE_PX). */
-const LOAD_MORE_PX = 80;
 type TextKey = "number" | "title" | "department" | "createdBy";
 const TEXT_IDS: Record<TextKey, string> = {
   number: "eoi-list-number",
@@ -44,6 +43,8 @@ const TEXT_IDS: Record<TextKey, string> = {
 export const eoiHref = (id: string) => `/opportunities/eoi/${id}`;
 
 // The original's text when the list never answered (a route's own error is shown as sent).
+// One empty list while the funders load, so the dropdown keeps a stable options prop.
+const NO_FUNDERS: EoiListView["sorts"] = [];
 const UNREACHABLE: PublicError = {
   code: "UPSTREAM",
   message: "Applications could not be loaded.",
@@ -59,10 +60,13 @@ export function EoiList({
   format,
 }: {
   view: EoiListView;
-  initial: EoiListResult;
+  /** The default filters' first page, streaming from the server. */
+  initial: Promise<EoiListResult>;
   format?: FormatSettings;
 }) {
   const { gates: g, texts: t } = view;
+  // The funders fill their dropdown when they arrive; the page never waits for them.
+  const funders = useApi(eoi.funders, g.funder ? undefined : null).data;
   const toast = useToast(),
     router = useRouter();
   const [filters, setFilters] = useState<EoiFilters>(DEFAULT_EOI_FILTERS),
@@ -70,14 +74,20 @@ export function EoiList({
     // Bumped by Clear so the uncontrolled text inputs remount empty.
     [generation, setGeneration] = useState(0);
   const list = useRef<HTMLUListElement>(null);
-  // The server rendered the default filters' first page; it seeds only that list.
-  const seeded =
-    initial.ok && serializeEoiFilters(filters) === "" ? initial.data : null;
-  const paged = usePagedApi(eoi.list, filters, {
-    initial: seeded
-      ? { ...seeded, total: seeded.total ?? undefined }
+  // The server's first page (still streaming) seeds only the default filters' list.
+  const [seed] = useState(() =>
+    serializeEoiFilters(filters) === ""
+      ? initial.then((r) =>
+          r.ok
+            ? {
+                ok: r.ok,
+                data: { ...r.data, total: r.data.total ?? undefined },
+              }
+            : r,
+        )
       : undefined,
-  });
+  );
+  const paged = usePagedApi(eoi.list, filters, { initial: seed });
   const { rows, loading } = paged,
     total = paged.total ?? null,
     failed =
@@ -97,6 +107,9 @@ export function EoiList({
   useEffect(() => {
     for (const message of view.errors) toast.show("error", message);
   }, [view.errors, toast]);
+  useEffect(() => {
+    for (const message of funders?.errors ?? []) toast.show("error", message);
+  }, [funders, toast]);
 
   // A later page's failure toasts once, as the original's.
   useEffect(() => {
@@ -183,7 +196,7 @@ export function EoiList({
               id="eoi-list-funder"
               label={t.funder}
               emptyText="No funders available"
-              options={view.funders}
+              options={funders?.options ?? NO_FUNDERS}
               value={filters.funder}
               onChange={(funder) => patch({ funder })}
             />,
@@ -274,8 +287,14 @@ export function EoiList({
     [
       [t.createdBy, row.createdBy],
       [t.department, row.department],
-      [t.createdOn, row.created && dateDisplay(row.created, format)],
-      [t.updatedOn, row.updated && dateDisplay(row.updated, format)],
+      [
+        t.createdOn,
+        row.created && functions.format.dateDisplay(row.created, format),
+      ],
+      [
+        t.updatedOn,
+        row.updated && functions.format.dateDisplay(row.updated, format),
+      ],
     ].filter((m): m is [string, string] => !!m[1]);
 
   return (
@@ -311,7 +330,7 @@ export function EoiList({
                 const el = e.currentTarget;
                 if (
                   el.scrollHeight - el.scrollTop - el.clientHeight <
-                  LOAD_MORE_PX
+                  constants.paging.loadMorePx
                 )
                   more();
               }}

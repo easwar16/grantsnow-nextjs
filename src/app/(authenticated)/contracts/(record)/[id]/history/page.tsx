@@ -7,9 +7,9 @@ import { historyView } from "@/server/record/objects/history";
 import { contractId } from "@/features/modules/contracts/schema";
 import { ObjectHistory } from "@/features/record/objects/object-history";
 import { State } from "@/components/feedback/state";
-import { publicError } from "@/lib/errors";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/feedback/skeleton";
+import { functions } from "@/lib/functions";
 
 export const metadata = { title: "Contract History" };
 export default async function ContractHistory({
@@ -38,7 +38,7 @@ async function HistoryContent({ id }: { id: string }) {
     contractHistoryHost(id).then(historyView),
   ]).then(
     ([contract, view]) => ({ contract, view }),
-    (error: unknown) => ({ failure: publicError(error) }),
+    (error: unknown) => ({ failure: functions.errors.publicError(error) }),
   );
   if ("failure" in result) {
     const failure = result.failure;

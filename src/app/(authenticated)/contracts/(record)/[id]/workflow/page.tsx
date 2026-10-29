@@ -6,7 +6,7 @@ import { contractId } from "@/features/modules/contracts/schema";
 import { ApprovalWorkflow } from "@/features/record/approvals/approval-workflow";
 import { State } from "@/components/feedback/state";
 import { Skeleton } from "@/components/feedback/skeleton";
-import { publicError } from "@/lib/errors";
+import { functions } from "@/lib/functions";
 
 export const metadata = { title: "Contract Workflow" };
 
@@ -37,7 +37,7 @@ async function WorkflowContent({ id }: { id: string }) {
     .then(workflowView)
     .then(
       (view) => ({ view }),
-      (error: unknown) => ({ failure: publicError(error) }),
+      (error: unknown) => ({ failure: functions.errors.publicError(error) }),
     );
   if ("failure" in result) {
     const { failure } = result;

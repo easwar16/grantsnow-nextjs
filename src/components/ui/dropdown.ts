@@ -23,7 +23,7 @@ const T = useCombobox.stateChangeTypes;
 
 /**
  * Places an open dropdown panel as a fixed overlay on its field (GN-Angular's CDK connected overlay): under the field
- * with a 2px gap, above it when there is more room there, at least as wide as the field. Fixed panels take no space
+ * with a 2px gap, above it when there is more room there, as wide as the field. Fixed panels take no space
  * in their container, so opening one never scrolls or reflows the form around it. Returns the panel's style.
  */
 export function useDropdownPanel(
@@ -49,7 +49,8 @@ export function useDropdownPanel(
         padding: MARGIN,
         // The panel's CSS caps its height at the lesser of its own limit and this room.
         apply: ({ rects, availableHeight, elements }) => {
-          elements.floating.style.minWidth = `${rects.reference.width}px`;
+          // Exactly the field's width: sized to its rows, a windowed list would change width as it scrolls.
+          elements.floating.style.width = `${rects.reference.width}px`;
           elements.floating.style.setProperty(
             "--panel-room",
             `${Math.max(0, availableHeight)}px`,
@@ -67,12 +68,14 @@ const measure = (line: Element) =>
 
 /**
  * Renders only the visible lines of an option list (people lists run to thousands). Each line carries
- * `data-index` and `ref={window.measure}`; `style` keeps the list's height as padding around them.
+ * `data-index` and `ref={window.measure}`; `style` keeps the list's height as padding around them. `panel` is the
+ * scroll box around the list, never the list itself: a box is never shorter than its padding, so a list scrolling its
+ * own padding grows to its full height and the window draws every line.
  */
-export function useOptionWindow(count: number, list: HTMLUListElement | null) {
+export function useOptionWindow(count: number, panel: HTMLElement | null) {
   const v = useVirtualizer({
     count,
-    getScrollElement: () => list,
+    getScrollElement: () => panel,
     estimateSize: () => ROW,
     paddingStart: PAD,
     paddingEnd: PAD,

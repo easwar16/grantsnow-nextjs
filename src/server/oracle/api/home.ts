@@ -1,12 +1,13 @@
 import "server-only";
 import { read, write, type PageParams } from "../client";
-import { TTL } from "../cache";
+
 import type { Operation } from "../connection";
+import { serverConstants } from "@/server/constants";
 
 /** One module's announcements (legacy getSharedAnnouncements `module_name`: DASHBOARD, OPPORTUNITIES). */
 export const announcements = read<{ module: string }, unknown>({
   op: "getSharedAnnouncements",
-  ttl: TTL.access,
+  ttl: serverConstants.ttl.access,
   headers: (p) => ({ module_name: p.module }),
 });
 /** Whether the user may open Ethics rows (legacy `/dynamicForms/checkApplApprAccess`). */
@@ -17,16 +18,16 @@ export const ethicsAccess = read<void, unknown>({
 export const kpiStatistics = read<{ reports: string; orgId?: string }, unknown>(
   {
     op: "getSharedGetKpiStatistics",
-    ttl: TTL.figures,
-    stale: TTL.figuresStale,
+    ttl: serverConstants.ttl.figures,
+    stale: serverConstants.ttl.figuresStale,
     headers: (p) => ({ report_name: p.reports, p_org_id: p.orgId }),
   },
 );
 /** A dynamic chart's data (legacy getDynamicCharts `report_name` = infolet id). */
 export const dynamicChart = read<{ report: string; orgId?: string }, unknown>({
   op: "getSharedGetDynamicCharts",
-  ttl: TTL.figures,
-  stale: TTL.figuresStale,
+  ttl: serverConstants.ttl.figures,
+  stale: serverConstants.ttl.figuresStale,
   headers: (p) => ({ report_name: p.report, p_org_id: p.orgId }),
 });
 
@@ -79,8 +80,8 @@ export const widget = Object.fromEntries(
         month: p.month,
       }),
       pages: "page",
-      ttl: TTL.figures,
-      stale: TTL.figuresStale,
+      ttl: serverConstants.ttl.figures,
+      stale: serverConstants.ttl.figuresStale,
     }),
   ]),
 ) as Record<WidgetOperation, ReturnType<typeof read<WidgetParams, unknown>>>;
@@ -89,8 +90,8 @@ export const isWidgetOperation = (op: Operation): op is WidgetOperation =>
 /** The gauge's parameters (getWidgetParameters): the token goes as `p_token`; the widget names its other headers. */
 export const gauge = read<{ headers: Record<string, string | undefined> }>({
   op: "getSharedGetWidgetParameters",
-  ttl: TTL.figures,
-  stale: TTL.figuresStale,
+  ttl: serverConstants.ttl.figures,
+  stale: serverConstants.ttl.figuresStale,
   tokenHeader: "p_token",
   headers: (p) => p.headers,
 });

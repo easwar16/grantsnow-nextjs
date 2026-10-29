@@ -1,7 +1,7 @@
-import { idPart } from "@/lib/ids";
 import type { Kpi } from "@/server/modules/home/kpis";
 import { sparklineSegments } from "../sparkline";
 import { Icon } from "@/components/ui/icon";
+import { functions } from "@/lib/functions";
 export function KpiStrip({ items, error }: { items: Kpi[]; error?: string }) {
   if (error)
     return (
@@ -29,7 +29,7 @@ export function KpiStrip({ items, error }: { items: Kpi[]; error?: string }) {
           k.trendChart?.data.map((r) => r.value) ?? [],
         );
         return (
-          <article key={k.id} id={`kpi-${idPart(k.id)}`}>
+          <article key={k.id} id={`kpi-${functions.ids.idPart(k.id)}`}>
             <div className="kpi-title">
               <strong>{k.title}</strong>
               {segments.length > 0 && (

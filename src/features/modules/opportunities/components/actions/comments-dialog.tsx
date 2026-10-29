@@ -1,7 +1,8 @@
 "use client";
-import { dateDisplay, type FormatSettings } from "@/lib/format";
+import { type FormatSettings } from "@/lib/format";
 import { ActionDialog } from "../../../../../components/dialog/action-dialog";
 import styles from "../../../../../components/dialog/dialog.module.css";
+import { functions } from "@/lib/functions";
 /** Initials for the comment's avatar: first and last name (getShareCommentInitials). */
 export function initials(name: string | undefined) {
   const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
@@ -15,7 +16,7 @@ function stamp(value: string | undefined, format?: FormatSettings) {
   if (!at || Number.isNaN(at.getTime())) return value ?? "";
   const pad = (n: number) => String(n).padStart(2, "0");
   const day = `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`;
-  return `${dateDisplay(day, format)}, ${pad(at.getHours())}:${pad(at.getMinutes())}`;
+  return `${functions.format.dateDisplay(day, format)}, ${pad(at.getHours())}:${pad(at.getMinutes())}`;
 }
 /** The Shared tab's Comments: the one comment the opportunity was shared with (8516 dropped the history endpoint). */
 export function CommentsDialog({

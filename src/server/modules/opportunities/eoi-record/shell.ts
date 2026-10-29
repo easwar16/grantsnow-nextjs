@@ -1,10 +1,6 @@
 import "server-only";
-import {
-  label,
-  resourceVisible,
-  type Resources,
-} from "@/server/platform/configuration/resources";
-import { dateDisplay, type FormatSettings } from "@/lib/format";
+import { type Resources } from "@/server/platform/configuration/resources";
+import { type FormatSettings } from "@/lib/format";
 import type {
   RecordShellModel,
   RecordTabLink,
@@ -18,10 +14,12 @@ import {
   pageOf,
   type EoiTab,
 } from "../../../../shared/opportunities/eoi-record";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 const BUNDLE = "opportunities-eoi";
 const textOf =
   (rows: Resources) => (group: string, key: string, fallback: string) =>
-    label(rows, BUNDLE, group, key, fallback);
+    serverFunctions.resources.label(rows, BUNDLE, group, key, fallback);
 /** A tab's name: the bundle's `page-name.<page>`, else the original's fallback. */
 export const tabName = (rows: Resources, tab: EoiTab) =>
   textOf(rows)("page-name", pageOf(tab), EOI_TAB_DEFS[tab].name);
@@ -45,7 +43,12 @@ function labels(rows: Resources): RecordShellModel["labels"] {
     saveDraft: t("labels", "eoi-save-as-draft", "Save as draft"),
     cancelEdit: "Cancel Edit",
     comments: t("button-labels", "comments", "Comments"),
-    audit: resourceVisible(rows, BUNDLE, "button-labels", "openAuditTrail")
+    audit: serverFunctions.resources.resourceVisible(
+      rows,
+      BUNDLE,
+      "button-labels",
+      "openAuditTrail",
+    )
       ? t("button-labels", "openAuditTrail", "Open Audit Trail")
       : null,
     auditTitle: t("header-labels", "audit-trail", "Audit Trail"),
@@ -64,7 +67,8 @@ export function recordShell(
   format: FormatSettings | undefined,
 ): RecordShellModel {
   const t = textOf(rows);
-  const shown = (key: string) => resourceVisible(rows, BUNDLE, "labels", key);
+  const shown = (key: string) =>
+    serverFunctions.resources.resourceVisible(rows, BUNDLE, "labels", key);
   const r = context.request;
   const converts = headerConverts(r.status_code, context.access);
   const panel: RecordShellModel["panel"] = [];
@@ -92,7 +96,7 @@ export function recordShell(
     panel.push({
       key: "created-on",
       label: t("labels", "eoi-created-on", "Created on"),
-      value: dateDisplay(r.creation_date, format),
+      value: functions.format.dateDisplay(r.creation_date, format),
     });
   return {
     mode: "record",

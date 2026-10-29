@@ -1,10 +1,10 @@
 "use client";
-import { idPart } from "@/lib/ids";
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/feedback/skeleton";
-import type { FormatSettings } from "@/lib/format";
+import { type FormatSettings } from "@/lib/format";
 import type { AttentionRow } from "../types";
 import type { AccessDeniedText } from "./row-link";
+import { functions } from "@/lib/functions";
 
 // D19: FullCalendar is its own chunk, fetched the first time a widget opens Calendar View; it measures the DOM, so no SSR.
 const DeadlineFullCalendar = dynamic(() => import("./calendar/full-calendar"), {
@@ -32,9 +32,15 @@ export function DeadlineCalendar({
   denied: AccessDeniedText;
 }) {
   return (
-    <div id={`calendar-${idPart(widgetId)}`} className="deadline-calendar">
+    <div
+      id={`calendar-${functions.ids.idPart(widgetId)}`}
+      className="deadline-calendar"
+    >
       {hasMore && (
-        <p id={`calendar-${idPart(widgetId)}-notice`} className="notice">
+        <p
+          id={`calendar-${functions.ids.idPart(widgetId)}-notice`}
+          className="notice"
+        >
           Calendar shows the loaded records. Load further records in List View
           to view their deadlines.
         </p>

@@ -1,4 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
+import { serverFunctions } from "@/server/functions";
 const { oracle, session, user } = vi.hoisted(() => ({
   oracle: vi.fn(),
   session: { token: "token-a" },
@@ -15,7 +16,6 @@ import {
   ethicsAccess,
   grantsEthicsAccess,
 } from "@/server/modules/home/ethics-access";
-import { orgDepth } from "@/server/platform/configuration/service";
 import {
   monthOptions,
   pruneMonths,
@@ -62,13 +62,13 @@ it("loops the announcement strip at both ends", () => {
 it("indents orgs by depth with spaces an <option> keeps, and degrades bad depths to none", () => {
   expect(indent(2)).toBe("  ");
   expect(indent(-1)).toBe("");
-  expect(orgDepth(3)).toBe(3);
-  expect(orgDepth("2")).toBe(2);
-  expect(orgDepth(null)).toBe(0);
-  expect(orgDepth("")).toBe(0);
-  expect(orgDepth("x")).toBe(0);
-  expect(orgDepth(1.5)).toBe(0);
-  expect(orgDepth(500)).toBe(20);
+  expect(serverFunctions.organizations.orgDepth(3)).toBe(3);
+  expect(serverFunctions.organizations.orgDepth("2")).toBe(2);
+  expect(serverFunctions.organizations.orgDepth(null)).toBe(0);
+  expect(serverFunctions.organizations.orgDepth("")).toBe(0);
+  expect(serverFunctions.organizations.orgDepth("x")).toBe(0);
+  expect(serverFunctions.organizations.orgDepth(1.5)).toBe(0);
+  expect(serverFunctions.organizations.orgDepth(500)).toBe(20);
 });
 it("grants Ethics access only on true, 'true' or 'Y'", () => {
   expect(grantsEthicsAccess({ hasAccess: true })).toBe(true);

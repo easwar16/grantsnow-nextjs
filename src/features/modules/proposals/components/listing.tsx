@@ -9,7 +9,7 @@ import { State } from "@/components/feedback/state";
 import { RecordCard } from "./record-card";
 import type { ListingChoices } from "../lookups";
 import { LatestRequest } from "@/lib/store/latest-request";
-import { proposals, session } from "@/lib/api";
+import { proposals, session, useApi } from "@/lib/api";
 import { FilterPanel } from "@/components/ui/filter-panel";
 import { Select, type SelectOption } from "@/components/ui/select";
 import styles from "./listing.module.css";
@@ -55,26 +55,50 @@ function FormSelect({
     </span>
   );
 }
+const NONE: ListingChoices = {
+  statuses: [],
+  categories: [],
+  investigators: [],
+  assignees: [],
+  departments: [],
+  sponsors: [],
+  activities: [],
+  proposalTypes: [],
+  sorts: [],
+  errors: [],
+};
 export function Listing({
   initial,
   columns,
   filters,
   initialQuery,
-  choices,
   format,
 }: {
-  initial: Result;
+  /** The URL query's first page, streaming from the server. */
+  initial: Promise<Result>;
   columns: Column[];
   filters: FilterLabels;
   initialQuery: ProposalQuery;
-  choices: ListingChoices;
   format?: FormatSettings;
 }) {
+  // Each choice group fills its filters as it arrives; a slow lookup never holds the others.
+  const groups = [
+    useApi(proposals.choices, "codes").data,
+    useApi(proposals.choices, "people").data,
+    useApi(proposals.choices, "sponsors").data,
+    useApi(proposals.choices, "departments").data,
+    useApi(proposals.choices, "sorts").data,
+  ];
+  const choices: ListingChoices = {
+    ...NONE,
+    ...Object.assign({}, ...groups),
+    errors: groups.flatMap((g) => g?.errors ?? []),
+  };
   const router = useRouter(),
     path = usePathname(),
     params = useSearchParams(),
     queryKey = params.toString();
-  const [result, setResult] = useState(initial),
+  const [result, setResult] = useState<Result | null>(null),
     [loading, setLoading] = useState(false),
     [loadingMore, setLoadingMore] = useState(false),
     [moreError, setMoreError] = useState(""),
@@ -90,6 +114,12 @@ export function Listing({
   } catch {
     invalid = true;
   }
+  // The server's page lands only while the query it was rendered for is still the one shown.
+  useEffect(() => {
+    void initial.then((r) => {
+      if (!leftInitialQuery.current) setResult(r);
+    });
+  }, [initial]);
   useEffect(() => {
     if (
       !leftInitialQuery.current &&
@@ -162,9 +192,9 @@ export function Listing({
     }
   }
   const stale =
-    result.ok && serializeQuery(result.data.query) !== serializeQuery(query);
+    result?.ok && serializeQuery(result.data.query) !== serializeQuery(query);
   const current =
-    result.ok && !stale && !loading && !invalid ? result.data : undefined;
+    result?.ok && !stale && !loading && !invalid ? result.data : undefined;
   async function loadMore() {
     if (!current?.hasMore || loadingMore || loading) return;
     const request = latest.current.begin();
@@ -462,7 +492,7 @@ export function Listing({
               message="Clear filters to recover."
               code="BAD_REQUEST"
             />
-          ) : loading || stale ? (
+          ) : !result || loading || stale ? (
             <RecordSkeleton variant="proposal" label="Loading proposals" />
           ) : !result.ok ? (
             <State

@@ -4,11 +4,6 @@ import { cache } from "react";
 import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
 import {
-  finalizedOf,
-  objectAccessOf,
-  requireModule,
-} from "@/server/platform/permissions";
-import {
   eoi,
   people as peopleApi,
   roles as recordRoles,
@@ -17,12 +12,10 @@ import { fixtureMode } from "@/server/platform/configuration/environment";
 import { dashboardRoles } from "@/server/platform/configuration/service";
 import { canCreate } from "@/features/modules/opportunities/display";
 import { AppError } from "@/lib/errors";
-import { label, resources } from "@/server/platform/configuration/resources";
+import { resources } from "@/server/platform/configuration/resources";
 import { displayFormat } from "@/server/platform/configuration/formatting";
-import { dateDisplay } from "@/lib/format";
 import type { SummaryActionContext } from "@/features/modules/opportunities/eoi/types";
 import { afterCheck, opportunityGlobals } from "./gates";
-import { pageAccess } from "@/server/platform/permissions";
 import {
   EDITABLE_STATUSES,
   ATTACHMENT_STATUSES,
@@ -42,6 +35,8 @@ import {
 } from "./eoi-record/opportunity";
 import type { AttachmentHost } from "@/server/record/attachments/attachments";
 import { orNull, recordId, recordRoleRows } from "@/server/record/shared";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 export { eoiTabs, type EoiTab };
 export const eoiRecordIdentity = z.object({
   id: recordId,
@@ -87,11 +82,11 @@ export const eoiRecordContext = cache(async (id: string) => {
     throw new AppError("BAD_REQUEST", "Invalid application identity.", 400);
   const { session, user } = await authenticate();
   // "opportunities-eoi" is an RB bundle, not a module_access id: VBCS findModuleAccess derives it from the group.
-  requireModule(user, "opportunities-group");
+  serverFunctions.permissions.requireModule(user, "opportunities-group");
   // The person list is reference data, so it loads alongside the access check; no record data is read before it.
   const staffRead = orNull(peopleApi.all());
   staffRead.catch(() => undefined);
-  const access = objectAccessOf(
+  const access = serverFunctions.permissions.objectAccessOf(
     recordRoleRows.parse(
       // Every tab of the record reads these; held as briefly as the dashboard roles (VBCS reads them once per record).
       await recordRoles.record({ objectType: EOI_MODULE, objectId: id }),
@@ -127,7 +122,10 @@ export const eoiRecordContext = cache(async (id: string) => {
     ),
     staffRead,
   ]);
-  const finalized = finalizedOf(access.pages, locks ?? []);
+  const finalized = serverFunctions.permissions.finalizedOf(
+    access.pages,
+    locks ?? [],
+  );
   return {
     session,
     user,
@@ -284,10 +282,12 @@ export const newApplicationContext = cache(async (opportunityId: string) => {
   if (!recordId.safeParse(opportunityId).success)
     throw new AppError("BAD_REQUEST", "Invalid opportunity identity.", 400);
   const { session, user } = await authenticate();
-  requireModule(user, "opportunities-finder");
+  serverFunctions.permissions.requireModule(user, "opportunities-finder");
   const rolesRead = dashboardRoles();
   const check = rolesRead.then((roles) => {
-    if (!pageAccess(roles, "apply-opportunities").read)
+    if (
+      !serverFunctions.permissions.pageAccess(roles, "apply-opportunities").read
+    )
       throw new AppError(
         "FORBIDDEN",
         "This action is not enabled for your account.",
@@ -320,7 +320,7 @@ export async function opportunityDetail(opportunityId: string) {
   if (!recordId.safeParse(opportunityId).success)
     throw new AppError("BAD_REQUEST", "Invalid opportunity identity.", 400);
   const { user } = await authenticate();
-  requireModule(user, "opportunities-finder");
+  serverFunctions.permissions.requireModule(user, "opportunities-finder");
   const [opportunity, rows, format, roles, deadlineWarningDays] =
     await Promise.all([
       readOpportunityRecord(Number(opportunityId)),
@@ -332,12 +332,20 @@ export async function opportunityDetail(opportunityId: string) {
   if (!opportunity)
     throw new AppError("BAD_REQUEST", "The opportunity was not found.", 404);
   const t = (group: string, key: string, fallback: string) =>
-    label(rows, "opportunities-eoi", group, key, fallback);
+    serverFunctions.resources.label(
+      rows,
+      "opportunities-eoi",
+      group,
+      key,
+      fallback,
+    );
   const closing = opportunity.closing_date ?? undefined;
   const actionContext: SummaryActionContext = {
     opportunityId,
     closingAt: closing,
-    closingDisplay: closing ? dateDisplay(closing, format) : undefined,
+    closingDisplay: closing
+      ? functions.format.dateDisplay(closing, format)
+      : undefined,
     deadlineWarningDays,
     texts: {
       deadlineTitle: t(

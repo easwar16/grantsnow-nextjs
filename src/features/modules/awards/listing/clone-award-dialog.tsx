@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useEffectEvent, useState } from "react";
 import { Icon } from "@/components/ui/icon";
-import { idPart } from "@/lib/ids";
 import { Skeleton } from "@/components/feedback/skeleton";
 import { useToast } from "@/components/feedback/toast";
 import { ActionDialog } from "@/components/dialog/action-dialog";
@@ -13,6 +12,7 @@ import { useInFlight } from "@/lib/hooks/use-in-flight";
 import { awards } from "@/lib/api";
 import { toggleClonePart, type CloneSetup } from "./actions";
 import styles from "@/components/dialog/dialog.module.css";
+import { functions } from "@/lib/functions";
 
 /** Legacy dialogCopyAward: clone an award with the chosen parts ("Entire Award" ticks them all). */
 export function CloneAwardDialog({
@@ -95,7 +95,7 @@ export function CloneAwardDialog({
           {parts.map((p) => (
             <label key={p.value} className={styles.radio}>
               <input
-                id={`${id}-part-${idPart(p.value)}`}
+                id={`${id}-part-${functions.ids.idPart(p.value)}`}
                 type="checkbox"
                 checked={chosen.includes(p.value)}
                 disabled={saving || p.fixed}

@@ -98,6 +98,10 @@ const list = usePagedApi(eoi.list, filters); // rows, last, hasMore, total, load
   - `loadMore` appends the next page.
   - A filter change starts again from page one.
   - The route answers `{ rows, hasMore }` or whatever its `page()` mapper reads.
+  - **The server's first page streams** (2026-10-29). The page passes `settle(listX(filters))` without awaiting
+    it, and the list hands it to `usePagedApi(ep, params, { initial })`. It answers the first request for the
+    parameters it was rendered for, once. A failure shows as the list's error, and Retry reads the route. A page
+    that is already resolved still works as `initial`.
 - **Paged lists** are held per parameters, so a tab or filter already seen shows at once and refreshes in the background. New parameters keep the previous rows on screen (`stale`: dim them with `aria-busy` and make them `inert`) until their first page arrives. Show a skeleton only when nothing is held (`loading && !last`) or for the next page (`loadingMore`), never for a background refresh. `retry()` asks a failed next page again.
 - **After a write,** call `retry()` on the reads it changed, or `useForget()("/path")` to drop every held page of a listing. To show a saved change wherever a list is held without re-reading it, rewrite the held rows with the store's `update(prefix, change)` (the finder's `patchHeldRow`).
 - **The signed-in user** (name, organisation, module access; never tokens or `legal_id`) is held in the shell (`useCurrentUser()`). Read it from there; never pass it to routes, which take identity from the session.

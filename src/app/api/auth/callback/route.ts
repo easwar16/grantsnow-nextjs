@@ -6,9 +6,9 @@ import {
   oidcSettings,
 } from "@/server/platform/configuration/environment";
 import { storage } from "@/server/identity/session/storage";
-import { trustedUsername, safeReturn } from "@/lib/security";
 import { oracle } from "@/server/oracle/connection";
 import { mapBootstrap } from "@/server/identity/session/contracts";
+import { functions } from "@/lib/functions";
 export async function GET(request: Request) {
   const store = await storage(),
     transaction = store.transaction;
@@ -40,7 +40,10 @@ export async function GET(request: Request) {
       claims.exp * 1000 <= Date.now()
     )
       throw new Error("Invalid identity lifetime.");
-    const username = trustedUsername(claims, oidcSettings().usernameClaim);
+    const username = functions.security.trustedUsername(
+      claims,
+      oidcSettings().usernameClaim,
+    );
     const b = mapBootstrap(await oracle("getSessionLogin", { username }));
     backendToken = b.token;
     store.app = {
@@ -57,7 +60,7 @@ export async function GET(request: Request) {
       b.user.landing === "PROPOSALS" &&
       b.user.modules.PROPOSALS
         ? "/proposals"
-        : safeReturn(transaction.returnTo);
+        : functions.security.safeReturn(transaction.returnTo);
     return Response.redirect(new URL(destination, appOrigin()), 303);
   } catch {
     store.destroy();

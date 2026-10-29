@@ -1,5 +1,6 @@
-import { calendarDate, moneyDisplay, type FormatSettings } from "@/lib/format";
+import { type FormatSettings } from "@/lib/format";
 import type { AttentionRow } from "../../types";
+import { functions } from "@/lib/functions";
 
 /** Legacy `calendarProvider` codes (fp-proposals-calendar); one sidebar entry and colour each. */
 export type CalendarProvider =
@@ -94,7 +95,7 @@ export function eventTitle(widgetId: string, row: AttentionRow) {
 
 /** The row's calendar day as YYYY-MM-DD, read from the string so a date-only value never shifts zone. */
 export function eventDay(value?: string) {
-  const parts = calendarDate(value);
+  const parts = functions.format.calendarDate(value);
   if (!parts) return undefined;
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}`;
@@ -158,7 +159,7 @@ export function rowFields(row: AttentionRow, format?: FormatSettings) {
       value:
         row.value == null
           ? undefined
-          : moneyDisplay(row.value, row.currency, format),
+          : functions.format.moneyDisplay(row.value, row.currency, format),
     },
   ];
 }

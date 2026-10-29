@@ -11,6 +11,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Icon } from "@/components/ui/icon";
 import { rise } from "@/lib/motion";
 import styles from "./toast.module.css";
+import { constants } from "@/lib/constants";
 export type ToastSeverity = "success" | "error" | "warning" | "info";
 interface Toast {
   id: number;
@@ -26,7 +27,6 @@ type Show = (
   persist?: boolean,
 ) => void;
 const ToastContext = createContext<Show>(() => {});
-const AUTO_DISMISS_MS = 5000;
 /** GN-Angular's toast stack: errors stay until dismissed (the original's persistent error toast), others close after 5 s. */
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]),
@@ -49,7 +49,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           ? all
           : [...all, { id, severity, summary, detail }],
       );
-      if (!persist) setTimeout(() => dismiss(id), AUTO_DISMISS_MS);
+      if (!persist)
+        setTimeout(() => dismiss(id), constants.timing.toastDismissMs);
     },
     [dismiss],
   );

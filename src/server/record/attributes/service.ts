@@ -1,15 +1,9 @@
 import "server-only";
 import { z } from "zod";
 import { attributes } from "@/server/oracle/api";
-import {
-  label,
-  resources,
-  resourceVisible,
-} from "@/server/platform/configuration/resources";
+import { resources } from "@/server/platform/configuration/resources";
 import { authorizeForm } from "@/server/record/dynamic-form/access";
 import { formGlobals } from "@/server/record/dynamic-form/globals";
-import { sanitizeHtml } from "@/server/platform/sanitize";
-import { early } from "@/server/platform/async";
 import { AppError } from "@/lib/errors";
 import {
   ATTRIBUTE_HOSTS,
@@ -19,6 +13,7 @@ import {
   type AttributeText,
   type AttributesView,
 } from "@/features/record/attributes/model";
+import { serverFunctions } from "@/server/functions";
 const recordId = z.string().regex(/^[1-9]\d{0,14}$/);
 const query = z
   .object({
@@ -90,7 +85,7 @@ const field = z.object({
   colspan: z.coerce.number().int().nullish().catch(null),
   attributeName: name,
   helperText: text.transform((v) => {
-    const html = sanitizeHtml(v ?? "").trim();
+    const html = serverFunctions.sanitize.sanitizeHtml(v ?? "").trim();
     return html === "" ? null : html;
   }),
   regexValidation: text,
@@ -159,11 +154,18 @@ export function attributesQuery(q: URLSearchParams): Query {
 /** GET: the host's attribute fields, after its access rule; none are read while `labels.show-attributes` is hidden. */
 export async function loadAttributes(q: Query): Promise<AttributesView> {
   const host = HOSTS[q.host];
-  const labels = early(resources()),
-    settings = early(formGlobals());
+  const labels = serverFunctions.async.early(resources()),
+    settings = serverFunctions.async.early(formGlobals());
   await host.authorize(q);
   const rows = await labels;
-  if (!resourceVisible(rows, host.bundle, "labels", "show-attributes"))
+  if (
+    !serverFunctions.resources.resourceVisible(
+      rows,
+      host.bundle,
+      "labels",
+      "show-attributes",
+    )
+  )
     return { visible: false };
   const [raw, globals] = await Promise.all([
     attributes.fields({
@@ -179,7 +181,13 @@ export async function loadAttributes(q: Query): Promise<AttributesView> {
     texts: Object.fromEntries(
       Object.entries(TEXTS).map(([k, [group, key, fallback]]) => [
         k,
-        label(rows, host.bundle, group, key, fallback),
+        serverFunctions.resources.label(
+          rows,
+          host.bundle,
+          group,
+          key,
+          fallback,
+        ),
       ]),
     ) as Record<AttributeText, string>,
     decimals: globals.decimals,

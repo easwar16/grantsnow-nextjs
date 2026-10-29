@@ -3,7 +3,6 @@ import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { attachments, useApi } from "@/lib/api";
 import { useStoreApi } from "@/lib/store/app-store";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
-import { idPart } from "@/lib/ids";
 import { Icon } from "@/components/ui/icon";
 import { InsideField } from "@/components/ui/inside-field";
 import { Skeleton } from "@/components/feedback/skeleton";
@@ -21,6 +20,7 @@ import {
 } from "./model";
 import { saveBlob } from "@/features/record/dynamic-form/api";
 import styles from "./attachments.module.css";
+import { functions } from "@/lib/functions";
 
 type Labels = AttachmentsView["labels"];
 
@@ -271,7 +271,7 @@ const FolderBranch = memo(function FolderBranch({
   const [open, setOpen] = useState(
     node.files.length > 0 || node.folders.length > 0,
   );
-  const key = `${id}-folder-${idPart(node.path.replaceAll("~~", "-"))}`;
+  const key = `${id}-folder-${functions.ids.idPart(node.path.replaceAll("~~", "-"))}`;
   return (
     <li id={key} className={styles.branch}>
       <div className={styles.row}>

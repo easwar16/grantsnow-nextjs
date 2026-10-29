@@ -2,7 +2,6 @@
 import { DateInput } from "@/components/ui/date-input";
 import { Icon } from "@/components/ui/icon";
 import { Select } from "@/components/ui/select";
-import { dateDisplay } from "@/lib/format";
 import { isGridEditable, sectionKey } from "./engine";
 import type { DynamicFormModel } from "./model";
 import type {
@@ -13,6 +12,7 @@ import type {
 } from "./models";
 import { NumberInput } from "./dyn-field";
 import styles from "./dynamic-form.module.css";
+import { functions } from "@/lib/functions";
 /** What a cell shows outside edit mode: an LOV's option label, a date as configured, else the value. */
 function cellText(field: DynField, value: FieldValue): string {
   if (value === null || value === undefined || value === "") return "";
@@ -22,7 +22,7 @@ function cellText(field: DynField, value: FieldValue): string {
         ?.optionValue ?? String(value)
     );
   if (field.fieldType === "DATE" && typeof value === "string")
-    return dateDisplay(value) ?? value;
+    return functions.format.dateDisplay(value) ?? value;
   return Array.isArray(value) ? value.join(", ") : String(value);
 }
 /**

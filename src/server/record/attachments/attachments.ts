@@ -18,9 +18,7 @@ import {
 } from "@/server/record/attachments/service";
 import { formGlobals } from "@/server/record/dynamic-form/globals";
 import {
-  label,
   resources,
-  resourceVisible,
   type Resources,
 } from "@/server/platform/configuration/resources";
 import { displayFormat } from "@/server/platform/configuration/formatting";
@@ -42,10 +40,10 @@ import {
   type AttachmentList,
   type AttachmentsView,
 } from "@/features/record/attachments/model";
-import { dateTimeDisplay } from "@/lib/format";
 import { AppError } from "@/lib/errors";
-import { early } from "@/server/platform/async";
 import { mimeDescription, previewable } from "./mime-types";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 
 /**
  * The shared attachments panel's server side (legacy `object-attachments`, 8788): records in ORDS
@@ -205,23 +203,39 @@ export function attachmentLabels(rows: Resources, bundle: string) {
       const mapped = BUNDLE_KEYS[bundle]?.[name];
       if (mapped === null) return [name, fallback];
       const [g, k] = mapped ?? [group, key];
-      return [name, label(rows, bundle, g, k, fallback)];
+      return [
+        name,
+        serverFunctions.resources.label(rows, bundle, g, k, fallback),
+      ];
     }),
   ) as Record<AttachmentLabel, string>;
 }
 /** The bundle's gates: folders, links and the confidential choice show only on an explicit 'Y' row. */
 function gates(rows: Resources, bundle: string) {
   return {
-    folders: resourceVisible(rows, bundle, "tree-nodes", "attachments-nodes")
-      ? parseFolders(label(rows, bundle, "tree-nodes", "attachments-nodes", ""))
+    folders: serverFunctions.resources.resourceVisible(
+      rows,
+      bundle,
+      "tree-nodes",
+      "attachments-nodes",
+    )
+      ? parseFolders(
+          serverFunctions.resources.label(
+            rows,
+            bundle,
+            "tree-nodes",
+            "attachments-nodes",
+            "",
+          ),
+        )
       : [],
-    showLinks: resourceVisible(
+    showLinks: serverFunctions.resources.resourceVisible(
       rows,
       bundle,
       "header-labels",
       "attachment-links-header",
     ),
-    allowConfidential: resourceVisible(
+    allowConfidential: serverFunctions.resources.resourceVisible(
       rows,
       bundle,
       "labels",
@@ -294,7 +308,7 @@ export async function listAttachments(
       uploadedBy: a.created_by_name,
       // The fragment shows DEFAULT_DATE_FORMAT with the time.
       uploadedOn: a.creation_date
-        ? dateTimeDisplay(a.creation_date, format)
+        ? functions.format.dateTimeDisplay(a.creation_date, format)
         : "",
       previewType: previewable(a.document_type) ? a.document_type : null,
       downloadName: withExtension(a.file_name, a.file_location),
@@ -352,8 +366,8 @@ export async function uploadAttachment(
   const fields = uploadFields.safeParse(raw);
   if (!fields.success)
     throw new AppError("BAD_REQUEST", "Invalid upload.", 400);
-  const settings = early(formGlobals()),
-    labelRows = early(resources());
+  const settings = serverFunctions.async.early(formGlobals()),
+    labelRows = serverFunctions.async.early(resources());
   const host = await attachmentHost(q, "edit");
   requireStorage();
   const globals = await settings;

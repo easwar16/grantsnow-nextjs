@@ -1,10 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
-  nameChoices,
-  objectDateChoices,
-  statusChoices,
-} from "@/server/platform/configuration/choices";
-import {
   eoiListGates,
   eoiOracleQuery,
   eoiWhereClause,
@@ -17,14 +12,14 @@ import {
   parseEoiFilters,
   serializeEoiFilters,
 } from "@/features/modules/opportunities/eoi-list/schema";
-import { mergeResourceDefaults } from "@/server/platform/configuration/resources";
 import { mockOracle } from "@/test-support/transport";
+import { serverFunctions } from "@/server/functions";
 
 const f = (change: Partial<typeof DEFAULT_EOI_FILTERS>) => ({
   ...DEFAULT_EOI_FILTERS,
   ...change,
 });
-const seeds = mergeResourceDefaults([]);
+const seeds = serverFunctions.resources.mergeResourceDefaults([]);
 const allGates = eoiListGates(seeds);
 
 it("sends no clause for All with no filters", () => {
@@ -143,7 +138,7 @@ it("gates fail closed when the bundle row is missing or not Y", () => {
   expect(allGates.funder).toBe(true);
   expect(allGates.statusList).toBe(true);
   const hidden = eoiListGates(
-    mergeResourceDefaults([
+    serverFunctions.resources.mergeResourceDefaults([
       {
         module_name: "OPPORTUNITIES-EOI",
         label_type: "labels",
@@ -215,7 +210,7 @@ it("rejects duplicate requests", () =>
 
 it("lists EOI_STATUS with All first and de-duplicates funders", () => {
   expect(
-    statusChoices(
+    serverFunctions.choices.statusChoices(
       {
         items: [
           {
@@ -234,7 +229,7 @@ it("lists EOI_STATUS with All first and de-duplicates funders", () => {
     { value: "IA", label: "Internally Approved" },
   ]);
   expect(
-    nameChoices(
+    serverFunctions.choices.nameChoices(
       {
         items: [{ value: "UKRI" }, { value: "UKRI" }, { value: "Wellcome" }],
       },
@@ -245,7 +240,7 @@ it("lists EOI_STATUS with All first and de-duplicates funders", () => {
     { value: "Wellcome", label: "Wellcome" },
   ]);
   expect(
-    objectDateChoices({
+    serverFunctions.choices.objectDateChoices({
       items: [
         { column_name: "creation_date", column_description: "Created On" },
         { column_name: 'x" OR 1=1', column_description: "Bad" },

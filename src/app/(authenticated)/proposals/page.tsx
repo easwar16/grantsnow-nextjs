@@ -1,17 +1,12 @@
 import { displayFormat } from "@/server/platform/configuration/formatting";
-import { listingChoices } from "@/server/modules/proposals/lookups";
 import { pageIdentity } from "@/server/identity/auth/page";
-import {
-  resources,
-  proposalColumns,
-  proposalFilters,
-} from "@/server/platform/configuration/resources";
+import { resources } from "@/server/platform/configuration/resources";
 import { listProposals } from "@/server/modules/proposals/service";
 import { parseQuery } from "@/features/modules/proposals/schemas";
 import { Listing } from "@/features/modules/proposals/components/listing";
-import { publicError } from "@/lib/errors";
-import { requireModule } from "@/server/platform/permissions";
 import { State } from "@/components/feedback/state";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 export const metadata = { title: "Proposals" };
 export default async function Proposals({
   searchParams,
@@ -20,7 +15,7 @@ export default async function Proposals({
 }) {
   const { user } = await pageIdentity("/proposals");
   try {
-    requireModule(user, "PROPOSALS");
+    serverFunctions.permissions.requireModule(user, "PROPOSALS");
   } catch {
     return (
       <State
@@ -45,27 +40,23 @@ export default async function Proposals({
       />
     );
   }
-  const rows = await resources();
-  const columns = proposalColumns(rows);
-  let initial;
-  try {
-    initial = { ok: true as const, data: await listProposals(query, columns) };
-  } catch (e) {
-    const error = publicError(e);
-    initial = {
-      ok: false as const,
-      error: { code: error.code, message: error.message, action: error.action },
-    };
-  }
+  // Independent reads run together; the rows wait only for the columns and stream in after the shell.
+  const bundleRead = resources();
+  const initial = functions.errors.settle(
+    bundleRead.then((rows) =>
+      listProposals(query, serverFunctions.resources.proposalColumns(rows)),
+    ),
+  );
+  // The filter choices load in the browser, a group at a time, so no lookup holds the page.
+  const [rows, format] = await Promise.all([bundleRead, displayFormat()]);
   return (
     <>
       <Listing
         initial={initial}
-        columns={columns}
-        filters={proposalFilters(rows)}
+        columns={serverFunctions.resources.proposalColumns(rows)}
+        filters={serverFunctions.resources.proposalFilters(rows)}
         initialQuery={query}
-        choices={await listingChoices()}
-        format={await displayFormat()}
+        format={format}
       />
     </>
   );

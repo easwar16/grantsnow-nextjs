@@ -1,10 +1,10 @@
 import { expect, it, vi } from "vitest";
 import { calendarDaysUntil, isOverdue } from "@/features/modules/home/deadline";
 import { sparklineSegments } from "@/features/modules/home/sparkline";
-import { dateDisplay, moneyDisplay } from "@/lib/format";
 import { formattingSettings } from "@/server/platform/configuration/formatting";
 import { mapWidget, viewerToday } from "@/server/modules/home/service";
 import { widgets } from "@/server/modules/home/widgets";
+import { functions } from "@/lib/functions";
 // 22 Oct 2026, 23:30 local: late in the day, where the old millisecond diff misjudged tomorrow.
 const today = new Date(2026, 9, 22, 23, 30);
 const widget = (id: string) => widgets.find((w) => w.id === id)!;
@@ -147,25 +147,37 @@ it("keeps row identities unique across scroll pages", () => {
   expect(page(0)).not.toBe(page(25));
 });
 it("formats dates with the configured legacy pattern and falls back on unsupported tokens", () => {
-  expect(dateDisplay("2026-09-05", { dateFormat: "dd-MMM-yyyy" })).toBe(
-    "05-Sep-2026",
-  );
-  expect(dateDisplay("2026-09-05T23:00:00Z", { dateFormat: "MM/DD/YY" })).toBe(
-    "09/05/26",
-  );
-  expect(dateDisplay("2026-09-05", { dateFormat: "DDDD MMMM" })).toBe(
-    "05-Sep-2026",
-  );
-  expect(dateDisplay("2026-09-05")).toBe("05-Sep-2026");
-  expect(dateDisplay("not a date")).toBe("not a date");
+  expect(
+    functions.format.dateDisplay("2026-09-05", { dateFormat: "dd-MMM-yyyy" }),
+  ).toBe("05-Sep-2026");
+  expect(
+    functions.format.dateDisplay("2026-09-05T23:00:00Z", {
+      dateFormat: "MM/DD/YY",
+    }),
+  ).toBe("09/05/26");
+  expect(
+    functions.format.dateDisplay("2026-09-05", { dateFormat: "DDDD MMMM" }),
+  ).toBe("05-Sep-2026");
+  expect(functions.format.dateDisplay("2026-09-05")).toBe("05-Sep-2026");
+  expect(functions.format.dateDisplay("not a date")).toBe("not a date");
 });
 it("applies configured decimals for display only and keeps masks verbatim", () => {
-  expect(moneyDisplay("1234.5678", "GBP", { decimals: 3 })).toBe("£1,234.568");
-  expect(moneyDisplay("1234.5", "GBP", { decimals: null })).toBe("£1,234.5");
-  expect(moneyDisplay("1234.5", "GBP", { decimals: 0 })).toBe("£1,234.5");
-  expect(moneyDisplay("1234.5678", undefined, { decimals: 1 })).toBe("1,234.6");
-  expect(moneyDisplay("1234.5", "GBP")).toBe("£1,234.50");
-  expect(moneyDisplay("****", "GBP", { decimals: 2 })).toBe("****");
+  expect(
+    functions.format.moneyDisplay("1234.5678", "GBP", { decimals: 3 }),
+  ).toBe("£1,234.568");
+  expect(
+    functions.format.moneyDisplay("1234.5", "GBP", { decimals: null }),
+  ).toBe("£1,234.5");
+  expect(functions.format.moneyDisplay("1234.5", "GBP", { decimals: 0 })).toBe(
+    "£1,234.5",
+  );
+  expect(
+    functions.format.moneyDisplay("1234.5678", undefined, { decimals: 1 }),
+  ).toBe("1,234.6");
+  expect(functions.format.moneyDisplay("1234.5", "GBP")).toBe("£1,234.50");
+  expect(functions.format.moneyDisplay("****", "GBP", { decimals: 2 })).toBe(
+    "****",
+  );
 });
 it("reads global variables without inventing a decimal count", () => {
   expect(

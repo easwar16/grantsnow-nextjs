@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { serverFunctions } from "@/server/functions";
 const mocks = vi.hoisted(() => ({
   oracle: vi.fn(),
   oracleWrite: vi.fn(),
@@ -10,18 +11,9 @@ vi.mock("@/server/identity/session/service", () => ({
     user: { personId: "12", modules: {} },
   }),
 }));
-vi.mock(
-  "@/server/platform/configuration/resources",
-  async (importOriginal) => ({
-    resourceVisible: (
-      await importOriginal<
-        typeof import("@/server/platform/configuration/resources")
-      >()
-    ).resourceVisible,
-    resources: mocks.resources,
-    label: () => "",
-  }),
-);
+vi.mock("@/server/platform/configuration/resources", () => ({
+  resources: mocks.resources,
+}));
 vi.mock("@/server/platform/configuration/service", () => ({
   organizations: async () => [],
 }));
@@ -48,7 +40,7 @@ import {
   presetThemes,
   themeVariables,
 } from "@/features/modules/account/themes";
-import { drawerAccess, visibleNavigation } from "@/server/platform/permissions";
+
 const presenceVisible = [
   {
     module_name: "dashboard",
@@ -254,10 +246,11 @@ it("rejects a theme the organisation does not offer before any write", async () 
   expect(mocks.oracleWrite).not.toHaveBeenCalled();
 });
 it("always opens the header's Help and View all pages but never lists them in the drawer", () => {
-  expect(drawerAccess({}, "tutorials")).toBe(true);
-  expect(drawerAccess({}, "announcements-notifications")).toBe(true);
-  expect(visibleNavigation({}).map((i) => i.id)).toEqual([
-    "home",
-    "announcements",
-  ]);
+  expect(serverFunctions.permissions.drawerAccess({}, "tutorials")).toBe(true);
+  expect(
+    serverFunctions.permissions.drawerAccess({}, "announcements-notifications"),
+  ).toBe(true);
+  expect(
+    serverFunctions.permissions.visibleNavigation({}).map((i) => i.id),
+  ).toEqual(["home", "announcements"]);
 });

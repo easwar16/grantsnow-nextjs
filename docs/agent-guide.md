@@ -69,6 +69,7 @@ Then confirm three things before you edit anything:
 | Browser to API                                                                         | `@/lib/api` endpoints + `useApi` / `usePagedApi`                                                | `fetch('/api…')`, server actions, hand-built `/api` URLs |
 | Motion                                                                                 | the presets in `@/lib/motion`, `Pop`, the CSS tokens                                            | one-off keyframes                                        |
 | Libraries                                                                              | lodash, moment, motion, downshift, the existing set in `package.json`                           | a new dependency (ask the owner first)                   |
+| App-wide constants and shared pure helpers                                             | `constants` / `serverConstants`, `functions` / `serverFunctions` (by category)                  | a local copy or a module's own helper                    |
 
 When two modules need the same thing, it becomes one shared piece, and the modules differ only in data.
 
@@ -108,6 +109,15 @@ When two modules need the same thing, it becomes one shared piece, and the modul
   - Never use a fixed zone such as `Asia/Kolkata`.
 - **Performance:** independent awaits run in parallel. Cache only what the VBCS app caches. Heavy reads (an
   approval graph) load when they are opened.
+  - A page awaits only what its shell draws (identity, access, labels, format, record context).
+  - Lists, sections and panels stream in as their data arrives, so one slow read never holds the page. A client
+    list gets `initial: functions.errors.settle(read)` in `usePagedApi`; a server section goes behind its own `<Suspense>`.
+  - Ten things never wait for one: never bundle independent pieces into one reply. Each dropdown's options,
+    panel or table is its own read (`?list=` / `?group=` / `?view=`), and degrades alone (`choiceList`).
+  - Lookups and org units are held for the session (`ttl.session`), as the live app holds them.
+  - App-wide constants come from `constants` / `serverConstants`, and shared pure helpers from `functions` /
+    `serverFunctions`; never a local copy.
+  - Details are in the foundations doc, under Performance.
 - **Minimal diffs at the true cause.** Comments are one line of why. Delete dead code; do not leave a parallel
   copy beside the shared one.
 

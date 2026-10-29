@@ -4,10 +4,10 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { RecordMetadata } from "@/components/ui/record-metadata";
 import { ActionDialog } from "@/components/dialog/action-dialog";
-import { dateDisplay, type FormatSettings } from "@/lib/format";
-import { idPart } from "@/lib/ids";
+import { type FormatSettings } from "@/lib/format";
 import type { LinkedObjects } from "./model";
 import styles from "./linked.module.css";
+import { functions } from "@/lib/functions";
 
 /**
  * Legacy linkedModulesDialog: a record's linked records by module, each with its status, title, last update and View
@@ -46,7 +46,7 @@ export function LinkedObjectsDialog({
               {g.records.map((r) => (
                 <li
                   key={r.id}
-                  id={`${id}-${idPart(r.id)}`}
+                  id={`${id}-${functions.ids.idPart(r.id)}`}
                   className={styles.record}
                 >
                   <div className={styles.main}>
@@ -61,14 +61,16 @@ export function LinkedObjectsDialog({
                         { label: t.updatedBy, value: r.updatedBy },
                         {
                           label: t.updated,
-                          value: r.updated && dateDisplay(r.updated, format),
+                          value:
+                            r.updated &&
+                            functions.format.dateDisplay(r.updated, format),
                         },
                       ]}
                     />
                   </div>
                   {r.href && (
                     <Link
-                      id={`${id}-${idPart(r.id)}-view`}
+                      id={`${id}-${functions.ids.idPart(r.id)}-view`}
                       className="gn-btn gn-btn--borderless gn-btn--icon"
                       href={r.href}
                       target="_blank"

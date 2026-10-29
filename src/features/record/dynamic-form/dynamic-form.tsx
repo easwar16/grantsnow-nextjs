@@ -1,5 +1,4 @@
 "use client";
-import { idPart } from "@/lib/ids";
 import {
   useCallback,
   useEffect,
@@ -35,6 +34,7 @@ import type { DynamicFormData, DynField, DynForm, DynSection } from "./models";
 import { DynFieldView } from "./dyn-field";
 import { DynGrid } from "./dyn-grid";
 import styles from "./dynamic-form.module.css";
+import { functions } from "@/lib/functions";
 /**
  * The dynamic forms engine (port of GN-Angular shared/dynamic-form, D40/D42). CONTRACT between the record pages and the
  * engine: hosts render <DynamicForm ref=…> and drive it through the handle instead of trigger flags.
@@ -364,7 +364,7 @@ export function DynamicForm({
           form.sections.map((section) => {
             if (!model.shown(form.formId, section)) return null;
             const on = model.sectionEnabled(form.formId, section.sectionId);
-            const sectionDomId = `${prefix}-section-${idPart(section.sectionId)}`;
+            const sectionDomId = `${prefix}-section-${functions.ids.idPart(section.sectionId)}`;
             return (
               <section
                 key={`${form.formId}/${section.sectionId}`}

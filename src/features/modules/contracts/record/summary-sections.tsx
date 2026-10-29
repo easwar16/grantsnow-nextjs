@@ -3,25 +3,21 @@ import { loadContract } from "@/server/modules/contracts/service";
 import type { ContractDetail } from "@/features/modules/contracts/types";
 import { State } from "@/components/feedback/state";
 import { Skeleton } from "@/components/feedback/skeleton";
-import { publicError } from "@/lib/errors";
-import { dateDisplay } from "@/lib/format";
 import { displayFormat } from "@/server/platform/configuration/formatting";
 import { DynamicForm } from "@/features/record/dynamic-form/dynamic-form";
 import { Icon } from "@/components/ui/icon";
-import {
-  label,
-  resourceVisible,
-  resources,
-} from "@/server/platform/configuration/resources";
+import { resources } from "@/server/platform/configuration/resources";
 import { DocumentLink } from "./document-link";
-import styles from "../../contracts.module.css";
+import styles from "../contracts.module.css";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 
 export async function ContractSummaryContent({ id }: { id: string }) {
   let contract;
   try {
     contract = await loadContract(id);
   } catch (error) {
-    const e = publicError(error);
+    const e = functions.errors.publicError(error);
     return (
       <State
         title={
@@ -85,7 +81,7 @@ async function SummaryDeadlines({ contract }: { contract: ContractDetail }) {
               <tr key={`${deadline.date}-${index}`}>
                 <td>{deadline.type}</td>
                 <td>{deadline.description}</td>
-                <td>{dateDisplay(deadline.date, format)}</td>
+                <td>{functions.format.dateDisplay(deadline.date, format)}</td>
                 <td>{deadline.reminderDays}</td>
               </tr>
             ))
@@ -111,7 +107,7 @@ async function SummaryDocument({ contract }: { contract: ContractDetail }) {
     >
       <h2>Contract Document</h2>
       <div className={styles.documentActions}>
-        {resourceVisible(
+        {serverFunctions.resources.resourceVisible(
           rb,
           "contract",
           "labels",
@@ -123,7 +119,7 @@ async function SummaryDocument({ contract }: { contract: ContractDetail }) {
             disabled
           >
             <legend>
-              {label(
+              {serverFunctions.resources.label(
                 rb,
                 "contract",
                 "labels",
@@ -155,7 +151,7 @@ async function SummaryDocument({ contract }: { contract: ContractDetail }) {
         )}
         <DocumentLink id={id} kind="tags">
           <span aria-hidden="true">{"{ }"}</span>{" "}
-          {label(
+          {serverFunctions.resources.label(
             rb,
             "contract",
             "labels",
@@ -165,7 +161,7 @@ async function SummaryDocument({ contract }: { contract: ContractDetail }) {
         </DocumentLink>
         {contract.usesStandardTemplate &&
           contract.document.typeCode &&
-          resourceVisible(
+          serverFunctions.resources.resourceVisible(
             rb,
             "contract",
             "labels",
@@ -173,7 +169,7 @@ async function SummaryDocument({ contract }: { contract: ContractDetail }) {
           ) && (
             <DocumentLink id={id} kind="template">
               <Icon name="download" />{" "}
-              {label(
+              {serverFunctions.resources.label(
                 rb,
                 "contract",
                 "labels",
@@ -182,7 +178,7 @@ async function SummaryDocument({ contract }: { contract: ContractDetail }) {
               )}
             </DocumentLink>
           )}
-        {resourceVisible(
+        {serverFunctions.resources.resourceVisible(
           rb,
           "contract",
           "labels",
@@ -190,7 +186,7 @@ async function SummaryDocument({ contract }: { contract: ContractDetail }) {
         ) && (
           <DocumentLink id={id} kind="contract">
             <Icon name="view" />{" "}
-            {label(
+            {serverFunctions.resources.label(
               rb,
               "contract",
               "labels",

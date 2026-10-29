@@ -10,7 +10,8 @@ import type { ShareSetup } from "@/features/modules/opportunities/components/act
 import type { ConvertSetup } from "@/features/modules/opportunities/components/actions/convert-dialog";
 import { apiUrl, get, post, type ApiResult } from "../http";
 import { endpoint, type Endpoint, type PagedEndpoint } from "../hooks";
-import { PAGE_SIZE } from "@/features/modules/opportunities/finder/state";
+
+import { constants } from "@/lib/constants";
 
 /** One finder page as the route answers it: the rows, the true total and the card the gates allow. */
 export type FinderPage = {
@@ -37,11 +38,14 @@ export const finder: PagedEndpoint<
     return r.ok
       ? {
           ok: true,
-          data: { ...r.data, hasMore: r.data.rows.length >= PAGE_SIZE },
+          data: {
+            ...r.data,
+            hasMore: r.data.rows.length >= constants.paging.opportunities,
+          },
         }
       : r;
   },
-  size: PAGE_SIZE,
+  size: constants.paging.opportunities,
 };
 
 /** After a bookmark or notes save: every held finder list shows the change, so a tab revisited is not stale. */
@@ -64,18 +68,16 @@ export function patchHeldRow(
 type Option = { value: string; label: string; detail?: string };
 const action = (name: string) => `/opportunities/actions/${name}`;
 // Dialog setups stay fresh briefly, so a hover's read serves the open without serving a stale setup much later.
-const SETUP_TTL = 30_000;
 // Reference lists several dialogs share (people, roles, groups, org units).
-const LIST_TTL = 5 * 60_000;
 /** The share dialog's texts and comment limit. */
 export const shareSetup = endpoint<void, ShareSetup>(
   () => ({ path: action("share") }),
-  { ttl: SETUP_TTL },
+  { ttl: constants.ttl.setup },
 );
 /** Share recipients of one kind: roles, groups or every person. */
 export const shareValues = endpoint<{ type: string }, Option[]>(
   (p) => ({ path: action("share-values"), query: { type: p.type } }),
-  { ttl: LIST_TTL },
+  { ttl: constants.ttl.list },
 );
 export type ConvertSetupQuery = {
   opener: string;
@@ -86,12 +88,12 @@ export type ConvertSetupQuery = {
 /** The convert dialog's setup for one opportunity (and, from the EOI record, its application). */
 export const convertSetup = endpoint<ConvertSetupQuery, ConvertSetup>(
   (p) => ({ path: action("convert"), query: p }),
-  { ttl: SETUP_TTL },
+  { ttl: constants.ttl.setup },
 );
 /** A principal investigator's org units. */
 export const orgUnits = endpoint<{ personId: string }, Option[]>(
   (p) => ({ path: action("org-units"), query: { personId: p.personId } }),
-  { ttl: LIST_TTL },
+  { ttl: constants.ttl.list },
 );
 /** Starts an endpoint's read in the app store on intent (hover, focus, a click before a confirm); reads only. */
 export function warm<P, T>(ep: Endpoint<P, T>, params: P) {

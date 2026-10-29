@@ -6,9 +6,9 @@ import {
   DEFAULT_FILTERS,
   FINDER_TABS,
   MAX_FUNDER_KEYS,
-  PAGE_SIZE,
   type FinderFilters,
 } from "./finder/state";
+import { constants } from "@/lib/constants";
 // Values become quote-escaped SQL literals on the server; the schema bounds their size and shape only.
 const value = z.string().trim().max(150);
 const day = z.union([z.literal(""), z.iso.date()]);
@@ -59,7 +59,7 @@ export const finderRequestSchema = z.object({
     .int()
     .min(0)
     .max(250000)
-    .refine((n) => n % PAGE_SIZE === 0),
+    .refine((n) => n % constants.paging.opportunities === 0),
 });
 export type OpportunityQuery = {
   tab: (typeof FINDER_TABS)[number];

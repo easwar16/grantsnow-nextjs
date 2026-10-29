@@ -138,10 +138,11 @@ export type WorkflowTextKey =
   | "addStageSubmit"
   | "success"
   | "stageAdded";
+/** The route's history table, read on its own beside the route. */
+export type WorkflowHistory = { rows: ApprovalRow[] } | { error: string };
 export interface WorkflowView {
   texts: Record<WorkflowTextKey, string>;
   stages: ApprovalStage[];
-  history: { rows: ApprovalRow[] } | { error: string };
   /** Legacy's RB-gated tabs: Graph View beside the route list, Card View beside the history table. */
   views: { graph: boolean; cards: boolean };
   gates: {

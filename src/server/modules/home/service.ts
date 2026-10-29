@@ -2,17 +2,13 @@ import { insightRows, fundingEfficiency } from "./insight-mapping";
 import { formattingConfiguration } from "@/server/platform/configuration/formatting";
 import "server-only";
 import { cookies } from "next/headers";
-import { TIME_ZONE_COOKIE } from "@/lib/format";
+
 import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
 import {
   dashboardConfiguration,
   organizations,
 } from "@/server/platform/configuration/service";
-import {
-  requireModule,
-  scopeOrganization,
-} from "@/server/platform/permissions";
 import { home, lookups } from "@/server/oracle/api";
 import type { WidgetParams } from "@/server/oracle/api/home";
 import { widgets, type WidgetDefinition } from "./widgets";
@@ -25,8 +21,10 @@ import type {
 import { calendarDaysUntil } from "@/features/modules/home/deadline";
 import { recordIdentity } from "@/features/modules/proposals/record";
 import { awardHref } from "@/features/modules/awards/links";
-import { AppError, publicError } from "@/lib/errors";
-import { early } from "@/server/platform/async";
+import { AppError } from "@/lib/errors";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
+import { constants } from "@/lib/constants";
 const CHART_PAGE = 100;
 const envelope = z.object({
   items: z.array(z.record(z.string(), z.unknown())),
@@ -81,7 +79,7 @@ export function rowHref(
 /** Today on the viewer's calendar (the shell's time-zone cookie); the server's day until the cookie is set. */
 export async function viewerToday(now = new Date()) {
   try {
-    const zone = (await cookies()).get(TIME_ZONE_COOKIE)?.value;
+    const zone = (await cookies()).get(constants.cookies.timeZone)?.value;
     if (!zone) return now;
     const [y, m, d] = new Intl.DateTimeFormat("en-CA", { timeZone: zone })
       .format(now)
@@ -259,19 +257,19 @@ export async function loadWidget(
   const { user } = await homeAccess(),
     w = widgets.find((w) => w.id === id);
   if (!w) throw new AppError("BAD_REQUEST", "Unknown dashboard widget.", 400);
-  requireModule(user, w.module);
+  serverFunctions.permissions.requireModule(user, w.module);
   if (
     w.kind !== "statistics" &&
     (filters.offset % QUEUE_PAGE !== 0 || filters.offset >= QUEUE_CAP)
   )
     throw new AppError("BAD_REQUEST", "Invalid queue page.", 400);
   // Reference reads start together; each check below still passes before the widget's own read.
-  const orgs = early(organizations()),
-    format = early(formattingConfiguration());
+  const orgs = serverFunctions.async.early(organizations()),
+    format = serverFunctions.async.early(formattingConfiguration());
   const config = await dashboardConfiguration();
   if (config[w.section][w.id]?.isVisible !== true)
     throw new AppError("FORBIDDEN", "This widget is disabled.", 403);
-  const org = scopeOrganization(
+  const org = serverFunctions.permissions.scopeOrganization(
     filters.organization || user.organizationId,
     await orgs,
   );
@@ -346,7 +344,7 @@ export async function widgetResult(
   try {
     return { ok: true, data: await loadWidget(id, filters) };
   } catch (e) {
-    const error = publicError(e);
+    const error = functions.errors.publicError(e);
     return { ok: false, error: { code: error.code, message: error.message } };
   }
 }

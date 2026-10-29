@@ -2,10 +2,10 @@ import "server-only";
 import { cache } from "react";
 import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
-import { requireModule } from "@/server/platform/permissions";
 import { contracts, dynamicForm, lookups, people } from "@/server/oracle/api";
 import { organizations } from "@/server/platform/configuration/service";
 import { AppError } from "@/lib/errors";
+import { serverFunctions } from "@/server/functions";
 
 const rows = z.object({ items: z.array(z.record(z.string(), z.unknown())) });
 type Choice = { value: string; label: string };
@@ -29,7 +29,7 @@ function choices(raw: unknown, valueKey: string, labelKey: string): Choice[] {
 
 export const contractSortChoices = cache(async (): Promise<Choice[]> => {
   const { user } = await authenticate();
-  requireModule(user, "CONTRACTS");
+  serverFunctions.permissions.requireModule(user, "CONTRACTS");
   return choices(
     await lookups.objectDates({ objectType: "CONTRACT" }),
     "column_name",
@@ -39,7 +39,7 @@ export const contractSortChoices = cache(async (): Promise<Choice[]> => {
 
 export const contractTypeChoices = cache(async (): Promise<Choice[]> => {
   const { user } = await authenticate();
-  requireModule(user, "CONTRACTS");
+  serverFunctions.permissions.requireModule(user, "CONTRACTS");
   const raw = await lookups.codes({ types: "CONTRACT_TYPE" });
   return choices(
     {
@@ -54,7 +54,7 @@ export const contractTypeChoices = cache(async (): Promise<Choice[]> => {
 
 export const contractOrgChoices = cache(async (): Promise<Choice[]> => {
   const { user } = await authenticate();
-  requireModule(user, "CONTRACTS");
+  serverFunctions.permissions.requireModule(user, "CONTRACTS");
   return (await organizations()).map((org) => ({
     value: org.id,
     label: org.name,
@@ -145,13 +145,13 @@ export function mapContractForms(formRaw: unknown) {
 /** Standalone creation choices mirror the legacy Contract Summary data providers. */
 export const contractRelationChoices = cache(async () => {
   const { user } = await authenticate();
-  requireModule(user, "CONTRACTS");
+  serverFunctions.permissions.requireModule(user, "CONTRACTS");
   return choices(await contracts.relationTypes(), "object_type", "object_desc");
 });
 
 export const contractDynamicForms = cache(async () => {
   const { user } = await authenticate();
-  requireModule(user, "CONTRACTS");
+  serverFunctions.permissions.requireModule(user, "CONTRACTS");
   // A new contract has no id yet, so `p_id` / `p_obj_id` go empty.
   return mapContractForms(
     await dynamicForm.forms({
@@ -164,7 +164,7 @@ export const contractDynamicForms = cache(async () => {
 
 export const contractDeadlineChoices = cache(async () => {
   const { user } = await authenticate();
-  requireModule(user, "CONTRACTS");
+  serverFunctions.permissions.requireModule(user, "CONTRACTS");
   const raw = await lookups.codes({ types: "CTR_DEADLINE_TYPE" });
   return choices(
     {
@@ -194,7 +194,7 @@ export const contractCreateChoices = cache(async () => {
 
 export async function contractAssignees() {
   const { user } = await authenticate();
-  requireModule(user, "CONTRACTS");
+  serverFunctions.permissions.requireModule(user, "CONTRACTS");
   return (await people.all()).flatMap((p) =>
     p.full_name ? [{ value: String(p.person_id), label: p.full_name }] : [],
   );
@@ -206,7 +206,7 @@ export async function contractDependentChoices(input: {
   orgId: string;
 }) {
   const { user } = await authenticate();
-  requireModule(user, "CONTRACTS");
+  serverFunctions.permissions.requireModule(user, "CONTRACTS");
   const base = await contractCreateChoices();
   if (
     input.contractType &&

@@ -102,3 +102,39 @@ it("serves the drawer's choices only with the Awards module", async () => {
     ),
   ).toBe(false);
 });
+
+it("reads each choice list on its own: a failed org lookup leaves the funders loading", async () => {
+  const shown = ["list-org-unit", "list-funder"].map((label_name) => ({
+    module_name: "award",
+    label_type: "labels",
+    label_name,
+    label_value: label_name,
+    is_visible: "Y",
+  }));
+  state.calls.mockImplementation(async (op: string) => {
+    if (op === "getSessionValidate") return valid();
+    if (op === "getSharedLabels") return shown;
+    if (op === "getPre_awardGetLkpOrgUnitType")
+      throw new Error("timed out after 60s");
+    if (op === "GetSponsorList")
+      return { items: [{ party_id: 7, party_name: "Wellcome" }] };
+    throw new Error(`Unexpected ${op}`);
+  });
+  const choices = (list: string) =>
+    choicesGet(
+      new Request(`http://127.0.0.1:3000/api/awards/choices?list=${list}`),
+    );
+  const [orgs, parties] = await Promise.all([
+    choices("orgs").then((r) => r.json()),
+    choices("parties").then((r) => r.json()),
+  ]);
+  expect(orgs).toEqual({
+    options: [],
+    errors: ["Org units could not be loaded."],
+  });
+  expect(parties.options.map((o: { label: string }) => o.label)).toEqual([
+    "Wellcome",
+  ]);
+  expect(parties.errors).toEqual([]);
+  expect((await choices("everything")).status).toBe(400);
+});

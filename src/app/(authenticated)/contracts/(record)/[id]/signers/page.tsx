@@ -2,17 +2,14 @@ import { pageIdentity } from "@/server/identity/auth/page";
 import { contractSigners } from "@/server/modules/contracts/service";
 import { contractId } from "@/features/modules/contracts/schema";
 import { State } from "@/components/feedback/state";
-import { publicError } from "@/lib/errors";
 import { contractSignerStamp } from "@/features/modules/contracts/format";
 import { displayFormat } from "@/server/platform/configuration/formatting";
-import {
-  label,
-  resourceVisible,
-  resources,
-} from "@/server/platform/configuration/resources";
+import { resources } from "@/server/platform/configuration/resources";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/feedback/skeleton";
-import styles from "../../../contracts.module.css";
+import styles from "@/features/modules/contracts/contracts.module.css";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 
 export const metadata = { title: "Contract Signers" };
 export default async function ContractSigners({
@@ -42,7 +39,7 @@ async function SignersContent({ id }: { id: string }) {
     resources(),
   ]).then(
     ([signers, format, labels]) => ({ signers, format, labels }),
-    (error: unknown) => ({ failure: publicError(error) }),
+    (error: unknown) => ({ failure: functions.errors.publicError(error) }),
   );
   if ("failure" in result) {
     const failure = result.failure;
@@ -78,7 +75,12 @@ async function SignersContent({ id }: { id: string }) {
     { key: "status", resource: "signer-status", fallback: "Status" },
   ] as const;
   const visibleColumns = columns.filter((column) =>
-    resourceVisible(labels, "contract", "table-headers", column.resource),
+    serverFunctions.resources.resourceVisible(
+      labels,
+      "contract",
+      "table-headers",
+      column.resource,
+    ),
   );
   return (
     <section
@@ -94,7 +96,7 @@ async function SignersContent({ id }: { id: string }) {
               <tr>
                 {visibleColumns.map((column) => (
                   <th scope="col" key={column.key}>
-                    {label(
+                    {serverFunctions.resources.label(
                       labels,
                       "contract",
                       "table-headers",

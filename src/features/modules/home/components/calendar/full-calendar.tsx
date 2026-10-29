@@ -1,12 +1,11 @@
 "use client";
-import { idPart } from "@/lib/ids";
 import { useEffect, useMemo, useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import { Icon } from "@/components/ui/icon";
 import { RecordMetadata } from "@/components/ui/record-metadata";
-import { dateDisplay, type FormatSettings } from "@/lib/format";
+import { type FormatSettings } from "@/lib/format";
 import type { AttentionRow } from "../../types";
 import {
   PROVIDER_LABELS,
@@ -19,6 +18,7 @@ import {
 } from "./model";
 import { RowLink, type AccessDeniedText } from "../row-link";
 import styles from "./calendar.module.css";
+import { functions } from "@/lib/functions";
 
 const PLUGINS = [dayGridPlugin, timeGridPlugin];
 // Legacy fp-proposals-calendar toolbar and views.
@@ -84,7 +84,7 @@ export default function DeadlineFullCalendar({
   }
 
   const provider = selected && providerOf(selected),
-    base = `calendar-${idPart(widgetId)}`;
+    base = `calendar-${functions.ids.idPart(widgetId)}`;
   return (
     <div id={`${base}-view`} className={styles.calendar}>
       {sidebarOpen && (
@@ -184,7 +184,7 @@ export default function DeadlineFullCalendar({
                 <dt>Deadline</dt>
                 <dd>
                   <time dateTime={selected.date.slice(0, 10)}>
-                    {dateDisplay(selected.date, format)}
+                    {functions.format.dateDisplay(selected.date, format)}
                   </time>
                   {selected.age && (
                     <span className={styles.warn}>{selected.age}</span>

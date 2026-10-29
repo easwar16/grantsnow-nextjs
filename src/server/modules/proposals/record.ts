@@ -2,11 +2,8 @@ import "server-only";
 import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
 import { proposals, roles as recordRoles } from "@/server/oracle/api";
-import { requireModule } from "@/server/platform/permissions";
 import {
   resources,
-  label,
-  resourceVisible,
   type Resources,
 } from "@/server/platform/configuration/resources";
 import {
@@ -15,6 +12,7 @@ import {
   type ProposalSummary,
 } from "@/features/modules/proposals/record";
 import { AppError } from "@/lib/errors";
+import { serverFunctions } from "@/server/functions";
 const summarySchema = z.object({
   proposal_id: z.number().int().positive(),
   proposal_type: z.string(),
@@ -111,11 +109,18 @@ export function mapSummary(
     value: unknown,
     kind: "text" | "date" = "text",
   ) {
-    if (!resourceVisible(rb, bundle, "labels", key)) return [];
+    if (!serverFunctions.resources.resourceVisible(rb, bundle, "labels", key))
+      return [];
     return [
       {
         key,
-        label: label(rb, bundle, "labels", key, fallback),
+        label: serverFunctions.resources.label(
+          rb,
+          bundle,
+          "labels",
+          key,
+          fallback,
+        ),
         value: typeof value === "string" ? value : "",
         kind,
       },
@@ -168,7 +173,7 @@ export function mapSummary(
 export async function loadSummary(input: RecordIdentity) {
   const identity = recordIdentity.parse(input),
     { user } = await authenticate();
-  requireModule(user, "PROPOSALS");
+  serverFunctions.permissions.requireModule(user, "PROPOSALS");
   const roles = roleRows.parse(
     await recordRoles.record({
       objectType: identity.type,

@@ -7,11 +7,11 @@ import { ActionDialog } from "@/components/dialog/action-dialog";
 import { useActionFailure } from "@/components/dialog/action-failure";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
 import { awards } from "@/lib/api";
-import type { FormatSettings } from "@/lib/format";
-import { idPart } from "@/lib/ids";
+import { type FormatSettings } from "@/lib/format";
 import type { CreditRow, CreditView } from "./credit-types";
 import dialog from "@/components/dialog/dialog.module.css";
 import styles from "./tabs.module.css";
+import { functions } from "@/lib/functions";
 
 const percent = (n: number, decimals?: number | null) =>
   `${(n * 100).toFixed(decimals ?? 2)}%`;
@@ -52,7 +52,7 @@ export function CreditTab({
           </thead>
           <tbody>
             {view.rows.map((r) => (
-              <tr key={r.id} id={`award-credit-${idPart(r.id)}`}>
+              <tr key={r.id} id={`award-credit-${functions.ids.idPart(r.id)}`}>
                 <td>{r.person}</td>
                 <td>{r.role}</td>
                 <td className={styles.number}>
@@ -64,7 +64,7 @@ export function CreditTab({
                 <td>
                   <button
                     type="button"
-                    id={`award-credit-${idPart(r.id)}-edit`}
+                    id={`award-credit-${functions.ids.idPart(r.id)}-edit`}
                     className="gn-btn gn-btn--borderless gn-btn--icon"
                     aria-label={`${t.edit} ${r.person}`}
                     title={t.edit}

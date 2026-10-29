@@ -11,11 +11,11 @@ vi.mock("@/server/oracle/connection", async (importOriginal) => ({
 }));
 import {
   capturedBrowserSession,
-  DEV_SESSION_LEASE_MS,
   parsePastedToken,
   pastedBrowserSession,
 } from "@/server/identity/session/browser-session";
 import { fixtureUser } from "@/test-support/fixtures";
+import { serverConstants } from "@/server/constants";
 const base = "https://dev.example/ords/dev_base/";
 const apps = "https://dev.example/ords/dev/";
 beforeEach(() => {
@@ -59,7 +59,9 @@ it("validates the token before creating a minimal bounded local session", async 
   expect(state.oracle).toHaveBeenCalledWith("getSessionValidate", {
     token: "isolated-test-token",
   });
-  expect(b.expiresAt).toBeLessThanOrEqual(Date.now() + DEV_SESSION_LEASE_MS);
+  expect(b.expiresAt).toBeLessThanOrEqual(
+    Date.now() + serverConstants.session.devLeaseMs,
+  );
   expect(JSON.stringify(b.user)).not.toContain("private_secret");
   expect(JSON.stringify(b.user)).not.toContain("isolated-test-token");
 });
@@ -152,7 +154,9 @@ it("validates a pasted token without reading the capture file", async () => {
   expect(state.oracle).toHaveBeenCalledWith("getSessionValidate", {
     token: "isolated-test-token",
   });
-  expect(b.expiresAt).toBeLessThanOrEqual(Date.now() + DEV_SESSION_LEASE_MS);
+  expect(b.expiresAt).toBeLessThanOrEqual(
+    Date.now() + serverConstants.session.devLeaseMs,
+  );
 });
 it("lets validate, not a stale cookie expiry, decide whether a pasted token lives", async () => {
   const stale = JSON.stringify({

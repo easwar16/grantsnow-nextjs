@@ -3,13 +3,9 @@ import { z } from "zod";
 import { approvals, lookups, people } from "@/server/oracle/api";
 import type { StageRow } from "@/server/oracle/api/approvals";
 import {
-  label,
-  resourceRequired,
   resources,
-  resourceVisible,
   type Resources,
 } from "@/server/platform/configuration/resources";
-import { plainText, sanitizeHtml } from "@/server/platform/sanitize";
 import { AppError } from "@/lib/errors";
 import { mapApprovalGraph } from "./graph";
 import type { UserContext } from "@/shared/auth/types";
@@ -22,8 +18,10 @@ import type {
   PersonChoice,
   StageUsers,
   WorkflowTextKey,
+  WorkflowHistory,
   WorkflowView,
 } from "@/features/record/approvals/types";
+import { serverFunctions } from "@/server/functions";
 
 /**
  * One host of the shared approval workflow (legacy `approval-workflow` fragment, KB GrantsNow-Approvals host
@@ -203,7 +201,7 @@ export function workflowTexts(rows: Resources, bundle: string) {
   return Object.fromEntries(
     Object.entries(KEYS).map(([k, [group, key, fallback]]) => [
       k,
-      label(rows, bundle, group, key, fallback),
+      serverFunctions.resources.label(rows, bundle, group, key, fallback),
     ]),
   ) as Record<WorkflowTextKey, string>;
 }
@@ -212,7 +210,7 @@ const visible = (
   host: ApprovalHost,
   group: string,
   key: string,
-) => resourceVisible(rows, host.bundle, group, key);
+) => serverFunctions.resources.resourceVisible(rows, host.bundle, group, key);
 
 const doc = (host: ApprovalHost) => ({
   docNum: host.docNum,
@@ -233,7 +231,9 @@ export async function approvalHistoryRows(
     status: show(r.status),
     stage: show(r.stage_desc),
     comments:
-      typeof r.user_comments === "string" ? plainText(r.user_comments) : "",
+      typeof r.user_comments === "string"
+        ? serverFunctions.sanitize.plainText(r.user_comments)
+        : "",
     updated: r.last_update_date ?? "",
   }));
 }
@@ -276,13 +276,17 @@ function stageView(s: StageRow, host: ApprovalHost): ApprovalStage {
     id: String(s.stage_id),
     name: s.level_name ?? "",
     description: s.level_desc ?? "",
-    helpText: empty(s.help_text) ? null : sanitizeHtml(s.help_text!),
+    helpText: empty(s.help_text)
+      ? null
+      : serverFunctions.sanitize.sanitizeHtml(s.help_text!),
     role: empty(s.approval_group_name) ? null : s.approval_group_name!,
     actionType: s.approval_type ?? "",
     required: show(s.no_of_approval_req),
     status,
     review: s.approval_type === "PEERREVIEW",
-    remarks: empty(s.remarks) ? null : sanitizeHtml(s.remarks!),
+    remarks: empty(s.remarks)
+      ? null
+      : serverFunctions.sanitize.sanitizeHtml(s.remarks!),
     pendingDays: s.pending_approval_days ?? null,
     approvers: s.approval_group !== "System",
     canDelete:
@@ -297,26 +301,25 @@ function stageView(s: StageRow, host: ApprovalHost): ApprovalStage {
   };
 }
 const viewsOf = (rows: Resources, host: ApprovalHost) => ({
-  graph: resourceVisible(rows, host.bundle, "labels", "approval-graph-view"),
-  cards: resourceVisible(rows, host.bundle, "labels", "approval-card-view"),
+  graph: serverFunctions.resources.resourceVisible(
+    rows,
+    host.bundle,
+    "labels",
+    "approval-graph-view",
+  ),
+  cards: serverFunctions.resources.resourceVisible(
+    rows,
+    host.bundle,
+    "labels",
+    "approval-card-view",
+  ),
 });
-/** Stages, history and gates for the Workflow tab; a history failure degrades only its table. */
+/** Stages and gates for the Workflow tab; the history table reads on its own (workflowHistory). */
 export async function workflowView(host: ApprovalHost): Promise<WorkflowView> {
-  const [rows, stages, history] = await Promise.all([
-    resources(),
-    readStages(host),
-    approvalHistoryRows(host.docNum, host.approvalType).then(
-      (rows) => ({ rows }),
-      (e: unknown) => {
-        if (e instanceof AppError && e.status === 401) throw e;
-        return { error: "Approval history could not be loaded." };
-      },
-    ),
-  ]);
+  const [rows, stages] = await Promise.all([resources(), readStages(host)]);
   return {
     texts: workflowTexts(rows, host.bundle),
     stages: stages.map((s) => stageView(s, host)),
-    history,
     views: viewsOf(rows, host),
     gates: routeGates(stages, host, rows),
   };
@@ -433,7 +436,13 @@ const FIELD = {
 } as const;
 function stageFields(rows: Resources, host: ApprovalHost) {
   const req = (key: string) =>
-    resourceRequired(rows, host.bundle, "labels", key, false);
+    serverFunctions.resources.resourceRequired(
+      rows,
+      host.bundle,
+      "labels",
+      key,
+      false,
+    );
   return {
     fields: {
       deadlineDays: visible(rows, host, "labels", FIELD.deadlineDays),
@@ -723,6 +732,15 @@ export async function workflowWrite(host: ApprovalHost, raw: unknown) {
       return removeApprover(host, input);
   }
 }
+/** The route's history, read beside the route so neither waits for the other; a failure degrades only its table. */
+async function workflowHistory(host: ApprovalHost): Promise<WorkflowHistory> {
+  try {
+    return { rows: await approvalHistoryRows(host.docNum, host.approvalType) };
+  } catch (e) {
+    if (e instanceof AppError && e.status === 401) throw e;
+    return { error: "Approval history could not be loaded." };
+  }
+}
 /** The dialogs' reads: a stage's approvers, the Add Stage setup, the person directory or one type's groups. */
 export async function workflowRead(
   host: ApprovalHost,
@@ -739,6 +757,8 @@ export async function workflowRead(
       return approverGroups(host, params.get("type"));
     case "graph":
       return routeGraph(host);
+    case "history":
+      return workflowHistory(host);
     default:
       return workflowView(host);
   }

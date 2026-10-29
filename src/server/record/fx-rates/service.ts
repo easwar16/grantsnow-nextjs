@@ -2,18 +2,8 @@ import "server-only";
 import { z } from "zod";
 import { fxRates, proposals, roles } from "@/server/oracle/api";
 import { authenticate } from "@/server/identity/session/service";
-import {
-  finalizedOf,
-  objectAccessOf,
-  requireModule,
-} from "@/server/platform/permissions";
-import {
-  label,
-  resources,
-  resourceVisible,
-} from "@/server/platform/configuration/resources";
+import { resources } from "@/server/platform/configuration/resources";
 import { proposalBundle } from "@/server/modules/proposals/record";
-import { early } from "@/server/platform/async";
 import { AppError } from "@/lib/errors";
 import {
   FX_MODES,
@@ -24,6 +14,7 @@ import {
   type FxText,
   type FxView,
 } from "@/features/record/fx-rates/model";
+import { serverFunctions } from "@/server/functions";
 const recordId = z.string().regex(/^[1-9]\d{0,14}$/);
 export const fxTarget = z
   .object({
@@ -127,14 +118,14 @@ const denied = (message = "You do not have access to FX rates.") =>
  */
 async function readRates(t: FxTarget) {
   const { user } = await authenticate();
-  requireModule(user, "PROPOSALS");
+  serverFunctions.permissions.requireModule(user, "PROPOSALS");
   // Read together; the role check still decides first, and nothing is returned before every check passes.
-  const ratesRead = early(
+  const ratesRead = serverFunctions.async.early(
       fxRates.rates({ proposalId: t.id, versionId: t.versionId }),
     ),
-    proposalRead = early(proposals.summary({ id: t.id })),
-    labels = early(resources());
-  const access = objectAccessOf(
+    proposalRead = serverFunctions.async.early(proposals.summary({ id: t.id })),
+    labels = serverFunctions.async.early(resources());
+  const access = serverFunctions.permissions.objectAccessOf(
     roleSchema.parse(await roles.record({ objectType: t.type, objectId: t.id }))
       .items,
   );
@@ -142,7 +133,14 @@ async function readRates(t: FxTarget) {
   if (!page?.read) throw denied();
   const rows = await labels,
     bundle = proposalBundle(rows, t.type);
-  if (!resourceVisible(rows, bundle, "button-labels", "fx-rates"))
+  if (
+    !serverFunctions.resources.resourceVisible(
+      rows,
+      bundle,
+      "button-labels",
+      "fx-rates",
+    )
+  )
     throw denied("FX rates are not enabled for this proposal type.");
   const proposal = proposalSchema.safeParse(await proposalRead);
   if (
@@ -162,7 +160,9 @@ async function readRates(t: FxTarget) {
   const tab = access.pages.find((p) => p.name === PAGE_OF[t.mode]);
   const finalized =
     tab === undefined ||
-    finalizedOf(access.pages, proposal.data.locked_modules ?? []).has(tab.name);
+    serverFunctions.permissions
+      .finalizedOf(access.pages, proposal.data.locked_modules ?? [])
+      .has(tab.name);
   const editable =
     page.edit &&
     EDITABLE_TYPES.includes(t.type) &&
@@ -179,7 +179,7 @@ async function readRates(t: FxTarget) {
         ...(Object.fromEntries(
           Object.entries(TEXTS).map(([k, [group, key, fallback]]) => [
             k,
-            label(rows, bundle, group, key, fallback),
+            serverFunctions.resources.label(rows, bundle, group, key, fallback),
           ]),
         ) as Record<keyof typeof TEXTS, string>),
         // Legacy has no RB keys for these: an icon-only reset and a literal "Edited" title on the marker.

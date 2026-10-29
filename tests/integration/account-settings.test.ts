@@ -6,18 +6,9 @@ vi.mock("@/server/identity/session/service", () => ({
     user: { personId: "12", modules: { "opportunities-finder": true } },
   }),
 }));
-vi.mock(
-  "@/server/platform/configuration/resources",
-  async (importOriginal) => ({
-    resourceVisible: (
-      await importOriginal<
-        typeof import("@/server/platform/configuration/resources")
-      >()
-    ).resourceVisible,
-    resources: mocks.resources,
-    label: () => "",
-  }),
-);
+vi.mock("@/server/platform/configuration/resources", () => ({
+  resources: mocks.resources,
+}));
 vi.mock("@/server/platform/configuration/service", () => ({
   organizations: async () => [{ id: "5", name: "Own organization" }],
   forgetDashboardConfiguration: () => {},

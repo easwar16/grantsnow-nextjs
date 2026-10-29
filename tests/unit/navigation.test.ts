@@ -1,14 +1,12 @@
 import { expect, it } from "vitest";
-import {
-  drawerAccess,
-  requireDrawerAccess,
-  visibleNavigation,
-} from "@/server/platform/permissions";
 import { externalToolUrls } from "@/app/(authenticated)/modules/external-tools";
+import { serverFunctions } from "@/server/functions";
 const ids = (modules: Record<string, boolean>) =>
-  visibleNavigation(modules).map((i) =>
-    i.children ? `${i.id}[${i.children.map((c) => c.id).join(",")}]` : i.id,
-  );
+  serverFunctions.permissions
+    .visibleNavigation(modules)
+    .map((i) =>
+      i.children ? `${i.id}[${i.children.map((c) => c.id).join(",")}]` : i.id,
+    );
 it("fails closed to Home and Announcements when no module is granted", () => {
   expect(ids({})).toEqual(["home", "announcements"]);
 });
@@ -62,16 +60,21 @@ it("guards drawer routes with the same grant", () => {
     landing: "",
     modules: { "opportunities-finder": true },
   };
-  expect(() => requireDrawerAccess(user, "opportunities-finder")).toThrow(
-    expect.objectContaining({ code: "FORBIDDEN" }),
-  );
+  expect(() =>
+    serverFunctions.permissions.requireDrawerAccess(
+      user,
+      "opportunities-finder",
+    ),
+  ).toThrow(expect.objectContaining({ code: "FORBIDDEN" }));
   expect(
-    drawerAccess(
+    serverFunctions.permissions.drawerAccess(
       { "opportunities-group": true, "opportunities-finder": true },
       "opportunities-finder",
     ),
   ).toBe(true);
-  expect(drawerAccess({}, "announcements")).toBe(true);
+  expect(serverFunctions.permissions.drawerAccess({}, "announcements")).toBe(
+    true,
+  );
 });
 it("reads external tools from configuration and drops unsafe values", () => {
   const urls = externalToolUrls({

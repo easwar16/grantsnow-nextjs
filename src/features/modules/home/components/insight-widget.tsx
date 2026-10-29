@@ -1,15 +1,14 @@
 "use client";
-import { idPart } from "@/lib/ids";
 import { useRef } from "react";
 import type { HomeFilters } from "../types";
-import { chartIsEmpty } from "@/lib/chart-options";
 import { home, useApi } from "@/lib/api";
 import { ChartSkeleton } from "@/components/feedback/skeleton";
 import { State } from "@/components/feedback/state";
 import { HelpButton } from "@/components/ui/help-button";
 import { InsightChart } from "./insight-chart";
 import { Icon } from "@/components/ui/icon";
-import type { FormatSettings } from "@/lib/format";
+import { type FormatSettings } from "@/lib/format";
+import { functions } from "@/lib/functions";
 export function InsightWidget({
   id,
   title,
@@ -30,20 +29,24 @@ export function InsightWidget({
 }) {
   const { data, error, retry } = useApi(home.widget, { id, filters }),
     dialog = useRef<HTMLDialogElement>(null);
-  const empty = data && chartIsEmpty(data);
+  const empty = data && functions.charts.chartIsEmpty(data);
   return (
     <section
-      id={`insight-${idPart(id)}`}
+      id={`insight-${functions.ids.idPart(id)}`}
       className="insight-widget"
       style={{ gridColumn: `span ${data?.presentation?.columns || columns}` }}
     >
       <div className="insight-content">
         <div className="insight-head">
           <h3>
-            {title} <HelpButton id={`insight-${idPart(id)}-help`} html={help} />
+            {title}{" "}
+            <HelpButton
+              id={`insight-${functions.ids.idPart(id)}-help`}
+              html={help}
+            />
           </h3>
           <button
-            id={`insight-${idPart(id)}-expand`}
+            id={`insight-${functions.ids.idPart(id)}-expand`}
             type="button"
             className="chart-expand"
             disabled={!data || !!empty}
@@ -70,7 +73,7 @@ export function InsightWidget({
           </div>
         ) : (
           <InsightChart
-            id={`insights-chart-${idPart(id)}`}
+            id={`insights-chart-${functions.ids.idPart(id)}`}
             title={title}
             data={data}
             format={format}
@@ -79,17 +82,20 @@ export function InsightWidget({
       </div>
       <dialog
         ref={dialog}
-        id={`insight-${idPart(id)}-dialog`}
+        id={`insight-${functions.ids.idPart(id)}-dialog`}
         className="expanded-chart-dialog"
         aria-label={`Expanded ${title}`}
       >
         <div className="expanded-chart-head">
           <h2>
             {title}{" "}
-            <HelpButton id={`insight-${idPart(id)}-dialog-help`} html={help} />
+            <HelpButton
+              id={`insight-${functions.ids.idPart(id)}-dialog-help`}
+              html={help}
+            />
           </h2>
           <button
-            id={`insight-${idPart(id)}-dialog-close`}
+            id={`insight-${functions.ids.idPart(id)}-dialog-close`}
             type="button"
             className="expanded-chart-close"
             aria-label="Close expanded chart"
@@ -100,7 +106,7 @@ export function InsightWidget({
         </div>
         {data && !empty && (
           <InsightChart
-            id={`insights-chart-${idPart(id)}-expanded`}
+            id={`insights-chart-${functions.ids.idPart(id)}-expanded`}
             title={title}
             data={data}
             format={format}

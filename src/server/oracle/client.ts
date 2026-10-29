@@ -5,6 +5,7 @@ import { forget, forgetOperation, memo, operationKey, refresh } from "./cache";
 import { inWrite } from "./scope";
 import { oracleContext, type IdentityField } from "./context";
 import { AppError } from "@/lib/errors";
+import { serverConstants } from "@/server/constants";
 
 /**
  * The Oracle API client. Every backend operation is one function defined here with `read` or `write`; services call
@@ -78,9 +79,6 @@ const isPaged = (b: unknown): b is { items: unknown[]; hasMore?: unknown } =>
   typeof b === "object" &&
   b !== null &&
   Array.isArray((b as { items?: unknown }).items);
-const PAGE_ROWS = 500,
-  MAX_PAGES = 20,
-  ALL_PAGES_MS = 120_000;
 /** The backend pages a list with p_offset / p_limit and a `hasMore` flag ("true" as a string); read every page. */
 async function everyPage(
   send: (query: URLSearchParams) => Promise<unknown>,
@@ -88,14 +86,14 @@ async function everyPage(
 ) {
   const at = (offset: number) => {
     const q = new URLSearchParams(base);
-    q.set("p_limit", String(PAGE_ROWS));
+    q.set("p_limit", String(serverConstants.paging.rowsPerPage));
     q.set("p_offset", String(offset));
     return send(q);
   };
   const first = await at(0);
   if (!isPaged(first) || !more(first)) return first;
   const items = [...first.items];
-  for (let page = 1; page < MAX_PAGES; page++) {
+  for (let page = 1; page < serverConstants.paging.maxPages; page++) {
     const next = await at(items.length);
     if (!isPaged(next)) break;
     items.push(...next.items);
@@ -136,8 +134,9 @@ export function read<P = void, R = unknown>(def: ReadDef<P, R>) {
     const read = (signal?: AbortSignal) => {
       if (def.pages !== "all")
         return oracle(def.op, headers, query, signal, path);
-      // Each page has its own limit; the whole list gets one too, so up to MAX_PAGES slow pages cannot chain.
-      const deadline = AbortSignal.timeout(ALL_PAGES_MS),
+      // Each page has its own limit; the whole list gets one too, so up to serverConstants.paging.maxPages slow pages cannot chain.
+      const deadline = // A whole list gets the same limit as one call, so a slow page is never cut short by its list.
+          AbortSignal.timeout(serverConstants.timeouts.oracle),
         all = signal ? AbortSignal.any([signal, deadline]) : deadline;
       return everyPage((q) => oracle(def.op, headers, q, all, path), query);
     };

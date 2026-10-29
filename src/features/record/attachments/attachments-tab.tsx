@@ -1,8 +1,8 @@
 import "server-only";
 import { State } from "@/components/feedback/state";
-import { publicError } from "@/lib/errors";
 import { attachmentsView } from "@/server/record/attachments/attachments";
 import { AttachmentsPanel } from "./attachments-panel";
+import { functions } from "@/lib/functions";
 /** A host page's Attachments panel: the server-built view (labels, gates, limits), or why it is unavailable. */
 export async function AttachmentsTab({
   host,
@@ -20,7 +20,7 @@ export async function AttachmentsTab({
     id,
   ).then(
     (view) => ({ view }),
-    (error: unknown) => ({ error: publicError(error) }),
+    (error: unknown) => ({ error: functions.errors.publicError(error) }),
   );
   if ("error" in result)
     return (

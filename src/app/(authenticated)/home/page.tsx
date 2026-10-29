@@ -1,4 +1,3 @@
-import { idPart } from "@/lib/ids";
 import { InsightWidget } from "@/features/modules/home/components/insight-widget";
 import { dashboardTabs } from "@/server/modules/home/extra-tabs";
 import { OrganizationHeading } from "@/features/modules/home/components/organization-heading";
@@ -21,18 +20,17 @@ import { HomeFilterControls } from "@/features/modules/home/components/filters";
 import { Widget } from "@/features/modules/home/components/widget";
 import type { HomeFilters } from "@/features/modules/home/types";
 import { AppError } from "@/lib/errors";
-import type { FormatSettings } from "@/lib/format";
+import { type FormatSettings } from "@/lib/format";
 import { displayFormat } from "@/server/platform/configuration/formatting";
 import { RecordSkeleton, KpiSkeleton } from "@/components/feedback/skeleton";
 import { State } from "@/components/feedback/state";
 import {
-  label,
-  resourceDescription,
-  resourceVisible,
   resources,
   type Resources,
 } from "@/server/platform/configuration/resources";
 import type { WidgetLabels } from "@/features/modules/home/components/widget";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 export const metadata = { title: "Home" };
 /** A dashboard RB entry by its `<group>.<name>` key. */
 const dashboardKey = (key: string) => {
@@ -40,9 +38,18 @@ const dashboardKey = (key: string) => {
   return [key.slice(0, dot), key.slice(dot + 1)] as const;
 };
 const dashboardLabel = (rows: Resources, key: string, fallback: string) =>
-  label(rows, "dashboard", ...dashboardKey(key), fallback);
+  serverFunctions.resources.label(
+    rows,
+    "dashboard",
+    ...dashboardKey(key),
+    fallback,
+  );
 const dashboardHelp = (rows: Resources, key: string) =>
-  resourceDescription(rows, "dashboard", ...dashboardKey(key));
+  serverFunctions.resources.resourceDescription(
+    rows,
+    "dashboard",
+    ...dashboardKey(key),
+  );
 async function LoadedKpis({ organization }: { organization?: string }) {
   return <KpiStrip {...await loadKpis(organization)} />;
 }
@@ -132,7 +139,7 @@ export default async function Home({
   const widgetLabels: WidgetLabels = {
     list: dashboardLabel(rb, "labels.dashboard-list-view", "List View"),
     // Legacy shows Calendar View only when its RB row is visible.
-    calendar: resourceVisible(
+    calendar: serverFunctions.resources.resourceVisible(
       rb,
       "dashboard",
       "labels",
@@ -182,7 +189,7 @@ export default async function Home({
               key={`${w.id}:${params.toString()}`}
               fallback={
                 <article
-                  id={`home-widget-${idPart(w.id)}-loading`}
+                  id={`home-widget-${functions.ids.idPart(w.id)}-loading`}
                   className="attention-widget"
                 >
                   <div className="attention-content">

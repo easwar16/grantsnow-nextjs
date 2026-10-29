@@ -1,17 +1,26 @@
 import "server-only";
+import { Agent, fetch as poolFetch } from "undici";
 import { AppError } from "@/lib/errors";
 import {
   assertWritesEnabled,
   fixtureMode,
 } from "@/server/platform/configuration/environment";
+import { serverConstants } from "@/server/constants";
 /**
  * Object Storage through OIC (UPLOAD_OBJECT / GET_OBJECT / DELETE_OBJECT), the VBCS `ics` connection (GN-Angular D43).
  * Basic credentials live only in server env (OIC_BASE_URL, GN_OIC_USER, GN_OIC_PASSWORD); the session token never
  * goes to OIC. Uploads and deletes are writes: gated by WRITES_ENABLED (D27). Callers build `location` on the server.
  */
 export const FLOWS = "ic/api/integration/v1/flows/rest";
-// OIC calls take ~10 s on DEV; bounded at a minute.
-export const TIMEOUT_MS = 60_000;
+// OIC calls take ~10 s on DEV; bounded at serverConstants.timeouts.oic.
+// undici stops waiting for headers or body after 5 minutes by default; OIC gets the same 10 minutes.
+const pool = new Agent({
+  headersTimeout: serverConstants.timeouts.oic,
+  bodyTimeout: serverConstants.timeouts.oic,
+});
+/** fetch for OIC, on a pool whose limits match serverConstants.timeouts.oic. */
+export const oicFetch: typeof poolFetch = (input, init) =>
+  poolFetch(input, { ...init, dispatcher: pool });
 // Fixture mode keeps objects in memory so the file flow can be exercised without OIC.
 const fixtureStore = new Map<string, { bytes: Uint8Array; type: string }>();
 /** OIC base URL and basic credentials from server env; refuses when either is missing or unsafe. */
@@ -68,21 +77,24 @@ async function call(
   body?: Uint8Array,
 ) {
   const { url, auth } = oicSettings();
-  let response: Response;
+  let response: Awaited<ReturnType<typeof oicFetch>>;
   try {
-    response = await fetch(new URL(`${FLOWS}/${flow}/1.0/objectstorage`, url), {
-      method,
-      headers: {
-        Authorization: auth,
-        file_name: storageSafeName(location),
-        // OIC answers 415 to anything but octet-stream on upload (verified 2026-10-15).
-        ...(body ? { "Content-Type": "application/octet-stream" } : {}),
+    response = await oicFetch(
+      new URL(`${FLOWS}/${flow}/1.0/objectstorage`, url),
+      {
+        method,
+        headers: {
+          Authorization: auth,
+          file_name: storageSafeName(location),
+          // OIC answers 415 to anything but octet-stream on upload (verified 2026-10-15).
+          ...(body ? { "Content-Type": "application/octet-stream" } : {}),
+        },
+        ...(body ? { body } : {}),
+        cache: "no-store",
+        redirect: "error",
+        signal: AbortSignal.timeout(serverConstants.timeouts.oic),
       },
-      ...(body ? { body: body as BodyInit } : {}),
-      cache: "no-store",
-      redirect: "error",
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
+    );
   } catch {
     throw new AppError(
       "UPSTREAM",

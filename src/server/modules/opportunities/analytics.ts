@@ -1,8 +1,8 @@
 import "server-only";
 import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
-import { requireDrawerAccess } from "@/server/platform/permissions";
 import { opportunities } from "@/server/oracle/api";
+import { serverFunctions } from "@/server/functions";
 const schema = z.object({
   items: z.array(
     z.object({
@@ -16,7 +16,10 @@ export async function opportunityStatistics(
   type: "TOP_FUNDERS" | "FUNDING_TYPE",
 ) {
   const { user } = await authenticate();
-  requireDrawerAccess(user, "opportunities-analytics");
+  serverFunctions.permissions.requireDrawerAccess(
+    user,
+    "opportunities-analytics",
+  );
   return schema
     .parse(await opportunities.statistics({ chartType: type }))
     .items.map((r, i) => ({

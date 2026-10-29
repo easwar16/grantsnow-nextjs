@@ -13,7 +13,6 @@ import { useConfirm } from "@/components/dialog/action-dialog";
 import { useActionFailure } from "@/components/dialog/action-failure";
 import { approvals, useApi } from "@/lib/api";
 import { useStoreApi } from "@/lib/store/app-store";
-import { idPart } from "@/lib/ids";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
 import { AddStageDialog, ApproversDialog, CommentsDialog } from "./dialogs";
 import { ApprovalTree } from "./approval-tree";
@@ -24,6 +23,7 @@ import type {
   WorkflowView,
 } from "./types";
 import styles from "./approval-workflow.module.css";
+import { functions } from "@/lib/functions";
 
 /** Legacy oj-badge tones by stage status; any other status is the plain badge. */
 const TONE: Record<string, StatusTone> = {
@@ -196,7 +196,7 @@ export function ApprovalWorkflow({
   api: string;
   view: WorkflowView;
 }) {
-  const { texts, stages, gates, history } = view;
+  const { texts, stages, gates } = view;
   const router = useRouter(),
     store = useStoreApi(),
     toast = useToast(),
@@ -223,6 +223,7 @@ export function ApprovalWorkflow({
         if (message) toast.show("success", message);
         // Stage approvers changed; the people and Add Stage lists did not.
         store.forget(approvals.stageUsersKeys(api));
+        store.forget(approvals.history.key(api));
         startTransition(() => router.refresh());
         return true;
       }, key)) === true,
@@ -331,7 +332,7 @@ export function ApprovalWorkflow({
               {stages.map((stage) => (
                 <Stage
                   key={stage.id}
-                  id={`${id}-stage-${idPart(stage.id)}`}
+                  id={`${id}-stage-${functions.ids.idPart(stage.id)}`}
                   stage={stage}
                   texts={texts}
                   busy={busy}
@@ -346,7 +347,7 @@ export function ApprovalWorkflow({
       )}
       <ApprovalHistory
         id={id}
-        history={history}
+        api={api}
         texts={texts}
         cards={view.views.cards}
       />
@@ -472,17 +473,19 @@ function RouteGraph({
 /** The route's history section, shared by every approval host. */
 function ApprovalHistory({
   id,
-  history,
+  api,
   texts,
   cards,
 }: {
   id: string;
-  history: WorkflowView["history"];
+  /** The host's workflow route; the history reads from it beside the route. */
+  api: string;
   texts: WorkflowView["texts"];
   /** Legacy's Card View tab, RB-gated. */
   cards: boolean;
 }) {
   const [historyView, setHistoryView] = useState<"table" | "card">("table");
+  const { data: history, error, retry } = useApi(approvals.history, api);
   return (
     <details
       id={`${id}-history`}
@@ -525,7 +528,18 @@ function ApprovalHistory({
           </span>
         )}
       </summary>
-      {"error" in history ? (
+      {error ? (
+        <State
+          id={`${id}-history-error`}
+          title="Approval history could not be loaded."
+          message={error.message}
+          code={error.code}
+          action={error.action}
+          retry={retry}
+        />
+      ) : !history ? (
+        <Skeleton kind="list" count={3} label={texts.history} />
+      ) : "error" in history ? (
         <State
           id={`${id}-history-error`}
           title={history.error}
@@ -578,7 +592,7 @@ function ApprovalHistory({
               {history.rows.map((row) => (
                 <tr
                   key={row.id}
-                  id={`${id}-history-${idPart(row.id)}`}
+                  id={`${id}-history-${functions.ids.idPart(row.id)}`}
                   className="enter-rise"
                 >
                   <td>{row.name}</td>

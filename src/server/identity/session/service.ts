@@ -4,7 +4,6 @@ import { cache } from "react";
 import { storage } from "./storage";
 import { z } from "zod";
 import { assertBusiness, oracle } from "@/server/oracle/connection";
-import { DEV_SESSION_LEASE_MS } from "./browser-session";
 import {
   fixtureMode,
   browserSessionMode,
@@ -12,6 +11,7 @@ import {
 import { mapBootstrap, mapValidatedIdentity } from "./contracts";
 import { AppError } from "@/lib/errors";
 import type { AppSession } from "@/shared/auth/types";
+import { serverConstants } from "@/server/constants";
 const extendedToken = z.object({
   token: z.string().min(1).max(1600).optional(),
   expiry_datetime: z.string().nullish(),
@@ -44,7 +44,6 @@ export function assertActive(session?: AppSession) {
 }
 // D24: validate once per token, not once per request. Home fans out to a dozen widget routes, and DEV's slow
 // validate timed out under that load. A minute bounds how long a revoked token keeps working.
-const VALIDATE_TTL_MS = 60_000;
 // On globalThis: route handlers and pages load this module separately, and a sign-out must clear both.
 const validations = ((
   globalThis as {
@@ -61,7 +60,7 @@ function validateOnce(token: string) {
   const key = validationKey(token),
     now = Date.now();
   for (const [k, v] of validations)
-    if (now - v.at > VALIDATE_TTL_MS) validations.delete(k);
+    if (now - v.at > serverConstants.ttl.validation) validations.delete(k);
   const hit = validations.get(key);
   if (hit) return hit.body;
   const body = oracle("getSessionValidate", { token });
@@ -137,7 +136,7 @@ export async function renewSession() {
         backend > Date.now()
           ? Math.min(
               backend,
-              Date.now() + DEV_SESSION_LEASE_MS,
+              Date.now() + serverConstants.session.devLeaseMs,
               auth.session.identityExpiresAt,
             )
           : auth.session.expiresAt,

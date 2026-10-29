@@ -15,8 +15,6 @@ vi.mock("@/server/platform/configuration/service", () => ({
 }));
 vi.mock("@/server/platform/configuration/resources", () => ({
   resources: async () => [],
-  label: (_rows: unknown, _m: string, _g: string, _k: string, f: string) => f,
-  resourceDescription: () => null,
 }));
 vi.mock("@/server/platform/configuration/formatting", () => ({
   displayFormat: async () => undefined,

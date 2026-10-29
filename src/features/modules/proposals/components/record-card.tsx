@@ -2,8 +2,9 @@ import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import Link from "next/link";
 import { recordIdentity } from "../record";
 import { RecordMetadata } from "@/components/ui/record-metadata";
-import { dateDisplay, moneyDisplay, type FormatSettings } from "@/lib/format";
+import { type FormatSettings } from "@/lib/format";
 import type { Column, ProposalRow } from "../types";
+import { functions } from "@/lib/functions";
 function tone(code?: string): StatusTone {
   if (["REJ", "ABANDON", "HIGH", "CRITICAL"].includes(code || ""))
     return "danger";
@@ -33,12 +34,11 @@ export function RecordCard({
       label: c.label,
       value:
         c.key === "value"
-          ? moneyDisplay(row.value, row.currency, format).replace(
-              /([£$€])0\.00$/,
-              "$10",
-            )
+          ? functions.format
+              .moneyDisplay(row.value, row.currency, format)
+              .replace(/([£$€])0\.00$/, "$10")
           : ["created", "updated", "start", "end"].includes(c.key)
-            ? dateDisplay(row[c.key], format)
+            ? functions.format.dateDisplay(row[c.key], format)
             : row[c.key],
     }));
   return (

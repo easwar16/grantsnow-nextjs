@@ -1,11 +1,6 @@
 import "server-only";
-import {
-  label,
-  resourceDescription,
-  resourceVisible,
-  type Resources,
-} from "@/server/platform/configuration/resources";
-import { moneyDisplay, type FormatSettings } from "@/lib/format";
+import { type Resources } from "@/server/platform/configuration/resources";
+import { type FormatSettings } from "@/lib/format";
 import type { AwardShellModel } from "@/features/modules/awards/record/types";
 import {
   AWARD_STATUS_TONE,
@@ -16,10 +11,12 @@ import {
 } from "@/shared/awards/award-record";
 import { isDraft, type AwardRecordContext } from "../record";
 import { canSendToErp } from "./erp";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 const BUNDLE = "award";
 const textOf =
   (rows: Resources) => (group: string, key: string, fallback: string) =>
-    label(rows, BUNDLE, group, key, fallback);
+    serverFunctions.resources.label(rows, BUNDLE, group, key, fallback);
 /** A tab's name: the bundle's `page-name.<key>`, else legacy's fallback. */
 export const tabName = (rows: Resources, tab: AwardTab) =>
   textOf(rows)("page-name", AWARD_TAB_DEFS[tab].key, AWARD_TAB_DEFS[tab].name);
@@ -37,7 +34,8 @@ export function awardShell(
   const t = textOf(rows);
   const a = context.award;
   const status = a.award_status ?? "";
-  const shown = (key: string) => resourceVisible(rows, BUNDLE, "labels", key);
+  const shown = (key: string) =>
+    serverFunctions.resources.resourceVisible(rows, BUNDLE, "labels", key);
   const cells: [string, string, string, string | null | undefined][] = [
     ["award-title", "award-title", "Award Title", a.award_name],
     ["award-number", "award-number", "Award Number", a.award_number],
@@ -70,7 +68,11 @@ export function awardShell(
     panel.push({
       key: "amount",
       label: t("labels", "award-amount", "Amount"),
-      value: moneyDisplay(String(a.award_amount), format?.currency, format),
+      value: functions.format.moneyDisplay(
+        String(a.award_amount),
+        format?.currency,
+        format,
+      ),
     });
   const rest: [string, string, string, string | null | undefined][] = [
     ["funder", "detail-funder", "Funder", a.sponsor_party_name],
@@ -114,7 +116,7 @@ export function awardShell(
     status: "award-status",
   };
   for (const cell of panel)
-    cell.help = resourceDescription(
+    cell.help = serverFunctions.resources.resourceDescription(
       rows,
       BUNDLE,
       "labels",
@@ -147,7 +149,12 @@ export function awardShell(
       save: t("button-labels", "save", "Save"),
       cancel: t("button-labels", "cancel", "Cancel"),
       comments: t("button-labels", "comments", "Comments"),
-      audit: resourceVisible(rows, BUNDLE, "button-labels", "openAuditTrail")
+      audit: serverFunctions.resources.resourceVisible(
+        rows,
+        BUNDLE,
+        "button-labels",
+        "openAuditTrail",
+      )
         ? t("button-labels", "openAuditTrail", "Open Audit Trail")
         : null,
       auditTitle: t("header-labels", "audit-trail", "Audit Trail"),

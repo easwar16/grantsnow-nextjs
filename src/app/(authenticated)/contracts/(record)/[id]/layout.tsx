@@ -2,8 +2,7 @@ import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { pageIdentity } from "@/server/identity/auth/page";
 import { contractId } from "@/features/modules/contracts/schema";
-import { dateDisplay } from "@/lib/format";
-import { AppError, publicError } from "@/lib/errors";
+import { AppError } from "@/lib/errors";
 import { State } from "@/components/feedback/state";
 import { Skeleton } from "@/components/feedback/skeleton";
 import { displayFormat } from "@/server/platform/configuration/formatting";
@@ -12,13 +11,14 @@ import {
   contractVisibleTabs,
   loadContract,
 } from "@/server/modules/contracts/service";
-import { ContractTabs } from "./contract-tabs";
-import { ContractCreatedBy } from "./created-by";
+import { ContractTabs } from "@/features/modules/contracts/record/contract-tabs";
+import { ContractCreatedBy } from "@/features/modules/contracts/record/created-by";
 import { LocalTime } from "@/components/ui/local-time";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { CONTRACT_STATUS_TONE } from "@/features/modules/contracts/format";
-import styles from "../../contracts.module.css";
+import styles from "@/features/modules/contracts/contracts.module.css";
 import { ContractRecordPanels } from "@/features/record/objects/record-panels";
+import { functions } from "@/lib/functions";
 
 /** Kept mounted across Contract tabs; only children below this header are replaced. */
 export default async function ContractRecordLayout({
@@ -57,7 +57,7 @@ async function ContractRecordHeader({ id }: { id: string }) {
   try {
     contract = await loadContract(id);
   } catch (error) {
-    const failure = publicError(error);
+    const failure = functions.errors.publicError(error);
     return (
       <State
         title={
@@ -90,7 +90,7 @@ async function ContractRecordHeader({ id }: { id: string }) {
       label: f.label,
       value:
         f.kind === "date" ? (
-          dateDisplay(f.value, format)
+          functions.format.dateDisplay(f.value, format)
         ) : f.kind === "status" ? (
           <StatusBadge tone={CONTRACT_STATUS_TONE[contract.statusCode]}>
             {f.value}

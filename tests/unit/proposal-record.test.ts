@@ -5,7 +5,8 @@ import {
   objectAccess,
   proposalBundle,
 } from "@/server/modules/proposals/record";
-import { safeReturn } from "@/lib/security";
+import { functions } from "@/lib/functions";
+
 const identity = { type: "PROPOSAL" as const, id: "123" };
 const record = {
   proposal_id: 123,
@@ -156,7 +157,11 @@ it("rejects a response for a different authorized object or type", () => {
   ).toThrow();
 });
 it("preserves safe detail returns but rejects unsupported record routes", () => {
-  expect(safeReturn("/proposals/PROPOSAL/123")).toBe("/proposals/PROPOSAL/123");
-  expect(safeReturn("/proposals/INVALID/123")).toBe("/home");
-  expect(safeReturn("/proposals/PROPOSAL/123/delete")).toBe("/home");
+  expect(functions.security.safeReturn("/proposals/PROPOSAL/123")).toBe(
+    "/proposals/PROPOSAL/123",
+  );
+  expect(functions.security.safeReturn("/proposals/INVALID/123")).toBe("/home");
+  expect(functions.security.safeReturn("/proposals/PROPOSAL/123/delete")).toBe(
+    "/home",
+  );
 });
