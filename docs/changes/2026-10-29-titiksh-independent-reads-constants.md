@@ -53,6 +53,11 @@
     `AppShell`, sets `title` on hover for any element whose ellipsis or line clamp cuts its text, and for an input
     whose value does not fit. It never replaces a deliberate `title` and removes its own once the text fits. Live DEV:
     cut Funder dropdown rows show their full names. Test: `tests/unit/truncated-titles.test.ts`.
+  - Preferences drawer switches (owner: "the circle & the pill are not aligned properly"): the global switch style
+    (`90e46d0`, globals.css) centres its thumb with `top: 50%` + `translateY(-50%)`; the drawer's own switch places
+    its thumb with `top: 2px` but kept the inherited transform, so the thumb sat 8 px high, half outside the pill.
+    The drawer's thumb now sets `transform: none` (measured after: 2 px above and below in a 20 px pill). Labels
+    unchanged (an earlier label-alignment change was reverted at the owner's request).
   - Rules written: foundations (Performance: ten things never wait for one, session-held lookups, 10-minute
     timeouts; constants in one place), AGENTS.md, agent-guide §5.
 - **Shared pieces used or extended:** `useDropdownPanel`, `useApi`, `usePagedApi`, `route` / `searchOf`,
