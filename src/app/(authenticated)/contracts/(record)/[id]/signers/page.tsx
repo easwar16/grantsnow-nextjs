@@ -2,7 +2,7 @@ import { pageIdentity } from "@/server/identity/auth/page";
 import { contractSigners } from "@/server/modules/contracts/service";
 import { contractId } from "@/features/modules/contracts/schema";
 import { State } from "@/components/feedback/state";
-import { contractSignerStamp } from "@/features/modules/contracts/format";
+import { SignersTable } from "@/features/modules/contracts/record/contract-tables";
 import { displayFormat } from "@/server/platform/configuration/formatting";
 import { resources } from "@/server/platform/configuration/resources";
 import { Suspense } from "react";
@@ -91,38 +91,20 @@ async function SignersContent({ id }: { id: string }) {
       <h2 id="contract-signers-title">Signers</h2>
       {signers.length ? (
         <div className={styles.signersTableWrap}>
-          <table id="contract-signers-table">
-            <thead>
-              <tr>
-                {visibleColumns.map((column) => (
-                  <th scope="col" key={column.key}>
-                    {serverFunctions.resources.label(
-                      labels,
-                      "contract",
-                      "table-headers",
-                      column.resource,
-                      column.fallback,
-                    )}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {signers.map((row, index) => (
-                <tr key={`${row.email}-${index}`}>
-                  {visibleColumns.map((column) => (
-                    <td key={column.key}>
-                      {column.key === "sent" ||
-                      column.key === "delivered" ||
-                      column.key === "signed"
-                        ? contractSignerStamp(row[column.key], format)
-                        : row[column.key]}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <SignersTable
+            columns={visibleColumns.map((column) => ({
+              key: column.key,
+              label: serverFunctions.resources.label(
+                labels,
+                "contract",
+                "table-headers",
+                column.resource,
+                column.fallback,
+              ),
+            }))}
+            rows={signers}
+            format={format}
+          />
         </div>
       ) : (
         <p>No data to display.</p>

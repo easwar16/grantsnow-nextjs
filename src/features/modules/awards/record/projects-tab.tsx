@@ -2,7 +2,7 @@
 import { useState, useTransition } from "react";
 import omit from "lodash/omit";
 import { useRouter } from "next/navigation";
-import { Icon } from "@/components/ui/icon";
+import { DataTable } from "@/components/ui/data-table";
 import { HelpButton } from "@/components/ui/help-button";
 import { Collapsible } from "@/components/ui/collapsible";
 import { Select } from "@/components/ui/select";
@@ -361,51 +361,31 @@ function ProjectsPanel({
           </button>
         </div>
       )}
-      <div className="gn-table-scroll" data-height="short">
-        <table id="award-projects-table" className="gn-table">
-          <thead>
-            <tr>
-              {shown.map((k) => (
-                <th key={k} scope="col">
-                  {f[k].label}
-                </th>
-              ))}
-              <th scope="col">
-                <span className="sr-only">{view.texts.editProject}</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {view.projects.map((p) => (
-              <tr key={p.id} id={`award-project-${functions.ids.idPart(p.id)}`}>
-                {shown.map((k) => (
-                  <td key={k}>{cell(p, k)}</td>
-                ))}
-                <td>
-                  <button
-                    type="button"
-                    id={`award-project-${functions.ids.idPart(p.id)}-edit`}
-                    className="gn-btn gn-btn--borderless gn-btn--icon"
-                    aria-label={`${view.texts.editProject} ${p.name}`}
-                    title={view.texts.editProject}
-                    disabled={!view.gates.edit || !p.editable}
-                    onClick={() => setDraft(draftOf(p))}
-                  >
-                    <Icon name="edit" size={14} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {view.projects.length === 0 && (
-              <tr>
-                <td colSpan={shown.length + 1} className="gn-table-empty">
-                  {view.texts.noData}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        id="award-projects-table"
+        rowIds="award-project"
+        height="short"
+        columns={shown.map((k) => ({
+          id: k,
+          header: f[k].label,
+          cell: (p: ProjectRow) => cell(p, k),
+        }))}
+        rows={view.projects}
+        rowKey={(p) => p.id}
+        actions={[
+          {
+            id: "edit",
+            icon: "edit",
+            size: 14,
+            label: (p) => `${view.texts.editProject} ${p.name}`,
+            title: view.texts.editProject,
+            disabled: (p) => !view.gates.edit || !p.editable,
+            onClick: (p) => setDraft(draftOf(p)),
+          },
+        ]}
+        actionsLabel={view.texts.editProject}
+        empty={view.texts.noData}
+      />
       {draft && (
         <ProjectDialog
           view={view}
@@ -621,58 +601,47 @@ function TeamPanel({
             className={styles.collapsible}
             heading={<span>{p.number || p.name}</span>}
           >
-            <div className="gn-table-scroll" data-height="none">
-              <table className="gn-table">
-                <thead>
-                  <tr>
-                    <th scope="col">{c.project}</th>
-                    <th scope="col">{c.projectName}</th>
-                    <th scope="col">{c.person}</th>
-                    <th scope="col">{c.role}</th>
-                    <th scope="col">{c.start}</th>
-                    <th scope="col">{c.end}</th>
-                    <th scope="col">
-                      <span className="sr-only">{view.texts.editTeam}</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {members.map((m) => (
-                    <tr
-                      key={m.id}
-                      id={`award-team-${functions.ids.idPart(m.id)}`}
-                    >
-                      <td>{p.number}</td>
-                      <td>{m.projectName || p.name}</td>
-                      <td>{m.person}</td>
-                      <td>{m.role}</td>
-                      <td>{functions.format.dateDisplay(m.start, format)}</td>
-                      <td>{functions.format.dateDisplay(m.end, format)}</td>
-                      <td>
-                        <button
-                          type="button"
-                          id={`award-team-${functions.ids.idPart(m.id)}-edit`}
-                          className="gn-btn gn-btn--borderless gn-btn--icon"
-                          aria-label={`${view.texts.editTeam} ${m.person}`}
-                          title={view.texts.editTeam}
-                          disabled={!view.gates.edit || !m.editable}
-                          onClick={() => setDraft(m)}
-                        >
-                          <Icon name="edit" size={14} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {members.length === 0 && (
-                    <tr>
-                      <td colSpan={7} className="gn-table-empty">
-                        {view.texts.noData}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              id={`award-team-project-${functions.ids.idPart(p.id)}-table`}
+              rowIds="award-team"
+              emptyId={`award-team-project-${functions.ids.idPart(p.id)}-empty`}
+              height="none"
+              columns={[
+                { id: "project", header: c.project, cell: () => p.number },
+                {
+                  id: "projectName",
+                  header: c.projectName,
+                  cell: (m) => m.projectName || p.name,
+                },
+                { id: "person", header: c.person, cell: (m) => m.person },
+                { id: "role", header: c.role, cell: (m) => m.role },
+                {
+                  id: "start",
+                  header: c.start,
+                  cell: (m) => functions.format.dateDisplay(m.start, format),
+                },
+                {
+                  id: "end",
+                  header: c.end,
+                  cell: (m) => functions.format.dateDisplay(m.end, format),
+                },
+              ]}
+              rows={members}
+              rowKey={(m) => m.id}
+              actions={[
+                {
+                  id: "edit",
+                  icon: "edit",
+                  size: 14,
+                  label: (m) => `${view.texts.editTeam} ${m.person}`,
+                  title: view.texts.editTeam,
+                  disabled: (m) => !view.gates.edit || !m.editable,
+                  onClick: setDraft,
+                },
+              ]}
+              actionsLabel={view.texts.editTeam}
+              empty={view.texts.noData}
+            />
           </Collapsible>
         );
       })}

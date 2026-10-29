@@ -135,3 +135,24 @@
   line-height: 1.4;
   resize: vertical;
 }
+/* Around a read-only control: no box, so the floated label and the value read as a label-value pair. */
+.box:has(
+  > :is(input, textarea)[readonly]:not([type="checkbox"], [type="radio"])
+) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.box:has(
+    > :is(input, textarea)[readonly]:not([type="checkbox"], [type="radio"])
+  )
+  :is(input, textarea) {
+  padding-inline: 0;
+  background: transparent;
+}
+.box:has(
+    > :is(input, textarea)[readonly]:not([type="checkbox"], [type="radio"])
+  )
+  .label {
+  left: 0;
+}

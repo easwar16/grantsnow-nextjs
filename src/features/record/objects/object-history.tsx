@@ -20,6 +20,7 @@ import {
 } from "./types";
 import styles from "./history-delegations.module.css";
 import { functions } from "@/lib/functions";
+import { DataTable } from "@/components/ui/data-table";
 /** Legacy convertUserComments: the table shows the first 15 characters, the popup the whole comment. */
 const preview = (c: string) => (c.length >= 15 ? `${c.slice(0, 15)}...` : c);
 /**
@@ -91,50 +92,40 @@ export function ObjectHistory({
       </div>
       {/* Legacy oj-table: the header stays, an empty table says so in its body. */}
       <div className={`gn-table-scroll ${styles.tableWrap}`}>
-        <table id={`${id}-table`} className="gn-table">
-          <thead>
-            <tr>
-              <th scope="col">{texts.status}</th>
-              <th scope="col">{texts.mode}</th>
-              <th scope="col">{texts.comments}</th>
-              <th scope="col">{texts.user}</th>
-              <th scope="col">{texts.date}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {view.rows.map((r) => (
-              <tr
-                key={r.id}
-                id={`${id}-row-${functions.ids.idPart(r.id)}`}
-                className="enter-rise"
-              >
-                <td>{r.status}</td>
-                <td>{r.mode}</td>
-                <td>
-                  {r.comments && (
-                    <button
-                      type="button"
-                      id={`${id}-row-${functions.ids.idPart(r.id)}-comments`}
-                      className={styles.link}
-                      onClick={() => setComment(r.comments)}
-                    >
-                      {preview(r.comments)}
-                    </button>
-                  )}
-                </td>
-                <td>{r.user}</td>
-                <td>{functions.format.stampDisplay(r.date, format)}</td>
-              </tr>
-            ))}
-            {view.rows.length === 0 && (
-              <tr>
-                <td id={`${id}-empty`} colSpan={5} className="gn-table-empty">
-                  {texts.noData}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        <DataTable
+          id={`${id}-table`}
+          rowIds={`${id}-row`}
+          emptyId={`${id}-empty`}
+          columns={[
+            { id: "status", header: texts.status, cell: (r) => r.status },
+            { id: "mode", header: texts.mode, cell: (r) => r.mode },
+            {
+              id: "comments",
+              header: texts.comments,
+              cell: (r) =>
+                r.comments && (
+                  <button
+                    type="button"
+                    id={`${id}-row-${functions.ids.idPart(r.id)}-comments`}
+                    className={styles.link}
+                    onClick={() => setComment(r.comments)}
+                  >
+                    {preview(r.comments)}
+                  </button>
+                ),
+            },
+            { id: "user", header: texts.user, cell: (r) => r.user },
+            {
+              id: "date",
+              header: texts.date,
+              cell: (r) => functions.format.stampDisplay(r.date, format),
+            },
+          ]}
+          rows={view.rows}
+          rowKey={(r) => r.id}
+          rowClassName={() => "enter-rise"}
+          empty={texts.noData}
+        />
       </div>
       {view.approvals && (
         <details
@@ -151,60 +142,63 @@ export function ObjectHistory({
             />
           ) : (
             <div className={`gn-table-scroll ${styles.tableWrap}`}>
-              <table id={`${id}-approvals-table`} className="gn-table">
-                <thead>
-                  <tr>
-                    <th scope="col">{texts.approvalName}</th>
-                    <th scope="col">{texts.approvalStatus}</th>
-                    <th scope="col">{texts.approvalStage}</th>
-                    <th scope="col">{texts.approvalComments}</th>
-                    {view.approvalTransaction && (
-                      <th scope="col">{texts.approvalTransaction}</th>
-                    )}
-                    <th scope="col">{texts.approvalUpdated}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {view.approvals.rows.map((r) => (
-                    <tr
-                      key={r.id}
-                      id={`${id}-approval-${functions.ids.idPart(r.id)}`}
-                      className="enter-rise"
-                    >
-                      <td>{r.name}</td>
-                      <td>{r.status}</td>
-                      <td>{r.stage}</td>
-                      <td>
-                        {r.comments && (
-                          <button
-                            type="button"
-                            id={`${id}-approval-${functions.ids.idPart(r.id)}-comments`}
-                            className={`${styles.link} ${styles.clamp}`}
-                            onClick={() => setComment(r.comments)}
-                          >
-                            {r.comments}
-                          </button>
-                        )}
-                      </td>
-                      {view.approvalTransaction && <td>{r.transaction}</td>}
-                      <td>
-                        {functions.format.stampDisplay(r.updated, format)}
-                      </td>
-                    </tr>
-                  ))}
-                  {view.approvals.rows.length === 0 && (
-                    <tr>
-                      <td
-                        id={`${id}-approvals-empty`}
-                        colSpan={5}
-                        className="gn-table-empty"
-                      >
-                        {texts.approvalNoData}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+              <DataTable
+                id={`${id}-approvals-table`}
+                rowIds={`${id}-approval`}
+                emptyId={`${id}-approvals-empty`}
+                columns={[
+                  {
+                    id: "name",
+                    header: texts.approvalName,
+                    cell: (r) => r.name,
+                  },
+                  {
+                    id: "status",
+                    header: texts.approvalStatus,
+                    cell: (r) => r.status,
+                  },
+                  {
+                    id: "stage",
+                    header: texts.approvalStage,
+                    cell: (r) => r.stage,
+                  },
+                  {
+                    id: "comments",
+                    header: texts.approvalComments,
+                    cell: (r) =>
+                      r.comments && (
+                        <button
+                          type="button"
+                          id={`${id}-approval-${functions.ids.idPart(r.id)}-comments`}
+                          className={`${styles.link} ${styles.clamp}`}
+                          onClick={() => setComment(r.comments)}
+                        >
+                          {r.comments}
+                        </button>
+                      ),
+                  },
+                  ...(view.approvalTransaction
+                    ? [
+                        {
+                          id: "transaction",
+                          header: texts.approvalTransaction,
+                          cell: (r: (typeof view.approvals.rows)[number]) =>
+                            r.transaction,
+                        },
+                      ]
+                    : []),
+                  {
+                    id: "updated",
+                    header: texts.approvalUpdated,
+                    cell: (r) =>
+                      functions.format.stampDisplay(r.updated, format),
+                  },
+                ]}
+                rows={view.approvals.rows}
+                rowKey={(r) => r.id}
+                rowClassName={() => "enter-rise"}
+                empty={texts.approvalNoData}
+              />
             </div>
           )}
         </details>

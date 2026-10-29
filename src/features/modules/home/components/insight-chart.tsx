@@ -1,11 +1,19 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { DataTable } from "@/components/ui/data-table";
 import { useRouter } from "next/navigation";
 import { ChartSkeleton } from "@/components/feedback/skeleton";
 import type { WidgetData } from "../types";
 import { type FormatSettings } from "@/lib/format";
 import { functions } from "@/lib/functions";
+/** One line of the chart's accessible values. */
+type DataRow = {
+  key: string;
+  category: React.ReactNode;
+  series: string;
+  value: React.ReactNode;
+};
 // Drill targets are server-built listing paths; anything else is not navigated to.
 const internal = (href?: string) =>
   href?.startsWith("/") && !href.startsWith("//") ? href : undefined;
@@ -135,16 +143,15 @@ export function InsightChart({
       {(expanded || showData || failed) && (
         <details id={`${id}-data`} className="insight-data" open={expanded}>
           <summary>View chart data</summary>
-          <table>
-            <thead>
-              <tr>
-                <th>Category</th>
-                <th>Series</th>
-                <th>Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              {g
+          <DataTable<DataRow>
+            id={`${id}-data-table`}
+            columns={[
+              { id: "category", header: "Category", cell: (r) => r.category },
+              { id: "series", header: "Series", cell: (r) => r.series },
+              { id: "value", header: "Value", cell: (r) => r.value },
+            ]}
+            rows={
+              g
                 ? (
                     [
                       ["Total Awarded Funding", g.value],
@@ -152,39 +159,37 @@ export function InsightChart({
                       ["Medium", g.medium],
                       ["Target", g.target],
                     ] as const
-                  ).map(([name, v]) => (
-                    <tr key={name}>
-                      <td>{name}</td>
-                      <td>
-                        {name === "Total Awarded Funding"
-                          ? "—"
-                          : "Organizational Objective"}
-                      </td>
-                      <td>{value(v, true)}</td>
-                    </tr>
-                  ))
+                  ).map(([name, v]) => ({
+                    key: name,
+                    category: name,
+                    series:
+                      name === "Total Awarded Funding"
+                        ? "—"
+                        : "Organizational Objective",
+                    value: value(v, true),
+                  }))
                 : data.statistics.map((r) => {
                     const href = internal(r.href);
-                    return (
-                      <tr key={r.id}>
-                        <td>
-                          {href ? <Link href={href}>{r.label}</Link> : r.label}
-                        </td>
-                        <td>{r.series || "—"}</td>
-                        <td>
-                          {value(
-                            r.value,
-                            // The combo's count series is not money (legacy y converter is decimal).
-                            data.presentation?.type === "combo"
-                              ? r.series === "Awarded Amount"
-                              : undefined,
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-            </tbody>
-          </table>
+                    return {
+                      key: r.id,
+                      category: href ? (
+                        <Link href={href}>{r.label}</Link>
+                      ) : (
+                        r.label
+                      ),
+                      series: r.series || "—",
+                      value: value(
+                        r.value,
+                        // The combo's count series is not money (legacy y converter is decimal).
+                        data.presentation?.type === "combo"
+                          ? r.series === "Awarded Amount"
+                          : undefined,
+                      ),
+                    };
+                  })
+            }
+            rowKey={(r) => r.key}
+          />
         </details>
       )}
     </div>

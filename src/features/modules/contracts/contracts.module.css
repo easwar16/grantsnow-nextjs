@@ -716,25 +716,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-.summary table {
-  width: 100%;
-  border-collapse: collapse;
-  background: var(--surface);
-  font-size: 12px;
-}
-.summary th {
-  background: #345257;
-  color: white;
-  text-align: left;
-}
-.summary th,
-.summary td {
-  padding: 9px 12px;
-  vertical-align: top;
-}
-.summary td {
-  border: 1px solid var(--border);
-}
+/* The deadlines table is DataTable (.gn-table); only its empty row's legacy height stays. */
 .summary tbody tr:only-child td[colspan] {
   height: 94px;
 }
@@ -781,10 +763,7 @@
   overflow-x: auto;
 }
 .signersTableWrap table {
-  width: 100%;
-  border-collapse: collapse;
   table-layout: fixed;
-  font-size: 12px;
 }
 .signersTableWrap th:nth-child(1) {
   width: 11%;
@@ -795,15 +774,7 @@
 .signersTableWrap th:nth-child(3) {
   width: 12%;
 }
-.signersTableWrap th {
-  background: #345257;
-  color: #fff;
-  text-align: left;
-}
-.signersTableWrap th,
 .signersTableWrap td {
-  padding: 12px;
-  border-bottom: 1px solid var(--border);
   overflow-wrap: anywhere;
 }
 @media (max-width: 760px) {

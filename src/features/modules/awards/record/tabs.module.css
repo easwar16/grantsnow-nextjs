@@ -22,6 +22,11 @@
 .number {
   text-align: right;
 }
+/* A footer label ending at its cell's end, as legacy's spanned label cell. */
+.footLabel {
+  display: block;
+  text-align: right;
+}
 .empty {
   text-align: center;
   color: var(--gn-text-secondary);
@@ -105,30 +110,6 @@
 }
 /* The cost tree (legacy prepareCostingData, measured 2026-10-26): expander and a warning-coloured 12px bold name,
    categories indented one step; group amounts bold, every percentage 15px bold. */
-.node {
-  display: inline-flex;
-  align-items: center;
-}
-/* Measured text starts: section 30px, category 49px, line 60px (legacy td padding-left: 60px). */
-.level1 .node {
-  padding-left: 19px;
-}
-.level2 > :first-child {
-  padding-left: 60px;
-}
-.expander {
-  display: inline-flex;
-  min-height: 0;
-  padding: 2px;
-  border: 0;
-  background: none;
-}
-.expander > * {
-  transition: transform var(--dur) var(--ease);
-}
-.expander[aria-expanded="false"] > * {
-  transform: rotate(-90deg);
-}
 .nodeName {
   font-size: 12px;
   font-weight: 700;
@@ -191,7 +172,8 @@
   font-weight: 600;
   text-align: end;
 }
-.globalForm .actions {
+/* The Edit / Cancel / Save row spans both columns, so it centres on the whole form. */
+.globalForm .globalActions {
   grid-column: 1 / -1;
 }
 @media (max-width: 900px) {

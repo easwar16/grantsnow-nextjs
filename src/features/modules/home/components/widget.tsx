@@ -1,5 +1,5 @@
 "use client";
-import { RecordSkeleton } from "@/components/feedback/skeleton";
+import { ListSkeleton } from "@/components/feedback/skeleton";
 import { useMemo, useState } from "react";
 import type { HomeFilters, WidgetResult } from "../types";
 import { State } from "@/components/feedback/state";
@@ -124,7 +124,7 @@ export function Widget({
           </div>
         </div>
         {loading === "refresh" ? (
-          <RecordSkeleton label={`Loading ${title}`} />
+          <ListSkeleton label={`Loading ${title}`} />
         ) : error ? (
           <State
             title="Widget unavailable"
@@ -208,7 +208,7 @@ export function Widget({
             )}
             {loading === "more" && (
               <li className="attention-loading">
-                <RecordSkeleton rows={1} label={`Loading more ${title}`} />
+                <ListSkeleton rows={1} label={`Loading more ${title}`} />
               </li>
             )}
           </ul>

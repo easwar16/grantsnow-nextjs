@@ -2,6 +2,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
+import { DataTable } from "@/components/ui/data-table";
 import { HelpButton } from "@/components/ui/help-button";
 import { DateInput } from "@/components/ui/date-input";
 import { useToast } from "@/components/feedback/toast";
@@ -72,76 +73,52 @@ export function BudgetTab({
           </button>
         </div>
       )}
-      <div className="gn-table-scroll">
-        <table id="award-budget-periods" className="gn-table">
-          <thead>
-            <tr>
-              <th scope="col">{c.start}</th>
-              <th scope="col">{c.end}</th>
-              <th scope="col">{c.type}</th>
-              {AMOUNTS.map((k) => (
-                <th key={k} scope="col" className={styles.number}>
-                  {c[k]}
-                </th>
-              ))}
-              <th scope="col">
-                <span className="sr-only">{view.texts.edit}</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {view.rows.map((r) => (
-              <tr
-                key={r.key}
-                id={`award-budget-${functions.ids.idPart(r.key)}`}
-              >
-                <td>{functions.format.dateDisplay(r.start, format)}</td>
-                <td>{functions.format.dateDisplay(r.end, format)}</td>
-                <td>{r.type}</td>
-                {AMOUNTS.map((k) => (
-                  <td key={k} className={styles.number}>
-                    {money(r[k])}
-                  </td>
-                ))}
-                <td>
-                  <button
-                    type="button"
-                    id={`award-budget-${functions.ids.idPart(r.key)}-edit`}
-                    className="gn-btn gn-btn--borderless gn-btn--icon"
-                    aria-label={`${view.texts.edit} ${r.key}`}
-                    title={view.texts.edit}
-                    disabled={!view.canEdit || !r.editable}
-                    onClick={() => setDraft(r)}
-                  >
-                    <Icon name="edit" size={14} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {view.rows.length === 0 && (
-              <tr>
-                <td colSpan={9} className="gn-table-empty">
-                  {view.texts.noData}
-                </td>
-              </tr>
-            )}
-          </tbody>
-          <tfoot>
-            <tr>
-              {/* Legacy footerTemplate totalCostLabel: in the type column, at its end. */}
-              <td colSpan={3} className={styles.number}>
-                {c.footer}
-              </td>
-              {AMOUNTS.map((k) => (
-                <td key={k} className={styles.number}>
-                  {money(totals[k])}
-                </td>
-              ))}
-              <td />
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+      <DataTable
+        id="award-budget-periods"
+        rowIds="award-budget"
+        height="default"
+        columns={[
+          {
+            id: "start",
+            header: c.start,
+            cell: (r) => functions.format.dateDisplay(r.start, format),
+          },
+          {
+            id: "end",
+            header: c.end,
+            cell: (r) => functions.format.dateDisplay(r.end, format),
+          },
+          // Legacy footerTemplate totalCostLabel: in the type column, at its end.
+          {
+            id: "type",
+            header: c.type,
+            cell: (r) => r.type,
+            footer: <span className={styles.footLabel}>{c.footer}</span>,
+          },
+          ...AMOUNTS.map((k) => ({
+            id: k,
+            header: c[k],
+            align: "end" as const,
+            cell: (r: BudgetView["rows"][number]) => money(r[k]),
+            footer: money(totals[k]),
+          })),
+        ]}
+        rows={view.rows}
+        rowKey={(r) => r.key}
+        actions={[
+          {
+            id: "edit",
+            icon: "edit",
+            size: 14,
+            label: (r) => `${view.texts.edit} ${r.key}`,
+            title: view.texts.edit,
+            disabled: (r) => !view.canEdit || !r.editable,
+            onClick: setDraft,
+          },
+        ]}
+        actionsLabel={view.texts.edit}
+        empty={view.texts.noData}
+      />
       {draft && (
         <BudgetDialog
           view={view}

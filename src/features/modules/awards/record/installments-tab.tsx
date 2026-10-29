@@ -1,6 +1,7 @@
 "use client";
 import { Fragment, useState, useSyncExternalStore } from "react";
 import { Icon } from "@/components/ui/icon";
+import { DataTable } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Collapsible } from "@/components/ui/collapsible";
 import { HelpButton } from "@/components/ui/help-button";
@@ -19,6 +20,7 @@ import {
   progress,
   saveInstallments,
   storedInstallments,
+  type Amounts,
   type Installment,
   type InstallmentRow,
 } from "./installments-model";
@@ -85,28 +87,14 @@ export function InstallmentsTab({
     });
     if (ok) commit(list.filter((_, i) => i !== index));
   };
-  const amounts = (
-    r: InstallmentRow | (typeof sections)[number]["projects"][number],
-    strong: boolean,
-  ) => (
-    <>
-      {(
-        [
-          money(r.sponsor_contribution),
-          percent(r.share_pct, decimals),
-          money(r.installment_amount),
-          money(r.remaining_balance),
-        ] as const
-      ).map((v, i) => (
-        <td
-          key={i}
-          className={`${styles.number}${strong ? ` ${styles.strong}` : ""}`}
-        >
-          {v}
-        </td>
-      ))}
-    </>
-  );
+  // The four amount columns of a section, category, item or project total, formatted.
+  const values = (r: Amounts) =>
+    [
+      money(r.sponsor_contribution),
+      percent(r.share_pct, decimals),
+      money(r.installment_amount),
+      money(r.remaining_balance),
+    ] as const;
   return (
     <div id="award-record-installments" className={styles.tab}>
       {list.length > 0 && (
@@ -248,8 +236,8 @@ export function InstallmentsTab({
                   id={`${key}-project-${p.project_id}-table`}
                   view={view}
                   rows={p.sections}
-                  footer={amounts(p, true)}
-                  amounts={amounts}
+                  total={p}
+                  values={values}
                 />
               </Collapsible>
             ))}
@@ -291,108 +279,55 @@ function InstallmentTable({
   id,
   view,
   rows,
-  footer,
-  amounts,
+  total,
+  values,
 }: {
   id: string;
   view: InstallmentsView;
   rows: InstallmentRow[];
-  footer: React.ReactNode;
-  amounts: (r: InstallmentRow, strong: boolean) => React.ReactNode;
+  total: Amounts;
+  values: (r: Amounts) => readonly string[];
 }) {
   const t = view.texts;
-  const [closed, setClosed] = useState<ReadonlySet<string>>(new Set());
-  const toggle = (key: string) =>
-    setClosed((c) => {
-      const next = new Set(c);
-      if (!next.delete(key)) next.add(key);
-      return next;
-    });
-  const node = (r: InstallmentRow) => (
-    <th scope="row">
-      <span className={styles.node}>
-        <button
-          type="button"
-          id={`${id}-${functions.ids.idPart(r.key)}-toggle`}
-          className={styles.expander}
-          aria-expanded={!closed.has(r.key)}
-          aria-label={r.name}
-          onClick={() => toggle(r.key)}
-        >
-          <Icon name="caret-down" size={14} />
-        </button>
-        <span className={styles.nodeName}>{r.name}</span>
-      </span>
-    </th>
-  );
+  // Sections and categories (depth 0 and 1) are bold, as legacy's node rows.
+  const strong = (depth: number, v: string) =>
+    depth < 2 ? <span className={styles.strong}>{v}</span> : v;
+  const amount = (i: number, header: string) => ({
+    id: `amount-${i}`,
+    header,
+    align: "end" as const,
+    cell: (r: InstallmentRow, depth: number) => strong(depth, values(r)[i]),
+    footer: strong(0, values(total)[i]),
+  });
   return (
-    <div className="gn-table-scroll" data-height="tall">
-      <table id={id} className="gn-table">
-        <thead>
-          <tr>
-            <th scope="col">{t.costItem}</th>
-            <th scope="col" className={styles.number}>
-              {t.funderContribution}
-            </th>
-            <th scope="col" className={styles.number}>
-              {t.share}
-            </th>
-            <th scope="col" className={styles.number}>
-              {t.amount}
-            </th>
-            <th scope="col" className={styles.number}>
-              {t.remaining}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((section) => (
-            <Fragment key={section.key}>
-              <tr id={`${id}-${functions.ids.idPart(section.key)}`}>
-                {node(section)}
-                {amounts(section, true)}
-              </tr>
-              {!closed.has(section.key) &&
-                section.children.map((category) => (
-                  <Fragment key={category.key}>
-                    <tr
-                      id={`${id}-${functions.ids.idPart(category.key)}`}
-                      className={styles.level1}
-                    >
-                      {node(category)}
-                      {amounts(category, true)}
-                    </tr>
-                    {!closed.has(category.key) &&
-                      category.children.map((item) => (
-                        <tr
-                          key={item.key}
-                          id={`${id}-${functions.ids.idPart(item.key)}`}
-                          className={styles.level2}
-                        >
-                          <td>{item.name}</td>
-                          {amounts(item, false)}
-                        </tr>
-                      ))}
-                  </Fragment>
-                ))}
-            </Fragment>
-          ))}
-          {rows.length === 0 && (
-            <tr>
-              <td colSpan={5} className="gn-table-empty">
-                {t.tableNoData}
-              </td>
-            </tr>
-          )}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td>{t.total}</td>
-            {footer}
-          </tr>
-        </tfoot>
-      </table>
-    </div>
+    <DataTable
+      id={id}
+      height="tall"
+      columns={[
+        {
+          id: "item",
+          header: t.costItem,
+          cell: (r, depth) =>
+            depth < 2 ? (
+              <span className={styles.nodeName}>{r.name}</span>
+            ) : (
+              r.name
+            ),
+          footer: t.total,
+        },
+        amount(0, t.funderContribution),
+        amount(1, t.share),
+        amount(2, t.amount),
+        amount(3, t.remaining),
+      ]}
+      rows={rows}
+      rowKey={(r) => r.key}
+      childrenOf={(r) => r.children}
+      rowLabel={(r) => r.name}
+      // Measured text starts: section 30px, category 49px, item 60px from the cell edge (12px padding, 18px expander).
+      indent={(depth, leaf) => (leaf && depth > 1 ? "30px" : `${depth * 19}px`)}
+      empty={t.tableNoData}
+    />
   );
 }
 

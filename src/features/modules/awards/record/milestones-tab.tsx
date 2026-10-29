@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Icon } from "@/components/ui/icon";
+import { DataTable } from "@/components/ui/data-table";
 import { ActionDialog } from "@/components/dialog/action-dialog";
 import { DynamicForm } from "@/features/record/dynamic-form/dynamic-form";
 import { AWARD_MODULE } from "@/shared/awards/award-record";
@@ -28,29 +29,21 @@ export function MilestonesTab({ view }: { view: MilestonesView }) {
           {t.add}
         </button>
       </div>
-      <div className="gn-table-scroll">
-        <table id="award-milestones-table" className="gn-table">
-          <thead>
-            <tr>
-              <th scope="col">{t.description}</th>
-              <th scope="col">{t.date}</th>
-              <th scope="col">{t.amount}</th>
-              <th scope="col">{t.status}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td
-                id="award-milestones-empty"
-                colSpan={4}
-                className="gn-table-empty"
-              >
-                {t.noData}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      {/* Legacy never fills it: the columns over the empty message. */}
+      <DataTable
+        id="award-milestones-table"
+        rowIds="award-milestones"
+        height="default"
+        columns={[
+          { id: "description", header: t.description, cell: () => null },
+          { id: "date", header: t.date, cell: () => null },
+          { id: "amount", header: t.amount, cell: () => null },
+          { id: "status", header: t.status, cell: () => null },
+        ]}
+        rows={[] as never[]}
+        rowKey={() => ""}
+        empty={t.noData}
+      />
       {open && (
         <ActionDialog
           id="award-milestone-dialog"

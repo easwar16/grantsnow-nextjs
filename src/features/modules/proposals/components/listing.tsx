@@ -1,6 +1,6 @@
 "use client";
 import type { FormatSettings } from "@/lib/format";
-import { RecordSkeleton } from "@/components/feedback/skeleton";
+import { ListSkeleton } from "@/components/feedback/skeleton";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { parseQuery, serializeQuery, type ProposalQuery } from "../schemas";
@@ -493,7 +493,7 @@ export function Listing({
               code="BAD_REQUEST"
             />
           ) : !result || loading || stale ? (
-            <RecordSkeleton variant="proposal" label="Loading proposals" />
+            <ListSkeleton variant="proposal" label="Loading proposals" />
           ) : !result.ok ? (
             <State
               title={
@@ -546,7 +546,7 @@ export function Listing({
                   />
                 ))}
                 {loadingMore && (
-                  <RecordSkeleton label="Loading more proposals" rows={1} />
+                  <ListSkeleton label="Loading more proposals" rows={1} />
                 )}
                 {moreError && (
                   <div className="notice" role="alert">

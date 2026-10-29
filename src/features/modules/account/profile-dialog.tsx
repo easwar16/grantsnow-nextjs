@@ -3,9 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { account, useApi } from "@/lib/api";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
-import { Skeleton, RecordSkeleton } from "@/components/feedback/skeleton";
+import { Skeleton, ListSkeleton } from "@/components/feedback/skeleton";
 import { useToast } from "@/components/feedback/toast";
 import { Icon } from "@/components/ui/icon";
+import { DataTable } from "@/components/ui/data-table";
 import { Select } from "@/components/ui/select";
 import { useShell } from "@/components/layout/shell-context";
 import { saveFailure, saveSettings } from "./apply";
@@ -462,7 +463,7 @@ function StatusEditor({
               </button>
             </div>
           ) : org && !people.data ? (
-            <RecordSkeleton label="Loading proxy directory" rows={1} />
+            <ListSkeleton label="Loading proxy directory" rows={1} />
           ) : (
             <label>
               <span>{labels.selectProxy}</span>
@@ -494,60 +495,44 @@ function StatusEditor({
               />
             </label>
           )}
-          <table id="profile-proxies" className={styles.wide}>
-            <thead>
-              <tr>
-                <th>{labels.orgName}</th>
-                <th>{labels.proxyName}</th>
-                <th>
-                  <span className="sr-only">Remove</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {value.proxy_users.length === 0 ? (
-                <tr>
-                  <td colSpan={3} className="muted">
-                    {labels.noData}
-                  </td>
-                </tr>
-              ) : (
-                value.proxy_users.map((p, i) => (
-                  <tr
-                    key={`${p.org_id}:${p.proxy_pid}`}
-                    id={`profile-proxy-${p.org_id}-${p.proxy_pid}`}
-                  >
-                    <td>
-                      {organizations.find((o) => o.id === p.org_id)?.name ||
-                        p.org_id}
-                    </td>
-                    <td>
-                      {people.data?.find((person) => person.id === p.proxy_pid)
-                        ?.name || p.proxy_pid}
-                    </td>
-                    <td>
-                      <button
-                        id={`profile-proxy-${p.org_id}-${p.proxy_pid}-remove`}
-                        type="button"
-                        className={styles.danger}
-                        aria-label="Remove proxy"
-                        onClick={() =>
-                          onChange({
-                            ...value,
-                            proxy_users: value.proxy_users.filter(
-                              (_, index) => index !== i,
-                            ),
-                          })
-                        }
-                      >
-                        <Icon name="trash" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          <DataTable
+            id="profile-proxies"
+            rowIds="profile-proxy"
+            className={styles.wide}
+            columns={[
+              {
+                id: "org",
+                header: labels.orgName,
+                cell: (p) =>
+                  organizations.find((o) => o.id === p.org_id)?.name ||
+                  p.org_id,
+              },
+              {
+                id: "proxy",
+                header: labels.proxyName,
+                cell: (p) =>
+                  people.data?.find((person) => person.id === p.proxy_pid)
+                    ?.name || p.proxy_pid,
+              },
+            ]}
+            rows={value.proxy_users}
+            rowKey={(p) => `${p.org_id}-${p.proxy_pid}`}
+            actions={[
+              {
+                id: "remove",
+                icon: "trash",
+                label: () => "Remove proxy",
+                className: styles.danger,
+                onClick: (p) =>
+                  onChange({
+                    ...value,
+                    proxy_users: value.proxy_users.filter((x) => x !== p),
+                  }),
+              },
+            ]}
+            actionsLabel="Remove"
+            empty={labels.noData}
+          />
         </>
       )}
     </div>

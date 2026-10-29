@@ -29,6 +29,10 @@
 .toggle[aria-expanded="true"] {
   background: var(--hover-tint);
 }
+.items {
+  /* The single guides slide open (expand animates the height). */
+  overflow: hidden;
+}
 .menu .items button {
   padding-left: 28px;
   color: var(--gn-text-secondary);
@@ -113,4 +117,10 @@
 }
 .popover :global(.driver-popover-arrow-side-right) {
   border-right-color: var(--gn-surface);
+}
+/* driver.js's own fades give way to the app's motion (guide-launcher animates with the shared presets). */
+:global(body.driver-fade) :global(.driver-overlay),
+:global(body.driver-fade) :global(.driver-popover) {
+  /* body.: outranks driver.css, which loads after this module. */
+  animation: none;
 }

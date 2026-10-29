@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/feedback/skeleton";
+import { FormSkeleton } from "@/components/feedback/skeleton";
 export default function Loading() {
-  return <Skeleton kind="table" count={5} label="Loading Contract section" />;
+  return <FormSkeleton label="Loading Contract section" />;
 }

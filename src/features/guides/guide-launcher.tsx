@@ -1,9 +1,11 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { AnimatePresence, motion, useAnimate } from "motion/react";
 import { Icon } from "@/components/ui/icon";
 import { doneKey, guideMenu, guidesFor, loadSteps } from "./registry";
 import type { Guide, GuideStep } from "./types";
+import { expand, fade, pop } from "@/lib/motion";
 import styles from "./guides.module.css";
 import { functions } from "@/lib/functions";
 type Tour = { destroy: () => void };
@@ -75,12 +77,33 @@ async function reach(s: GuideStep) {
   await appear(() => anchor(s), 3000);
   return anchor(s) !== null;
 }
-/** Starts a guide with driver.js; the library and its CSS load only on first use. */
+/** Starts a guide with driver.js; the library, its CSS and Motion's DOM animate load only on first use. */
 async function run(g: Guide, content: GuideStep[]): Promise<Tour> {
-  const [{ driver }] = await Promise.all([
+  const [{ driver }, , { animate }] = await Promise.all([
     import("driver.js"),
     import("driver.js/dist/driver.css"),
+    import("motion"),
   ]);
+  // The app's motion (the shared presets), not driver.js's own 400ms fade; none when the viewer reduces motion.
+  const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const overlay = () =>
+    document.querySelector<SVGElement>(".driver-overlay") ?? undefined;
+  let entered = false,
+    leaving = false;
+  // Pops the popover and fades the overlay out, then closes the tour; every way of leaving comes through here.
+  const leave = async () => {
+    if (leaving) return;
+    leaving = true;
+    const wrapper = document.querySelector<HTMLElement>(".driver-popover"),
+      shade = overlay(),
+      out = still ? { duration: 0 } : pop.transition;
+    await Promise.all([
+      wrapper && animate(wrapper, { opacity: 0, scale: pop.exit.scale }, out),
+      shade &&
+        animate(shade, { opacity: 0 }, still ? out : fade.exit.transition),
+    ]);
+    tour.destroy();
+  };
   // A step behind a tab stays while its tab exists; its element is checked when the step is reached.
   const kept = content.filter(
     (s) =>
@@ -90,7 +113,7 @@ async function run(g: Guide, content: GuideStep[]): Promise<Tour> {
   const move = async (from: number, dir: 1 | -1) => {
     for (let i = from + dir; i >= 0 && i < kept.length; i += dir)
       if (await reach(kept[i])) return tour.moveTo(i);
-    if (dir === 1) tour.destroy();
+    if (dir === 1) void leave();
   };
   const tour = driver({
     steps: kept.map((s) => ({
@@ -104,6 +127,8 @@ async function run(g: Guide, content: GuideStep[]): Promise<Tour> {
     overlayOpacity: 0.55,
     stagePadding: 4,
     stageRadius: 3,
+    // The stage moves between elements in the app's base duration (--gn-dur).
+    duration: 250,
     popoverClass: styles.popover,
     progressText: "{{current}} of {{total}}",
     nextBtnText: "Next",
@@ -114,7 +139,22 @@ async function run(g: Guide, content: GuideStep[]): Promise<Tour> {
       // Added, not replaced: driver.js finds its buttons by its own class names.
       p.nextButton.classList.add("gn-btn", "gn-btn--solid", "gn-btn--primary");
       p.previousButton.classList.add("gn-btn", "gn-btn--outlined");
+      if (still) return;
+      // Hidden at once: Motion starts on the next frame, and the popover is already on the page.
+      p.wrapper.style.opacity = "0";
+      animate(
+        p.wrapper,
+        { opacity: [pop.initial.opacity, 1], scale: [pop.initial.scale, 1] },
+        pop.transition,
+      );
+      const shade = overlay();
+      if (!entered && shade) {
+        entered = true;
+        animate(shade, { opacity: [0, 1] }, fade.animate.transition);
+      }
     },
+    // Escape, the close button, the overlay and Done all arrive here; driver.js then waits for destroy().
+    onDestroyStarted: () => void leave(),
     onDestroyed: () => markDone(g),
   });
   for (let i = 0; i < kept.length; i++)
@@ -145,6 +185,7 @@ export function GuideLauncher({ access }: { access: string[] }) {
   // A guide chosen for another page, started once that page is reached.
   const pending = useRef<Guide | null>(null);
   const [busy, setBusy] = useState(false);
+  const [panel, animatePanel] = useAnimate<HTMLDivElement>();
   const [expanded, setExpanded] = useState<string | null>(null);
   const start = useCallback((g: Guide) => {
     active.current?.destroy();
@@ -210,7 +251,23 @@ export function GuideLauncher({ access }: { access: string[] }) {
     }
   }
   return (
-    <details id="guide-menu" className="user-menu" ref={details}>
+    <details
+      id="guide-menu"
+      className="user-menu"
+      ref={details}
+      // The panel pops in on open, animated in place so keyboard focus moved into it stays.
+      onToggle={(e) => {
+        if (e.currentTarget.open && panel.current)
+          void animatePanel(
+            panel.current,
+            {
+              opacity: [pop.initial.opacity, 1],
+              scale: [pop.initial.scale, 1],
+            },
+            pop.transition,
+          );
+      }}
+    >
       <summary
         ref={trigger}
         id="guide-menu-button"
@@ -231,6 +288,7 @@ export function GuideLauncher({ access }: { access: string[] }) {
         <Icon name="caret-down" />
       </summary>
       <div
+        ref={panel}
         id="guide-menu-list"
         className={`user-menu-content ${styles.menu}`}
         role="menu"
@@ -275,22 +333,28 @@ export function GuideLauncher({ access }: { access: string[] }) {
                   </button>
                 )}
               </div>
-              {open && (
-                <div id={`${key}-items`} className={styles.items}>
-                  {items.map((g) => (
-                    <button
-                      key={g.id}
-                      id={`guide-menu-${g.id}`}
-                      type="button"
-                      role="menuitem"
-                      disabled={busy}
-                      onClick={() => choose(g)}
-                    >
-                      {g.title}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <AnimatePresence initial={false}>
+                {open && (
+                  <motion.div
+                    {...expand}
+                    id={`${key}-items`}
+                    className={styles.items}
+                  >
+                    {items.map((g) => (
+                      <button
+                        key={g.id}
+                        id={`guide-menu-${g.id}`}
+                        type="button"
+                        role="menuitem"
+                        disabled={busy}
+                        onClick={() => choose(g)}
+                      >
+                        {g.title}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           );
         })}

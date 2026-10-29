@@ -1,6 +1,7 @@
 "use client";
 import { Fragment, useState } from "react";
 import { Icon } from "@/components/ui/icon";
+import { DataTable, type TableColumn } from "@/components/ui/data-table";
 import { HelpButton } from "@/components/ui/help-button";
 import { Collapsible } from "@/components/ui/collapsible";
 import { ActionMenu } from "@/components/ui/action-menu";
@@ -21,6 +22,7 @@ import {
   type Amounts,
   type CostLine,
   type GlobalCosts,
+  type ProjectCosts,
   type GlobalEdit,
   type Split,
 } from "./projects-model";
@@ -107,6 +109,39 @@ const draftOf = (level: Level, line: CostLine, a: Amounts): CostDraft => ({
   split: splitOf(a),
 });
 
+/** One row of the cost tree: a funding section, a cost category or a costing line, with its amounts. */
+type CostNode = {
+  level: Level;
+  key: string;
+  name: string;
+  amounts: Amounts;
+  /** What Edit opens: the group's first line (legacy editRowData), or the line itself. */
+  line: CostLine;
+  children?: CostNode[];
+};
+const costTree = (p: ProjectCosts): CostNode[] =>
+  p.sections.map((s) => ({
+    level: "SECTION",
+    key: s.key,
+    name: s.name,
+    amounts: s,
+    line: s.first,
+    children: s.categories.map((c) => ({
+      level: "CATEGORY",
+      key: c.key,
+      name: c.name,
+      amounts: c,
+      line: c.first,
+      children: c.leaves.map((l) => ({
+        level: "LINE",
+        key: l.key,
+        name: l.line.staff_name,
+        amounts: l,
+        line: l.line,
+      })),
+    })),
+  }));
+
 export function ProjectCostsPanel({
   view,
   format,
@@ -117,8 +152,6 @@ export function ProjectCostsPanel({
   onSaved: () => void;
 }) {
   const [draft, setDraft] = useState<CostDraft | null>(null),
-    // Collapsed section and category rows (legacy oj-row-expander; all start expanded).
-    [closed, setClosed] = useState<ReadonlySet<string>>(new Set()),
     { run, isActive } = useInFlight(),
     fail = useActionFailure(),
     confirm = useConfirm("award-cost-delete");
@@ -180,47 +213,9 @@ export function ProjectCostsPanel({
       onSaved();
     }, `${action}-${line.id}`);
   };
-  // Live: group rows' amounts bold, every percentage 15px bold.
-  const amountCells = (a: Amounts, group = false) =>
-    shown.map((k) =>
-      k === "sponsor" || k === "institution" || k === "total" ? (
-        <td
-          key={k}
-          className={`${styles.number} ${group ? styles.strong : ""}`}
-        >
-          {money(a[k])}
-        </td>
-      ) : k === "sponsorPct" || k === "institutionPct" ? (
-        <td key={k} className={`${styles.number} ${styles.pct}`}>
-          {pct(a[k])}
-        </td>
-      ) : null,
-    );
-  const toggle = (key: string) =>
-    setClosed((c) => {
-      const next = new Set(c);
-      if (!next.delete(key)) next.add(key);
-      return next;
-    });
-  const node = (key: string, name: string) => (
-    <th scope="row">
-      <span className={styles.node}>
-        <button
-          type="button"
-          id={`award-cost-${functions.ids.idPart(key)}-toggle`}
-          className={styles.expander}
-          aria-expanded={!closed.has(key)}
-          aria-label={name}
-          onClick={() => toggle(key)}
-        >
-          <Icon name="caret-down" size={14} />
-        </button>
-        <span className={styles.nodeName}>{name}</span>
-      </span>
-    </th>
-  );
-  const leafCell = (k: CostColumn, line: CostLine) => {
-    const v: Partial<Record<CostColumn, string>> = {
+  // One column per shown cost column: group rows bold their amounts and leave the line-only columns blank.
+  const leafValue = (k: CostColumn, line: CostLine) =>
+    ({
       role: line.cost_category_description,
       start: functions.format.dateDisplay(line.cost_start_date, format),
       end: functions.format.dateDisplay(line.cost_end_date, format),
@@ -231,33 +226,46 @@ export function ProjectCostsPanel({
       quantity: text(line.units),
       hours: text(line.project_hours),
       months: text(line.project_months),
-    };
-    return <td key={k}>{v[k]}</td>;
-  };
-  // Group rows leave the leaf-only columns blank.
-  const blanks = (from: number) =>
-    shown
-      .slice(from)
-      .filter((k) => LEAF_ONLY.includes(k))
-      .map((k) => <td key={k} />);
-  const editButton = (
-    id: string,
-    label: string,
-    disabled: boolean,
-    open: () => void,
-  ) => (
-    <button
-      type="button"
-      id={id}
-      className="gn-btn gn-btn--borderless gn-btn--icon"
-      aria-label={label}
-      title={view.texts.editCost}
-      disabled={disabled}
-      onClick={open}
-    >
-      <Icon name="edit" size={14} />
-    </button>
-  );
+    })[k as string];
+  const amount = (k: CostColumn, a: Amounts, group: boolean) =>
+    k === "sponsorPct" || k === "institutionPct" ? (
+      // Live: every percentage 15px bold.
+      <span className={styles.pct}>{pct(a[k])}</span>
+    ) : group ? (
+      <span className={styles.strong}>{money(a[k as keyof Amounts])}</span>
+    ) : (
+      money(a[k as keyof Amounts])
+    );
+  const columns = (p: ProjectCosts): TableColumn<CostNode>[] =>
+    shown.map((k) =>
+      k === "item"
+        ? {
+            id: k,
+            header: h[k].label,
+            cell: (n) =>
+              n.level === "LINE" ? (
+                n.name
+              ) : (
+                <span className={styles.nodeName}>{n.name}</span>
+              ),
+            footer: (
+              <span className={styles.footLabel}>{view.texts.total}</span>
+            ),
+          }
+        : LEAF_ONLY.includes(k)
+          ? {
+              id: k,
+              header: h[k].label,
+              cell: (n) => (n.level === "LINE" ? leafValue(k, n.line) : null),
+            }
+          : {
+              id: k,
+              header: h[k].label,
+              align: "end",
+              cell: (n) => amount(k, n.amounts, n.level !== "LINE"),
+              footer: amount(k, p, false),
+            },
+    );
   return (
     <>
       <GlobalCostForm view={view} format={format} onSaved={onSaved} />
@@ -295,133 +303,73 @@ export function ProjectCostsPanel({
               </span>
             }
           >
-            <div className="gn-table-scroll" data-height="tall">
-              <table className="gn-table">
-                <thead>
-                  <tr>
-                    {shown.map((k) => (
-                      <th
-                        key={k}
-                        scope="col"
-                        className={
-                          LEAF_ONLY.includes(k) || k === "item"
-                            ? undefined
-                            : styles.number
-                        }
-                      >
-                        {h[k].label}
-                      </th>
-                    ))}
-                    <th scope="col">
-                      <span className="sr-only">{view.texts.editCost}</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {p.sections.flatMap((s) => [
-                    <tr
-                      key={s.key}
-                      id={`award-cost-${functions.ids.idPart(s.key)}`}
-                      className={styles.level0}
-                    >
-                      {node(s.key, s.name)}
-                      {blanks(1)}
-                      {amountCells(s, true)}
-                      <td>
-                        {editButton(
-                          `award-cost-${functions.ids.idPart(s.key)}-edit`,
-                          `${view.texts.editCost} ${s.name}`,
-                          !g.edit || !s.first.is_editable,
-                          () => setDraft(draftOf("SECTION", s.first, s)),
-                        )}
-                      </td>
-                    </tr>,
-                    ...(closed.has(s.key) ? [] : s.categories).flatMap((c) => [
-                      <tr
-                        key={c.key}
-                        id={`award-cost-${functions.ids.idPart(c.key)}`}
-                        className={styles.level1}
-                      >
-                        {node(c.key, c.name)}
-                        {blanks(1)}
-                        {amountCells(c, true)}
-                        <td>
-                          {editButton(
-                            `award-cost-${functions.ids.idPart(c.key)}-edit`,
-                            `${view.texts.editCost} ${c.name}`,
-                            !g.edit || !c.first.is_editable,
-                            () => setDraft(draftOf("CATEGORY", c.first, c)),
-                          )}
-                        </td>
-                      </tr>,
-                      ...(closed.has(c.key) ? [] : c.leaves).map((l) => {
-                        const id = `award-cost-${functions.ids.idPart(l.key)}`;
-                        const busy =
-                          isActive(`delete-${l.line.id}`) ||
-                          isActive(`clone-${l.line.id}`);
-                        return (
-                          <tr key={l.key} id={id} className={styles.level2}>
-                            <td>{l.line.staff_name}</td>
-                            {shown
-                              .slice(1)
-                              .map((k) =>
-                                LEAF_ONLY.includes(k)
-                                  ? leafCell(k, l.line)
-                                  : null,
-                              )}
-                            {amountCells(l)}
-                            <td className={styles.rowActions}>
-                              {/* Legacy projectCostActionMenu: Edit, Delete, Clone. */}
-                              <ActionMenu
-                                id={`${id}-menu`}
-                                label={`${view.texts.editCost} ${l.line.staff_name || l.line.cost_category_description}`}
-                                icon="menu"
-                                iconSize={16}
-                                className="gn-btn gn-btn--borderless gn-btn--icon"
-                                disabled={
-                                  !l.line.is_editable ||
-                                  busy ||
-                                  (!g.edit && !g.remove)
-                                }
-                                items={[
-                                  {
-                                    key: "edit",
-                                    label: view.texts.editCost,
-                                    disabled: !g.edit,
-                                    run: () =>
-                                      setDraft(draftOf("LINE", l.line, l)),
-                                  },
-                                  {
-                                    key: "delete",
-                                    label: view.texts.deleteCost,
-                                    disabled: !g.remove,
-                                    run: () => act("delete", l.line),
-                                  },
-                                  {
-                                    key: "clone",
-                                    label: view.texts.clone,
-                                    disabled: !g.edit,
-                                    run: () => act("clone", l.line),
-                                  },
-                                ]}
-                              />
-                            </td>
-                          </tr>
-                        );
-                      }),
-                    ]),
-                  ])}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td className={styles.number}>{view.texts.total}</td>
-                    {blanks(1)}
-                    {amountCells(p)}
-                    <td />
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+            <DataTable
+              id={`award-costs-project-${pid}-table`}
+              rowIds="award-cost"
+              height="tall"
+              columns={columns(p)}
+              rows={costTree(p)}
+              rowKey={(n) => n.key}
+              childrenOf={(n) => n.children}
+              rowLabel={(n) => n.name}
+              // Measured text starts: section 30px, category 49px, line 60px (legacy td padding-left: 60px).
+              indent={(depth, leaf) =>
+                leaf && depth > 1 ? "30px" : `${depth * 19}px`
+              }
+              actions={[
+                {
+                  id: "edit",
+                  icon: "edit",
+                  size: 14,
+                  label: (n) => `${view.texts.editCost} ${n.name}`,
+                  title: view.texts.editCost,
+                  hidden: (n) => n.level === "LINE",
+                  disabled: (n) => !g.edit || !n.line.is_editable,
+                  onClick: (n) => setDraft(draftOf(n.level, n.line, n.amounts)),
+                },
+              ]}
+              actionsClassName={styles.rowActions}
+              actionsLabel={view.texts.editCost}
+              // Legacy projectCostActionMenu: Edit, Delete, Clone, on the line rows.
+              actionCell={(n) => {
+                if (n.level !== "LINE") return null;
+                const busy =
+                  isActive(`delete-${n.line.id}`) ||
+                  isActive(`clone-${n.line.id}`);
+                return (
+                  <ActionMenu
+                    id={`award-cost-${functions.ids.idPart(n.key)}-menu`}
+                    label={`${view.texts.editCost} ${n.line.staff_name || n.line.cost_category_description}`}
+                    icon="menu"
+                    iconSize={16}
+                    className="gn-btn gn-btn--borderless gn-btn--icon"
+                    disabled={
+                      !n.line.is_editable || busy || (!g.edit && !g.remove)
+                    }
+                    items={[
+                      {
+                        key: "edit",
+                        label: view.texts.editCost,
+                        disabled: !g.edit,
+                        run: () => setDraft(draftOf("LINE", n.line, n.amounts)),
+                      },
+                      {
+                        key: "delete",
+                        label: view.texts.deleteCost,
+                        disabled: !g.remove,
+                        run: () => act("delete", n.line),
+                      },
+                      {
+                        key: "clone",
+                        label: view.texts.clone,
+                        disabled: !g.edit,
+                        run: () => act("clone", n.line),
+                      },
+                    ]}
+                  />
+                );
+              }}
+            />
           </Collapsible>
         );
       })}
@@ -985,6 +933,20 @@ const share = (part: number, total: number) =>
 const periodChange = (s: Split, type: GlobalEdit, v: number) =>
   v < 0 ? s : splitChange(s, type, v);
 
+type Period = CostDialogData["periods"][number];
+// The blank row a new period is typed into; never sent, only drawn as the editor.
+const NEW_PERIOD: Period = {
+  id: "",
+  start: "",
+  end: "",
+  unitType: "",
+  quantity: null,
+  hours: null,
+  months: null,
+  sponsor: 0,
+  institution: 0,
+  total: 0,
+};
 function CostPeriods({
   view,
   format,
@@ -1140,7 +1102,7 @@ function CostPeriods({
           }
         />
       )}
-      <td className={styles.rowActions}>
+      <td className={`${styles.rowActions} gn-table-actions`}>
         <button
           type="button"
           id="award-cost-period-save"
@@ -1199,103 +1161,130 @@ function CostPeriods({
           </button>
         </div>
       )}
-      <div className="gn-table-scroll" data-height="dialog">
-        <table id="award-cost-periods-table" className="gn-table">
-          <thead>
-            <tr>
-              <th scope="col">{h.start.label}</th>
-              <th scope="col">{h.end.label}</th>
-              <th scope="col">{h.unitType.label}</th>
-              <th scope="col">{h.quantity.label}</th>
-              {h.hours.show && <th scope="col">{h.hours.label}</th>}
-              {h.months.show && <th scope="col">{h.months.label}</th>}
-              <th scope="col">{h.sponsor.label}</th>
-              <th scope="col">{h.sponsorPct.label}</th>
-              <th scope="col">{h.institution.label}</th>
-              <th scope="col">{h.institutionPct.label}</th>
-              <th scope="col">{h.total.label}</th>
-              <th scope="col">
-                <span className="sr-only">{view.texts.editCost}</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {row?.itemId === null && editing}
-            {data.periods.map((p) =>
-              row?.itemId === Number(p.id) ? (
-                <Fragment key={p.id}>{editing}</Fragment>
-              ) : (
-                <tr
-                  key={p.id}
-                  id={`award-cost-period-${functions.ids.idPart(p.id)}`}
-                >
-                  <td>{functions.format.dateDisplay(p.start, format)}</td>
-                  <td>{functions.format.dateDisplay(p.end, format)}</td>
-                  <td>
-                    {view.choices.unitTypes.find((u) => u.value === p.unitType)
-                      ?.label ?? p.unitType}
-                  </td>
-                  <td>{text(p.quantity)}</td>
-                  {h.hours.show && <td>{text(p.hours)}</td>}
-                  {h.months.show && <td>{text(p.months)}</td>}
-                  <td className={styles.number}>{money(p.sponsor)}</td>
-                  <td className={styles.number}>
-                    {pct(share(p.sponsor, p.total))}
-                  </td>
-                  <td className={styles.number}>{money(p.institution)}</td>
-                  <td className={styles.number}>
-                    {pct(share(p.institution, p.total))}
-                  </td>
-                  <td className={styles.number}>{money(p.total)}</td>
-                  <td className={styles.rowActions}>
-                    <button
-                      type="button"
-                      id={`award-cost-period-${functions.ids.idPart(p.id)}-edit`}
-                      className="gn-btn gn-btn--borderless gn-btn--icon"
-                      aria-label={`${view.texts.editCost} ${p.start}`}
-                      title={view.texts.editCost}
-                      disabled={readOnly || row !== null}
-                      onClick={() =>
-                        setRow({
-                          itemId: Number(p.id),
-                          start: p.start,
-                          end: p.end,
-                          unitType: p.unitType,
-                          quantity: text(p.quantity),
-                          hours: text(p.hours),
-                          months: text(p.months),
-                          split: {
-                            sponsor: p.sponsor,
-                            institution: p.institution,
-                            total: p.total,
-                            sponsorPct: share(p.sponsor, p.total),
-                            institutionPct: share(p.institution, p.total),
-                          },
-                        })
-                      }
-                    >
-                      <Icon name="edit" size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      id={`award-cost-period-${functions.ids.idPart(p.id)}-delete`}
-                      className="gn-btn gn-btn--borderless gn-btn--icon"
-                      aria-label={`${view.texts.deleteCost} ${p.start}`}
-                      title={view.texts.deleteCost}
-                      disabled={
-                        !view.gates.remove || isActive(`period-delete-${p.id}`)
-                      }
-                      onClick={() => remove(Number(p.id))}
-                    >
-                      <Icon name="trash" size={14} />
-                    </button>
-                  </td>
-                </tr>
-              ),
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        id="award-cost-periods-table"
+        rowIds="award-cost-period"
+        height="dialog"
+        columns={[
+          {
+            id: "start",
+            header: h.start.label,
+            cell: (p) => functions.format.dateDisplay(p.start, format),
+          },
+          {
+            id: "end",
+            header: h.end.label,
+            cell: (p) => functions.format.dateDisplay(p.end, format),
+          },
+          {
+            id: "unitType",
+            header: h.unitType.label,
+            cell: (p) =>
+              view.choices.unitTypes.find((u) => u.value === p.unitType)
+                ?.label ?? p.unitType,
+          },
+          {
+            id: "quantity",
+            header: h.quantity.label,
+            cell: (p) => text(p.quantity),
+          },
+          ...(h.hours.show
+            ? [
+                {
+                  id: "hours",
+                  header: h.hours.label,
+                  cell: (p: Period) => text(p.hours),
+                },
+              ]
+            : []),
+          ...(h.months.show
+            ? [
+                {
+                  id: "months",
+                  header: h.months.label,
+                  cell: (p: Period) => text(p.months),
+                },
+              ]
+            : []),
+          {
+            id: "sponsor",
+            header: h.sponsor.label,
+            className: styles.number,
+            cell: (p) => money(p.sponsor),
+          },
+          {
+            id: "sponsorPct",
+            header: h.sponsorPct.label,
+            className: styles.number,
+            cell: (p) => pct(share(p.sponsor, p.total)),
+          },
+          {
+            id: "institution",
+            header: h.institution.label,
+            className: styles.number,
+            cell: (p) => money(p.institution),
+          },
+          {
+            id: "institutionPct",
+            header: h.institutionPct.label,
+            className: styles.number,
+            cell: (p) => pct(share(p.institution, p.total)),
+          },
+          {
+            id: "total",
+            header: h.total.label,
+            className: styles.number,
+            cell: (p) => money(p.total),
+          },
+        ]}
+        // A new period edits in a blank first row; an edited one edits in place.
+        rows={
+          row?.itemId === null ? [NEW_PERIOD, ...data.periods] : data.periods
+        }
+        rowKey={(p) => p.id || "new"}
+        renderRow={(p) =>
+          p === NEW_PERIOD || row?.itemId === Number(p.id) ? editing : null
+        }
+        actions={[
+          {
+            id: "edit",
+            icon: "edit",
+            size: 14,
+            label: (p) => `${view.texts.editCost} ${p.start}`,
+            title: view.texts.editCost,
+            disabled: () => readOnly || row !== null,
+            onClick: (p) =>
+              setRow({
+                itemId: Number(p.id),
+                start: p.start,
+                end: p.end,
+                unitType: p.unitType,
+                quantity: text(p.quantity),
+                hours: text(p.hours),
+                months: text(p.months),
+                split: {
+                  sponsor: p.sponsor,
+                  institution: p.institution,
+                  total: p.total,
+                  sponsorPct: share(p.sponsor, p.total),
+                  institutionPct: share(p.institution, p.total),
+                },
+              }),
+          },
+          {
+            id: "delete",
+            icon: "trash",
+            size: 14,
+            label: (p) => `${view.texts.deleteCost} ${p.start}`,
+            title: view.texts.deleteCost,
+            disabled: (p) =>
+              !view.gates.remove || isActive(`period-delete-${p.id}`),
+            onClick: (p) => remove(Number(p.id)),
+          },
+        ]}
+        actionsClassName={styles.rowActions}
+        actionsLabel={view.texts.editCost}
+      />
       {confirm.element}
     </div>
   );

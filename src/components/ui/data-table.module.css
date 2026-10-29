@@ -1,0 +1,39 @@
+.end {
+  text-align: end;
+}
+.center {
+  text-align: center;
+}
+/* A tree row's first cell: the expander (or the leaf's matching gap) right before its text, indented by depth. */
+.node {
+  display: inline-flex;
+  align-items: center;
+  padding-inline-start: calc(var(--depth, 0) * 19px);
+}
+tr[data-depth="1"] .node {
+  --depth: 1;
+}
+tr[data-depth="2"] .node {
+  --depth: 2;
+}
+tr[data-depth="3"] .node {
+  --depth: 3;
+}
+.expander {
+  display: inline-flex;
+  min-height: 0;
+  padding: 2px;
+  border: 0;
+  background: none;
+}
+.expander > * {
+  transition: transform var(--dur) var(--ease);
+}
+.expander[aria-expanded="false"] > * {
+  transform: rotate(-90deg);
+}
+/* The expander's width (14px icon + 2px padding each side), so leaf text lines up with its siblings'. */
+.leaf {
+  flex: none;
+  width: 18px;
+}

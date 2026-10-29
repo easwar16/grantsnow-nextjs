@@ -293,6 +293,21 @@ These rules belong in `src/server/api/*` and nowhere else.
   (`serverFunctions.permissions.requireModule(user, "AWARD")`). Services that read Oracle stay in their modules, so
   tests can mock them by path; mock a helper on `serverFunctions` (see `tests/integration/contracts-access.test.ts`).
   Types and classes (`AppError`, `FormatSettings`, `Choice`) stay in their modules.
+- **Every table is `DataTable`** (`components/ui/data-table`, owner, 2026-10-29): flat or a tree (`childrenOf`), from
+  `columns`, `rows`, `rowKey` and `actions`. Operations stay in the parent: actions and cells call back, the parent
+  holds the state. Row actions are the last column, pinned to the row's end (`.gn-table-actions`), whatever the
+  table's width. A table extends the component once, backwards compatibly, never with a module copy.
+- **Read-only reads as label and value** (owner, 2026-10-29), as JET renders `readonly`: a field the user cannot
+  change is `ReadonlyField`, not a disabled or read-only control. A `readonly` input that stays (a computed total
+  in a dialog) is drawn without a box by the global `.gn-control[readonly]` and `InsideField` rules. `disabled` is
+  only for a control that is editable but busy (saving).
+- **Skeletons have the shape of what replaces them** (owner, 2026-10-29). A listing page (`(list)/loading.tsx`) uses
+  `ListingSkeleton`. A record page above its layout (`(record)/loading.tsx`) uses `DetailSkeleton` (header, tabs,
+  fields). A tab or section uses its content's shape: `FormSkeleton` (fields), `TableSkeleton`, `ChartSkeleton`,
+  `KpiSkeleton`, or `ListSkeleton` (record rows or cards). Never a list placeholder for a record page; the old
+  `RecordSkeleton` name invited that and was renamed `ListSkeleton`.
+- **Presses are subtle** (owner, 2026-10-29): a pressed control scales to `--gn-press-scale` (0.99), one token for
+  every button.
 - **Truncated text always shows its full value on hover** (owner, 2026-10-29). `TruncatedTitles` (in `AppShell`)
   titles any element whose ellipsis or line clamp is cutting its text, and any input whose value does not fit. Keep
   truncating with `text-overflow: ellipsis` or a line clamp so it is covered; set your own `title` only when the tooltip

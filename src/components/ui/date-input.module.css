@@ -24,7 +24,7 @@
   transform: translateY(-50%);
 }
 .button:active:not(:disabled) {
-  transform: translateY(-50%) scale(0.92);
+  transform: translateY(-50%) scale(var(--gn-press-scale));
 }
 /* Covers the field, invisible and click-through, so the native picker anchors under it: a zero-size anchor makes
    Chrome open the picker at the window's top-left (seen in the convert dialog). */

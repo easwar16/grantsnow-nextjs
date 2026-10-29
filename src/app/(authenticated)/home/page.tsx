@@ -22,7 +22,7 @@ import type { HomeFilters } from "@/features/modules/home/types";
 import { AppError } from "@/lib/errors";
 import { type FormatSettings } from "@/lib/format";
 import { displayFormat } from "@/server/platform/configuration/formatting";
-import { RecordSkeleton, KpiSkeleton } from "@/components/feedback/skeleton";
+import { ListSkeleton, KpiSkeleton } from "@/components/feedback/skeleton";
 import { State } from "@/components/feedback/state";
 import {
   resources,
@@ -196,7 +196,7 @@ export default async function Home({
                     <div className="attention-head">
                       <h3>{title}</h3>
                     </div>
-                    <RecordSkeleton label={`Loading ${title}`} />
+                    <ListSkeleton label={`Loading ${title}`} />
                   </div>
                 </article>
               }

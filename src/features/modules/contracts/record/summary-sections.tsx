@@ -8,6 +8,7 @@ import { DynamicForm } from "@/features/record/dynamic-form/dynamic-form";
 import { Icon } from "@/components/ui/icon";
 import { resources } from "@/server/platform/configuration/resources";
 import { DocumentLink } from "./document-link";
+import { DeadlinesTable } from "./contract-tables";
 import styles from "../contracts.module.css";
 import { functions } from "@/lib/functions";
 import { serverFunctions } from "@/server/functions";
@@ -66,32 +67,11 @@ async function SummaryDeadlines({ contract }: { contract: ContractDetail }) {
       aria-label="Deadline Date"
     >
       <h2>Deadline Date</h2>
-      <table id={`contract-${contract.id}-deadlines-table`}>
-        <thead>
-          <tr>
-            <th>Deadline Type</th>
-            <th>Deadline Description</th>
-            <th>Deadline date</th>
-            <th>Remind me before</th>
-          </tr>
-        </thead>
-        <tbody>
-          {contract.deadlines.length ? (
-            contract.deadlines.map((deadline, index) => (
-              <tr key={`${deadline.date}-${index}`}>
-                <td>{deadline.type}</td>
-                <td>{deadline.description}</td>
-                <td>{functions.format.dateDisplay(deadline.date, format)}</td>
-                <td>{deadline.reminderDays}</td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan={4}>No data to display.</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      <DeadlinesTable
+        id={`contract-${contract.id}-deadlines-table`}
+        rows={contract.deadlines}
+        format={format}
+      />
     </section>
   );
 }

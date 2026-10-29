@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import { type FormatSettings } from "@/lib/format";
-import { RecordSkeleton } from "@/components/feedback/skeleton";
+import { ListSkeleton } from "@/components/feedback/skeleton";
 import { State } from "@/components/feedback/state";
 import { useToast } from "@/components/feedback/toast";
 import { FilterPanel } from "@/components/ui/filter-panel";
@@ -515,7 +515,7 @@ export function Finder({
           >
             {paged.loading && !paged.last ? (
               <li id="finder-list-loading">
-                <RecordSkeleton
+                <ListSkeleton
                   variant="opportunity"
                   label="Loading opportunities"
                 />
@@ -547,7 +547,7 @@ export function Finder({
                 ))}
                 {paged.loadingMore && (
                   <li id="finder-list-loading-more">
-                    <RecordSkeleton
+                    <ListSkeleton
                       variant="opportunity"
                       rows={1}
                       label="Loading more opportunities"

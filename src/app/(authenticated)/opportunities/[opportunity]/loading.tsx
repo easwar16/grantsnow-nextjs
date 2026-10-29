@@ -1,8 +1,8 @@
-import { RecordSkeleton } from "@/components/feedback/skeleton";
+import { DetailSkeleton } from "@/components/feedback/skeleton";
 export default function Loading() {
   return (
     <div id="opportunity-detail-loading" className="record-page-loading">
-      <RecordSkeleton label="Loading opportunity" />
+      <DetailSkeleton label="Loading opportunity" />
     </div>
   );
 }

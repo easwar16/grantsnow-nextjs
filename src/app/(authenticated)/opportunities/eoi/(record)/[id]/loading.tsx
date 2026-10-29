@@ -1,8 +1,8 @@
-import { RecordSkeleton } from "@/components/feedback/skeleton";
+import { FormSkeleton } from "@/components/feedback/skeleton";
 export default function Loading() {
   return (
     <div id="eoi-record-loading" className="record-page-loading">
-      <RecordSkeleton label="Loading application details" />
+      <FormSkeleton label="Loading application details" />
     </div>
   );
 }
