@@ -2,6 +2,7 @@ import "server-only";
 import * as oidc from "openid-client";
 import { oidcSettings } from "@/server/platform/configuration/environment";
 import { validateMetadata } from "./metadata";
+import { serverConstants } from "@/server/constants";
 let configuration: Promise<oidc.Configuration> | undefined;
 export function idcs() {
   const settings = oidcSettings();
@@ -9,7 +10,7 @@ export function idcs() {
     const response = await fetch(settings.discoveryUrl, {
       redirect: "error",
       cache: "no-store",
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(serverConstants.timeouts.identity),
       headers: { accept: "application/json" },
     });
     if (!response.ok) throw new Error("IDCS metadata could not be loaded.");

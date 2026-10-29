@@ -2,21 +2,16 @@ import "server-only";
 import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
 import {
-  requireDrawerAccess,
-  requireModule,
-} from "@/server/platform/permissions";
-import {
   awards,
   eoi,
   opportunities,
   roles as recordRoles,
 } from "@/server/oracle/api";
 import { dashboardRoles } from "@/server/platform/configuration/service";
-import { pageAccess } from "@/server/platform/permissions";
 import { canCreate } from "@/features/modules/opportunities/display";
 import { AppError } from "@/lib/errors";
-import { early } from "@/server/platform/async";
 import { loadContract } from "@/server/modules/contracts/service";
+import { serverFunctions } from "@/server/functions";
 /**
  * Who may read or change a dynamic form (and its files), decided on the server and failing closed. Today only the EOI
  * hosts: the Application tab (OPPORTUNITIES / OPPORTUNITIES-EOI-APPLICATION) and Dynamic Form 1–5
@@ -115,8 +110,15 @@ async function requireApply(opportunityId: string | undefined) {
   if (opportunityId === undefined)
     throw new AppError("BAD_REQUEST", "Invalid form request.", 400);
   // Read together; the role check still decides first, and nothing is returned before both pass.
-  const opportunity = early(opportunities.byId(Number(opportunityId)));
-  if (!pageAccess(await dashboardRoles(), "apply-opportunities").read)
+  const opportunity = serverFunctions.async.early(
+    opportunities.byId(Number(opportunityId)),
+  );
+  if (
+    !serverFunctions.permissions.pageAccess(
+      await dashboardRoles(),
+      "apply-opportunities",
+    ).read
+  )
     throw denied("This action is not enabled for your account.");
   const o = opportunitySchema
     .parse(await opportunity)
@@ -166,7 +168,7 @@ export async function authorizeForm(t: FormTarget, mode: "read" | "edit") {
   if (page === null)
     throw denied("Forms are not available for this record type.");
   if (t.objectType === "CONTRACT") {
-    requireModule(user, "CONTRACTS");
+    serverFunctions.permissions.requireModule(user, "CONTRACTS");
     if (t.objectId === undefined || (t.parentId && t.parentId !== t.objectId))
       throw new AppError("BAD_REQUEST", "Invalid Contract form request.", 400);
     if (mode === "edit") throw denied("Contract form editing is unavailable.");
@@ -174,7 +176,7 @@ export async function authorizeForm(t: FormTarget, mode: "read" | "edit") {
     return { user, page, record: { id: contract.id, number: contract.number } };
   }
   if (t.objectType === "AWARD") return authorizeAwardForm(t, mode, user, page);
-  requireModule(user, "opportunities-group");
+  serverFunctions.permissions.requireModule(user, "opportunities-group");
   if (t.objectId === undefined) {
     if (mode === "edit" || t.objectType !== "OPPORTUNITIES")
       throw new AppError("BAD_REQUEST", "Save the application first.", 400);
@@ -182,7 +184,9 @@ export async function authorizeForm(t: FormTarget, mode: "read" | "edit") {
     return { user, page, record: null };
   }
   // Read together; the role check still decides first, and nothing is returned before every check passes.
-  const requestDetails = early(eoi.details({ requestId: t.objectId }));
+  const requestDetails = serverFunctions.async.early(
+    eoi.details({ requestId: t.objectId }),
+  );
   const roles = rolesSchema.parse(
     // The same held answer the EOI record reads (one roles read per record, as VBCS).
     await recordRoles.record({
@@ -190,11 +194,13 @@ export async function authorizeForm(t: FormTarget, mode: "read" | "edit") {
       objectId: t.objectId,
     }),
   ).items;
-  const access = pageAccess(roles, page);
+  const access = serverFunctions.permissions.pageAccess(roles, page);
   if (!access.read || (mode === "edit" && !access.edit)) throw denied();
   // A finalized page is read-only on the server too, not only on screen (VBCS getLockStatus, lock_level = page id).
   const lock =
-    mode === "edit" ? early(pageLocked(t.objectId, roles, page)) : null;
+    mode === "edit"
+      ? serverFunctions.async.early(pageLocked(t.objectId, roles, page))
+      : null;
   const details = detailsSchema.parse(await requestDetails).items;
   const r = details[0];
   if (
@@ -237,18 +243,22 @@ async function authorizeAwardForm(
   user: Awaited<ReturnType<typeof authenticate>>["user"],
   page: string,
 ) {
-  requireDrawerAccess(user, "awards");
+  serverFunctions.permissions.requireDrawerAccess(user, "awards");
   if (t.objectId === undefined)
     throw new AppError("BAD_REQUEST", "Invalid form request.", 400);
-  const details = early(awards.details({ awardId: t.objectId }));
+  const details = serverFunctions.async.early(
+    awards.details({ awardId: t.objectId }),
+  );
   const roles = rolesSchema.parse(
     await recordRoles.record({ objectType: "AWARD", objectId: t.objectId }),
   ).items;
-  const access = pageAccess(roles, page);
+  const access = serverFunctions.permissions.pageAccess(roles, page);
   if (!access.read || (mode === "edit" && !access.edit)) throw denied();
   const lock =
     mode === "edit"
-      ? early(pageLocked(t.objectId, roles, page, "AWARD"))
+      ? serverFunctions.async.early(
+          pageLocked(t.objectId, roles, page, "AWARD"),
+        )
       : null;
   const a = awardSchema.parse(await details);
   if (String(a.award_id) !== t.objectId)

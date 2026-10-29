@@ -1,25 +1,21 @@
 import "server-only";
-import { safeUrl } from "@/lib/security";
 import { z } from "zod";
 import { opportunities } from "@/server/oracle/api";
 import { dashboardRoles } from "@/server/platform/configuration/service";
-import {
-  label,
-  resourceVisible,
-  type Resources,
-} from "@/server/platform/configuration/resources";
-import { sanitizeHtml } from "@/server/platform/sanitize";
+import { type Resources } from "@/server/platform/configuration/resources";
 import {
   canCreate,
   splitFunders,
 } from "@/features/modules/opportunities/display";
-import { dateDisplay, type FormatSettings } from "@/lib/format";
+import { type FormatSettings } from "@/lib/format";
 import { AppError } from "@/lib/errors";
-import { pageAccess, type RoleRow } from "@/server/platform/permissions";
+import { type RoleRow } from "@/server/platform/permissions";
 import type {
   SummaryField,
   SummaryView,
 } from "@/features/modules/opportunities/eoi/types";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 const BUNDLE = "opportunities-eoi";
 const text = z.string().nullish();
 const amount = z.union([z.number(), z.string()]).nullish();
@@ -69,7 +65,7 @@ const present = (v: string | null | undefined): v is string =>
 /** VBCS isHTMLString: backend text that carries markup is rendered as (sanitised) HTML, otherwise as text. */
 export const isHtml = (v: string) => /<\/?[a-z][\s\S]*>/i.test(v);
 const richText = (v: string): Pick<SummaryField, "html" | "text"> =>
-  isHtml(v) ? { html: sanitizeHtml(v) } : { text: v };
+  isHtml(v) ? { html: serverFunctions.sanitize.sanitizeHtml(v) } : { text: v };
 /** The opportunity's create flags (`'Y'` only, as the server's apply / convert gates: fail closed). */
 export const allows = (o: OpportunityRecord) => ({
   apply: o.create_application_of_interest === "Y",
@@ -89,10 +85,11 @@ export function summaryView(
   detail: boolean,
 ): SummaryView {
   const t = (group: string, key: string, fallback: string) =>
-    label(rows, BUNDLE, group, key, fallback);
-  const shown = (key: string) => resourceVisible(rows, BUNDLE, "labels", key);
+    serverFunctions.resources.label(rows, BUNDLE, group, key, fallback);
+  const shown = (key: string) =>
+    serverFunctions.resources.resourceVisible(rows, BUNDLE, "labels", key);
   const date = (v: string | null | undefined) =>
-    present(v) ? dateDisplay(v, format) : undefined;
+    present(v) ? functions.format.dateDisplay(v, format) : undefined;
   const field = (
     key: string,
     fallback: string,
@@ -115,11 +112,12 @@ export function summaryView(
             key: "summary-site",
             label: t("labels", "summary-site", "Site"),
             text: o.site,
-            href: safeUrl(o.site_url),
+            href: functions.security.safeUrl(o.site_url),
           },
         ]
       : [];
-  const access = (page: string) => pageAccess(roles, page).read;
+  const access = (page: string) =>
+    serverFunctions.permissions.pageAccess(roles, page).read;
   const counted = (page: string) =>
     (roles ?? []).some((r) => r.page_name === page && r.read_access === "Y");
   const open = canCreate(o.opportunity_status ?? "");
@@ -127,8 +125,8 @@ export function summaryView(
   const show = detail && open && roles !== null;
   return {
     heading: o.opp_heading,
-    link: safeUrl(o.opp_heading_link),
-    logo: safeUrl(o.logo),
+    link: functions.security.safeUrl(o.opp_heading_link),
+    logo: functions.security.safeUrl(o.logo),
     side: [
       ...site,
       ...field("summary-status", "Status", val(o.opportunity_status)),
@@ -255,7 +253,13 @@ export function summaryView(
   };
 }
 export const summaryEmpty = (rows: Resources) =>
-  label(rows, BUNDLE, "helper-texts", "eoi-no-data", "No data to display.");
+  serverFunctions.resources.label(
+    rows,
+    BUNDLE,
+    "helper-texts",
+    "eoi-no-data",
+    "No data to display.",
+  );
 /** The dashboard grants for the summary's counts and actions; a failed read hides both rather than failing the page. */
 export async function summaryRoles() {
   try {

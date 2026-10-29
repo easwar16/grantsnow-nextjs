@@ -6,7 +6,8 @@ import { resources } from "@/server/platform/configuration/resources";
 import { State } from "@/components/feedback/state";
 import { RecordShell } from "@/features/modules/opportunities/eoi/record-shell";
 import { Summary } from "@/features/modules/opportunities/eoi/summary";
-import { publicError } from "@/lib/errors";
+import { functions } from "@/lib/functions";
+
 /** More Info: the opportunity's summary alone, read-only, with Apply / Convert / Convert to Proposal. */
 export default async function OpportunityDetailPage({
   params,
@@ -22,11 +23,14 @@ export default async function OpportunityDetailPage({
       .safeParse(id).success
   )
     return <State title="Invalid opportunity" code="BAD_REQUEST" />;
+  // The shell's labels load beside the detail, not after it.
+  const labelsRead = resources();
+  labelsRead.catch(() => undefined);
   let detail;
   try {
     detail = await opportunityDetail(id);
   } catch (error) {
-    const e = publicError(error);
+    const e = functions.errors.publicError(error);
     return (
       <State
         title={
@@ -40,7 +44,7 @@ export default async function OpportunityDetailPage({
   }
   return (
     <RecordShell
-      model={openingShell("detail", id, detail.view.heading, await resources())}
+      model={openingShell("detail", id, detail.view.heading, await labelsRead)}
     >
       <Summary
         view={detail.view}

@@ -27,16 +27,29 @@ vi.mock("@/server/platform/configuration/service", () => ({
   organizations: state.organizations,
 }));
 vi.mock("@/server/platform/configuration/resources", () => ({
-  resources: async () => ({}),
-  label: (
-    _rb: unknown,
-    _module: string,
-    _group: string,
-    _key: string,
-    fallback: string,
-  ) => fallback,
-  resourceVisible: () => true,
+  resources: async () => [],
 }));
+// Every RB field shown, each with its literal label.
+vi.mock("@/server/functions", async (importOriginal) => {
+  const { serverFunctions } =
+    await importOriginal<typeof import("@/server/functions")>();
+  return {
+    serverFunctions: {
+      ...serverFunctions,
+      resources: {
+        ...serverFunctions.resources,
+        label: (
+          _rb: unknown,
+          _module: string,
+          _group: string,
+          _key: string,
+          fallback: string,
+        ) => fallback,
+        resourceVisible: () => true,
+      },
+    },
+  };
+});
 vi.mock("@/server/platform/configuration/formatting", () => ({
   displayFormat: async () => undefined,
 }));

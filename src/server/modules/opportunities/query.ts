@@ -2,11 +2,11 @@ import "server-only";
 import { containsClause } from "@/server/oracle/where";
 import type { OpportunityQuery } from "@/features/modules/opportunities/schemas";
 import {
-  PAGE_SIZE,
   type DateFilter,
   type FinderFilters,
   type FinderTab,
 } from "@/features/modules/opportunities/finder/state";
+import { constants } from "@/lib/constants";
 /**
  * The finder's `p_where_clause` for getOpportunities: GN-Angular where-clause.ts (VBCS `filterCriterion`,
  * `buildKeywordCriteria` and transforms.js `prepareQuery`). Built only here, from validated structured filters:
@@ -186,7 +186,7 @@ export function opportunityOracleQuery(query: OpportunityQuery) {
   return {
     params: new URLSearchParams({
       p_offset: String(query.offset),
-      p_limit: String(PAGE_SIZE),
+      p_limit: String(constants.paging.opportunities),
       ...(where ? { p_where_clause: where } : {}),
     }),
     headers: {

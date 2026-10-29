@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { dynamicForm } from "@/server/oracle/api";
-import { label, resources } from "@/server/platform/configuration/resources";
+import { resources } from "@/server/platform/configuration/resources";
 import { oicConnected } from "@/server/oic/connection";
 import { AppError } from "@/lib/errors";
 import type {
@@ -11,7 +11,8 @@ import type {
 import { authorizeForm, formTarget, type FormTarget } from "./access";
 import { checkAnswers, mapAnswers, mapForms } from "./forms";
 import { formGlobals } from "./globals";
-import { early } from "@/server/platform/async";
+import { serverFunctions } from "@/server/functions";
+
 /** The fragment's translationsModule defaults to the object type: AWARD reads the award bundle, EOI its own. */
 const bundleOf = (t: FormTarget) =>
   t.objectType === "AWARD"
@@ -53,7 +54,7 @@ async function formTexts(t: FormTarget) {
   return Object.fromEntries(
     Object.entries(TEXTS).map(([k, [group, key, fallback]]) => [
       k,
-      label(rows, bundleOf(t), group, key, fallback),
+      serverFunctions.resources.label(rows, bundleOf(t), group, key, fallback),
     ]),
   ) as Record<DynamicFormText, string>;
 }
@@ -72,8 +73,8 @@ const hasSections = (forms: { sections: unknown[] }[]) =>
 /** GET: the form and its answers as the allowlisted display model, with the settings the fields need. */
 export async function loadForm(t: FormTarget): Promise<DynamicFormData> {
   // Settings and labels are not the record's; they load while access is checked.
-  const settings = early(formGlobals()),
-    labels = early(formTexts(t));
+  const settings = serverFunctions.async.early(formGlobals()),
+    labels = serverFunctions.async.early(formTexts(t));
   await authorizeForm(t, "read");
   const objectId = t.objectId ?? "";
   const [forms, rawAnswers, globals, texts] = await Promise.all([

@@ -234,7 +234,17 @@ Its fixtures are in `src/test-support/eoi-writes.ts`. That lock store is held on
   - No focus ring on click anywhere, fields included; keyboard keeps every ring.
 - **Evidence:** typecheck clean; lint 0 errors (one React Compiler notice on the virtualised list); Prettier clean apart from the input-only migration spec; 711 unit and integration tests, the isolated production build and all 13 fixture Chromium journeys pass. On live DEV, switching between Others and Bookmarked shows each held list within 30 ms, with no skeleton. Live DEV, dev server: EOI Summary 449 ms cold, 357 ms held; Home 485 ms then 317 ms; the notifications read 2,088 ms cold, 35 ms held. No pre-change baseline was measured.
 
-### Contracts brought onto the shared layers — 2026-10-26 (latest)
+### Viewport layout finished and checked on DEV — 2026-10-27 (latest)
+
+- **Owner rule (2026-10-26):** layout in vw/vh, then %/fr, translated from the legacy JET class or legacy px ÷ 1745 (width) / ÷ 1043 (height); no fixed px caps. Details and every value: `docs/changes/2026-10-26-titiksh-contracts-onto-framework.md`.
+- **Dialogs:** every `ActionDialog` follows its legacy dialog. Budget and Credit are `oj-md-10` (83.333vw). A legacy dialog with no width class is Redwood's fixed 600px (measured on live VBCS, not content-sized), so `width` is optional and defaults to 34.384vw, at most 70vh tall (owner). Confirm, history status, contract deadline, share, notes, award links, linked objects, milestone, idle and chart-dimension dialogs use it.
+- **Containers:** notifications 33.333vw, finder Advanced filter 40vw, profile dialog 66.667vw, Insights filters 13.754vw, add-approver 33.333%, calendar sidebar and panel 12.607 / 16.046vw.
+- **Owner decisions (2026-10-27):** drawers stay in rem as legacy (navigation and Contracts sidebar 20rem, matching the resizable filter panels; configure 26rem within 20–31.25rem; record drawer 30rem for Comments and Audit); fixed legacy heights become vh (expanded chart and attention calendar 47.94vh, attachments tree 28.763vh); approval graph node 250 × 100px as legacy Treant.
+- **Found on the visual pass:** the record drawer's Motion preset animated to 400px over the CSS (now 30rem); `.createPage dialog` gave every New Contract dialog 520px. Dead CSS removed (`.contractFacts`, `.opportunity-information`).
+- **Open:** the visual-pass list (profile status fields, attachments detail pane and link form, approval comment cap, chart sizes, skeletons); the approval graph node unseen on DEV; the Awards listing e2e flake; login card and unavailable placeholder have no legacy counterpart.
+- **Evidence:** typecheck, lint (the existing warning), 820 unit/integration tests. Isolated build passed before the dialog default. Full e2e 19 passed, 2 skipped, 1 failed (the Awards listing flake, under load); alone it passed 3 of 3. Live DEV measured at 1745×1007; live VBCS dialog widths at 1745. Nothing saved on DEV or live.
+
+### Contracts brought onto the shared layers — 2026-10-26
 
 - **Owner (2026-10-26):** bring whatever the Contracts merge diverted back in line with the KB and the rules, without breaking it.
 - **Layout:** `src/server/contracts` → `src/server/modules/contracts`, `src/features/contracts` → `src/features/modules/contracts`.

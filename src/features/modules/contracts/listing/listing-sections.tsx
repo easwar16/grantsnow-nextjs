@@ -18,17 +18,13 @@ import {
   contractOrgChoices,
 } from "@/server/modules/contracts/lookups";
 import { State } from "@/components/feedback/state";
-import { publicError } from "@/lib/errors";
-import { dateDisplay } from "@/lib/format";
 import { displayFormat } from "@/server/platform/configuration/formatting";
 import { Icon } from "@/components/ui/icon";
-import {
-  label,
-  resourceVisible,
-  resources,
-} from "@/server/platform/configuration/resources";
-import styles from "./contracts.module.css";
+import { resources } from "@/server/platform/configuration/resources";
+import styles from "../contracts.module.css";
 import { ContractFilterForm } from "./contract-filter-form";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 
 export function ContractFilters({ query }: { query: ContractQuery }) {
   return (
@@ -232,7 +228,12 @@ export async function NewContractAction() {
     return null;
   }
   return canCreate &&
-    resourceVisible(rb, "contract", "button-labels", "listing-new-contract") ? (
+    serverFunctions.resources.resourceVisible(
+      rb,
+      "contract",
+      "button-labels",
+      "listing-new-contract",
+    ) ? (
     <Link
       id="contracts-new"
       href="/contracts/new"
@@ -240,7 +241,7 @@ export async function NewContractAction() {
       prefetch={false}
     >
       <span aria-hidden="true">＋</span>
-      {label(
+      {serverFunctions.resources.label(
         rb,
         "contract",
         "button-labels",
@@ -256,7 +257,7 @@ export async function ContractResults({ query }: { query: ContractQuery }) {
   try {
     result = await listContracts(query);
   } catch (error) {
-    const failure = publicError(error);
+    const failure = functions.errors.publicError(error);
     return (
       <State
         title="Contracts unavailable"
@@ -276,18 +277,30 @@ export async function ContractResults({ query }: { query: ContractQuery }) {
         "Reference Object Number",
         row.reference,
       ],
-      ["list-start-date", "Start Date", dateDisplay(row.start, format)],
-      ["list-end-date", "End Date", dateDisplay(row.end, format)],
-      ["list-creation-date", "Created On", dateDisplay(row.created, format)],
+      [
+        "list-start-date",
+        "Start Date",
+        functions.format.dateDisplay(row.start, format),
+      ],
+      [
+        "list-end-date",
+        "End Date",
+        functions.format.dateDisplay(row.end, format),
+      ],
+      [
+        "list-creation-date",
+        "Created On",
+        functions.format.dateDisplay(row.created, format),
+      ],
       [
         "list-last-update-date",
         "Last Updated On",
-        dateDisplay(row.updated, format),
+        functions.format.dateDisplay(row.updated, format),
       ],
       [
         "list-deadline-date",
         "Deadline Date",
-        dateDisplay(row.deadline, format),
+        functions.format.dateDisplay(row.deadline, format),
       ],
       ["list-org-unit", "Org Unit", row.organization],
       ["list-assigned-to", "Assigned To", row.assignedTo],
@@ -295,7 +308,12 @@ export async function ContractResults({ query }: { query: ContractQuery }) {
       ([key, , value]) =>
         value &&
         value !== "—" &&
-        resourceVisible(rb, "contract", "labels", key),
+        serverFunctions.resources.resourceVisible(
+          rb,
+          "contract",
+          "labels",
+          key,
+        ),
     );
 
   return (
@@ -344,7 +362,15 @@ export async function ContractResults({ query }: { query: ContractQuery }) {
               <dl className={styles.metadata}>
                 {metadata(row).map(([key, fallback, value]) => (
                   <div key={key}>
-                    <dt>{label(rb, "contract", "labels", key, fallback)}</dt>
+                    <dt>
+                      {serverFunctions.resources.label(
+                        rb,
+                        "contract",
+                        "labels",
+                        key,
+                        fallback,
+                      )}
+                    </dt>
                     <dd>{value}</dd>
                   </div>
                 ))}

@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { read } from "../client";
-import { TTL } from "../cache";
+import { serverConstants } from "@/server/constants";
 
 /** The labels of the user's bundles (legacy getSharedLabels, `module_name` comma-separated); merged over the seeds. */
 export const labels = read<{ bundles: string }, unknown>({
@@ -21,7 +21,7 @@ export type GlobalVariable = z.infer<typeof globals>["items"][number];
 /** The global variables (admin configuration): formats, form and file limits, the logo and the chatbot flag. */
 export const globalVariables = read<void, GlobalVariable[]>({
   op: "getPre_award_costingGetGlobalVar",
-  ttl: TTL.config,
+  ttl: serverConstants.ttl.config,
   parse: (b) => globals.parse(b).items,
 });
 
@@ -59,7 +59,7 @@ export type DashboardPreferences = z.infer<typeof preferences>;
 /** The user's dashboard preferences as the shell, Home and its widgets read them, held per session. */
 export const dashboardPreferences = read<void, DashboardPreferences>({
   op: "getSharedDashboardPreferences",
-  ttl: TTL.config,
+  ttl: serverConstants.ttl.config,
   parse: (b) => preferences.parse(b),
 });
 /** The same preferences as Oracle stores them now, for the panels that edit them (never the held copy). */
@@ -82,6 +82,6 @@ export type DashboardRole = z.infer<typeof roles>["items"][number];
 export const dashboardRoles = read<void, DashboardRole[]>({
   op: "getSecurityUser_roles",
   headers: () => ({ p_obj_type: "DASHBOARD" }),
-  ttl: TTL.access,
+  ttl: serverConstants.ttl.access,
   parse: (b) => roles.parse(b).items,
 });

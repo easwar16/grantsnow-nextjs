@@ -3,9 +3,9 @@ import { useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Icon } from "@/components/ui/icon";
 import { Select } from "@/components/ui/select";
-import { idPart } from "@/lib/ids";
 import { expand } from "@/lib/motion";
 import styles from "./filter-section.module.css";
+import { functions } from "@/lib/functions";
 
 /** One listing page's filter column contents (GN-Angular finder drawer): Clear on top, then the sections. */
 export function FilterStack({
@@ -149,7 +149,7 @@ export function FilterChoices({
       {options.map((o) => (
         <label key={o.value}>
           <input
-            id={`${id}-${idPart(o.value)}`}
+            id={`${id}-${functions.ids.idPart(o.value)}`}
             className={type === "checkbox" ? "gn-check" : undefined}
             type={type}
             name={type === "radio" ? id : undefined}

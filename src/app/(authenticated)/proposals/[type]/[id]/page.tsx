@@ -6,15 +6,17 @@ import { loadSummary } from "@/server/modules/proposals/record";
 import { recordIdentity } from "@/features/modules/proposals/record";
 import { State } from "@/components/feedback/state";
 import { Icon } from "@/components/ui/icon";
-import { publicError } from "@/lib/errors";
-import { dateDisplay } from "@/lib/format";
+import { functions } from "@/lib/functions";
+
 export const metadata = { title: "Proposal Summary" };
 export default async function Summary({
   params,
 }: {
   params: Promise<{ type: string; id: string }>;
 }) {
-  const format = await displayFormat();
+  // Format loads beside the identity and summary, not before them.
+  const formatRead = displayFormat();
+  formatRead.catch(() => undefined);
   const input = recordIdentity.safeParse(await params);
   if (!input.success)
     return <State title="Invalid proposal identity" code="BAD_REQUEST" />;
@@ -23,7 +25,7 @@ export default async function Summary({
   try {
     summary = await loadSummary(input.data);
   } catch (e) {
-    const error = publicError(e);
+    const error = functions.errors.publicError(e);
     return (
       <State
         title={
@@ -35,6 +37,7 @@ export default async function Summary({
       />
     );
   }
+  const format = await formatRead;
   return (
     <section className="record-workspace">
       <header className="record-header">
@@ -71,7 +74,7 @@ export default async function Summary({
                 <strong>{f.label}</strong>
                 <p>
                   {f.kind === "date"
-                    ? dateDisplay(f.value, format)
+                    ? functions.format.dateDisplay(f.value, format)
                     : f.value || "—"}
                 </p>
               </div>

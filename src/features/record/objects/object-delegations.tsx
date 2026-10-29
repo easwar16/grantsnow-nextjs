@@ -10,8 +10,6 @@ import {
   MultiSelect,
   type MultiSelectOption,
 } from "@/components/ui/multi-select";
-import { dateDisplay } from "@/lib/format";
-import { idPart } from "@/lib/ids";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
 import { ActionDialog, useConfirm } from "@/components/dialog/action-dialog";
 import { useActionFailure } from "@/components/dialog/action-failure";
@@ -20,6 +18,7 @@ import { objects, type ApiResult } from "@/lib/api";
 import type { ObjectHost } from "@/lib/api/endpoints/objects";
 import type { Delegate, DelegatedPage, DelegationView } from "./types";
 import styles from "./history-delegations.module.css";
+import { functions } from "@/lib/functions";
 type Access = Pick<DelegatedPage, "read" | "edit" | "delete">;
 /** The dialog's start: a new delegation, or Edit Access on one delegate (their read pages and common rights). */
 type Draft = {
@@ -122,7 +121,7 @@ export function ObjectDelegations({
       access: { read: true, edit: all("edit"), delete: all("delete") },
     });
   };
-  const date = (iso: string) => dateDisplay(iso, format);
+  const date = (iso: string) => functions.format.dateDisplay(iso, format);
   return (
     <section id={id} className={styles.panel}>
       <div className={`${styles.head} ${styles.end}`}>
@@ -141,7 +140,7 @@ export function ObjectDelegations({
       {view.delegates.length ? (
         <ul id={`${id}-list`} className={styles.delegates}>
           {view.delegates.map((d) => {
-            const key = `${id}-${idPart(d.personId)}`;
+            const key = `${id}-${functions.ids.idPart(d.personId)}`;
             return (
               <li key={d.personId} id={key} className="enter-rise">
                 <details className={`gn-collapsible ${styles.delegate}`}>
@@ -197,13 +196,13 @@ export function ObjectDelegations({
                   {d.groups.map((g) => (
                     <details
                       key={g.type}
-                      id={`${key}-${idPart(g.type)}`}
+                      id={`${key}-${functions.ids.idPart(g.type)}`}
                       className={`gn-collapsible ${styles.group}`}
                     >
                       <summary>{g.label}</summary>
                       <ul className={styles.pages}>
                         {g.pages.map((p) => {
-                          const rowKey = `${key}-page-${idPart(p.id)}`;
+                          const rowKey = `${key}-page-${functions.ids.idPart(p.id)}`;
                           const access = pending[p.id] ?? p;
                           const busy = isActive(p.id);
                           const switchOf = (
@@ -453,7 +452,7 @@ function DelegationDialog({
             return (
               <div key={g.type} className={styles.groupPick}>
                 {check(
-                  `${id}-${idPart(g.type)}-all`,
+                  `${id}-${functions.ids.idPart(g.type)}-all`,
                   g.label,
                   every(names),
                   (on) => pick(names, on),
@@ -461,7 +460,7 @@ function DelegationDialog({
                 <div className={styles.groupPages}>
                   {g.pages.map((p) =>
                     check(
-                      `${id}-${idPart(g.type)}-${idPart(p.name)}`,
+                      `${id}-${functions.ids.idPart(g.type)}-${functions.ids.idPart(p.name)}`,
                       p.label,
                       pages.has(p.name),
                       (on) => pick([p.name], on),

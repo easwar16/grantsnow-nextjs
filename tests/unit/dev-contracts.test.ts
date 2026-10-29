@@ -3,15 +3,11 @@ import {
   assertWritesEnabled,
   browserSessionMode,
 } from "@/server/platform/configuration/environment";
-import {
-  mergeResourceDefaults,
-  proposalColumns,
-  proposalFilters,
-} from "@/server/platform/configuration/resources";
 import { mapProposals } from "@/server/modules/proposals/service";
 import { parseQuery } from "@/features/modules/proposals/schemas";
 import { mapWidget } from "@/server/modules/home/service";
 import { widgets } from "@/server/modules/home/widgets";
+import { serverFunctions } from "@/server/functions";
 afterEach(() => vi.unstubAllEnvs());
 const local = {
   DEV_BROWSER_SESSION: "true",
@@ -36,9 +32,11 @@ it.each([
 });
 it("inherits current VBCS resource defaults but honors explicit visibility overrides", () => {
   expect(
-    proposalColumns(mergeResourceDefaults([])).some((c) => c.key === "value"),
+    serverFunctions.resources
+      .proposalColumns(serverFunctions.resources.mergeResourceDefaults([]))
+      .some((c) => c.key === "value"),
   ).toBe(true);
-  const rows = mergeResourceDefaults([
+  const rows = serverFunctions.resources.mergeResourceDefaults([
     {
       module_name: "PROPOSAL",
       label_type: "labels",
@@ -47,11 +45,17 @@ it("inherits current VBCS resource defaults but honors explicit visibility overr
       is_visible: "N",
     },
   ]);
-  expect(proposalColumns(rows).some((c) => c.key === "value")).toBe(false);
-  expect(() => mergeResourceDefaults({ response_msg: "ERROR" })).toThrow();
+  expect(
+    serverFunctions.resources
+      .proposalColumns(rows)
+      .some((c) => c.key === "value"),
+  ).toBe(false);
+  expect(() =>
+    serverFunctions.resources.mergeResourceDefaults({ response_msg: "ERROR" }),
+  ).toThrow();
 });
 it("shows each listing filter only on its list-* entry's 'Y', labelled from the bundle", () => {
-  const rows = mergeResourceDefaults([
+  const rows = serverFunctions.resources.mergeResourceDefaults([
     {
       module_name: "PROPOSAL",
       label_type: "labels",
@@ -67,13 +71,14 @@ it("shows each listing filter only on its list-* entry's 'Y', labelled from the 
       is_visible: "N",
     },
   ]);
-  const filters = proposalFilters(rows);
+  const filters = serverFunctions.resources.proposalFilters(rows);
   expect(filters.search).toBe("Project title");
   expect(filters.tags).toBeNull();
   // A key missing from the bundle and the seed stays hidden (fail closed).
   expect(
-    proposalFilters(rows.filter((r) => r.label_name !== "list-category"))
-      .category,
+    serverFunctions.resources.proposalFilters(
+      rows.filter((r) => r.label_name !== "list-category"),
+    ).category,
   ).toBeNull();
 });
 it("ignores the unreliable ORDS hasMore flag: total_count, else a full page, decides", () => {

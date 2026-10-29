@@ -2,12 +2,9 @@ import "server-only";
 import { z } from "zod";
 import { approvals, lookups, objects, people } from "@/server/oracle/api";
 import {
-  label,
   resources,
-  resourceVisible,
   type Resources,
 } from "@/server/platform/configuration/resources";
-import { plainText } from "@/server/platform/sanitize";
 import { AppError } from "@/lib/errors";
 import type { UserContext } from "@/shared/auth/types";
 import {
@@ -17,6 +14,7 @@ import {
   type HistoryTextKey,
   type HistoryView,
 } from "@/features/record/objects/types";
+import { serverFunctions } from "@/server/functions";
 
 /**
  * One host of the shared object history (legacy `object-history` fragment). The host supplies only what it alone
@@ -84,7 +82,16 @@ function historyTexts(rows: Resources, host: HistoryHost) {
   return Object.fromEntries(
     (Object.keys(KEYS) as HistoryTextKey[]).map((k) => {
       const [group, key] = host.keys?.[k] ?? KEYS[k];
-      return [k, label(rows, host.bundle, group, key, KEYS[k][2])];
+      return [
+        k,
+        serverFunctions.resources.label(
+          rows,
+          host.bundle,
+          group,
+          key,
+          KEYS[k][2],
+        ),
+      ];
     }),
   ) as Record<HistoryTextKey, string>;
 }
@@ -93,19 +100,29 @@ export function historyGates(rows: Resources, host: HistoryHost) {
   return {
     addStatus:
       host.rights.addStatus &&
-      resourceVisible(rows, host.bundle, "button-labels", "history-add-status"),
+      serverFunctions.resources.resourceVisible(
+        rows,
+        host.bundle,
+        "button-labels",
+        "history-add-status",
+      ),
     abandon:
       host.rights.abandon &&
-      resourceVisible(rows, host.bundle, "button-labels", "history-abandon"),
+      serverFunctions.resources.resourceVisible(
+        rows,
+        host.bundle,
+        "button-labels",
+        "history-abandon",
+      ),
     abandoned: host.statusCode === ABANDON,
     // Legacy read this flag from `objectType.toLowerCase()`, not a verified bundle (KB Framework-Patterns F2).
-    responseDate: resourceVisible(
+    responseDate: serverFunctions.resources.resourceVisible(
       rows,
       host.bundle,
       "labels",
       "actual-submision-date",
     ),
-    approvals: resourceVisible(
+    approvals: serverFunctions.resources.resourceVisible(
       rows,
       host.bundle,
       "header-labels",
@@ -234,7 +251,7 @@ export async function historyView(host: HistoryHost): Promise<HistoryView> {
                 transaction: r.transaction_number ?? "",
                 comments:
                   typeof r.user_comments === "string"
-                    ? plainText(r.user_comments)
+                    ? serverFunctions.sanitize.plainText(r.user_comments)
                     : "",
                 updated: r.last_update_date ?? "",
               })),

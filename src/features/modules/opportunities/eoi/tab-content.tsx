@@ -1,6 +1,6 @@
 import "server-only";
 import { State } from "@/components/feedback/state";
-import { resources, label } from "@/server/platform/configuration/resources";
+import { resources } from "@/server/platform/configuration/resources";
 import { displayFormat } from "@/server/platform/configuration/formatting";
 import {
   eoiPageLock,
@@ -17,7 +17,6 @@ import {
   type OpportunityRecord,
 } from "@/server/modules/opportunities/eoi-record/opportunity";
 import { tabName } from "@/server/modules/opportunities/eoi-record/shell";
-import { publicError } from "@/lib/errors";
 import { ApplicationTab } from "./application-tab";
 import { FormTab } from "./form-tab";
 import { TabLock } from "./record-context";
@@ -25,20 +24,22 @@ import { Summary } from "./summary";
 import { EoiObjectTab } from "./object-tabs";
 import { AttachmentsTab } from "@/features/record/attachments/attachments-tab";
 import styles from "@/features/record/shell/record-tab.module.css";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 const BUNDLE = "opportunities-eoi";
 async function applicationTexts() {
   const rows = await resources();
   return {
     create: "Create",
     save: "Save",
-    created: label(
+    created: serverFunctions.resources.label(
       rows,
       BUNDLE,
       "success-msg",
       "created",
       "Application created successfully",
     ),
-    updated: label(
+    updated: serverFunctions.resources.label(
       rows,
       BUNDLE,
       "success-msg",
@@ -83,7 +84,7 @@ async function WorkflowContent({ id }: { id: string }) {
   const [rows, result] = await Promise.all([resources(), read]);
   const name = tabName(rows, "approvals");
   if ("error" in result) {
-    const e = publicError(result.error);
+    const e = functions.errors.publicError(result.error);
     return (
       <State
         id="eoi-workflow-error"
@@ -155,8 +156,14 @@ export async function RecordTabContent({
           statusCode={r.status_code ?? undefined}
           lock={lock}
           texts={{
-            submit: label(rows, BUNDLE, "button-labels", "submit", "Submit"),
-            saved: label(
+            submit: serverFunctions.resources.label(
+              rows,
+              BUNDLE,
+              "button-labels",
+              "submit",
+              "Submit",
+            ),
+            saved: serverFunctions.resources.label(
               rows,
               BUNDLE,
               "success-msg",

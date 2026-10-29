@@ -1,10 +1,9 @@
 "use client";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { idPart } from "@/lib/ids";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { dateDisplay, moneyDisplay, type FormatSettings } from "@/lib/format";
+import { type FormatSettings } from "@/lib/format";
 import { Icon } from "@/components/ui/icon";
 import { FilterPanel } from "@/components/ui/filter-panel";
 import { Select } from "@/components/ui/select";
@@ -32,13 +31,13 @@ import { CreateAwardDialog } from "./create-award-dialog";
 import { CloneAwardDialog } from "./clone-award-dialog";
 import { AwardLinksDialog } from "./award-links-dialog";
 import { AdvancedQuery } from "./advanced-query";
+import { constants } from "@/lib/constants";
+import { functions } from "@/lib/functions";
 
 type PublicError = { code: string; message: string; action?: string };
 export type AwardListResult =
   { ok: true; data: AwardListPage } | { ok: false; error: PublicError };
 
-/** Within this many pixels of the end, the next page loads (loadMoreOnScroll). */
-const LOAD_MORE_PX = 80;
 type TextKey = "number" | "name" | "proposal";
 const TEXT_IDS: Record<TextKey, string> = {
   number: "awards-filter-number",
@@ -46,6 +45,8 @@ const TEXT_IDS: Record<TextKey, string> = {
   proposal: "awards-filter-proposal",
 };
 
+// One empty list while a choice list loads, so the dropdowns keep a stable options prop.
+const NO_CHOICES: AwardListView["sorts"] = [];
 const UNREACHABLE: PublicError = {
   code: "UPSTREAM",
   message: "Awards could not be loaded.",
@@ -67,7 +68,8 @@ export function AwardList({
   view: AwardListView;
   /** The URL's entry filters, which the server's first page used. */
   entry: AwardFilters;
-  initial: AwardListResult;
+  /** The entry filters' first page, streaming from the server. */
+  initial: Promise<AwardListResult>;
   format?: FormatSettings & { currency?: string };
 }) {
   const { gates: g, texts: t } = view;
@@ -91,19 +93,35 @@ export function AwardList({
   useEffect(() => {
     held = filters;
   }, [filters]);
-  // The server rendered the entry filters' first page; it seeds only that list.
-  const seeded =
-    initial.ok &&
+  // The server's first page (still streaming) seeds only the entry filters' list.
+  const [seed] = useState(() =>
     serializeAwardFilters(filters) === serializeAwardFilters(entry)
-      ? initial.data
-      : null;
-  const loaded = useApi(awards.choices, undefined).data;
-  const choices = loaded ?? { orgs: [], people: [], parties: [], errors: [] };
-  const paged = usePagedApi(awards.list, filters, {
-    initial: seeded
-      ? { ...seeded, total: seeded.total ?? undefined }
+      ? initial.then((r) =>
+          r.ok
+            ? {
+                ok: r.ok,
+                data: { ...r.data, total: r.data.total ?? undefined },
+              }
+            : r,
+        )
       : undefined,
-  });
+  );
+  // Each list fills its dropdowns as it arrives; a slow org lookup never holds the people or funders.
+  const orgs = useApi(awards.choices, g.org ? "orgs" : null).data,
+    persons = useApi(
+      awards.choices,
+      g.pi || g.assignedTo ? "people" : null,
+    ).data,
+    parties = useApi(
+      awards.choices,
+      g.funder || g.billingParty ? "parties" : null,
+    ).data;
+  const choices = {
+    orgs: orgs?.options ?? NO_CHOICES,
+    people: persons?.options ?? NO_CHOICES,
+    parties: parties?.options ?? NO_CHOICES,
+  };
+  const paged = usePagedApi(awards.list, filters, { initial: seed });
   const { rows, loading } = paged,
     total = paged.total ?? null,
     failed =
@@ -121,8 +139,14 @@ export function AwardList({
     for (const message of view.errors) toast.show("error", message);
   }, [view.errors, toast]);
   useEffect(() => {
-    for (const message of loaded?.errors ?? []) toast.show("error", message);
-  }, [loaded, toast]);
+    for (const message of orgs?.errors ?? []) toast.show("error", message);
+  }, [orgs, toast]);
+  useEffect(() => {
+    for (const message of persons?.errors ?? []) toast.show("error", message);
+  }, [persons, toast]);
+  useEffect(() => {
+    for (const message of parties?.errors ?? []) toast.show("error", message);
+  }, [parties, toast]);
   useEffect(() => {
     if (moreFailed && failed) toast.error(failed);
   }, [moreFailed, failed, toast]);
@@ -184,11 +208,11 @@ export function AwardList({
     required?: boolean,
   ) =>
     field(
-      `awards-filter-${idPart(key)}-trigger`,
+      `awards-filter-${functions.ids.idPart(key)}-trigger`,
       label,
       filters[key] !== "",
       <Select
-        id={`awards-filter-${idPart(key)}`}
+        id={`awards-filter-${functions.ids.idPart(key)}`}
         label={label}
         options={options}
         value={filters[key]}
@@ -311,19 +335,25 @@ export function AwardList({
 
   const meta = (row: AwardListRow) => [
     { label: t.proposal, value: row.proposal },
-    { label: t.start, value: row.start && dateDisplay(row.start, format) },
-    { label: t.end, value: row.end && dateDisplay(row.end, format) },
+    {
+      label: t.start,
+      value: row.start && functions.format.dateDisplay(row.start, format),
+    },
+    {
+      label: t.end,
+      value: row.end && functions.format.dateDisplay(row.end, format),
+    },
     {
       label: t.awarded,
-      value: row.awarded && dateDisplay(row.awarded, format),
+      value: row.awarded && functions.format.dateDisplay(row.awarded, format),
     },
     {
       label: t.created,
-      value: row.created && dateDisplay(row.created, format),
+      value: row.created && functions.format.dateDisplay(row.created, format),
     },
     {
       label: t.updated,
-      value: row.updated && dateDisplay(row.updated, format),
+      value: row.updated && functions.format.dateDisplay(row.updated, format),
     },
     { label: t.assignedTo, value: row.assignedTo },
     { label: t.funder, value: row.funder },
@@ -332,7 +362,9 @@ export function AwardList({
     { label: t.pi, value: row.pi },
     {
       label: t.amount,
-      value: row.amount && moneyDisplay(row.amount, format?.currency, format),
+      value:
+        row.amount &&
+        functions.format.moneyDisplay(row.amount, format?.currency, format),
     },
   ];
 
@@ -435,7 +467,7 @@ export function AwardList({
                     const el = e.currentTarget;
                     if (
                       el.scrollHeight - el.scrollTop - el.clientHeight <
-                      LOAD_MORE_PX
+                      constants.paging.loadMorePx
                     )
                       more();
                   }}

@@ -1,16 +1,17 @@
 "use client";
 import {
-  EOI_PAGE_SIZE,
   serializeEoiFilters,
   type EoiFilters,
 } from "@/features/modules/opportunities/eoi-list/schema";
 import type {
+  EoiFunders,
   EoiListPage,
   EoiListRow,
 } from "@/features/modules/opportunities/eoi-list/types";
 import type { CreatorCard } from "@/features/record/shell/creator-types";
 import { post } from "../http";
 import { endpoint, pagedEndpoint } from "../hooks";
+import { constants } from "@/lib/constants";
 
 /** The EOI list, a page at a time: only the filters that differ from the defaults travel (the hook adds the page). */
 export const list = pagedEndpoint<EoiFilters, EoiListRow, EoiListPage>(
@@ -21,7 +22,12 @@ export const list = pagedEndpoint<EoiFilters, EoiListRow, EoiListPage>(
     ),
   }),
   (b) => ({ rows: b.rows, hasMore: b.hasMore, total: b.total ?? undefined }),
-  { size: EOI_PAGE_SIZE },
+  { size: constants.paging.eoi },
+);
+/** The drawer's funder options (a held reference list), read once the page shows. */
+export const funders = endpoint<void, EoiFunders>(
+  () => ({ path: "/opportunities/eoi/funders" }),
+  { ttl: constants.ttl.session },
 );
 /** WRITES: creates the application once its form has validated; the browser sends only the opportunity id. */
 export const create = (opportunityId: number) =>

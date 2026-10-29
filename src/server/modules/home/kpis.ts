@@ -5,10 +5,9 @@ import {
   dashboardConfiguration,
   organizations,
 } from "@/server/platform/configuration/service";
-import { scopeOrganization } from "@/server/platform/permissions";
 import { home } from "@/server/oracle/api";
-import { publicError } from "@/lib/errors";
-import { early } from "@/server/platform/async";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 const schema = z.array(
   z.object({
     id: z.string(),
@@ -26,7 +25,7 @@ const schema = z.array(
 );
 export type Kpi = z.infer<typeof schema>[number];
 export async function loadKpis(organization?: string) {
-  const orgs = early(organizations());
+  const orgs = serverFunctions.async.early(organizations());
   const [, config] = await Promise.all([
     homeAccess(),
     dashboardConfiguration(),
@@ -35,7 +34,10 @@ export async function loadKpis(organization?: string) {
     .filter(([, v]) => v.isVisible === true)
     .map(([key]) => key);
   if (!enabled.length) return { items: [] as Kpi[] };
-  const org = scopeOrganization(organization, await orgs);
+  const org = serverFunctions.permissions.scopeOrganization(
+    organization,
+    await orgs,
+  );
   try {
     const raw = await home.kpiStatistics({
       reports: enabled.join(","),
@@ -46,6 +48,9 @@ export async function loadKpis(organization?: string) {
       items: schema.parse(raw).filter((r) => reports.has(r.id.toLowerCase())),
     };
   } catch (e) {
-    return { items: [] as Kpi[], error: publicError(e).message };
+    return {
+      items: [] as Kpi[],
+      error: functions.errors.publicError(e).message,
+    };
   }
 }

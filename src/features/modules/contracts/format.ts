@@ -1,5 +1,6 @@
 import type { StatusTone } from "@/components/ui/status-badge";
-import { dateDisplay, type FormatSettings } from "@/lib/format";
+import { type FormatSettings } from "@/lib/format";
+import { functions } from "@/lib/functions";
 
 /** VBCS Signers uses an oj-input-date-time pattern ending in `hh:mm:ss` without an AM/PM marker. */
 export function contractSignerStamp(value: string, format?: FormatSettings) {
@@ -20,7 +21,7 @@ export function contractSignerStamp(value: string, format?: FormatSettings) {
   }).formatToParts(instant);
   const part = (type: string) =>
     parts.find((item) => item.type === type)?.value;
-  return `${dateDisplay(date, format)} ${part("hour")}:${part("minute")}:${part("second")}`;
+  return `${functions.format.dateDisplay(date, format)} ${part("hour")}:${part("minute")}:${part("second")}`;
 }
 
 /**

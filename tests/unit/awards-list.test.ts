@@ -17,11 +17,9 @@ import {
   type AwardFilters,
 } from "@/features/modules/awards/listing/schema";
 import type { AwardListGates } from "@/features/modules/awards/listing/types";
-import {
-  labelBundles,
-  mergeResourceDefaults,
-} from "@/server/platform/configuration/resources";
+import { labelBundles } from "@/server/platform/configuration/resources";
 import { legacyDeepLink } from "@/shared/auth/legacy-link";
+import { serverFunctions } from "@/server/functions";
 
 const f = (change: Partial<AwardFilters>) => ({
   ...DEFAULT_AWARD_FILTERS,
@@ -84,7 +82,7 @@ it("refuses unsafe filter values before any SQL is built", () => {
 
 it("drops a filter whose RB gate is hidden, even from a hand-made request", () => {
   const gates = awardListGates(
-    mergeResourceDefaults([
+    serverFunctions.resources.mergeResourceDefaults([
       {
         module_name: "AWARD",
         label_type: "labels",
@@ -261,7 +259,7 @@ it("groups linked records in legacy order, leaves the award itself out and maps 
 });
 
 it("needs the award-clone role as well as both clone labels; the rest are RB only", () => {
-  const rows = mergeResourceDefaults([]);
+  const rows = serverFunctions.resources.mergeResourceDefaults([]);
   expect(awardActionGates(rows, [])).toMatchObject({
     create: true,
     link: true,

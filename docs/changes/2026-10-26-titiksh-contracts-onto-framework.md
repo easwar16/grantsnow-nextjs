@@ -67,3 +67,7 @@
   698.2px, record drawer 360px, credit and budget dialogs 1454.5px, attachments tree 289.7px, Contracts sidebar
   240px, Add Status 600.2px. Not seen: the approval graph node (award 1176 has no Approvals tab yet). DEV's
   milestone form returned no fields.
+- **Checks after the dialog default:** typecheck, lint (the existing warning), 820 unit tests. Full e2e 19 passed, 2
+  skipped, 1 failed: the Awards listing journey timed out clicking the drawer's Awards link ("outside of the
+  viewport") while a dev server shared the machine; alone it passed 3 of 3 (`--repeat-each 3`). The known
+  Awards listing flake, still open.

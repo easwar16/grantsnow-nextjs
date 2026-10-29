@@ -1,10 +1,8 @@
 import "server-only";
 import { z } from "zod";
 import { objects } from "@/server/oracle/api";
-import { label, resources } from "@/server/platform/configuration/resources";
+import { resources } from "@/server/platform/configuration/resources";
 import { displayFormat } from "@/server/platform/configuration/formatting";
-import { dateTimeDisplay } from "@/lib/format";
-import { idPart } from "@/lib/ids";
 import { AppError } from "@/lib/errors";
 import {
   AUDIT_EVENTS,
@@ -13,6 +11,8 @@ import {
 } from "@/features/record/objects/panel-types";
 import { panelHost } from "./panels";
 import { CONTRACT_AUDIT_EVENTS } from "@/features/record/objects/panel-types";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 
 /**
  * The audit trail (each detail page's `getObjectAuditsSDP`): backend-written and read-only, one page of the record,
@@ -38,7 +38,7 @@ export async function auditView(q: URLSearchParams): Promise<AuditView> {
   const seen = new Map<string, number>();
   const items = audits.map((a): AuditEntry => {
     // An entry has no id: its time and event name it, a repeat takes a count.
-    const base = idPart(`${a.date_time}-${a.event}`);
+    const base = functions.ids.idPart(`${a.date_time}-${a.event}`);
     const n = (seen.get(base) ?? 0) + 1;
     seen.set(base, n);
     return {
@@ -46,7 +46,9 @@ export async function auditView(q: URLSearchParams): Promise<AuditView> {
       event: a.event,
       name: a.name,
       // Legacy shows date_time verbatim; the configured format applies where it parses.
-      at: a.date_time ? dateTimeDisplay(a.date_time, format) : "",
+      at: a.date_time
+        ? functions.format.dateTimeDisplay(a.date_time, format)
+        : "",
       fields: (a.field_values ?? []).map((f) => ({
         name: f.field_name,
         value: f.field_value,
@@ -57,7 +59,7 @@ export async function auditView(q: URLSearchParams): Promise<AuditView> {
   return {
     items,
     // Each record's own key in its own bundle (EOI eoi-no-data; awards-detail-page no-data).
-    noData: label(
+    noData: serverFunctions.resources.label(
       rows,
       host.bundle,
       "helper-texts",

@@ -7,9 +7,9 @@ import { delegationView } from "@/server/record/objects/delegations";
 import { contractId } from "@/features/modules/contracts/schema";
 import { ObjectDelegations } from "@/features/record/objects/object-delegations";
 import { State } from "@/components/feedback/state";
-import { publicError } from "@/lib/errors";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/feedback/skeleton";
+import { functions } from "@/lib/functions";
 
 export const metadata = { title: "Contract Delegation" };
 export default async function ContractDelegation({
@@ -38,7 +38,7 @@ async function DelegationContent({ id }: { id: string }) {
     contractDelegationHost(id).then(delegationView),
   ]).then(
     ([contract, view]) => ({ contract, view }),
-    (error: unknown) => ({ failure: publicError(error) }),
+    (error: unknown) => ({ failure: functions.errors.publicError(error) }),
   );
   if ("failure" in result) {
     const failure = result.failure;

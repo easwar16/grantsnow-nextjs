@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { matchMentions, mentionAttributes, mentionQuery } from "@/lib/mentions";
-import { dateTimeDisplay } from "@/lib/format";
-import { plainText } from "@/server/platform/sanitize";
 import { oracle, oracleWrite } from "@/server/oracle/connection";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 
 describe("mentions", () => {
   const people = [
@@ -10,20 +9,31 @@ describe("mentions", () => {
     { id: "2", name: "Sam Taylor", detail: "", email: "" },
   ];
   it("finds the @query before the caret only after a boundary", () => {
-    expect(mentionQuery("Hi @al")).toEqual({ query: "al", length: 3 });
-    expect(mentionQuery("@")).toEqual({ query: "", length: 1 });
-    expect(mentionQuery("(@Sam T")).toEqual({ query: "Sam T", length: 6 });
-    expect(mentionQuery("mail me@x")).toBeNull();
-    expect(mentionQuery("@a\nb")).toBeNull();
+    expect(functions.mentions.mentionQuery("Hi @al")).toEqual({
+      query: "al",
+      length: 3,
+    });
+    expect(functions.mentions.mentionQuery("@")).toEqual({
+      query: "",
+      length: 1,
+    });
+    expect(functions.mentions.mentionQuery("(@Sam T")).toEqual({
+      query: "Sam T",
+      length: 6,
+    });
+    expect(functions.mentions.mentionQuery("mail me@x")).toBeNull();
+    expect(functions.mentions.mentionQuery("@a\nb")).toBeNull();
   });
   it("matches names case-insensitively without changing them", () => {
-    expect(matchMentions(people, "MOR").map((p) => p.name)).toEqual([
-      "Alex Morgan",
-    ]);
-    expect(matchMentions(people, "")).toHaveLength(2);
+    expect(
+      functions.mentions.matchMentions(people, "MOR").map((p) => p.name),
+    ).toEqual(["Alex Morgan"]);
+    expect(functions.mentions.matchMentions(people, "")).toHaveLength(2);
   });
   it("writes legacy's anchor attributes, with mailto only for a known email", () => {
-    expect(Object.fromEntries(mentionAttributes(people[0]))).toEqual({
+    expect(
+      Object.fromEntries(functions.mentions.mentionAttributes(people[0])),
+    ).toEqual({
       class: "mention oj-link-standalone oj-link-subtle-primary",
       "data-mention": "@Alex Morgan",
       "data-person-id": "1",
@@ -33,7 +43,7 @@ describe("mentions", () => {
       "data-mention-type": "person",
     });
     expect(
-      Object.fromEntries(mentionAttributes(people[1])).href,
+      Object.fromEntries(functions.mentions.mentionAttributes(people[1])).href,
     ).toBeUndefined();
   });
 });
@@ -41,15 +51,23 @@ describe("mentions", () => {
 describe("display helpers", () => {
   it("shows a wall-clock timestamp in the configured format with hh:mm a, and anything else verbatim", () => {
     expect(
-      dateTimeDisplay("2026-10-02T14:05:00", { dateFormat: "dd/mm/yyyy" }),
+      functions.format.dateTimeDisplay("2026-10-02T14:05:00", {
+        dateFormat: "dd/mm/yyyy",
+      }),
     ).toBe("02/10/2026 02:05 pm");
-    expect(dateTimeDisplay("2026-10-02 00:30")).toBe("02-Oct-2026 12:30 am");
-    expect(dateTimeDisplay("2025-0526T13:23")).toBe("2025-0526T13:23");
-    expect(dateTimeDisplay("")).toBe("—");
+    expect(functions.format.dateTimeDisplay("2026-10-02 00:30")).toBe(
+      "02-Oct-2026 12:30 am",
+    );
+    expect(functions.format.dateTimeDisplay("2025-0526T13:23")).toBe(
+      "2025-0526T13:23",
+    );
+    expect(functions.format.dateTimeDisplay("")).toBe("—");
   });
   it("reads rich text as plain text", () => {
-    expect(plainText("<p>A &amp; <b>B</b></p>")).toBe("A & B");
-    expect(plainText("<p> </p>").trim()).toBe("");
+    expect(serverFunctions.sanitize.plainText("<p>A &amp; <b>B</b></p>")).toBe(
+      "A & B",
+    );
+    expect(serverFunctions.sanitize.plainText("<p> </p>").trim()).toBe("");
   });
 });
 

@@ -14,8 +14,6 @@ import { ActionDialog, useConfirm } from "@/components/dialog/action-dialog";
 import { useActionFailure } from "@/components/dialog/action-failure";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
 import { awards, useApi } from "@/lib/api";
-import { dateDisplay, moneyDisplay } from "@/lib/format";
-import { idPart } from "@/lib/ids";
 import {
   globalChange,
   globalCosts,
@@ -42,6 +40,7 @@ import {
 } from "./projects-tab";
 import dialog from "@/components/dialog/dialog.module.css";
 import styles from "./tabs.module.css";
+import { functions } from "@/lib/functions";
 
 /** Legacy shows these four columns whatever the bundle says. */
 const ALWAYS: CostColumn[] = ["item", "sponsor", "institution", "total"];
@@ -124,7 +123,7 @@ export function ProjectCostsPanel({
     fail = useActionFailure(),
     confirm = useConfirm("award-cost-delete");
   const money = (n: number) =>
-    moneyDisplay(String(n), format?.currency, format);
+    functions.format.moneyDisplay(String(n), format?.currency, format);
   const h = view.costColumns;
   // Quantity belongs to the period rows only (legacy tree columns).
   const shown = (Object.keys(h) as CostColumn[]).filter(
@@ -208,7 +207,7 @@ export function ProjectCostsPanel({
       <span className={styles.node}>
         <button
           type="button"
-          id={`award-cost-${idPart(key)}-toggle`}
+          id={`award-cost-${functions.ids.idPart(key)}-toggle`}
           className={styles.expander}
           aria-expanded={!closed.has(key)}
           aria-label={name}
@@ -223,8 +222,8 @@ export function ProjectCostsPanel({
   const leafCell = (k: CostColumn, line: CostLine) => {
     const v: Partial<Record<CostColumn, string>> = {
       role: line.cost_category_description,
-      start: dateDisplay(line.cost_start_date, format),
-      end: dateDisplay(line.cost_end_date, format),
+      start: functions.format.dateDisplay(line.cost_start_date, format),
+      end: functions.format.dateDisplay(line.cost_end_date, format),
       glNominal: line.gl_nominal,
       unitType:
         view.choices.unitTypes.find((u) => u.value === line.unit_type)?.label ??
@@ -282,7 +281,7 @@ export function ProjectCostsPanel({
       )}
       {view.costs.map((p) => {
         const project = view.projects.find((x) => x.id === String(p.projectId));
-        const pid = idPart(String(p.projectId));
+        const pid = functions.ids.idPart(String(p.projectId));
         return (
           <Collapsible
             key={p.projectId}
@@ -322,7 +321,7 @@ export function ProjectCostsPanel({
                   {p.sections.flatMap((s) => [
                     <tr
                       key={s.key}
-                      id={`award-cost-${idPart(s.key)}`}
+                      id={`award-cost-${functions.ids.idPart(s.key)}`}
                       className={styles.level0}
                     >
                       {node(s.key, s.name)}
@@ -330,7 +329,7 @@ export function ProjectCostsPanel({
                       {amountCells(s, true)}
                       <td>
                         {editButton(
-                          `award-cost-${idPart(s.key)}-edit`,
+                          `award-cost-${functions.ids.idPart(s.key)}-edit`,
                           `${view.texts.editCost} ${s.name}`,
                           !g.edit || !s.first.is_editable,
                           () => setDraft(draftOf("SECTION", s.first, s)),
@@ -340,7 +339,7 @@ export function ProjectCostsPanel({
                     ...(closed.has(s.key) ? [] : s.categories).flatMap((c) => [
                       <tr
                         key={c.key}
-                        id={`award-cost-${idPart(c.key)}`}
+                        id={`award-cost-${functions.ids.idPart(c.key)}`}
                         className={styles.level1}
                       >
                         {node(c.key, c.name)}
@@ -348,7 +347,7 @@ export function ProjectCostsPanel({
                         {amountCells(c, true)}
                         <td>
                           {editButton(
-                            `award-cost-${idPart(c.key)}-edit`,
+                            `award-cost-${functions.ids.idPart(c.key)}-edit`,
                             `${view.texts.editCost} ${c.name}`,
                             !g.edit || !c.first.is_editable,
                             () => setDraft(draftOf("CATEGORY", c.first, c)),
@@ -356,7 +355,7 @@ export function ProjectCostsPanel({
                         </td>
                       </tr>,
                       ...(closed.has(c.key) ? [] : c.leaves).map((l) => {
-                        const id = `award-cost-${idPart(l.key)}`;
+                        const id = `award-cost-${functions.ids.idPart(l.key)}`;
                         const busy =
                           isActive(`delete-${l.line.id}`) ||
                           isActive(`clone-${l.line.id}`);
@@ -497,7 +496,7 @@ function GlobalCostForm({
   return (
     <div id="award-costs-global" className={styles.globalForm}>
       {GLOBAL_FIELDS.map(([k, type, percent]) => {
-        const id = `award-costs-global-${idPart(k)}`;
+        const id = `award-costs-global-${functions.ids.idPart(k)}`;
         if (!edit)
           return (
             <ReadonlyField
@@ -508,7 +507,11 @@ function GlobalCostForm({
               value={
                 percent
                   ? pct(g[k])
-                  : moneyDisplay(String(g[k]), format?.currency, format)
+                  : functions.format.moneyDisplay(
+                      String(g[k]),
+                      format?.currency,
+                      format,
+                    )
               }
             />
           );
@@ -615,7 +618,7 @@ function SplitInputs({
   return SPLIT_FIELDS.map(([k, , type, percent]) => {
     const input = (
       <input
-        id={`${id}-${idPart(k)}`}
+        id={`${id}-${functions.ids.idPart(k)}`}
         className="gn-control"
         type="number"
         step="any"
@@ -1007,7 +1010,7 @@ function CostPeriods({
     confirm = useConfirm("award-cost-period-delete");
   const h = view.costColumns;
   const money = (n: number) =>
-    moneyDisplay(String(n), format?.currency, format);
+    functions.format.moneyDisplay(String(n), format?.currency, format);
   // Legacy B_start / B_end: the line's dates inside the award's.
   const lineBounds = dateBounds(view.award, line.start, line.end);
   const bStart = lineBounds.endMin || view.award.start,
@@ -1222,9 +1225,12 @@ function CostPeriods({
               row?.itemId === Number(p.id) ? (
                 <Fragment key={p.id}>{editing}</Fragment>
               ) : (
-                <tr key={p.id} id={`award-cost-period-${idPart(p.id)}`}>
-                  <td>{dateDisplay(p.start, format)}</td>
-                  <td>{dateDisplay(p.end, format)}</td>
+                <tr
+                  key={p.id}
+                  id={`award-cost-period-${functions.ids.idPart(p.id)}`}
+                >
+                  <td>{functions.format.dateDisplay(p.start, format)}</td>
+                  <td>{functions.format.dateDisplay(p.end, format)}</td>
                   <td>
                     {view.choices.unitTypes.find((u) => u.value === p.unitType)
                       ?.label ?? p.unitType}
@@ -1244,7 +1250,7 @@ function CostPeriods({
                   <td className={styles.rowActions}>
                     <button
                       type="button"
-                      id={`award-cost-period-${idPart(p.id)}-edit`}
+                      id={`award-cost-period-${functions.ids.idPart(p.id)}-edit`}
                       className="gn-btn gn-btn--borderless gn-btn--icon"
                       aria-label={`${view.texts.editCost} ${p.start}`}
                       title={view.texts.editCost}
@@ -1272,7 +1278,7 @@ function CostPeriods({
                     </button>
                     <button
                       type="button"
-                      id={`award-cost-period-${idPart(p.id)}-delete`}
+                      id={`award-cost-period-${functions.ids.idPart(p.id)}-delete`}
                       className="gn-btn gn-btn--borderless gn-btn--icon"
                       aria-label={`${view.texts.deleteCost} ${p.start}`}
                       title={view.texts.deleteCost}

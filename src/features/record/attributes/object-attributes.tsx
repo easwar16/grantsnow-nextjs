@@ -11,8 +11,6 @@ import { Select } from "@/components/ui/select";
 import { NumberInput } from "@/features/record/dynamic-form/dyn-field";
 import { fieldWidth, isBlank } from "@/features/record/dynamic-form/engine";
 import type { FieldValue } from "@/features/record/dynamic-form/models";
-import { idPart } from "@/lib/ids";
-import { dateDisplay } from "@/lib/format";
 import { attributes, useApi } from "@/lib/api";
 import {
   attributeErrors,
@@ -24,6 +22,7 @@ import {
   type AttributeValues,
 } from "./model";
 import styles from "./attributes.module.css";
+import { functions } from "@/lib/functions";
 /** What a host's save calls, in order: `check()` before its own save, `reload()` once that save has passed. */
 export interface AttributesHandle {
   /** Shows every field's error; true when the host may save (hidden, failed to load, or all fields pass). */
@@ -199,7 +198,9 @@ export function ObjectAttributes({
         attributeOptions(f, values).find((o) => String(o.optionId) === value)
           ?.optionValue ?? String(value)
       );
-    return f.fieldType === "DATE" ? dateDisplay(String(value)) : String(value);
+    return f.fieldType === "DATE"
+      ? functions.format.dateDisplay(String(value))
+      : String(value);
   };
   if (!editable)
     return (
@@ -209,7 +210,7 @@ export function ObjectAttributes({
         aria-label="Attributes"
       >
         {fields.map((f) => {
-          const fieldId = `${id}-${idPart(f.name)}`;
+          const fieldId = `${id}-${functions.ids.idPart(f.name)}`;
           const help = (
             <HelpButton
               id={`${fieldId}-help`}
@@ -242,7 +243,7 @@ export function ObjectAttributes({
       aria-label="Attributes"
     >
       {fields.map((f) => {
-        const fieldId = `${id}-${idPart(f.name)}`,
+        const fieldId = `${id}-${functions.ids.idPart(f.name)}`,
           message = errors[f.name],
           shownError =
             message !== undefined && (checked || touched.has(f.name));

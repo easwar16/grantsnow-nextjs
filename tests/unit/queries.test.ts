@@ -6,10 +6,10 @@ import {
 import { oracleQuery } from "@/server/modules/proposals/where-clause";
 import { mapProposals } from "@/server/modules/proposals/service";
 import { proposals } from "@/test-support/fixtures";
-import { moneyDisplay, dateDisplay } from "@/lib/format";
 import { homeFilters } from "@/features/modules/home/schemas";
 import { mapWidget } from "@/server/modules/home/service";
 import { widgets } from "@/server/modules/home/widgets";
+import { functions } from "@/lib/functions";
 const q = parseQuery(new URLSearchParams());
 it("round trips URL queries and reset restores defaults", () => {
   const data = parseQuery(
@@ -156,8 +156,10 @@ it("rejects a page for a different offset", () =>
     mapProposals({ items: [], total_count: 0, offset: 10 }, q, []),
   ).toThrow());
 it("preserves masked money and calendar-date semantics", () => {
-  expect(moneyDisplay("****", "GBP")).toBe("****");
-  expect(dateDisplay("2026-01-01T23:00:00-08:00")).toBe("01-Jan-2026");
+  expect(functions.format.moneyDisplay("****", "GBP")).toBe("****");
+  expect(functions.format.dateDisplay("2026-01-01T23:00:00-08:00")).toBe(
+    "01-Jan-2026",
+  );
 });
 it("dashboard accepts verified filters and rejects invalid months", () => {
   expect(homeFilters(new URLSearchParams("year=2026&month=10")).month).toBe(

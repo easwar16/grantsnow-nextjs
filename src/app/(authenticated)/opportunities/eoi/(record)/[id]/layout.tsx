@@ -6,7 +6,8 @@ import { displayFormat } from "@/server/platform/configuration/formatting";
 import { State } from "@/components/feedback/state";
 import { DeniedRedirect } from "@/features/modules/opportunities/eoi/denied-redirect";
 import { RecordShell } from "@/features/modules/opportunities/eoi/record-shell";
-import { publicError } from "@/lib/errors";
+import { functions } from "@/lib/functions";
+
 /** The AOI / EOI record container: the request, the user's rights on it and its finalize state, shared by every tab. */
 export default async function EoiLayout({
   children,
@@ -32,7 +33,7 @@ export default async function EoiLayout({
   try {
     context = await eoiRecordContext(id);
   } catch (error) {
-    const e = publicError(error);
+    const e = functions.errors.publicError(error);
     // No rights on the record: the original's toast and back to the list.
     if (e.code === "FORBIDDEN")
       return (

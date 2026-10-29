@@ -95,7 +95,9 @@ it("points each award row step at its own control", async () => {
       .join("")}
     </li></ul>`).window;
   expect(
-    (await loadSteps(guide)).map((s) => document.querySelector(s.selector!)?.id),
+    (await loadSteps(guide)).map(
+      (s) => document.querySelector(s.selector!)?.id,
+    ),
   ).toEqual([
     "award-42",
     "award-42-number",

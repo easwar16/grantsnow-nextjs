@@ -1,13 +1,10 @@
 import "server-only";
 import { z } from "zod";
 import { awards } from "@/server/oracle/api";
-import {
-  label,
-  resourceVisible,
-  resources,
-} from "@/server/platform/configuration/resources";
+import { resources } from "@/server/platform/configuration/resources";
 import type { DueDiligenceView } from "@/features/modules/awards/record/due-diligence-model";
 import { awardRecordRead } from "../record";
+import { serverFunctions } from "@/server/functions";
 
 const BUNDLE = "award";
 const text = z.union([z.string(), z.number()]).nullish();
@@ -73,7 +70,7 @@ export async function dueDiligenceView(id: string): Promise<DueDiligenceView> {
   const items =
     z.object({ items: z.array(rowSchema).nullish() }).parse(raw).items ?? [];
   const shown = FIELDS.filter(([, , key]) =>
-    resourceVisible(rows, BUNDLE, "labels", key),
+    serverFunctions.resources.resourceVisible(rows, BUNDLE, "labels", key),
   );
   return {
     records: items.map((r) => {
@@ -92,7 +89,13 @@ export async function dueDiligenceView(id: string): Promise<DueDiligenceView> {
             : [
                 {
                   key: field,
-                  label: label(rows, BUNDLE, "labels", key, fallback),
+                  label: serverFunctions.resources.label(
+                    rows,
+                    BUNDLE,
+                    "labels",
+                    key,
+                    fallback,
+                  ),
                   value: String(value),
                   date,
                 },
@@ -101,7 +104,7 @@ export async function dueDiligenceView(id: string): Promise<DueDiligenceView> {
       };
     }),
     texts: {
-      empty: label(
+      empty: serverFunctions.resources.label(
         rows,
         BUNDLE,
         "helper-texts",

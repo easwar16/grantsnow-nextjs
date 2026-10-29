@@ -3,9 +3,9 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChartSkeleton } from "@/components/feedback/skeleton";
-import { insightOptions, legendTextWidth, pointRow } from "@/lib/chart-options";
 import type { WidgetData } from "../types";
-import { moneyDisplay, type FormatSettings } from "@/lib/format";
+import { type FormatSettings } from "@/lib/format";
+import { functions } from "@/lib/functions";
 // Drill targets are server-built listing paths; anything else is not navigated to.
 const internal = (href?: string) =>
   href?.startsWith("/") && !href.startsWith("//") ? href : undefined;
@@ -36,7 +36,7 @@ export function InsightChart({
     let disposed = false,
       loading = false,
       instance: import("echarts/core").ECharts | undefined;
-    const options = insightOptions(
+    const options = functions.charts.insightOptions(
       data,
       window.matchMedia("(prefers-reduced-motion: reduce)").matches,
       !!element.closest(".dark"),
@@ -47,7 +47,10 @@ export function InsightChart({
       label: { description: `${title}: values listed below` },
     };
     const fitLegend = () => {
-      const width = legendTextWidth(options, element.clientWidth);
+      const width = functions.charts.legendTextWidth(
+        options,
+        element.clientWidth,
+      );
       if (width)
         instance?.setOption({
           legend: {
@@ -71,7 +74,7 @@ export function InsightChart({
         fitLegend();
         instance.on("click", (point) => {
           const href = internal(
-            pointRow(
+            functions.charts.pointRow(
               data,
               String(point.name ?? ""),
               String(point.seriesName ?? ""),
@@ -103,7 +106,7 @@ export function InsightChart({
   const currency = data.presentation?.currency;
   const value = (v: number, money = !!currency) =>
     money
-      ? moneyDisplay(String(v), currency, format)
+      ? functions.format.moneyDisplay(String(v), currency, format)
       : new Intl.NumberFormat("en-GB", {
           maximumFractionDigits: format?.decimals || 2,
         }).format(v);

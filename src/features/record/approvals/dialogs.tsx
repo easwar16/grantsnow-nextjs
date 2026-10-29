@@ -7,12 +7,12 @@ import { InsideField } from "@/components/ui/inside-field";
 import { RichText } from "@/components/ui/rich-text";
 import { Select } from "@/components/ui/select";
 import { ActionDialog } from "@/components/dialog/action-dialog";
-import { idPart } from "@/lib/ids";
 import { approvals, useApi } from "@/lib/api";
 import type { useInFlight } from "@/lib/hooks/use-in-flight";
 import type { Texts, Write } from "./approval-workflow";
 import type { ApprovalAction, ApprovalStage } from "./types";
 import styles from "./approval-workflow.module.css";
+import { functions } from "@/lib/functions";
 
 /** Legacy #submitPopUp: comments for an action; a rejection or rework must say why. */
 export function CommentsDialog({
@@ -185,7 +185,7 @@ export function ApproversDialog({
             </thead>
             <tbody>
               {users.data.users.map((user) => {
-                const row = `${id}-user-${idPart(user.id)}`,
+                const row = `${id}-user-${functions.ids.idPart(user.id)}`,
                   edit = editing === user.id;
                 return (
                   <tr key={user.id} id={row}>

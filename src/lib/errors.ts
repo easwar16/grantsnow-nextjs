@@ -17,19 +17,3 @@ export class AppError extends Error {
     super(message);
   }
 }
-export function publicError(error: unknown): {
-  code: string;
-  message: string;
-  status: number;
-  action?: string;
-} {
-  if (!(error instanceof AppError))
-    return {
-      code: "UPSTREAM",
-      message:
-        "The service is unavailable. Please retry or contact your administrator.",
-      status: 502,
-    };
-  const { code, message, status, action } = error;
-  return action ? { code, message, status, action } : { code, message, status };
-}

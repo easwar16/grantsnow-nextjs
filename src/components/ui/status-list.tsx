@@ -1,5 +1,5 @@
-import { idPart } from "@/lib/ids";
 import styles from "./status-list.module.css";
+import { functions } from "@/lib/functions";
 
 /**
  * A listing drawer's status tabs (legacy vertical oj-navigation-list): one button per status, the chosen one marked
@@ -23,7 +23,7 @@ export function StatusList({
       {options.map((s) => (
         <button
           key={s.value}
-          id={`${id}-${idPart(s.value || "all")}`}
+          id={`${id}-${functions.ids.idPart(s.value || "all")}`}
           type="button"
           className={s.value === value ? styles.selected : ""}
           aria-current={s.value === value ? "true" : undefined}

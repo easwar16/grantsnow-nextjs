@@ -1,13 +1,13 @@
 "use client";
-import { idPart } from "@/lib/ids";
 import { useState } from "react";
-import type { FormatSettings } from "@/lib/format";
+import { type FormatSettings } from "@/lib/format";
 import { Icon, type IconName } from "@/components/ui/icon";
 import {
   DynamicChartsPanel,
   FeaturedPanel,
   NotificationsPanel,
 } from "./remote-tabs";
+import { functions } from "@/lib/functions";
 export function DashboardTabs({
   attention,
   insights,
@@ -119,9 +119,9 @@ export function DashboardTabs({
           <button
             key={tab.icon}
             role="tab"
-            id={`home-tab-${idPart(tab.key)}`}
+            id={`home-tab-${functions.ids.idPart(tab.key)}`}
             aria-selected={active === i}
-            aria-controls={`home-panel-${idPart(tab.key)}`}
+            aria-controls={`home-panel-${functions.ids.idPart(tab.key)}`}
             tabIndex={active === i ? 0 : -1}
             onKeyDown={(event) => {
               let next: number | undefined;
@@ -134,7 +134,9 @@ export function DashboardTabs({
                 event.preventDefault();
                 setSelected(next);
                 document
-                  .getElementById(`home-tab-${idPart(tabs[next].key)}`)
+                  .getElementById(
+                    `home-tab-${functions.ids.idPart(tabs[next].key)}`,
+                  )
                   ?.focus();
               }
             }}
@@ -149,8 +151,8 @@ export function DashboardTabs({
         <section
           key={tab.icon}
           role="tabpanel"
-          id={`home-panel-${idPart(tab.key)}`}
-          aria-labelledby={`home-tab-${idPart(tab.key)}`}
+          id={`home-panel-${functions.ids.idPart(tab.key)}`}
+          aria-labelledby={`home-tab-${functions.ids.idPart(tab.key)}`}
           hidden={active !== i}
         >
           {/* The first tab stays mounted so its queues keep their loaded pages. */}

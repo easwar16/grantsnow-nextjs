@@ -3,7 +3,8 @@ import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
 import { notifications } from "@/server/oracle/api";
 import { forgetOperation } from "@/server/oracle/cache";
-import { sanitizeHtml } from "@/server/platform/sanitize";
+import { serverFunctions } from "@/server/functions";
+
 // The original bell popup lists the five latest.
 const POPUP_ITEMS = 5;
 export interface BellNotification {
@@ -73,7 +74,9 @@ export async function bell(): Promise<Bell> {
         ? [
             {
               id: n.id,
-              html: sanitizeHtml(repairNotificationHtml(n.notific_content)),
+              html: serverFunctions.sanitize.sanitizeHtml(
+                repairNotificationHtml(n.notific_content),
+              ),
               at,
             },
           ]

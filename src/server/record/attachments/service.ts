@@ -17,7 +17,8 @@ import {
 import { formGlobals } from "@/server/record/dynamic-form/globals";
 import { fileProblem } from "@/features/record/dynamic-form/engine";
 import { AppError } from "@/lib/errors";
-import { early } from "@/server/platform/async";
+import { serverFunctions } from "@/server/functions";
+
 /**
  * Files of a record's form (port of GN-Angular FilesService, D43): attachment records in ORDS, bytes in Object Storage
  * through the OIC relay. The storage location is built here from the record and the session, never from the browser;
@@ -146,7 +147,7 @@ export async function uploadFile(
   t: FormTarget,
   file: { name: string; type: string; bytes: Uint8Array },
 ) {
-  const settings = early(formGlobals());
+  const settings = serverFunctions.async.early(formGlobals());
   const { user, scope } = await scoped(t, "edit");
   const globals = await settings;
   const problem =

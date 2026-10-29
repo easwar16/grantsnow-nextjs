@@ -2,15 +2,10 @@ import "server-only";
 import { z } from "zod";
 import { awards, lookups, people } from "@/server/oracle/api";
 import {
-  label,
-  resourceDescription,
-  resourceRequired,
-  resourceVisible,
   resources,
   type Resources,
 } from "@/server/platform/configuration/resources";
 import { globalVariables } from "@/server/platform/configuration/formatting";
-import { orgUnitRows } from "@/server/platform/configuration/service";
 import { orNull } from "@/server/record/shared";
 import { AppError } from "@/lib/errors";
 import { pageOf } from "@/shared/awards/award-record";
@@ -29,6 +24,7 @@ import {
   isDraft,
   type AwardRecordContext,
 } from "../record";
+import { serverFunctions } from "@/server/functions";
 
 const BUNDLE = "award";
 const PAGE = pageOf("projects");
@@ -147,7 +143,7 @@ const codeRows = items(
 );
 async function projectChoices() {
   const [orgs, everyone, staff, roles, sections, codes] = await Promise.all([
-    lookups.orgUnits({}).then(orgUnitRows),
+    lookups.orgUnits({}).then(serverFunctions.organizations.orgUnitRows),
     people.all(),
     // The team dialog's list is legacy's app-level getPersonList (unfiltered).
     people
@@ -224,10 +220,21 @@ type Choices = Awaited<ReturnType<typeof projectChoices>>;
 const fieldOf =
   (rows: Resources, group = "labels") =>
   (key: string, fallback: string) => ({
-    show: resourceVisible(rows, BUNDLE, group, key),
-    required: resourceRequired(rows, BUNDLE, group, key, false),
-    label: label(rows, BUNDLE, group, key, fallback),
-    help: resourceDescription(rows, BUNDLE, group, key),
+    show: serverFunctions.resources.resourceVisible(rows, BUNDLE, group, key),
+    required: serverFunctions.resources.resourceRequired(
+      rows,
+      BUNDLE,
+      group,
+      key,
+      false,
+    ),
+    label: serverFunctions.resources.label(rows, BUNDLE, group, key, fallback),
+    help: serverFunctions.resources.resourceDescription(
+      rows,
+      BUNDLE,
+      group,
+      key,
+    ),
   });
 
 export async function projectsView(id: string): Promise<ProjectsView> {
@@ -239,7 +246,7 @@ export async function projectsView(id: string): Promise<ProjectsView> {
   ]);
   const { context } = gates;
   const t = (group: string, key: string, fallback: string) =>
-    label(rows, BUNDLE, group, key, fallback);
+    serverFunctions.resources.label(rows, BUNDLE, group, key, fallback);
   const f = fieldOf(rows);
   const h = fieldOf(rows, "table-headers");
   return {
@@ -421,8 +428,14 @@ async function requiredCheck(
   const rows = await resources();
   const missing = Object.entries(keys).some(
     ([field, key]) =>
-      resourceVisible(rows, BUNDLE, "labels", key) &&
-      resourceRequired(rows, BUNDLE, "labels", key, false) &&
+      serverFunctions.resources.resourceVisible(rows, BUNDLE, "labels", key) &&
+      serverFunctions.resources.resourceRequired(
+        rows,
+        BUNDLE,
+        "labels",
+        key,
+        false,
+      ) &&
       (values[field] ?? "").trim() === "",
   );
   if (missing)

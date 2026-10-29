@@ -1,18 +1,13 @@
 import "server-only";
 import { z } from "zod";
 import { awards } from "@/server/oracle/api";
-import {
-  label,
-  resourceDescription,
-  resourceRequired,
-  resourceVisible,
-  resources,
-} from "@/server/platform/configuration/resources";
+import { resources } from "@/server/platform/configuration/resources";
 import { globalVariables } from "@/server/platform/configuration/formatting";
 import { AppError } from "@/lib/errors";
 import { pageOf } from "@/shared/awards/award-record";
 import type { BudgetRow } from "@/features/modules/awards/record/budget-model";
 import { awardPageLock, awardRecordRead, isDraft } from "../record";
+import { serverFunctions } from "@/server/functions";
 
 const BUNDLE = "award";
 const PAGE = pageOf("budget-periods");
@@ -86,12 +81,28 @@ export async function budgetView(id: string) {
     globalVariables(),
   ]);
   const t = (group: string, key: string, fallback: string) =>
-    label(rows, BUNDLE, group, key, fallback);
+    serverFunctions.resources.label(rows, BUNDLE, group, key, fallback);
   const field = (key: string, fallback: string) => ({
     label: t("labels", key, fallback),
-    show: resourceVisible(rows, BUNDLE, "labels", key),
-    required: resourceRequired(rows, BUNDLE, "labels", key, false),
-    help: resourceDescription(rows, BUNDLE, "labels", key),
+    show: serverFunctions.resources.resourceVisible(
+      rows,
+      BUNDLE,
+      "labels",
+      key,
+    ),
+    required: serverFunctions.resources.resourceRequired(
+      rows,
+      BUNDLE,
+      "labels",
+      key,
+      false,
+    ),
+    help: serverFunctions.resources.resourceDescription(
+      rows,
+      BUNDLE,
+      "labels",
+      key,
+    ),
   });
   return {
     awardId: id,

@@ -1,9 +1,9 @@
 import "server-only";
-import { sanitizeHtml } from "@/server/platform/sanitize";
 import { z } from "zod";
 import { homeAccess } from "./service";
-import { publicError } from "@/lib/errors";
 import { home } from "@/server/oracle/api";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 /** One module's announcements (DASHBOARD, OPPORTUNITIES), sanitised; the caller has already checked its access. */
 export async function announcementMessages(token: string, module: string) {
   try {
@@ -17,12 +17,15 @@ export async function announcementMessages(token: string, module: string) {
     return {
       messages: body.items.flatMap(({ msg }) =>
         typeof msg === "string" && msg.trim() !== "" && msg.length <= 100000
-          ? [sanitizeHtml(msg)]
+          ? [serverFunctions.sanitize.sanitizeHtml(msg)]
           : [],
       ),
     };
   } catch (e) {
-    return { messages: [] as string[], error: publicError(e).message };
+    return {
+      messages: [] as string[],
+      error: functions.errors.publicError(e).message,
+    };
   }
 }
 export async function loadAnnouncements() {

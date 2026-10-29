@@ -12,18 +12,12 @@ import {
   forgetDashboardConfiguration,
   organizations,
 } from "@/server/platform/configuration/service";
-import { early } from "@/server/platform/async";
-import {
-  label,
-  resources,
-  resourceVisible,
-} from "@/server/platform/configuration/resources";
-import { scopeOrganization } from "@/server/platform/permissions";
+import { resources } from "@/server/platform/configuration/resources";
 import { home, notifications as notes } from "@/server/oracle/api";
-import { sanitizeHtml } from "@/server/platform/sanitize";
 import { AppError } from "@/lib/errors";
 import { listOpportunities } from "@/server/modules/opportunities/service";
 import { finderRequest } from "@/features/modules/opportunities/schemas";
+import { serverFunctions } from "@/server/functions";
 export async function dashboardTabs() {
   const [{ user }, config, labels] = await Promise.all([
     homeAccess(),
@@ -31,7 +25,12 @@ export async function dashboardTabs() {
     resources(),
   ]);
   const visible = (key: string) =>
-    resourceVisible(labels, "dashboard", "button-labels", key);
+    serverFunctions.resources.resourceVisible(
+      labels,
+      "dashboard",
+      "button-labels",
+      key,
+    );
   const moduleAccess: Record<string, string> = {
     PROPOSAL: "PROPOSALS",
     AWARD: "AWARDS",
@@ -40,7 +39,12 @@ export async function dashboardTabs() {
     OPPORTUNITIES: "opportunities-finder",
   };
   const chartOption = (key: string) =>
-    resourceVisible(labels, "dashboard", "labels", key);
+    serverFunctions.resources.resourceVisible(
+      labels,
+      "dashboard",
+      "labels",
+      key,
+    );
   const charts = Object.entries(config.dynamicCharts || {})
     .filter(
       ([, c]) =>
@@ -69,7 +73,13 @@ export async function dashboardTabs() {
 const NOTIFICATION_PAGE = 25;
 /** The dashboard's empty-state text (helper-texts.no-data). */
 const emptyText = (labels: Awaited<ReturnType<typeof resources>>) =>
-  label(labels, "dashboard", "helper-texts", "no-data", "No data to display.");
+  serverFunctions.resources.label(
+    labels,
+    "dashboard",
+    "helper-texts",
+    "no-data",
+    "No data to display.",
+  );
 export function notificationPage(raw: unknown, offset: number) {
   // The envelope's hasMore/offset do not track p_offset paging (KB GrantsNow-Dashboard), so they are not trusted.
   const body = z
@@ -92,7 +102,7 @@ export function notificationPage(raw: unknown, offset: number) {
   return {
     rows: body.items.map((r) => ({
       id: String(r.id),
-      html: sanitizeHtml(r.notific_content),
+      html: serverFunctions.sanitize.sanitizeHtml(r.notific_content),
       read: r.is_read === "Y",
       date: /(?:Z|[+-]\d\d:\d\d)$/.test(r.datetime)
         ? r.datetime
@@ -158,7 +168,7 @@ export async function dynamicChart(
   organization: string | undefined,
   signal?: AbortSignal,
 ) {
-  const orgs = early(organizations());
+  const orgs = serverFunctions.async.early(organizations());
   const [, tabs] = await Promise.all([homeAccess(), dashboardTabs()]);
   const descriptor = tabs.charts.find((c) => c.id === id);
   if (!descriptor)
@@ -167,14 +177,17 @@ export async function dynamicChart(
       "This chart is not enabled for your account.",
       403,
     );
-  const org = scopeOrganization(organization, await orgs);
+  const org = serverFunctions.permissions.scopeOrganization(
+    organization,
+    await orgs,
+  );
   const [raw, labels] = await Promise.all([
     home.dynamicChart({ report: id, orgId: org || undefined }, { signal }),
     resources(),
   ]);
   const charts = chartSchema.parse(raw);
   const text = (group: string, key: string, fallback: string) =>
-    label(labels, "dashboard", group, key, fallback);
+    serverFunctions.resources.label(labels, "dashboard", group, key, fallback);
   const texts = {
     options: text("labels", "dyn-chart-options", "Options"),
     dimension: text("labels", "dyn-chart-dimensions", "Dimension"),

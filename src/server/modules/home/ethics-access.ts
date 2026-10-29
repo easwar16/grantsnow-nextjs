@@ -1,8 +1,8 @@
 import "server-only";
 import { z } from "zod";
 import { home } from "@/server/oracle/api";
-import { requireModule } from "@/server/platform/permissions";
 import { homeAccess } from "./service";
+import { serverFunctions } from "@/server/functions";
 const body = z.object({
   hasAccess: z.union([z.boolean(), z.string()]).nullish(),
 });
@@ -18,7 +18,7 @@ export function grantsEthicsAccess(raw: unknown) {
 /** Whether this user may open Ethics rows (legacy `/dynamicForms/checkApplApprAccess`), asked once per token. */
 export async function ethicsAccess() {
   const { user, session } = await homeAccess();
-  requireModule(user, "ETHICS");
+  serverFunctions.permissions.requireModule(user, "ETHICS");
   // Held per session; a failed check is not held, so the next click asks Oracle again.
   return grantsEthicsAccess(
     await home.ethicsAccess(undefined, { token: session.token }),

@@ -2,8 +2,9 @@ import "server-only";
 import { z } from "zod";
 import { people } from "@/server/oracle/api";
 import type { PersonRow } from "@/server/oracle/api/people";
-import { label, resources } from "@/server/platform/configuration/resources";
+import { resources } from "@/server/platform/configuration/resources";
 import type { CreatorCard } from "@/features/record/shell/creator-types";
+import { serverFunctions } from "@/server/functions";
 
 const text = z.string().nullish();
 const card = z.object({
@@ -47,7 +48,7 @@ export async function personCard(
       : null,
   ]);
   return {
-    title: label(
+    title: serverFunctions.resources.label(
       rows,
       bundle,
       "dialog-titles",
@@ -56,7 +57,13 @@ export async function personCard(
     ),
     fields: FIELDS.map(([field, key, fallback]) => ({
       key,
-      label: label(rows, bundle, "labels", key, fallback),
+      label: serverFunctions.resources.label(
+        rows,
+        bundle,
+        "labels",
+        key,
+        fallback,
+      ),
       value: found?.[field] ?? "",
     })),
   };

@@ -10,18 +10,15 @@ import {
   contractDeadlineChoices,
   contractDynamicForms,
 } from "@/server/modules/contracts/lookups";
-import {
-  resources,
-  label,
-  resourceVisible,
-} from "@/server/platform/configuration/resources";
+import { resources } from "@/server/platform/configuration/resources";
 import { State } from "@/components/feedback/state";
-import { publicError } from "@/lib/errors";
-import styles from "../contracts.module.css";
-import { DependentFields } from "./dependent-fields";
-import { AssigneeField } from "./assignee-field";
-import { DynamicFields } from "./dynamic-fields";
-import { DeadlineFields } from "./deadline-fields";
+import styles from "@/features/modules/contracts/contracts.module.css";
+import { DependentFields } from "@/features/modules/contracts/new/dependent-fields";
+import { AssigneeField } from "@/features/modules/contracts/new/assignee-field";
+import { DynamicFields } from "@/features/modules/contracts/new/dynamic-fields";
+import { DeadlineFields } from "@/features/modules/contracts/new/deadline-fields";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 
 export const metadata = { title: "New Contract" };
 
@@ -50,12 +47,12 @@ export default async function NewContract() {
 async function NewContractForm() {
   let access = false;
   let rb: Awaited<ReturnType<typeof resources>> | null = null;
-  let failure: ReturnType<typeof publicError> | null = null;
+  let failure: ReturnType<typeof functions.errors.publicError> | null = null;
   try {
     access = await canCreateContract();
     if (access) rb = await resources();
   } catch (error) {
-    failure = publicError(error);
+    failure = functions.errors.publicError(error);
   }
   if (failure)
     return (
@@ -75,9 +72,9 @@ async function NewContractForm() {
       />
     );
   const field = (key: string, fallback: string) =>
-    label(rb, "contract", "labels", key, fallback);
+    serverFunctions.resources.label(rb, "contract", "labels", key, fallback);
   const visible = (key: string) =>
-    resourceVisible(rb, "contract", "labels", key);
+    serverFunctions.resources.resourceVisible(rb, "contract", "labels", key);
   return (
     <section
       id="contract-new"
@@ -223,7 +220,7 @@ async function CreateDependentFields({
       contractOrgChoices(),
     ]);
   } catch (error) {
-    const failure = publicError(error);
+    const failure = functions.errors.publicError(error);
     return (
       <State
         title="Contract choices unavailable"
@@ -235,9 +232,9 @@ async function CreateDependentFields({
   }
   const [types, relations, orgs] = choices;
   const field = (key: string, fallback: string) =>
-    label(rb, "contract", "labels", key, fallback);
+    serverFunctions.resources.label(rb, "contract", "labels", key, fallback);
   const visible = (key: string) =>
-    resourceVisible(rb, "contract", "labels", key);
+    serverFunctions.resources.resourceVisible(rb, "contract", "labels", key);
   return (
     <DependentFields
       types={types}
@@ -269,7 +266,7 @@ async function CreateDeadlineFields() {
   try {
     types = await contractDeadlineChoices();
   } catch (error) {
-    const failure = publicError(error);
+    const failure = functions.errors.publicError(error);
     return (
       <State
         title="Deadline choices unavailable"
@@ -287,7 +284,7 @@ async function CreateDynamicFields() {
   try {
     forms = await contractDynamicForms();
   } catch (error) {
-    const failure = publicError(error);
+    const failure = functions.errors.publicError(error);
     return (
       <State
         title="Contract dynamic fields unavailable"

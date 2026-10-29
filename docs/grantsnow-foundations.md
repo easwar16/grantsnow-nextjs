@@ -228,6 +228,38 @@ These rules belong in `src/server/api/*` and nowhere else.
   - Independent work, whether Oracle calls or our own async functions, starts together (`Promise.all`, or
     start the promise early and await it late). Only a step that needs an earlier result waits for it.
   - Paged reads fetch the first page, then the remaining pages together once the total is known.
+  - **A page never waits on data it does not draw first** (owner, 2026-10-29). DEV reads can take 20 s or more
+    (the unfiltered Awards listing measured 15–33 s), so a slow read must not hold the shell.
+    - A page or layout awaits only what its shell needs: identity, access, the RB labels and gates, the format,
+      and the record context that decides the header and tabs. Each of these starts as soon as its inputs exist.
+    - Lists, sections and panels stream. A client list takes the server's first read as a pending promise:
+      `initial: functions.errors.settle(read)` (it never rejects) into `usePagedApi`'s `initial`. Server-rendered
+      sections go behind their own `<Suspense>` with a `Skeleton` fallback (Contracts, Home). The rest of the page
+      is usable while they load, and each fills in when its data arrives.
+    - A read started early but awaited after an early return gets `.catch(() => undefined)`, so it is never an
+      unhandled rejection.
+    - Never stream a read whose failure must replace the whole page (access, a missing record).
+  - **Ten things never wait for one** (owner, 2026-10-29). Independent pieces are never bundled into one reply
+    or one await: each dropdown's options, panel, section, table and banner is its own read and fills when its
+    own data arrives. A slow or failed piece shows its own skeleton or error, and every other piece keeps
+    working.
+    - Browser reads: one endpoint per piece, read in parallel (`useApi` each). Where one route serves several,
+      it takes the piece as a parameter: `/api/awards/choices?list=orgs|people|parties`,
+      `/api/proposals/choices?group=…`, a workflow's `?view=history`.
+    - Server-rendered pieces: pass each as its own pending promise (`functions.errors.settle(read)`, or a read that degrades on
+      its own) and resolve it with `useStreamed` (`@/lib/hooks/use-streamed`), as the finder's options and
+      banner do. Otherwise give each its own `<Suspense>`.
+    - A dropdown list degrades alone: `serverFunctions.choices.choiceList(read, message)`
+      returns `{ options, errors }`, so its failure toasts its own message and leaves the rest of the page.
+    - Gathering stays right when one answer needs every read: a record context, a write payload, a figure
+      computed from several reads.
+  - **Lookups and org units are held for the session** (owner, 2026-10-29), as the live app holds them
+    (`orgUnitsLookup`, `loadLookups`). Server: `serverConstants.ttl.session` on every `lookups.*` read and the
+    finder's funder, funder-type and call-code lists. Browser: `constants.ttl.session` on the dropdown-option
+    endpoints. A failure is never held, so a failed lookup is asked again on the next visit.
+  - **Backend calls wait up to 10 minutes** (owner, 2026-10-29): `serverConstants.timeouts.oracle` / `.oic`,
+    on the call, the whole paged list and the undici pool (`headersTimeout` / `bodyTimeout`, which default
+    to 5 minutes). Saves that legacy bounds at 15 s keep that limit.
   - Reference data Oracle answers slowly and the app never writes (labels, global variables, lookups, roles,
     org and person lists) goes through `memo` (`src/server/oracle/cache.ts`). It is keyed by session, shares one
     request between concurrent callers, never reuses a failure, and expires after a TTL. A write that changes
@@ -249,6 +281,22 @@ These rules belong in `src/server/api/*` and nowhere else.
     functional state updates), so a click re-renders only what changed.
   - Rise-in animates only record rows tagged `.enter-rise`, as GN-Angular did, never every list item.
   - Development logs every Oracle call over 1 s (`[oracle] op: N ms`), so latency is traced before it is fixed.
+- **App-wide constants live in one place** (owner, 2026-10-29), as one object grouped by category:
+  `constants` in `src/lib/constants.ts` (both sides: timing, paging, browser TTLs, limits) and `serverConstants` in
+  `src/server/constants.ts` (server-only: timeouts, server TTLs, paging, cache, pool, session). A constant two files
+  use, or a tuning value (a timeout, TTL, page size, wait or limit), goes there and is read by its path
+  (`constants.paging.awards`); a value one file uses stays beside it. Never redefine one locally.
+- **Shared pure helpers live in one place** (owner, 2026-10-29), the same way: `functions` in `src/lib/functions.ts`
+  (both sides: format, ids, errors, security, mentions, charts) and `serverFunctions` in `src/server/functions.ts`
+  (server-only: async, sanitize, choices, resources, permissions, organizations). A pure helper (no Oracle, cache,
+  storage or settings read) that two files use goes there and is called by its path
+  (`serverFunctions.permissions.requireModule(user, "AWARD")`). Services that read Oracle stay in their modules, so
+  tests can mock them by path; mock a helper on `serverFunctions` (see `tests/integration/contracts-access.test.ts`).
+  Types and classes (`AppError`, `FormatSettings`, `Choice`) stay in their modules.
+- **Truncated text always shows its full value on hover** (owner, 2026-10-29). `TruncatedTitles` (in `AppShell`)
+  titles any element whose ellipsis or line clamp is cutting its text, and any input whose value does not fit. Keep
+  truncating with `text-overflow: ellipsis` or a line clamp so it is covered; set your own `title` only when the tooltip
+  should say something else (it is never replaced).
 - **Names are sensible and short.** Variables, functions, CSS classes and ids say what the thing is in one to
   three words. No abbreviations a reader has to decode, and no long compound names.
 - **Mark a deliberate shortcut** with a `// ponytail:` comment that names its ceiling and the upgrade
@@ -313,16 +361,16 @@ and improvement choices stay with the owner (§ _Open for the owner_).
 
 ## Decisions 2026-10-22 (owner's second round)
 
-| Owner instruction               | Done                                                                                                                                                                                                                                                                                                                             |
-| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| DOMPurify if better             | Yes: legacy `renderAsHTML` uses it, it parses like a browser and keeps authored styles/tables (D15). Server-side with jsdom (`src/server/platform/sanitize.ts`), hardened: no `<style>`/form controls, no positioning or `url()` in styles, links new-tab, http(s)/mailto/relative only. `sanitize-html` removed                 |
-| FullCalendar                    | 6.1.22 via `@fullcalendar/react` (D17), loaded on first Calendar View (D19), ported legacy/GN-Angular calendar                                                                                                                                                                                                                   |
-| Dependencies                    | `sanitize-html` and its types removed; everything left in `dependencies` runs in production (zod validates every Oracle reply); test/tooling packages are dev-only                                                                                                                                                               |
-| Agreed fonts and styles         | Oracle gallery bundle linked as VB/GN-Angular do (Oracle Sans + `oj-ux-ico` glyphs, D13/D14), Open Sans listed as fallback, `<Icon>` component, GN tokens and component styles                                                                                                                                                   |
-| Charts we had                   | Every GN-Angular Insights and Dynamic chart, drill-downs, legend truncation, FEI gauge, funnel, stacking                                                                                                                                                                                                                         |
-| Filters on the left, adjustable | One `FilterPanel` on Proposals, Opportunities and EOI: drag or keyboard resize, per-browser width, collapsible                                                                                                                                                                                                                   |
-| Chatbot, bottom right           | Server proxy `/api/chatbot` (session token added server-side, answers sanitised), gated by `CHATBOT_URL` + global var `CHATBOT_ENABLED=Y`, draggable launcher snapping to edges, default bottom-right                                                                                                                            |
-| Real data not loading           | Machine DNS: the router stalls on IPv6 (AAAA) lookups, so Node needs ~6 s per lookup and parallel requests hit the 10 s connect timeout. Fix is local DNS. App hardened: read/aggregate timeouts 60/90 s, one validate per token per 60 s (D24), seeded labels when `shared/labels` is unreachable, dev-only failure diagnostics |
+| Owner instruction               | Done                                                                                                                                                                                                                                                                                                                                                |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DOMPurify if better             | Yes: legacy `renderAsHTML` uses it, it parses like a browser and keeps authored styles/tables (D15). Server-side with jsdom (`src/server/platform/sanitize.ts`), hardened: no `<style>`/form controls, no positioning or `url()` in styles, links new-tab, http(s)/mailto/relative only. `sanitize-html` removed                                    |
+| FullCalendar                    | 6.1.22 via `@fullcalendar/react` (D17), loaded on first Calendar View (D19), ported legacy/GN-Angular calendar                                                                                                                                                                                                                                      |
+| Dependencies                    | `sanitize-html` and its types removed; everything left in `dependencies` runs in production (zod validates every Oracle reply); test/tooling packages are dev-only                                                                                                                                                                                  |
+| Agreed fonts and styles         | Oracle gallery bundle linked as VB/GN-Angular do (Oracle Sans + `oj-ux-ico` glyphs, D13/D14), Open Sans listed as fallback, `<Icon>` component, GN tokens and component styles                                                                                                                                                                      |
+| Charts we had                   | Every GN-Angular Insights and Dynamic chart, drill-downs, legend truncation, FEI gauge, funnel, stacking                                                                                                                                                                                                                                            |
+| Filters on the left, adjustable | One `FilterPanel` on Proposals, Opportunities and EOI: drag or keyboard resize, per-browser width, collapsible                                                                                                                                                                                                                                      |
+| Chatbot, bottom right           | Server proxy `/api/chatbot` (session token added server-side, answers sanitised), gated by `CHATBOT_URL` + global var `CHATBOT_ENABLED=Y`, draggable launcher snapping to edges, default bottom-right                                                                                                                                               |
+| Real data not loading           | Machine DNS: the router stalls on IPv6 (AAAA) lookups, so Node needs ~6 s per lookup and parallel requests hit the 10 s connect timeout. Fix is local DNS. App hardened: one 10-minute timeout per call (owner, 2026-10-29), one validate per token per 60 s (D24), seeded labels when `shared/labels` is unreachable, dev-only failure diagnostics |
 
 Later the same day: the hover-only "Refresh" buttons on Home widgets (Need Attention, Notifications, Featured,
 Dynamic Charts) were removed at the owner's request, to be re-added if needed; the error-state "Retry" stays. The dev

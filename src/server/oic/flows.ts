@@ -7,7 +7,8 @@ import {
 } from "@/server/platform/configuration/environment";
 import { businessError } from "@/server/oracle/connection";
 import { oracleContext, type IdentityField } from "@/server/oracle/context";
-import { FLOWS, TIMEOUT_MS, oicSettings } from "./connection";
+import { FLOWS, oicFetch, oicSettings } from "./connection";
+import { serverConstants } from "@/server/constants";
 
 /**
  * OIC integration flows (the VBCS `ics` connection) as functions, like the Oracle client: an allowlisted flow, its
@@ -86,9 +87,9 @@ export function flow<P = void>(def: FlowDef<P>) {
         strings(def.query(params)),
       ).toString();
     const body = def.body?.(params);
-    let response: Response;
+    let response: Awaited<ReturnType<typeof oicFetch>>;
     try {
-      response = await fetch(target, {
+      response = await oicFetch(target, {
         method: op.method,
         headers: {
           ...headers,
@@ -100,8 +101,11 @@ export function flow<P = void>(def: FlowDef<P>) {
         cache: "no-store",
         redirect: "error",
         signal: options.signal
-          ? AbortSignal.any([options.signal, AbortSignal.timeout(TIMEOUT_MS)])
-          : AbortSignal.timeout(TIMEOUT_MS),
+          ? AbortSignal.any([
+              options.signal,
+              AbortSignal.timeout(serverConstants.timeouts.oic),
+            ])
+          : AbortSignal.timeout(serverConstants.timeouts.oic),
       });
     } catch {
       throw new AppError(

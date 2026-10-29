@@ -1,6 +1,5 @@
 import { displayFormat } from "@/server/platform/configuration/formatting";
 import { pageIdentity } from "@/server/identity/auth/page";
-import { requireDrawerAccess } from "@/server/platform/permissions";
 import {
   finderRequest,
   finderRequestSchema,
@@ -13,16 +12,17 @@ import {
   type FinderQuery,
 } from "@/features/modules/opportunities/finder/state";
 import {
+  finderBanner,
   finderContext,
+  finderOptions,
   finderPreferences,
   listOpportunities,
 } from "@/server/modules/opportunities/service";
-import {
-  Finder,
-  type FinderResult,
-} from "@/features/modules/opportunities/components/finder";
+import { Finder } from "@/features/modules/opportunities/components/finder";
 import { State } from "@/components/feedback/state";
-import { AppError, publicError } from "@/lib/errors";
+import { AppError } from "@/lib/errors";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 export const metadata = { title: "Funding opportunities" };
 export default async function Opportunities({
   searchParams,
@@ -31,7 +31,10 @@ export default async function Opportunities({
 }) {
   const { user } = await pageIdentity("/opportunities");
   try {
-    requireDrawerAccess(user, "opportunities-finder");
+    serverFunctions.permissions.requireDrawerAccess(
+      user,
+      "opportunities-finder",
+    );
   } catch {
     return (
       <State
@@ -64,13 +67,20 @@ export default async function Opportunities({
     return listOpportunities(request);
   });
   const formatRead = displayFormat();
-  // Settled below only once the context is known; never left unhandled.
-  pageRead.catch(() => undefined);
+  // The cards stream in after the shell; a failure is the list's own error, never a rejection.
+  const initial = functions.errors.settle(
+    pageRead.then((page) => ({
+      rows: page.rows,
+      total: page.total,
+      card: page.card,
+      ...(page.countsUnavailable ? { countsUnavailable: true as const } : {}),
+    })),
+  );
   let context;
   try {
     context = await contextRead;
   } catch (error) {
-    const e = publicError(error);
+    const e = functions.errors.publicError(error);
     return (
       <State
         title="Opportunities unavailable"
@@ -84,31 +94,14 @@ export default async function Opportunities({
   const { request, valid } = await requestRead;
   if (!valid)
     return <State title="Invalid opportunity filters" code="BAD_REQUEST" />;
-  let initial: FinderResult;
-  try {
-    const page = await pageRead;
-    initial = {
-      ok: true,
-      data: {
-        rows: page.rows,
-        total: page.total,
-        card: page.card,
-        ...(page.countsUnavailable ? { countsUnavailable: true } : {}),
-      },
-    };
-  } catch (error) {
-    const e = publicError(error);
-    initial = {
-      ok: false,
-      error: { code: e.code, message: e.message, action: e.action },
-    };
-  }
   return (
     <Finder
       initial={initial}
       initialRequest={{ tab: request.tab, filters: request.filters }}
       urlQuery={urlQuery}
-      context={context}
+      shell={context}
+      optionsRead={finderOptions()}
+      bannerRead={finderBanner()}
       format={await formatRead}
     />
   );

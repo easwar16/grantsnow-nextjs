@@ -3,11 +3,6 @@ import { cache } from "react";
 import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
 import {
-  finalizedOf,
-  objectAccessOf,
-  requireDrawerAccess,
-} from "@/server/platform/permissions";
-import {
   awards,
   eoi as locks,
   lookups,
@@ -16,7 +11,6 @@ import {
 } from "@/server/oracle/api";
 import { invalidate } from "@/server/oracle/client";
 import { fixtureMode } from "@/server/platform/configuration/environment";
-import { orgUnitRows } from "@/server/platform/configuration/service";
 import { orNull, recordId, recordRoleRows } from "@/server/record/shared";
 import type { AttachmentHost } from "@/server/record/attachments/attachments";
 import { AppError } from "@/lib/errors";
@@ -29,6 +23,7 @@ import {
   visibleTabs,
   type AwardTab,
 } from "@/shared/awards/award-record";
+import { serverFunctions } from "@/server/functions";
 
 export const awardRecordIdentity = z.object({
   id: recordId,
@@ -123,13 +118,15 @@ export const awardRecordContext = cache(async (id: string) => {
   if (!recordId.safeParse(id).success)
     throw new AppError("BAD_REQUEST", "Invalid award identity.", 400);
   const { session, user } = await authenticate();
-  requireDrawerAccess(user, "awards");
+  serverFunctions.permissions.requireDrawerAccess(user, "awards");
   // Reference lists load alongside the access check; no record data is read before it.
   const staffRead = orNull(people.all());
-  const orgsRead = orNull(lookups.orgUnits({}).then(orgUnitRows));
+  const orgsRead = orNull(
+    lookups.orgUnits({}).then(serverFunctions.organizations.orgUnitRows),
+  );
   staffRead.catch(() => undefined);
   orgsRead.catch(() => undefined);
-  const access = objectAccessOf(
+  const access = serverFunctions.permissions.objectAccessOf(
     recordRoleRows.parse(
       await recordRoles.record({ objectType: AWARD_MODULE, objectId: id }),
     ).items,
@@ -158,7 +155,10 @@ export const awardRecordContext = cache(async (id: string) => {
     throw new AppError("CONTRACT", "Oracle returned a different award.");
   const award = withPeriodDates(details, periods ?? []);
   // Legacy reads the finalized pages from the award's own locked_modules.
-  const finalized = finalizedOf(access.pages, details.locked_modules ?? []);
+  const finalized = serverFunctions.permissions.finalizedOf(
+    access.pages,
+    details.locked_modules ?? [],
+  );
   const status = award.award_status ?? "";
   return {
     session,

@@ -1,14 +1,12 @@
 import { displayFormat } from "@/server/platform/configuration/formatting";
 import { pageIdentity } from "@/server/identity/auth/page";
-import { requireDrawerAccess } from "@/server/platform/permissions";
 import { awardListView, listAwards } from "@/server/modules/awards/listing";
 import { awardEntryFilters } from "@/features/modules/awards/listing/schema";
-import {
-  AwardList,
-  type AwardListResult,
-} from "@/features/modules/awards/listing/award-list";
+import { AwardList } from "@/features/modules/awards/listing/award-list";
 import { State } from "@/components/feedback/state";
-import { publicError } from "@/lib/errors";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
+
 export const metadata = { title: "Awards" };
 /** Legacy awards-start. `?status&org` are its entry filters (Home's status chart); the rest start from the defaults. */
 export default async function Awards({
@@ -18,7 +16,7 @@ export default async function Awards({
 }) {
   const { user } = await pageIdentity("/awards");
   try {
-    requireDrawerAccess(user, "awards");
+    serverFunctions.permissions.requireDrawerAccess(user, "awards");
   } catch {
     return (
       <State
@@ -33,12 +31,14 @@ export default async function Awards({
     if (typeof v === "string") params.set(k, v);
   const entry = awardEntryFilters(params);
   const formatRead = displayFormat();
-  const [view, page] = await Promise.allSettled([
-    awardListView(),
-    listAwards(entry),
-  ]);
-  if (view.status === "rejected") {
-    const e = publicError(view.reason);
+  formatRead.catch(() => undefined);
+  // The rows stream in after the shell: the listing read can take seconds on DEV and never holds the filters.
+  const initial = functions.errors.settle(listAwards(entry));
+  let view;
+  try {
+    view = await awardListView();
+  } catch (error) {
+    const e = functions.errors.publicError(error);
     return (
       <State
         title="Awards unavailable"
@@ -48,15 +48,9 @@ export default async function Awards({
       />
     );
   }
-  let initial: AwardListResult;
-  if (page.status === "fulfilled") initial = { ok: true, data: page.value };
-  else {
-    const { code, message, action } = publicError(page.reason);
-    initial = { ok: false, error: { code, message, action } };
-  }
   return (
     <AwardList
-      view={view.value}
+      view={view}
       entry={entry}
       initial={initial}
       format={await formatRead}

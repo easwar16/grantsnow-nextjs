@@ -3,14 +3,9 @@ import { useEffect, useRef, useState } from "react";
 import Quill from "quill";
 import Embed from "quill/blots/embed";
 import "quill/dist/quill.snow.css";
-import {
-  matchMentions,
-  mentionAttributes,
-  mentionQuery,
-  mentionText,
-  type MentionPerson,
-} from "@/lib/mentions";
+import { type MentionPerson } from "@/lib/mentions";
 import styles from "./panels.module.css";
+import { functions } from "@/lib/functions";
 
 /** A person mention as one atomic anchor, written as legacy's UserMentionCustomization writes it. */
 class MentionBlot extends Embed {
@@ -19,9 +14,9 @@ class MentionBlot extends Embed {
   static className = "mention";
   static create(person: MentionPerson) {
     const node = super.create() as HTMLElement;
-    for (const [name, value] of mentionAttributes(person))
+    for (const [name, value] of functions.mentions.mentionAttributes(person))
       node.setAttribute(name, value);
-    node.textContent = mentionText(person);
+    node.textContent = functions.mentions.mentionText(person);
     return node;
   }
   static value(node: HTMLElement): MentionPerson {
@@ -118,9 +113,9 @@ export default function CommentEditor({
         .getContents(range.index - offset, offset)
         .ops.map((op) => (typeof op.insert === "string" ? op.insert : "\n"))
         .join("");
-      const typed = mentionQuery(before);
+      const typed = functions.mentions.mentionQuery(before);
       const matches = typed
-        ? matchMentions(latest.current.people, typed.query)
+        ? functions.mentions.matchMentions(latest.current.people, typed.query)
         : [];
       if (!typed || matches.length === 0) return setMenu(null);
       const start = range.index - typed.length,

@@ -1,6 +1,5 @@
 "use client";
 import { DateInput } from "@/components/ui/date-input";
-import { idPart } from "@/lib/ids";
 import { useState } from "react";
 import { HelpButton } from "@/components/ui/help-button";
 import { Icon } from "@/components/ui/icon";
@@ -22,6 +21,7 @@ import type {
   FieldValue,
 } from "./models";
 import styles from "./dynamic-form.module.css";
+import { functions } from "@/lib/functions";
 /**
  * A number box that keeps what is typed ("1.") while the model holds a number or nothing; an empty number stays
  * empty (D42). Shown rounded to DECIMAL_PLACES_COUNT when the field is left; the value keeps what was typed (decimals
@@ -195,7 +195,7 @@ export function DynFieldView({
             {options.map((o) => (
               <label key={o.optionId} className={styles.choice}>
                 <input
-                  id={`${id}-option-${idPart(o.optionId)}`}
+                  id={`${id}-option-${functions.ids.idPart(o.optionId)}`}
                   type="radio"
                   name={id}
                   checked={value === String(o.optionId)}
@@ -223,7 +223,7 @@ export function DynFieldView({
               return (
                 <label key={optionId} className={styles.choice}>
                   <input
-                    id={`${id}-option-${idPart(optionId)}`}
+                    id={`${id}-option-${functions.ids.idPart(optionId)}`}
                     type="checkbox"
                     checked={list.includes(optionId)}
                     disabled={!live}

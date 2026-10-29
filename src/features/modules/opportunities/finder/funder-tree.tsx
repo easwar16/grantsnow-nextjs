@@ -1,10 +1,10 @@
 "use client";
-import { idPart } from "@/lib/ids";
 import { useState, memo } from "react";
 import { Icon } from "@/components/ui/icon";
 import { isSite, toggleFunder, toggleSite, type SiteNode } from "./funders";
 import { MAX_FUNDER_KEYS, type FunderKey } from "./state";
 import styles from "./funder-tree.module.css";
+import { functions } from "@/lib/functions";
 /** The Filter By Funders tree: sites with tri-state boxes, expandable to their funders (GN-Angular funder-tree). */
 /** Memoised: hundreds of rows, re-rendered only when its nodes, selection or search change. */
 export const FunderTree = memo(function FunderTree({
@@ -46,7 +46,7 @@ export const FunderTree = memo(function FunderTree({
   return (
     <ul id={id} className={styles.tree} role="tree" aria-label={label}>
       {nodes.map((node) => {
-        const site = `${id}-${idPart(node.site)}`;
+        const site = `${id}-${functions.ids.idPart(node.site)}`;
         return (
           <li
             key={node.site}
@@ -93,14 +93,14 @@ export const FunderTree = memo(function FunderTree({
                   {node.funders.map((f) => (
                     <li
                       key={f}
-                      id={`${site}-${idPart(f)}`}
+                      id={`${site}-${functions.ids.idPart(f)}`}
                       role="treeitem"
                       aria-selected={funderChecked(node, f)}
                       className={`${styles.row} ${styles.child}`}
                     >
                       <label>
                         <input
-                          id={`${site}-${idPart(f)}-check`}
+                          id={`${site}-${functions.ids.idPart(f)}-check`}
                           type="checkbox"
                           checked={funderChecked(node, f)}
                           onChange={(e) =>

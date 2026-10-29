@@ -5,7 +5,6 @@ import { State } from "@/components/feedback/state";
 import { Icon } from "@/components/ui/icon";
 import { useActionFailure } from "@/components/dialog/action-failure";
 import { useStoreApi } from "@/lib/store/app-store";
-import { idPart } from "@/lib/ids";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
 import { fxRates, useApi } from "@/lib/api";
 import {
@@ -16,6 +15,7 @@ import {
   type FxMode,
 } from "./model";
 import styles from "./fx-rates.module.css";
+import { functions } from "@/lib/functions";
 const shown = (n: number | null) => (n === null ? "" : String(n));
 const without = <T,>(all: Record<string, T>, key: string) =>
   Object.fromEntries(Object.entries(all).filter(([k]) => k !== key));
@@ -101,7 +101,7 @@ export function FxRates({
   ) =>
     editable && which === column ? (
       <input
-        id={`${id}-${idPart(currency)}-${which}`}
+        id={`${id}-${functions.ids.idPart(currency)}-${which}`}
         className={`gn-control ${styles.input}`}
         type="number"
         step="any"
@@ -136,7 +136,10 @@ export function FxRates({
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.currency} id={`${id}-${idPart(r.currency)}`}>
+                <tr
+                  key={r.currency}
+                  id={`${id}-${functions.ids.idPart(r.currency)}`}
+                >
                   <td>
                     {r.name}
                     {r.status !== ADMIN_DEFAULT && (
@@ -151,7 +154,7 @@ export function FxRates({
                     <td className={styles.actions}>
                       <button
                         type="button"
-                        id={`${id}-${idPart(r.currency)}-reset`}
+                        id={`${id}-${functions.ids.idPart(r.currency)}-reset`}
                         className="gn-btn gn-btn--borderless gn-btn--icon"
                         title={texts.reset}
                         aria-label={`${texts.reset} ${r.currency}`}

@@ -1,6 +1,6 @@
 import "server-only";
 import { read, write } from "../client";
-import { TTL } from "../cache";
+import { serverConstants } from "@/server/constants";
 
 /**
  * AOI / EOI applications (dynamic-form requests of type OPPORTUNITIES-EOI): the list, one request, its finalize
@@ -16,19 +16,19 @@ export const list = read<{ module: string; query: Record<string, string> }>({
 /** One request (getRequestDetails). */
 export const details = read<{ requestId: string }>({
   op: "getDynamicFormsGetRequestDetails",
-  ttl: TTL.access,
+  ttl: serverConstants.ttl.access,
   headers: (p) => ({ request_id: p.requestId }),
 });
 /** The record's pages that can be finalized. */
 export const finalizablePages = read<{ objectType: string; objectId: string }>({
   op: "getSharedFinalizablePages",
-  ttl: TTL.access,
+  ttl: serverConstants.ttl.access,
   headers: (p) => ({ p_obj_type: p.objectType, p_obj_id: p.objectId }),
 });
 /** The record's finalized page locks (`prop_id` is the request id). */
 export const lockedModules = read<{ module: string; recordId: string }>({
   op: "getProposalGetLockedModules",
-  ttl: TTL.access,
+  ttl: serverConstants.ttl.access,
   headers: (p) => ({ module_name: p.module }),
   query: (p) => ({ prop_id: p.recordId }),
 });

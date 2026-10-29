@@ -1,13 +1,16 @@
 import { expect, it } from "vitest";
-import { RENEW_LEAD_MS, renewDelay } from "@/shared/auth/session-schedule";
+import { renewDelay } from "@/shared/auth/session-schedule";
+import { constants } from "@/lib/constants";
 const now = 1_000_000;
 it("extends one minute before expiry", () =>
-  expect(renewDelay(now + 10 * 60000, now)).toBe(10 * 60000 - RENEW_LEAD_MS));
+  expect(renewDelay(now + 10 * 60000, now)).toBe(
+    10 * 60000 - constants.timing.sessionRenewLeadMs,
+  ));
 it("extends immediately when less than a minute remains", () =>
   expect(renewDelay(now + 1000, now)).toBe(0));
 it("reschedules from a later returned expiry", () =>
   expect(renewDelay(now + 3600000, now, now + 60000)).toBe(
-    3600000 - RENEW_LEAD_MS,
+    3600000 - constants.timing.sessionRenewLeadMs,
   ));
 it.each([
   ["an unchanged expiry", now + 60000, now + 60000],

@@ -3,7 +3,7 @@ import { pageIdentity } from "@/server/identity/auth/page";
 import { contractId } from "@/features/modules/contracts/schema";
 import { State } from "@/components/feedback/state";
 import { Skeleton } from "@/components/feedback/skeleton";
-import { ContractSummaryContent } from "./summary-sections";
+import { ContractSummaryContent } from "@/features/modules/contracts/record/summary-sections";
 
 export const metadata = { title: "Contract Summary" };
 export default async function ContractSummary({

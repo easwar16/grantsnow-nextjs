@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
-import styles from "./contracts.module.css";
+import styles from "../contracts.module.css";
 
 export function ContractFilterForm({ children }: { children: ReactNode }) {
   const router = useRouter();

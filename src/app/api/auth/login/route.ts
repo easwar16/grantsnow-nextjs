@@ -14,13 +14,13 @@ import { idcs } from "@/server/identity/auth/oidc";
 import { storage } from "@/server/identity/session/storage";
 import { oracle } from "@/server/oracle/connection";
 import { mapBootstrap } from "@/server/identity/session/contracts";
-import { safeReturn, sameOrigin } from "@/lib/security";
 import { failure } from "@/server/http/response";
+import { functions } from "@/lib/functions";
 export async function POST(request: Request) {
   try {
-    sameOrigin(request, appOrigin());
+    functions.security.sameOrigin(request, appOrigin());
     const form = await request.formData(),
-      returnTo = safeReturn(form.get("returnTo")),
+      returnTo = functions.security.safeReturn(form.get("returnTo")),
       pasted = form.get("token");
     let store = await storage();
     store.destroy();

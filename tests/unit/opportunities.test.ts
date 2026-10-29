@@ -15,7 +15,8 @@ import {
   uniqueOptions,
 } from "@/server/modules/opportunities/service";
 import { splitFunders } from "@/features/modules/opportunities/display";
-import { idPart } from "@/lib/ids";
+import { functions } from "@/lib/functions";
+
 const none = () => false;
 const only =
   (...keys: string[]) =>
@@ -290,11 +291,13 @@ it("shows Featured only for a non-empty research preference", () => {
   expect(() => hasPreferences({ error: "x" })).toThrow();
 });
 it("turns record and config keys into short kebab-case id parts", () => {
-  expect(idPart("7400442")).toBe("7400442");
-  expect(idPart(3934)).toBe("3934");
-  expect(idPart("uk-research")).toBe("uk-research");
-  expect(idPart("pPendingApprovals")).toBe("p-pending-approvals");
-  expect(idPart("UK Research & Innovation")).toBe("uk-research-innovation");
-  expect(idPart("  Charities ")).toBe("charities");
-  expect(idPart("")).toBe("none");
+  expect(functions.ids.idPart("7400442")).toBe("7400442");
+  expect(functions.ids.idPart(3934)).toBe("3934");
+  expect(functions.ids.idPart("uk-research")).toBe("uk-research");
+  expect(functions.ids.idPart("pPendingApprovals")).toBe("p-pending-approvals");
+  expect(functions.ids.idPart("UK Research & Innovation")).toBe(
+    "uk-research-innovation",
+  );
+  expect(functions.ids.idPart("  Charities ")).toBe("charities");
+  expect(functions.ids.idPart("")).toBe("none");
 });

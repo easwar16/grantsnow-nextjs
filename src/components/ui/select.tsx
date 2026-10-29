@@ -1,5 +1,4 @@
 "use client";
-import { idPart } from "@/lib/ids";
 import { useId, useMemo, useState } from "react";
 import { useCombobox } from "downshift";
 import { Icon } from "@/components/ui/icon";
@@ -13,6 +12,7 @@ import {
   useOptionWindow,
 } from "@/components/ui/dropdown";
 import styles from "./select.module.css";
+import { functions } from "@/lib/functions";
 const T = useCombobox.stateChangeTypes;
 export interface SelectOption {
   value: string;
@@ -64,7 +64,6 @@ export function Select({
     [input, setInput] = useState<HTMLInputElement | null>(null),
     [box, setBox] = useState<HTMLDivElement | null>(null),
     [pop, setPop] = useState<HTMLDivElement | null>(null),
-    [list, setList] = useState<HTMLUListElement | null>(null),
     autoId = useId(),
     base = id ?? autoId,
     panel = `${base}-panel`;
@@ -85,8 +84,11 @@ export function Select({
         : []),
       ...matches,
     ],
-    optionId = (v: string) => `${base}-option-${v === "" ? "none" : idPart(v)}`;
-  const view = useOptionWindow(rows.length, list);
+    optionId = (v: string) =>
+      `${base}-option-${v === "" ? "none" : functions.ids.idPart(v)}`;
+  // Downshift's own: it tells a click inside the list from one outside.
+  const [, setList] = useState<HTMLUListElement | null>(null);
+  const view = useOptionWindow(rows.length, pop);
   const {
     isOpen: open,
     highlightedIndex,

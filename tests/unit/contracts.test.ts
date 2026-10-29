@@ -8,9 +8,9 @@ import {
   mapContracts,
 } from "@/server/modules/contracts/service";
 import { resolveOperationPath } from "@/server/oracle/connection";
-import { safeReturn } from "@/lib/security";
 import { mapApprovalGraph } from "@/server/record/approvals/graph";
 import { contractSignerStamp } from "@/features/modules/contracts/format";
+import { functions } from "@/lib/functions";
 
 const q = () => parseContractQuery(new URLSearchParams());
 const record = {
@@ -38,17 +38,25 @@ it("rejects malformed query and detail identities", () => {
       contract_id: "13/../../session",
     }),
   ).toThrow();
-  expect(safeReturn("/contracts/1300")).toBe("/contracts/1300");
-  expect(safeReturn("/contracts/new")).toBe("/contracts/new");
-  expect(safeReturn("/contracts/1300/history")).toBe("/contracts/1300/history");
-  expect(safeReturn("/contracts/1300/delegation")).toBe(
+  expect(functions.security.safeReturn("/contracts/1300")).toBe(
+    "/contracts/1300",
+  );
+  expect(functions.security.safeReturn("/contracts/new")).toBe(
+    "/contracts/new",
+  );
+  expect(functions.security.safeReturn("/contracts/1300/history")).toBe(
+    "/contracts/1300/history",
+  );
+  expect(functions.security.safeReturn("/contracts/1300/delegation")).toBe(
     "/contracts/1300/delegation",
   );
-  expect(safeReturn("/contracts/1300/signers")).toBe("/contracts/1300/signers");
-  expect(safeReturn("/contracts/1300/workflow")).toBe(
+  expect(functions.security.safeReturn("/contracts/1300/signers")).toBe(
+    "/contracts/1300/signers",
+  );
+  expect(functions.security.safeReturn("/contracts/1300/workflow")).toBe(
     "/contracts/1300/workflow",
   );
-  expect(safeReturn("/contracts/../home")).toBe("/home");
+  expect(functions.security.safeReturn("/contracts/../home")).toBe("/home");
 });
 it("quotes a pasted contract number and delegates pagination to Oracle", () => {
   const query = parseContractQuery(

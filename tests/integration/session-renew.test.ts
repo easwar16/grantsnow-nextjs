@@ -14,10 +14,11 @@ vi.mock("@/server/oracle/connection", async (importOriginal) => ({
 }));
 import { authenticate, renewSession } from "@/server/identity/session/service";
 import { mapValidatedIdentity } from "@/server/identity/session/contracts";
-import { DEV_SESSION_LEASE_MS } from "@/server/identity/session/browser-session";
+
 import { POST as renewRoute } from "@/app/api/auth/renew/route";
 import { GET as sessionRoute } from "@/app/api/auth/session/route";
 import { fixtureUser } from "@/test-support/fixtures";
+import { serverConstants } from "@/server/constants";
 const origin = "http://127.0.0.1:3000";
 const iso = (ms: number) => new Date(Date.now() + ms).toISOString();
 let session: Record<string, unknown>;
@@ -86,7 +87,9 @@ describe("browser-session renewal (D37)", () => {
   it("never extends past the lease or the identity expiry", async () => {
     backend({ expiry_datetime: iso(24 * 3600000) });
     const expiresAt = await renewSession();
-    expect(expiresAt).toBeLessThanOrEqual(Date.now() + DEV_SESSION_LEASE_MS);
+    expect(expiresAt).toBeLessThanOrEqual(
+      Date.now() + serverConstants.session.devLeaseMs,
+    );
     expect(expiresAt).toBeLessThanOrEqual(session.identityExpiresAt as number);
   });
   it("surfaces a business refusal verbatim and stores nothing", async () => {

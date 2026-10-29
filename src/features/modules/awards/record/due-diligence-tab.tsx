@@ -1,11 +1,11 @@
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Icon } from "@/components/ui/icon";
 import { RecordMetadata } from "@/components/ui/record-metadata";
-import { dateDisplay, type FormatSettings } from "@/lib/format";
-import { idPart } from "@/lib/ids";
+import { type FormatSettings } from "@/lib/format";
 import listing from "@/components/ui/listing.module.css";
 import type { DueDiligenceView } from "./due-diligence-model";
 import styles from "./tabs.module.css";
+import { functions } from "@/lib/functions";
 
 /** The Due Diligence tab (legacy ddAwardList): the linked records as cards. */
 export function DueDiligenceTab({
@@ -26,7 +26,7 @@ export function DueDiligenceTab({
           {view.records.map((r) => (
             <li
               key={r.id}
-              id={`award-dd-${idPart(r.id)}`}
+              id={`award-dd-${functions.ids.idPart(r.id)}`}
               className={listing.row}
             >
               <div className={listing.body}>
@@ -43,7 +43,9 @@ export function DueDiligenceTab({
                 <RecordMetadata
                   fields={r.fields.map((f) => ({
                     label: f.label,
-                    value: f.date ? dateDisplay(f.value, format) : f.value,
+                    value: f.date
+                      ? functions.format.dateDisplay(f.value, format)
+                      : f.value,
                   }))}
                 />
               </div>

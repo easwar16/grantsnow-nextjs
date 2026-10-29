@@ -1,4 +1,5 @@
 "use client";
+import { useRef } from "react";
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import {
   errorOf,
@@ -95,23 +96,40 @@ export function useApi<P, T>(ep: Endpoint<P, T>, params: P | null) {
  * A paged list (TanStack's infinite query): pages are held under the parameters, `loadMore` appends the next page, and
  * a change in the parameters starts again from the first page (its own held pages show at once if they are fresh).
  * `start` is the first page's offset (a list opened at page 3 of the URL); `initial` is that page as the server already
- * rendered it, so it is not fetched again.
+ * rendered it, so it is not fetched again, or the server's read still streaming (a promise the page did not await),
+ * which answers the first request for these parameters once; a retry or refresh reads the route.
  */
 export function usePagedApi<P, Row, Page extends ListPage<Row> = ListPage<Row>>(
   ep: PagedEndpoint<P, Row, Page>,
   params: P | null,
-  { start = 0, initial }: { start?: number; initial?: Page } = {},
+  {
+    start = 0,
+    initial,
+  }: { start?: number; initial?: Page | Promise<ApiResult<Page>> } = {},
 ) {
+  const key = params === null ? "" : `${ep.key(params)}#start=${start}`;
+  const streaming = initial && "then" in initial ? initial : undefined,
+    held = streaming ? undefined : (initial as Page | undefined);
+  // Bound to the parameters it was rendered for, so a changed filter never takes the server's page.
+  const seed = useRef(streaming && params !== null ? { key, streaming } : null);
   const query = useInfiniteQuery({
-    queryKey: [params === null ? "" : `${ep.key(params)}#start=${start}`],
-    queryFn: ({ pageParam }) => unwrap(ep.loadPage(params as P, pageParam)),
+    queryKey: [key],
+    queryFn: ({ pageParam, queryKey }) => {
+      const s = seed.current;
+      seed.current = null;
+      return unwrap(
+        s && s.key === queryKey[0] && pageParam === start
+          ? s.streaming
+          : ep.loadPage(params as P, pageParam),
+      );
+    },
     enabled: params !== null,
     initialPageParam: start,
     getNextPageParam: (last: Page, all: Page[]) =>
       last.hasMore ? start + all.length * ep.size : undefined,
-    ...(initial
+    ...(held
       ? {
-          initialData: { pages: [initial], pageParams: [start] },
+          initialData: { pages: [held], pageParams: [start] },
           // The server's page is as fresh as one just loaded.
           staleTime: Math.max(ep.ttl ?? 0, 60_000),
         }

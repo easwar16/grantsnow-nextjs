@@ -4,7 +4,8 @@ import { openingShell } from "@/server/modules/opportunities/eoi-record/shell";
 import { resources } from "@/server/platform/configuration/resources";
 import { State } from "@/components/feedback/state";
 import { RecordShell } from "@/features/modules/opportunities/eoi/record-shell";
-import { publicError } from "@/lib/errors";
+import { functions } from "@/lib/functions";
+
 /** A new application (Apply): Summary and Application only; the request is created on Create. */
 export default async function NewApplicationLayout({
   children,
@@ -22,7 +23,7 @@ export default async function NewApplicationLayout({
   try {
     context = await newApplicationContext(id);
   } catch (error) {
-    const e = publicError(error);
+    const e = functions.errors.publicError(error);
     return (
       <State
         title={

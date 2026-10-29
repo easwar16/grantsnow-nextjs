@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { read, write } from "../client";
-import { TTL } from "../cache";
+import { serverConstants } from "@/server/constants";
 
 /**
  * A record's attachment records and external links (`/pre_award/attachments/`, `/pre_award/links`). The bytes live in
@@ -31,7 +31,7 @@ type Target = { objectType: string; objectId: string };
 /** The record's attachments; `secondaryType` (`p_sec_obj_type`) narrows them to one form slot. */
 export const list = read<Target & { secondaryType?: string }, AttachmentRow[]>({
   op: "getPre_awardAttachmentsProposal_id",
-  ttl: TTL.access,
+  ttl: serverConstants.ttl.access,
   query: (p) => ({
     p_obj_id: p.objectId,
     p_obj_type: p.objectType,
@@ -52,7 +52,7 @@ export type LinkRow = z.infer<typeof linkRows>["items"][number];
 /** The record's external links. */
 export const links = read<Target, LinkRow[]>({
   op: "getPre_awardLinks",
-  ttl: TTL.access,
+  ttl: serverConstants.ttl.access,
   query: (p) => ({ p_obj_id: p.objectId, p_obj_type: p.objectType }),
   parse: (b) => linkRows.parse(b).items,
 });

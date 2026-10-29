@@ -2,24 +2,14 @@ import "server-only";
 import { cache } from "react";
 import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
-import { requireDrawerAccess } from "@/server/platform/permissions";
 import { awards, lookups, people } from "@/server/oracle/api";
 import { containsClause } from "@/server/oracle/where";
 import {
-  label,
   resources,
-  resourceVisible,
   type Resources,
 } from "@/server/platform/configuration/resources";
-import {
-  nameChoices,
-  objectDateChoices,
-  statusChoices,
-} from "@/server/platform/configuration/choices";
-import { orgUnitRows } from "@/server/platform/configuration/service";
 import { AppError } from "@/lib/errors";
 import {
-  AWARD_PAGE_SIZE,
   parseConditions,
   type AwardCondition,
   type AwardFilters,
@@ -37,8 +27,10 @@ import {
   type AwardListRow,
   type AwardListTextKey,
   type AwardListView,
-  type AwardChoices,
+  type AwardChoiceList,
 } from "@/features/modules/awards/listing/types";
+import { constants } from "@/lib/constants";
+import { serverFunctions } from "@/server/functions";
 
 /** Legacy shell-page maps module access AWARDS to bundle AWARD; the page reads `award`. */
 const BUNDLE = "award";
@@ -47,7 +39,7 @@ const DRAWER = "awards";
 /** Every gate the page and the row read (legacy isResourceVisible: only 'Y' shows). */
 export function awardListGates(rows: Resources): AwardListGates {
   const v = (key: string, group = "labels") =>
-    resourceVisible(rows, BUNDLE, group, key);
+    serverFunctions.resources.resourceVisible(rows, BUNDLE, group, key);
   return {
     number: v("list-award-number"),
     name: v("list-award-name"),
@@ -107,7 +99,7 @@ export function awardListTexts(rows: Resources) {
   return Object.fromEntries(
     Object.entries(TEXTS).map(([k, [group, key, fallback]]) => [
       k,
-      label(rows, BUNDLE, group, key, fallback),
+      serverFunctions.resources.label(rows, BUNDLE, group, key, fallback),
     ]),
   ) as Record<AwardListTextKey, string>;
 }
@@ -189,7 +181,7 @@ export function awardOracleQuery(f: AwardFilters) {
   const where = awardWhereClause(f);
   return new URLSearchParams({
     p_offset: String(f.offset),
-    p_limit: String(AWARD_PAGE_SIZE),
+    p_limit: String(constants.paging.awards),
     ...(where ? { p_where_clause: where } : {}),
     ...(f.sortBy
       ? {
@@ -275,13 +267,15 @@ export function mapAwardPage(raw: unknown, g: AwardListGates): AwardListPage {
     // ORDS' flag (a string on DEV) wins; without one, a full page means there may be more.
     hasMore:
       b.hasMore === undefined
-        ? b.items.length >= AWARD_PAGE_SIZE
+        ? b.items.length >= constants.paging.awards
         : b.hasMore === true || b.hasMore === "true",
   };
 }
 
 const sortChoices = cache(async () =>
-  objectDateChoices(await lookups.objectDates({ objectType: "AWARD" })),
+  serverFunctions.choices.objectDateChoices(
+    await lookups.objectDates({ objectType: "AWARD" }),
+  ),
 );
 
 const settled = <T>(r: PromiseSettledResult<T[]>) =>
@@ -290,13 +284,15 @@ const settled = <T>(r: PromiseSettledResult<T[]>) =>
 /** Gates, texts, status tabs and date sorts; a failed list degrades to empty and is reported. */
 export async function awardListView(): Promise<AwardListView> {
   const { user } = await authenticate();
-  requireDrawerAccess(user, DRAWER);
+  serverFunctions.permissions.requireDrawerAccess(user, DRAWER);
   const [rows, roles] = await Promise.all([resources(), dashboardRoles()]);
   const gates = awardListGates(rows);
   const [statuses, sorts] = await Promise.allSettled([
     lookups
       .codes({ types: "AWARD_STATUS" })
-      .then((raw) => statusChoices(raw, "AWARD_STATUS")),
+      .then((raw) =>
+        serverFunctions.choices.statusChoices(raw, "AWARD_STATUS"),
+      ),
     gates.dateSort ? sortChoices() : [],
   ]);
   return {
@@ -313,55 +309,60 @@ export async function awardListView(): Promise<AwardListView> {
   };
 }
 
-/** The drawer's org units, people and funders, each only when a visible filter needs it. */
-export async function awardChoices(): Promise<AwardChoices> {
-  const { user } = await authenticate();
-  requireDrawerAccess(user, DRAWER);
-  const gates = awardListGates(await resources());
-  const [orgs, persons, parties] = await Promise.allSettled([
-    gates.org
-      ? lookups.orgUnits({ module: "AWARD" }).then((raw) =>
-          orgUnitRows(raw).map((o) => ({
-            value: o.id,
-            label: "\u00a0".repeat(o.depth) + o.name,
-          })),
-        )
-      : [],
-    gates.pi || gates.assignedTo
-      ? people
-          .all()
-          .then((list) =>
-            list.flatMap((p) =>
-              p.full_name
-                ? [{ value: String(p.person_id), label: p.full_name }]
-                : [],
-            ),
-          )
-      : [],
-    gates.funder || gates.billingParty
-      ? lookups.sponsors().then((raw) => nameChoices(raw, "party_name"))
-      : [],
-  ]);
-  const errors: string[] = [];
-  if (orgs.status === "rejected") errors.push("Org units could not be loaded.");
-  if (persons.status === "rejected") errors.push("People could not be loaded.");
-  if (parties.status === "rejected")
-    errors.push("Funders could not be loaded.");
-  return {
-    orgs: settled(orgs),
-    people: settled(persons),
-    parties: settled(parties),
-    errors,
-  };
-}
+const CHOICE_FAILURES = {
+  orgs: "Org units could not be loaded.",
+  people: "People could not be loaded.",
+  parties: "Funders could not be loaded.",
+} as const;
 
+/** One of the drawer's choice lists, read on its own so a slow one never holds the others. */
+export async function awardChoices(list: string): Promise<AwardChoiceList> {
+  const { user } = await authenticate();
+  serverFunctions.permissions.requireDrawerAccess(user, DRAWER);
+  if (!Object.hasOwn(CHOICE_FAILURES, list))
+    throw new AppError("BAD_REQUEST", "Unknown choice list.", 400);
+  const key = list as keyof typeof CHOICE_FAILURES;
+  const gates = awardListGates(await resources());
+  const read = {
+    orgs: () =>
+      gates.org
+        ? lookups.orgUnits({ module: "AWARD" }).then((raw) =>
+            serverFunctions.organizations.orgUnitRows(raw).map((o) => ({
+              value: o.id,
+              label: "\u00a0".repeat(o.depth) + o.name,
+            })),
+          )
+        : [],
+    people: () =>
+      gates.pi || gates.assignedTo
+        ? people
+            .all()
+            .then((all) =>
+              all.flatMap((p) =>
+                p.full_name
+                  ? [{ value: String(p.person_id), label: p.full_name }]
+                  : [],
+              ),
+            )
+        : [],
+    parties: () =>
+      gates.funder || gates.billingParty
+        ? lookups
+            .sponsors()
+            .then((raw) =>
+              serverFunctions.choices.nameChoices(raw, "party_name"),
+            )
+        : [],
+  }[key];
+  return serverFunctions.choices.choiceList(read, CHOICE_FAILURES[key]);
+}
 /** One page of awards; the session, the drawer grant and every filter gate are checked here. */
 export async function listAwards(
   filters: AwardFilters,
   signal?: AbortSignal,
 ): Promise<AwardListPage> {
   const { user } = await authenticate();
-  requireDrawerAccess(user, DRAWER);
+  serverFunctions.permissions.requireDrawerAccess(user, DRAWER);
   const gates = awardListGates(await resources());
   const f = gatedAwardFilters(filters, gates);
   const conditions = parseConditions(f.conditions);
@@ -374,7 +375,7 @@ export async function listAwards(
       {
         query: {
           p_offset: String(f.offset),
-          p_limit: String(AWARD_PAGE_SIZE),
+          p_limit: String(constants.paging.awards),
           ...(where ? { p_where_clause: where } : {}),
         },
       },

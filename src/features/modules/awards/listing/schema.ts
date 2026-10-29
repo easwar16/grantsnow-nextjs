@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 /** Legacy awards-start list: `scroll-policy-options.fetch-size="10"`. */
-export const AWARD_PAGE_SIZE = 10;
 
 const text = z.string().max(200).default("");
 const day = z

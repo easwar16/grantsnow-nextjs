@@ -1,10 +1,11 @@
 import { ChartSkeleton } from "@/components/feedback/skeleton";
 import { Suspense } from "react";
 import { pageIdentity } from "@/server/identity/auth/page";
-import { requireDrawerAccess } from "@/server/platform/permissions";
 import { opportunityStatistics } from "@/server/modules/opportunities/analytics";
 import { State } from "@/components/feedback/state";
-import { publicError } from "@/lib/errors";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
+
 export const metadata = { title: "Opportunity analytics" };
 const colors = [
   "#267db3",
@@ -26,7 +27,7 @@ async function Chart({
   try {
     rows = await opportunityStatistics(type);
   } catch (error) {
-    const e = publicError(error);
+    const e = functions.errors.publicError(error);
     return (
       <article id={id} className="analytics-panel">
         <h2 id={`${id}-title`}>{title}</h2>
@@ -118,7 +119,10 @@ async function Chart({
 export default async function Analytics() {
   const { user } = await pageIdentity("/opportunities/analytics");
   try {
-    requireDrawerAccess(user, "opportunities-analytics");
+    serverFunctions.permissions.requireDrawerAccess(
+      user,
+      "opportunities-analytics",
+    );
   } catch {
     return <State title="Access denied" code="FORBIDDEN" />;
   }

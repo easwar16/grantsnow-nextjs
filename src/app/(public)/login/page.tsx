@@ -3,8 +3,8 @@ import {
   fixtureMode,
   browserSessionMode,
 } from "@/server/platform/configuration/environment";
-import { safeReturn } from "@/lib/security";
 import { Icon } from "@/components/ui/icon";
+import { functions } from "@/lib/functions";
 const messages: Record<string, string> = {
   EXPIRED: "Your session has expired. Sign in again to continue.",
   UNAUTHENTICATED: "Please sign in to continue.",
@@ -67,7 +67,7 @@ export default async function Login({
             id="login-return-to"
             type="hidden"
             name="returnTo"
-            value={safeReturn(p.returnTo)}
+            value={functions.security.safeReturn(p.returnTo)}
           />
           {browserSession && (
             <label className="token-field">

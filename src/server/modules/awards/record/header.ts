@@ -2,15 +2,9 @@ import "server-only";
 import { z } from "zod";
 import { awards, lookups, people } from "@/server/oracle/api";
 import {
-  label,
-  resourceDescription,
-  resourcePreference,
-  resourceRequired,
-  resourceVisible,
   resources,
   type Resources,
 } from "@/server/platform/configuration/resources";
-import { orgUnitRows } from "@/server/platform/configuration/service";
 import { AppError } from "@/lib/errors";
 import { pageOf } from "@/shared/awards/award-record";
 import {
@@ -25,6 +19,7 @@ import {
   isDraft,
   type AwardRecordContext,
 } from "../record";
+import { serverFunctions } from "@/server/functions";
 
 const BUNDLE = "award";
 const numeric = z.coerce.number().int().positive();
@@ -47,7 +42,7 @@ const day = (v: unknown) => str(v).slice(0, 10);
 async function headerChoices() {
   const [persons, orgs, sponsors, currencies] = await Promise.all([
     people.all(),
-    lookups.orgUnits({}).then(orgUnitRows),
+    lookups.orgUnits({}).then(serverFunctions.organizations.orgUnitRows),
     lookups.sponsors().then((raw) => sponsorRows.parse(raw).items),
     lookups
       .codes({ types: "CURRENCY_CODES" })
@@ -87,10 +82,33 @@ function headerFields(rows: Resources, context: AwardRecordContext) {
     HEADER_FIELDS.map(([field, key, fallback]) => [
       field,
       {
-        show: resourceVisible(rows, BUNDLE, "labels", key),
-        required: resourceRequired(rows, BUNDLE, "labels", key, false),
-        label: label(rows, BUNDLE, "labels", key, fallback),
-        maxLength: resourcePreference(rows, BUNDLE, "labels", key, "maxLength"),
+        show: serverFunctions.resources.resourceVisible(
+          rows,
+          BUNDLE,
+          "labels",
+          key,
+        ),
+        required: serverFunctions.resources.resourceRequired(
+          rows,
+          BUNDLE,
+          "labels",
+          key,
+          false,
+        ),
+        label: serverFunctions.resources.label(
+          rows,
+          BUNDLE,
+          "labels",
+          key,
+          fallback,
+        ),
+        maxLength: serverFunctions.resources.resourcePreference(
+          rows,
+          BUNDLE,
+          "labels",
+          key,
+          "maxLength",
+        ),
         readOnly:
           field === "number" || (field === "billingParty" && !billingEdit),
       },
@@ -134,11 +152,22 @@ export async function headerView(id: string): Promise<HeaderView> {
     awardPageLock(context, "header"),
   ]);
   const t = (group: string, key: string, fallback: string) =>
-    label(rows, BUNDLE, group, key, fallback);
+    serverFunctions.resources.label(rows, BUNDLE, group, key, fallback);
   const period = (key: string, fallback: string) => ({
     label: t("labels", key, fallback),
-    required: resourceRequired(rows, BUNDLE, "labels", key, false),
-    help: resourceDescription(rows, BUNDLE, "labels", key),
+    required: serverFunctions.resources.resourceRequired(
+      rows,
+      BUNDLE,
+      "labels",
+      key,
+      false,
+    ),
+    help: serverFunctions.resources.resourceDescription(
+      rows,
+      BUNDLE,
+      "labels",
+      key,
+    ),
   });
   const a = context.award;
   return {
@@ -148,7 +177,12 @@ export async function headerView(id: string): Promise<HeaderView> {
     values: headerValues(context),
     choices,
     attributes: attributeValues(context.raw),
-    showAttributes: resourceVisible(rows, BUNDLE, "labels", "show-attributes"),
+    showAttributes: serverFunctions.resources.resourceVisible(
+      rows,
+      BUNDLE,
+      "labels",
+      "show-attributes",
+    ),
     periods: context.periods.map((p, i) => ({
       key: str(p.proposal_id) || String(i),
       start: day(p.award_start_date),
@@ -260,7 +294,7 @@ export async function saveHeader(id: string, raw: unknown) {
   if (missing)
     throw new AppError(
       "BAD_REQUEST",
-      label(
+      serverFunctions.resources.label(
         rows,
         BUNDLE,
         "error-msg",
@@ -368,7 +402,13 @@ export async function savePeriod(id: string, raw: unknown) {
     );
   const rows = await resources();
   const required = (key: string) =>
-    resourceRequired(rows, BUNDLE, "labels", key, false);
+    serverFunctions.resources.resourceRequired(
+      rows,
+      BUNDLE,
+      "labels",
+      key,
+      false,
+    );
   if (
     (required("header-award-start-date") && !input.start) ||
     (required("header-award-end-date") && !input.end) ||

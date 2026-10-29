@@ -8,11 +8,11 @@ import {
   browserSessionMode,
   oidcSettings,
 } from "@/server/platform/configuration/environment";
-import { sameOrigin } from "@/lib/security";
 import { failure } from "@/server/http/response";
+import { functions } from "@/lib/functions";
 export async function POST(request: Request) {
   try {
-    sameOrigin(request, appOrigin());
+    functions.security.sameOrigin(request, appOrigin());
     const backendOk = await clearSession();
     const store = await storage();
     store.logoutStatus = backendOk ? "SIGNED_OUT" : "BACKEND_LOGOUT_FAILED";

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { pageIdentity } from "@/server/identity/auth/page";
-import { drawerAccess } from "@/server/platform/permissions";
-import { label, resources } from "@/server/platform/configuration/resources";
+import { resources } from "@/server/platform/configuration/resources";
 import { placeholderModules } from "@/lib/unavailable-modules";
+import { serverFunctions } from "@/server/functions";
 
 export default async function UnavailableModule({
   params,
@@ -15,8 +15,9 @@ export default async function UnavailableModule({
   if (!entry) notFound();
   const { user } = await pageIdentity(`/modules/${entry.id}`);
   // Same grant as the drawer entry; without it the module does not exist for this user.
-  if (!drawerAccess(user.modules, entry.id)) notFound();
-  const name = label(
+  if (!serverFunctions.permissions.drawerAccess(user.modules, entry.id))
+    notFound();
+  const name = serverFunctions.resources.label(
     await resources(),
     "dashboard",
     "module-name",

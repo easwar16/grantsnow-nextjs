@@ -2,10 +2,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
-import { idPart } from "@/lib/ids";
 import { doneKey, guideMenu, guidesFor, loadSteps } from "./registry";
 import type { Guide, GuideStep } from "./types";
 import styles from "./guides.module.css";
+import { functions } from "@/lib/functions";
 type Tour = { destroy: () => void };
 function isDone(g: Guide) {
   try {
@@ -84,9 +84,7 @@ async function run(g: Guide, content: GuideStep[]): Promise<Tour> {
   // A step behind a tab stays while its tab exists; its element is checked when the step is reached.
   const kept = content.filter(
     (s) =>
-      !anchored(s) ||
-      anchor(s) ||
-      (s.open && document.getElementById(s.open)),
+      !anchored(s) || anchor(s) || (s.open && document.getElementById(s.open)),
   );
   // Moves to the next step in `dir` whose element shows; past the end the tour closes.
   const move = async (from: number, dir: 1 | -1) => {
@@ -240,11 +238,16 @@ export function GuideLauncher({ access }: { access: string[] }) {
         onKeyDown={menuKeys}
       >
         {menu.map(({ module, tour, items }) => {
-          const key = `guide-menu-${idPart(module.id)}`,
+          const key = `guide-menu-${functions.ids.idPart(module.id)}`,
             open = expanded === module.id;
           const toggle = () => setExpanded(open ? null : module.id);
           return (
-            <div key={module.id} id={key} role="group" aria-label={module.label}>
+            <div
+              key={module.id}
+              id={key}
+              role="group"
+              aria-label={module.label}
+            >
               <div className={styles.row}>
                 <button
                   id={`${key}-tour`}

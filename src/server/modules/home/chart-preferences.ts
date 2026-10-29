@@ -3,6 +3,7 @@ import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { fixtureMode } from "@/server/platform/configuration/environment";
 import { home } from "@/server/oracle/api";
+import { serverConstants } from "@/server/constants";
 export const chartDimensions = z
   .object({
     infolet_id: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
@@ -19,8 +20,11 @@ export async function saveChartPreference(
   if (fixtureMode()) return;
   // The save gives up after 15 s, as before; the client's own limit is longer.
   const deadline = signal
-    ? AbortSignal.any([signal, AbortSignal.timeout(15000)])
-    : AbortSignal.timeout(15000);
+    ? AbortSignal.any([
+        signal,
+        AbortSignal.timeout(serverConstants.timeouts.save),
+      ])
+    : AbortSignal.timeout(serverConstants.timeouts.save);
   try {
     await home.saveChartDimensions({ body }, { signal: deadline });
   } catch (e) {

@@ -5,7 +5,12 @@ export const awards: GuideModule = {
   route: "/awards",
   access: "awards",
   guides: [
-    { id: "awards-tour", version: 1, title: "Tour the awards list", auto: true },
+    {
+      id: "awards-tour",
+      version: 1,
+      title: "Tour the awards list",
+      auto: true,
+    },
     { id: "awards-find", version: 1, title: "Find an award" },
     { id: "awards-row", version: 1, title: "Work with an award" },
   ],

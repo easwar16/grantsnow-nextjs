@@ -1,5 +1,4 @@
 "use client";
-import { idPart } from "@/lib/ids";
 import { useId, useMemo, useState } from "react";
 import { useCombobox, useMultipleSelection } from "downshift";
 import { Icon } from "@/components/ui/icon";
@@ -13,6 +12,7 @@ import {
   useOptionWindow,
 } from "@/components/ui/dropdown";
 import styles from "./multi-select.module.css";
+import { functions } from "@/lib/functions";
 const T = useCombobox.stateChangeTypes,
   M = useMultipleSelection.stateChangeTypes;
 export interface MultiSelectOption {
@@ -59,7 +59,6 @@ export function MultiSelect({
     [input, setInput] = useState<HTMLInputElement | null>(null),
     [box, setBox] = useState<HTMLDivElement | null>(null),
     [pop, setPop] = useState<HTMLDivElement | null>(null),
-    [list, setList] = useState<HTMLUListElement | null>(null),
     autoId = useId(),
     base = id ?? autoId,
     panel = `${base}-panel`;
@@ -81,8 +80,10 @@ export function MultiSelect({
     rows = limit === undefined ? matches : matches.slice(0, limit),
     // The cap note is the window's first line when shown.
     lead = matches.length > rows.length ? 1 : 0,
-    optionId = (v: string) => `${base}-option-${idPart(v)}`;
-  const view = useOptionWindow(rows.length + lead, list);
+    optionId = (v: string) => `${base}-option-${functions.ids.idPart(v)}`;
+  // Downshift's own: it tells a click inside the list from one outside.
+  const [, setList] = useState<HTMLUListElement | null>(null);
+  const view = useOptionWindow(rows.length + lead, pop);
   const { getDropdownProps, addSelectedItem, removeSelectedItem } =
     useMultipleSelection<string>({
       selectedItems: value,
@@ -205,7 +206,7 @@ export function MultiSelect({
                 {labelOf(v)}
                 {/* Pointer shortcut only; keyboard users untick the option or press Backspace. */}
                 <button
-                  id={`${base}-remove-${idPart(v)}`}
+                  id={`${base}-remove-${functions.ids.idPart(v)}`}
                   type="button"
                   tabIndex={-1}
                   aria-label={`Remove ${labelOf(v)}`}

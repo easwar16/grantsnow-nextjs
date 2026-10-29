@@ -4,7 +4,6 @@ import {
   forgetDashboardConfiguration,
   organizations,
 } from "@/server/platform/configuration/service";
-import { dateDisplay } from "@/lib/format";
 import { displayFormat } from "@/server/platform/configuration/formatting";
 import {
   infoletSettings,
@@ -14,7 +13,6 @@ import {
   authenticate,
   validatedIdentity,
 } from "@/server/identity/session/service";
-import { early } from "@/server/platform/async";
 import { forgetOperation } from "@/server/oracle/cache";
 import { assertBusiness } from "@/server/oracle/connection";
 import {
@@ -26,8 +24,6 @@ import {
 import { availableThemes } from "./themes";
 import {
   resources,
-  resourceVisible,
-  label,
   type Resources,
 } from "@/server/platform/configuration/resources";
 import { fixtureMode } from "@/server/platform/configuration/environment";
@@ -42,8 +38,11 @@ import {
   type AccountData,
   type DigitalPresence,
 } from "@/features/modules/account/contracts";
+import { serverConstants } from "@/server/constants";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 const visible = (rows: Resources, key: string) =>
-  resourceVisible(rows, "dashboard", "labels", key);
+  serverFunctions.resources.resourceVisible(rows, "dashboard", "labels", key);
 /** The funder names offered as favourite funders. */
 const funderNames = (body: unknown) =>
   (
@@ -51,7 +50,7 @@ const funderNames = (body: unknown) =>
   ).flatMap((i) => (typeof i.value === "string" ? [i.value] : []));
 export async function accountData(panel = "profile"): Promise<AccountData> {
   const { session, user } = await authenticate();
-  const themes = early(
+  const themes = serverFunctions.async.early(
     panel === "preferences" ? availableThemes() : Promise.resolve([]),
   );
   // Preferences are read fresh here: this panel edits them.
@@ -76,8 +75,15 @@ export async function accountData(panel = "profile"): Promise<AccountData> {
   ] as const)
     if (typeof value === "string" && value && visible(rows, key))
       fields.push({
-        label: label(rows, "dashboard", "labels", key, fallback),
-        value: key === "dob" ? dateDisplay(value, format) : value,
+        label: serverFunctions.resources.label(
+          rows,
+          "dashboard",
+          "labels",
+          key,
+          fallback,
+        ),
+        value:
+          key === "dob" ? functions.format.dateDisplay(value, format) : value,
       });
   for (const [key, source, fallback] of [
     ["institutional-roles", "institutional_roles", "Institutional roles"],
@@ -88,7 +94,13 @@ export async function accountData(panel = "profile"): Promise<AccountData> {
       for (const role of person[source] as Record<string, unknown>[])
         if (typeof role.role_name === "string")
           fields.push({
-            label: label(rows, "dashboard", "labels", key, fallback),
+            label: serverFunctions.resources.label(
+              rows,
+              "dashboard",
+              "labels",
+              key,
+              fallback,
+            ),
             value:
               role.role_name +
               (typeof role.org_name === "string" ? ` (${role.org_name})` : ""),
@@ -116,7 +128,9 @@ export async function accountData(panel = "profile"): Promise<AccountData> {
   // The research and status reads are independent; both start before either is used.
   const statusRead =
     manageAllowed && panel === "profile"
-      ? early(Promise.all([account.personStatus(), organizations()]))
+      ? serverFunctions.async.early(
+          Promise.all([account.personStatus(), organizations()]),
+        )
       : undefined;
   if (researchAllowed && panel === "profile") {
     const [preference, areas, keywords, funders] = await Promise.all([
@@ -186,7 +200,7 @@ export async function accountData(panel = "profile"): Promise<AccountData> {
         .flat()
         .map(([key, group, name, seed]) => [
           key,
-          label(rows, "dashboard", group, name, seed),
+          serverFunctions.resources.label(rows, "dashboard", group, name, seed),
         ]),
     ),
     themes: await themes,
@@ -241,7 +255,7 @@ async function write(path: keyof typeof SETTINGS, body: unknown) {
     // Settings saves give up after 15 s, as before; the client's own limit is longer.
     reply = await SETTINGS[path](
       { body },
-      { signal: AbortSignal.timeout(15000) },
+      { signal: AbortSignal.timeout(serverConstants.timeouts.save) },
     );
   } catch (e) {
     throw settingsError(e);
@@ -291,7 +305,7 @@ export async function saveAccount(kind: string, body: unknown) {
     // Each allowed org's directory is read at once; every proxy is still checked in order before the write.
     const directories = chosen.map((proxy) =>
       allowed.some((o) => o.id === proxy.org_id)
-        ? early(proxyPeople(proxy.org_id))
+        ? serverFunctions.async.early(proxyPeople(proxy.org_id))
         : undefined,
     );
     const proxies: Record<string, unknown>[] = [];
@@ -365,7 +379,7 @@ export async function saveAccount(kind: string, body: unknown) {
     throw new AppError("BAD_REQUEST", "Unknown settings change.", 400);
   const input = dashboardChange.parse(body);
   // Read fresh (never the memo): the write merges over exactly what Oracle holds now.
-  const stored = early(configuration.storedPreferences());
+  const stored = serverFunctions.async.early(configuration.storedPreferences());
   if (
     input.theme !== undefined &&
     !(await availableThemes()).some((t) => t.id === input.theme)

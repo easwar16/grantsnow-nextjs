@@ -1,4 +1,13 @@
 import { test, expect, type Locator } from "@playwright/test";
+import { doneKey, guides } from "../../src/features/guides/registry";
+
+// Guides auto-start on their page and their overlay takes the clicks; journeys run with every guide finished.
+const finished = guides.map(doneKey);
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript((keys) => {
+    for (const k of keys) localStorage.setItem(k, "Y");
+  }, finished);
+});
 /** Scroll a list to its end until the next-page request shows (a scroll before hydration goes unhandled). */
 async function nextPageOnScroll(list: Locator, signal: Locator) {
   await expect(async () => {
@@ -552,8 +561,12 @@ test("narrow layout keyboard, private cache and no tokens in client payload; log
     (await context.cookies()).find((c) => c.name === "grantsnow-local")
       ?.httpOnly,
   ).toBe(true);
-  expect(await page.evaluate(() => localStorage.length)).toBe(0);
-  await page.locator(".user-menu summary").click();
+  expect(
+    await page.evaluate(() =>
+      Object.keys(localStorage).filter((k) => !k.startsWith("gn-guide:")),
+    ),
+  ).toEqual([]);
+  await page.locator("#user-menu > summary").click();
   expect(
     (
       await page.request.post("/api/auth/renew", {
@@ -676,7 +689,7 @@ test("preview-style desktop drawer, user menu and Opportunities routes", async (
   await expect(
     page.getByRole("dialog", { name: "Application Navigation Drawer" }),
   ).not.toBeVisible();
-  await page.locator(".user-menu summary").click();
+  await page.locator("#user-menu > summary").click();
   await expect(
     page.getByRole("menuitem", { name: "Manage profile" }),
   ).toBeVisible();
@@ -687,7 +700,7 @@ test("preview-style desktop drawer, user menu and Opportunities routes", async (
   await page.getByRole("radio", { name: "Dark", exact: true }).click();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.locator(".app")).toHaveClass(/dark/);
-  await page.locator(".user-menu summary").click();
+  await page.locator("#user-menu > summary").click();
   await page.getByRole("menuitem", { name: "Preferences" }).click();
   await page.getByRole("button", { name: "Reset", exact: true }).click();
   await page.getByRole("button", { name: "Save", exact: true }).click();
@@ -1006,7 +1019,7 @@ test("account dialogs, research save, preferences and accessible preview cancell
   page,
 }) => {
   await login(page);
-  await page.locator(".user-menu > summary").click();
+  await page.locator("#user-menu > summary").click();
   await page.getByRole("menuitem", { name: "Manage profile" }).click();
   const profile = page.getByRole("dialog", { name: "Manage profile" });
   await expect(
@@ -1015,7 +1028,7 @@ test("account dialogs, research save, preferences and accessible preview cancell
   await profile.getByRole("tab", { name: "Preference", exact: true }).click();
   await profile.getByRole("button", { name: "Save", exact: true }).click();
   await expect(profile).not.toBeVisible();
-  await page.locator(".user-menu > summary").click();
+  await page.locator("#user-menu > summary").click();
   await page
     .getByRole("menuitem", { name: "Preferences", exact: true })
     .click();
@@ -1025,7 +1038,7 @@ test("account dialogs, research save, preferences and accessible preview cancell
   ).toBeVisible();
   await preferences.getByRole("button", { name: "Save", exact: true }).click();
   await expect(preferences).not.toBeVisible();
-  await page.locator(".user-menu > summary").click();
+  await page.locator("#user-menu > summary").click();
   await page
     .getByRole("menuitem", { name: "Accessibility", exact: true })
     .click();

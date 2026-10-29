@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "@/lib/errors";
+import { serverFunctions } from "@/server/functions";
 // The client also passes its optional signal / query / path arguments; assertions compare the leading ones.
 const lead = (mock: { mock: { calls: unknown[][] } }, n = 3) =>
   mock.mock.calls.map((c) => c.slice(0, n));
@@ -62,7 +63,6 @@ import {
   convertGates,
   deadlineWarningDays,
 } from "@/server/modules/opportunities/gates";
-import { pageAccess } from "@/server/platform/permissions";
 import {
   endDateAfter,
   monthsBetween,
@@ -277,9 +277,9 @@ describe("payload builders", () => {
 });
 describe("gates", () => {
   it("is role based: every row must grant, and unknown roles fail closed", () => {
-    expect(pageAccess(null, "p").read).toBe(false);
+    expect(serverFunctions.permissions.pageAccess(null, "p").read).toBe(false);
     expect(
-      pageAccess(
+      serverFunctions.permissions.pageAccess(
         [
           { page_name: "p", read_access: "Y", edit_access: "Y" },
           { page_name: "p", read_access: "N", edit_access: "Y" },

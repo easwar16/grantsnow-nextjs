@@ -3,22 +3,20 @@ import { z } from "zod";
 import { comments, people } from "@/server/oracle/api";
 import type { CommentRow } from "@/server/oracle/api/comments";
 import {
-  label,
-  resourcePreference,
   resources,
   type Resources,
 } from "@/server/platform/configuration/resources";
 import { displayFormat } from "@/server/platform/configuration/formatting";
-import { plainText, sanitizeHtml } from "@/server/platform/sanitize";
-import { dateTimeDisplay } from "@/lib/format";
 import { AppError } from "@/lib/errors";
-import type { MentionPerson } from "@/lib/mentions";
+import { type MentionPerson } from "@/lib/mentions";
 import {
   COMMENT_LABELS,
   type CommentLabel,
   type CommentsView,
 } from "@/features/record/objects/panel-types";
 import { panelHost, type PanelHost } from "./panels";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 
 /**
  * The shared comments panel's server side (legacy `object-comments`): one thread per record page (`module` is the
@@ -73,25 +71,32 @@ const BUNDLE_KEYS: Record<
 function settings(rows: Resources, bundle: string) {
   const keys = BUNDLE_KEYS[bundle];
   const maxLength =
-    resourcePreference(rows, bundle, "labels", "comments-input", "maxLength") ??
-    MAX_LENGTH;
+    serverFunctions.resources.resourcePreference(
+      rows,
+      bundle,
+      "labels",
+      "comments-input",
+      "maxLength",
+    ) ?? MAX_LENGTH;
   return {
     labels: Object.fromEntries(
       COMMENT_LABELS.map((name) => [
         name,
         keys?.[name]
-          ? label(rows, bundle, keys[name][0], keys[name][1], DEFAULTS[name])
+          ? serverFunctions.resources.label(
+              rows,
+              bundle,
+              keys[name][0],
+              keys[name][1],
+              DEFAULTS[name],
+            )
           : DEFAULTS[name],
       ]),
     ) as Record<CommentLabel, string>,
     maxLength,
-    warning: label(
-      rows,
-      bundle,
-      "warning-messages",
-      "dynamic-less-than",
-      WARNING,
-    ).replaceAll("{num}", String(maxLength)),
+    warning: serverFunctions.resources
+      .label(rows, bundle, "warning-messages", "dynamic-less-than", WARNING)
+      .replaceAll("{num}", String(maxLength)),
   };
 }
 
@@ -133,9 +138,11 @@ export async function commentsView(q: URLSearchParams): Promise<CommentsView> {
     items: thread.map((row) => ({
       id: row.comment_id,
       // Legacy renderAsHTML drops the RTE's escaped newlines; sanitizeHtml does the same.
-      html: sanitizeHtml(row.comments),
+      html: serverFunctions.sanitize.sanitizeHtml(row.comments),
       author: row.full_name,
-      at: row.creation_date ? dateTimeDisplay(row.creation_date, format) : "",
+      at: row.creation_date
+        ? functions.format.dateTimeDisplay(row.creation_date, format)
+        : "",
       own: isOwn(row, host),
       canChange: host.canComment && isOwn(row, host),
     })),
@@ -147,8 +154,11 @@ export const commentInput = z.object({ comments: z.string() }).strict();
 async function checkedComment(host: PanelHost, raw: unknown) {
   const { comments } = commentInput.parse(raw);
   const { maxLength, warning } = settings(await resources(), host.bundle);
-  const html = sanitizeHtml(comments);
-  if (plainText(html).trim() === "" || html.length > maxLength)
+  const html = serverFunctions.sanitize.sanitizeHtml(comments);
+  if (
+    serverFunctions.sanitize.plainText(html).trim() === "" ||
+    html.length > maxLength
+  )
     throw new AppError("BAD_REQUEST", warning, 400);
   return html;
 }

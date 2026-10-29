@@ -1,6 +1,6 @@
 import "server-only";
 import { read, write } from "../client";
-import { TTL } from "../cache";
+import { serverConstants } from "@/server/constants";
 
 type Body = Record<string, unknown>;
 const record = (b: unknown) => b as Body;
@@ -11,14 +11,14 @@ const items = (b: unknown) =>
 export const preferenceOptions = read<{ lov: string }, string[]>({
   op: "getSharedUserPreferenceLOV",
   headers: (p) => ({ lov_type: p.lov }),
-  ttl: TTL.config,
+  ttl: serverConstants.ttl.config,
   parse: (b) =>
     items(b).flatMap((i) => (typeof i.label === "string" ? [i.label] : [])),
 });
 /** The user's own status and proxies, held for the profile. */
 export const personStatus = read<void, Body>({
   op: "getSharedPersonStatus",
-  ttl: TTL.config,
+  ttl: serverConstants.ttl.config,
   parse: record,
 });
 /** The same status as Oracle holds it now, for the save that merges over it (never the held copy). */
@@ -40,7 +40,7 @@ export const saveDigitalPresence = write<Body>({
 /** The organisation's own themes (legacy getCustomTheme), as stored; the service maps the usable rows. */
 export const customThemes = read<void, unknown>({
   op: "getSharedGetCustomTheme",
-  ttl: TTL.config,
+  ttl: serverConstants.ttl.config,
 });
 /** The profile's settings writes; each posts its whole body as built by the account service. */
 const settings = (

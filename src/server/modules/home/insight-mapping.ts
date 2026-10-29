@@ -7,7 +7,8 @@ import {
   querySchema,
   serializeQuery,
 } from "@/features/modules/proposals/schemas";
-import { drawerAccess } from "@/server/platform/permissions";
+import { serverFunctions } from "@/server/functions";
+
 /** A chart row plus the code a click on it drills by; the code never leaves the server. */
 export type InsightRow = StatisticRow & { code?: string };
 export function insightRows(
@@ -228,7 +229,8 @@ export function drillHref(
     : drill === "awardStatus"
       ? "awards"
       : "proposals";
-  if (!drawerAccess(ctx.modules, target)) return undefined;
+  if (!serverFunctions.permissions.drawerAccess(ctx.modules, target))
+    return undefined;
   const org = ctx.organization;
   if (drill === "awardedBySchool")
     return proposals({

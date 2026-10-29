@@ -1,22 +1,14 @@
 import "server-only";
-import { safeUrl } from "@/lib/security";
 import { cache } from "react";
 import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
-import {
-  requireDrawerAccess,
-  requireModule,
-} from "@/server/platform/permissions";
 import { opportunities, lookups } from "@/server/oracle/api";
 import { dashboardRoles } from "@/server/platform/configuration/service";
 import {
-  label,
   resources,
-  resourceVisible,
   type Resources,
 } from "@/server/platform/configuration/resources";
 import { formattingConfiguration } from "@/server/platform/configuration/formatting";
-import { sanitizeHtml } from "@/server/platform/sanitize";
 import { announcementMessages } from "@/server/modules/home/announcements";
 import type { OpportunityQuery } from "@/features/modules/opportunities/schemas";
 import {
@@ -37,8 +29,10 @@ import {
   opportunityGlobals,
   type Opener,
 } from "./gates";
-import type { RoleRow } from "@/server/platform/permissions";
-import { AppError, publicError } from "@/lib/errors";
+import { type RoleRow } from "@/server/platform/permissions";
+import { AppError } from "@/lib/errors";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 const text = z.string().nullish();
 const amount = z.union([z.number(), z.string()]).nullish();
 const schema = z.object({
@@ -150,14 +144,16 @@ export function mapOpportunities(
     id: String(row.opportunities_id),
     title: row.opp_heading,
     status: row.opportunity_status,
-    url: safeUrl(row.opp_heading_link),
-    logo: safeUrl(row.logo),
+    url: functions.security.safeUrl(row.opp_heading_link),
+    logo: functions.security.safeUrl(row.logo),
     site: row.site || undefined,
     bookmarked: row.is_bookmarked === "Y",
     isNew: Number(row.is_new) > 0 || row.is_new === "Y",
     closingSoon: row.closing_soon === "Y",
     otherBookmarks: row.other_bookmarks || undefined,
-    notes: row.notes ? sanitizeHtml(row.notes) : undefined,
+    notes: row.notes
+      ? serverFunctions.sanitize.sanitizeHtml(row.notes)
+      : undefined,
     shared:
       row.shared_by || row.shared_comment
         ? {
@@ -200,7 +196,9 @@ export function mapOpportunities(
         ? (row.outline_proposal_count ?? undefined)
         : undefined,
     summary:
-      show("summary") && row.summary ? sanitizeHtml(row.summary) : undefined,
+      show("summary") && row.summary
+        ? serverFunctions.sanitize.sanitizeHtml(row.summary)
+        : undefined,
   }));
   if (new Set(rows.map((row) => row.id)).size !== rows.length)
     throw new AppError("CONTRACT", "Oracle returned duplicate opportunities.");
@@ -240,15 +238,31 @@ export function metaCells(rows: Resources, opener: Opener, tab: string) {
       ? META_KEYS.filter(
           (key) =>
             (!SHARED_ONLY.includes(key) || tab === "shared") &&
-            resourceVisible(rows, "opportunities-eoi", "labels", key),
+            serverFunctions.resources.resourceVisible(
+              rows,
+              "opportunities-eoi",
+              "labels",
+              key,
+            ),
         )
       : // RB-driven cells show only on an explicit 'Y' (owner rule), Home's from the dashboard bundle.
         DASHBOARD_META.filter((key) =>
-          resourceVisible(rows, "dashboard", "labels", key),
+          serverFunctions.resources.resourceVisible(
+            rows,
+            "dashboard",
+            "labels",
+            key,
+          ),
         );
   return keys.map((key) => ({
     key,
-    label: label(rows, bundleOf(opener), "labels", key, META_LABELS[key]),
+    label: serverFunctions.resources.label(
+      rows,
+      bundleOf(opener),
+      "labels",
+      key,
+      META_LABELS[key],
+    ),
     kind: (key in MONEY
       ? "money"
       : DATE_META.includes(key)
@@ -267,14 +281,24 @@ export function opportunityCard(
   return {
     labels: cardLabelTexts(rows, opener),
     dates: opportunityDateKeys.filter((key) =>
-      resourceVisible(rows, "opportunities-eoi", "labels", key),
+      serverFunctions.resources.resourceVisible(
+        rows,
+        "opportunities-eoi",
+        "labels",
+        key,
+      ),
     ),
     meta: metaCells(rows, opener, tab),
     actions: cardActions(rows, roles, opener, tab, deadlineDays),
   };
 }
 const eoi = (rows: Resources, group: string, key: string) =>
-  resourceVisible(rows, "opportunities-eoi", group, key);
+  serverFunctions.resources.resourceVisible(
+    rows,
+    "opportunities-eoi",
+    group,
+    key,
+  );
 /** Advanced fields whose gate is hidden never filter: the server drops them whatever the browser sent. */
 export function gatedFilters(rows: Resources, f: FinderFilters): FinderFilters {
   const on = (key: string) => eoi(rows, "labels", key);
@@ -303,8 +327,13 @@ export async function listOpportunities(
 ) {
   const { user } = await authenticate();
   // Home's Featured tab is gated on the finder id alone (shell-page.html); the finder page on its drawer entry.
-  if (dashboardFeatured) requireModule(user, "opportunities-finder");
-  else requireDrawerAccess(user, "opportunities-finder");
+  if (dashboardFeatured)
+    serverFunctions.permissions.requireModule(user, "opportunities-finder");
+  else
+    serverFunctions.permissions.requireDrawerAccess(
+      user,
+      "opportunities-finder",
+    );
   const labelsRead = resources();
   const featured = {
     p_where_clause: `"preference" = 'Y' AND "opportunity_status" != 'CLOSED'`,
@@ -342,7 +371,13 @@ export async function listOpportunities(
     ...mapOpportunities(
       raw,
       query,
-      (key) => resourceVisible(labels, "opportunities-eoi", "labels", key),
+      (key) =>
+        serverFunctions.resources.resourceVisible(
+          labels,
+          "opportunities-eoi",
+          "labels",
+          key,
+        ),
       formatting.currency,
       roles &&
         new Set(
@@ -463,7 +498,9 @@ async function degrade<T>(
     return await read();
   } catch (e) {
     if (e instanceof AppError && e.code === "EXPIRED") throw e;
-    failures?.push(`${what} could not be loaded. ${publicError(e).message}`);
+    failures?.push(
+      `${what} could not be loaded. ${functions.errors.publicError(e).message}`,
+    );
     return empty;
   }
 }
@@ -481,7 +518,7 @@ export function hasPreferences(raw: unknown) {
 /** Whether the user has research preferences (Featured or Others first); the page reads it before the context. */
 export const finderPreferences = cache(async () => {
   const { user } = await authenticate();
-  requireDrawerAccess(user, "opportunities-finder");
+  serverFunctions.permissions.requireDrawerAccess(user, "opportunities-finder");
   return degrade(
     "Preferences",
     // Shared with the profile (VBCS app-level userPreferences); a research save drops it.
@@ -491,110 +528,12 @@ export const finderPreferences = cache(async () => {
   );
 });
 /** Everything the finder page needs besides the list: RB labels and gates, filter options, tabs and the banner. */
+/** What the finder draws first: labels, gates, the Featured tab's preference and the new-dots. */
 export async function finderContext() {
-  const { session, user } = await authenticate();
-  requireDrawerAccess(user, "opportunities-finder");
-  const token = session.token,
-    failures: string[] = [];
-  const rowsRead = resources();
-  // The banner waits only for its own gate, not for the filter options.
-  const bannerRead = rowsRead.then(
-    async (rows): Promise<{ messages: string[]; error?: string }> =>
-      eoi(rows, "header-labels", "announcements")
-        ? announcementMessages(token, "OPPORTUNITIES")
-        : { messages: [] },
-  );
-  const filterRows = degrade(
-    "Filter options",
-    async () =>
-      list(
-        z.object({
-          filter_type: z.string(),
-          label: z.string().nullish(),
-          value: z.string(),
-        }),
-      ).parse(await opportunities.filterOptions()).items,
-    [],
-    failures,
-  );
-  const [
-    rows,
-    banner,
-    filters,
-    funders,
-    funderTypes,
-    callCodes,
-    operators,
-    prefs,
-    flags,
-  ] = await Promise.all([
-    rowsRead,
-    bannerRead,
-    filterRows,
-    degrade(
-      "Funders",
-      async () =>
-        list(
-          z.object({
-            value: z.string(),
-            site: z.string().nullish(),
-            site_name: z.string().nullish(),
-          }),
-        )
-          .parse(await opportunities.funders())
-          .items.flatMap((r): FunderRow[] =>
-            r.site
-              ? [
-                  {
-                    value: r.value,
-                    site: r.site,
-                    site_name: r.site_name ?? null,
-                  },
-                ]
-              : [],
-          ),
-      [] as FunderRow[],
-      failures,
-    ),
-    degrade(
-      "Funder types",
-      async () =>
-        list(z.object({ funder_type: z.string().nullish() }))
-          .parse(await opportunities.funderTypes())
-          .items.flatMap((t) => (t.funder_type?.trim() ? [t.funder_type] : [])),
-      [] as string[],
-      failures,
-    ),
-    degrade(
-      "Call codes",
-      async () =>
-        list(z.object({ call: z.string().nullish() }))
-          .parse(await opportunities.callCodes())
-          // Dev returns one row with no code; it can be neither shown nor filtered on.
-          .items.flatMap((c) => (c.call?.trim() ? [c.call] : [])),
-      [] as string[],
-      failures,
-    ),
-    // FILTER_OPERATOR: the popup's date operators; a failure leaves BETWEEN only, silently, as the original.
-    degrade(
-      "Date operators",
-      async () =>
-        list(
-          z.object({
-            lookup_type_code: z.string(),
-            lookup_code: z.string(),
-            lookup_code_value: z.string().nullish(),
-          }),
-        )
-          .parse(await lookups.codes({ types: "FILTER_OPERATOR" }))
-          .items.filter((r) => r.lookup_type_code === "FILTER_OPERATOR")
-          .map((r) => ({
-            value: r.lookup_code,
-            label: r.lookup_code_value || r.lookup_code,
-          })),
-      [] as FilterOption[],
-      null,
-    ),
+  const { user } = await authenticate();
+  serverFunctions.permissions.requireDrawerAccess(user, "opportunities-finder");
+  const [rows, prefs, flags] = await Promise.all([
+    resources(),
     finderPreferences(),
     // The new-dots are decoration; a failure shows none.
     degrade(
@@ -618,7 +557,13 @@ export async function finderContext() {
     labels: Object.fromEntries(
       Object.entries(FINDER_LABELS).map(([name, [group, key, fallback]]) => [
         name,
-        label(rows, "opportunities-eoi", group, key, fallback),
+        serverFunctions.resources.label(
+          rows,
+          "opportunities-eoi",
+          group,
+          key,
+          fallback,
+        ),
       ]),
     ) as FinderLabels,
     gates: Object.fromEntries(
@@ -627,23 +572,162 @@ export async function finderContext() {
         eoi(rows, "labels", key),
       ]),
     ) as FinderGates,
-    options: {
-      status: uniqueOptions(filters, "STATUS"),
-      fundingType: uniqueOptions(filters, "FUNDING_TYPE"),
-      funders,
-      funderTypes,
-      callCodes,
-      operators: operators.filter((o) =>
-        ["BETWEEN", "GT", "LT", "NULL", "NOT_NULL"].includes(o.value),
-      ),
-    },
     hasPreferences: prefs,
     newFlags: {
       featured: flags.is_new_preference === "Y",
       others: flags.is_new_others === "Y",
     },
-    announcements: banner,
-    failures,
   };
 }
-export type FinderContext = Awaited<ReturnType<typeof finderContext>>;
+export type FinderShell = Awaited<ReturnType<typeof finderContext>>;
+
+/** The filter panel's options, streamed after the shell; never rejects (a failure is empty and reported). */
+export async function finderOptions() {
+  const failures: string[] = [];
+  try {
+    const { user } = await authenticate();
+    serverFunctions.permissions.requireDrawerAccess(
+      user,
+      "opportunities-finder",
+    );
+    const filterRows = degrade(
+      "Filter options",
+      async () =>
+        list(
+          z.object({
+            filter_type: z.string(),
+            label: z.string().nullish(),
+            value: z.string(),
+          }),
+        ).parse(await opportunities.filterOptions()).items,
+      [],
+      failures,
+    );
+    const [filters, funders, funderTypes, callCodes, operators] =
+      await Promise.all([
+        filterRows,
+        degrade(
+          "Funders",
+          async () =>
+            list(
+              z.object({
+                value: z.string(),
+                site: z.string().nullish(),
+                site_name: z.string().nullish(),
+              }),
+            )
+              .parse(await opportunities.funders())
+              .items.flatMap((r): FunderRow[] =>
+                r.site
+                  ? [
+                      {
+                        value: r.value,
+                        site: r.site,
+                        site_name: r.site_name ?? null,
+                      },
+                    ]
+                  : [],
+              ),
+          [] as FunderRow[],
+          failures,
+        ),
+        degrade(
+          "Funder types",
+          async () =>
+            list(z.object({ funder_type: z.string().nullish() }))
+              .parse(await opportunities.funderTypes())
+              .items.flatMap((t) =>
+                t.funder_type?.trim() ? [t.funder_type] : [],
+              ),
+          [] as string[],
+          failures,
+        ),
+        degrade(
+          "Call codes",
+          async () =>
+            list(z.object({ call: z.string().nullish() }))
+              .parse(await opportunities.callCodes())
+              // Dev returns one row with no code; it can be neither shown nor filtered on.
+              .items.flatMap((c) => (c.call?.trim() ? [c.call] : [])),
+          [] as string[],
+          failures,
+        ),
+        // FILTER_OPERATOR: the popup's date operators; a failure leaves BETWEEN only, silently, as the original.
+        degrade(
+          "Date operators",
+          async () =>
+            list(
+              z.object({
+                lookup_type_code: z.string(),
+                lookup_code: z.string(),
+                lookup_code_value: z.string().nullish(),
+              }),
+            )
+              .parse(await lookups.codes({ types: "FILTER_OPERATOR" }))
+              .items.filter((r) => r.lookup_type_code === "FILTER_OPERATOR")
+              .map((r) => ({
+                value: r.lookup_code,
+                label: r.lookup_code_value || r.lookup_code,
+              })),
+          [] as FilterOption[],
+          null,
+        ),
+      ]);
+    return {
+      options: {
+        status: uniqueOptions(filters, "STATUS"),
+        fundingType: uniqueOptions(filters, "FUNDING_TYPE"),
+        funders,
+        funderTypes,
+        callCodes,
+        operators: operators.filter((o) =>
+          ["BETWEEN", "GT", "LT", "NULL", "NOT_NULL"].includes(o.value),
+        ),
+      },
+      failures,
+    };
+  } catch (e) {
+    return {
+      options: EMPTY_FINDER_OPTIONS,
+      failures: [
+        `Filter options could not be loaded. ${functions.errors.publicError(e).message}`,
+      ],
+    };
+  }
+}
+export type FinderOptions = Awaited<
+  ReturnType<typeof finderOptions>
+>["options"];
+const EMPTY_FINDER_OPTIONS = {
+  status: [],
+  fundingType: [],
+  funders: [],
+  funderTypes: [],
+  callCodes: [],
+  operators: [],
+};
+
+/** The announcement banner, streamed after the shell; it waits only for its own gate. Never rejects. */
+export async function finderBanner(): Promise<{
+  messages: string[];
+  error?: string;
+}> {
+  try {
+    const { session, user } = await authenticate();
+    serverFunctions.permissions.requireDrawerAccess(
+      user,
+      "opportunities-finder",
+    );
+    return eoi(await resources(), "header-labels", "announcements")
+      ? await announcementMessages(session.token, "OPPORTUNITIES")
+      : { messages: [] };
+  } catch (e) {
+    return { messages: [], error: functions.errors.publicError(e).message };
+  }
+}
+/** The finder's context once its streamed parts have arrived. */
+export type FinderContext = FinderShell & {
+  options: FinderOptions;
+  announcements: { messages: string[]; error?: string };
+  failures: string[];
+};

@@ -3,7 +3,7 @@ import { memo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { dateDisplay, moneyDisplay, type FormatSettings } from "@/lib/format";
+import { type FormatSettings } from "@/lib/format";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
 import type { OpportunityCardModel, OpportunityRow } from "../types";
 import { canCreate } from "../display";
@@ -22,6 +22,7 @@ import { opportunities } from "@/lib/api";
 import { useActionFailure } from "../../../../components/dialog/action-failure";
 import { ShareDialog, warmShare } from "./actions/share-dialog";
 import styles from "./opportunity-card.module.css";
+import { functions } from "@/lib/functions";
 const dateValue = {
   "publication-date": "published",
   "opening-date": "opening",
@@ -33,7 +34,7 @@ const deadlineList = (raw: string, format?: FormatSettings) =>
     .split(",")
     .map((d) => d.trim())
     .filter(Boolean)
-    .map((d) => dateDisplay(d, format))
+    .map((d) => functions.format.dateDisplay(d, format))
     .join(", ");
 type Open =
   | { dialog: "notes" | "share" | "comments" }
@@ -120,7 +121,7 @@ export const OpportunityCard = memo(function OpportunityCard({
     ask({
       title: labels["deadline-title"],
       message: labels["deadline-message"],
-      detail: `${labels["closing-date"]}: ${dateDisplay(o.closingAt, format)}`,
+      detail: `${labels["closing-date"]}: ${functions.format.dateDisplay(o.closingAt, format)}`,
       confirm: labels.continue,
       cancel: labels.cancel,
     });
@@ -290,13 +291,12 @@ export const OpportunityCard = memo(function OpportunityCard({
                   <small>{label}</small>
                   {kind === "money" ? (
                     <strong>
-                      {moneyDisplay(value, o.currency, format).replace(
-                        /\.00$/,
-                        "",
-                      )}
+                      {functions.format
+                        .moneyDisplay(value, o.currency, format)
+                        .replace(/\.00$/, "")}
                     </strong>
                   ) : kind === "date" ? (
-                    dateDisplay(value, format)
+                    functions.format.dateDisplay(value, format)
                   ) : (
                     value
                   )}
@@ -320,7 +320,7 @@ export const OpportunityCard = memo(function OpportunityCard({
                     {value
                       ? key === "closing-date"
                         ? deadlineList(value, format)
-                        : dateDisplay(value, format)
+                        : functions.format.dateDisplay(value, format)
                       : key === "closing-date"
                         ? labels["check-website"]
                         : labels["not-available"]}

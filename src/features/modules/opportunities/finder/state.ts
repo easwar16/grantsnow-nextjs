@@ -52,7 +52,6 @@ export interface FinderFilters {
 }
 /** The original refuses a 20th funder selection ("Cannot add these many filter options"). */
 export const MAX_FUNDER_KEYS = 19;
-export const PAGE_SIZE = 25;
 const DATE_DEFAULT: DateFilter = { op: "BETWEEN", on: "", from: "", to: "" };
 /** The original's defaults: OPEN + UPCOMING, newest publication first, every date operator BETWEEN. */
 export const DEFAULT_FILTERS: FinderFilters = {

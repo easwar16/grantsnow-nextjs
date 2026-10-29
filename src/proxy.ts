@@ -7,8 +7,8 @@ import {
   browserSessionMode,
 } from "@/server/platform/configuration/environment";
 import type { StoredSession } from "@/server/identity/session/storage";
-import { safeReturn } from "@/lib/security";
 import { legacyDeepLink } from "@/shared/auth/legacy-link";
+import { functions } from "@/lib/functions";
 export async function proxy(request: NextRequest) {
   // H26: old notification/report emails; the target route authenticates and keeps the deep link through login.
   const legacy = legacyDeepLink(request.nextUrl.search);
@@ -33,7 +33,9 @@ export async function proxy(request: NextRequest) {
     const url = new URL("/login", appOrigin());
     url.searchParams.set(
       "returnTo",
-      safeReturn(request.nextUrl.pathname + request.nextUrl.search),
+      functions.security.safeReturn(
+        request.nextUrl.pathname + request.nextUrl.search,
+      ),
     );
     url.searchParams.set("reason", session.app ? "EXPIRED" : "UNAUTHENTICATED");
     return NextResponse.redirect(url);

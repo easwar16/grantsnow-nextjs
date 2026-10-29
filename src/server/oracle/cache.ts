@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { LRUCache } from "lru-cache";
+import { serverConstants } from "@/server/constants";
 
 /**
  * The one server cache: short-lived and per session. The Oracle client holds reads here by operation and parameters
@@ -24,8 +25,8 @@ type Entry = {
 const store = ((
   globalThis as { __gnOracleCache?: LRUCache<string, Entry> }
 ).__gnOracleCache ??= new LRUCache<string, Entry>({
-  max: 2000,
-  maxSize: 64 * 1024 * 1024,
+  max: serverConstants.cache.maxEntries,
+  maxSize: serverConstants.cache.maxBytes,
   sizeCalculation: (e) => e.size ?? 1,
 }));
 
@@ -132,15 +133,3 @@ export const operationKey = (operation: string, token: string) =>
 export function forgetOperation(operation: string, token: string) {
   forget(operationKey(operation, token));
 }
-
-/** TTLs by how often the data can change underneath us. */
-export const TTL = {
-  /** Labels, lookups, global variables: configuration changed by admins. */
-  config: 5 * 60_000,
-  /** Roles and grants, and a record's own data during a visit: kept short so a change elsewhere shows quickly. */
-  access: 60_000,
-  /** Home's slow figures (KPIs, queues, charts): fresh for 3 minutes, then served while a refresh runs. */
-  figures: 3 * 60_000,
-  /** How long past `figures` a held figure may still be shown while it refreshes. */
-  figuresStale: 10 * 60_000,
-} as const;

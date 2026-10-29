@@ -1,6 +1,6 @@
 import "server-only";
 import { State } from "@/components/feedback/state";
-import { resources, label } from "@/server/platform/configuration/resources";
+import { resources } from "@/server/platform/configuration/resources";
 import {
   awardPageLock,
   type AwardRecordContext,
@@ -19,7 +19,6 @@ import { AttachmentsTab } from "@/features/record/attachments/attachments-tab";
 import { ObjectHistory } from "@/features/record/objects/object-history";
 import { ObjectDelegations } from "@/features/record/objects/object-delegations";
 import { isFormTab, type AwardTab } from "@/shared/awards/award-record";
-import { publicError } from "@/lib/errors";
 import { AwardFormTab } from "./form-tab";
 import { HeaderTab } from "./header-tab";
 import { BudgetTab } from "./budget-tab";
@@ -42,6 +41,8 @@ import { headerView } from "@/server/modules/awards/record/header";
 import { displayFormat } from "@/server/platform/configuration/formatting";
 import { AwardTabLock } from "./record-shell";
 import styles from "@/features/record/shell/record-tab.module.css";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 
 const BUNDLE = "award";
 
@@ -53,7 +54,7 @@ async function settle<T>(read: Promise<T>) {
   );
 }
 function failed(id: string, title: string, error: unknown) {
-  const e = publicError(error);
+  const e = functions.errors.publicError(error);
   return (
     <State
       id={`${id}-error`}
@@ -166,8 +167,14 @@ export async function AwardTabContent({
           statusCode={status}
           lock={lock}
           texts={{
-            submit: label(rows, BUNDLE, "button-labels", "submit", "Submit"),
-            saved: label(
+            submit: serverFunctions.resources.label(
+              rows,
+              BUNDLE,
+              "button-labels",
+              "submit",
+              "Submit",
+            ),
+            saved: serverFunctions.resources.label(
               rows,
               BUNDLE,
               "success-msg",

@@ -1,5 +1,6 @@
 import "server-only";
-import { bounded } from "@/server/platform/async";
+import { serverFunctions } from "@/server/functions";
+
 /** Owner rule (GN-Dashboard): queues load 25 rows per scroll page, up to 100, as legacy loadMoreOnScroll max-count. */
 export const QUEUE_PAGE = 25;
 export const QUEUE_CAP = 100;
@@ -42,7 +43,7 @@ export async function pagedRows<T>(
   if (typeof total === "number" && Number.isSafeInteger(total)) {
     const offsets: number[] = [];
     for (let o = size; o < Math.min(total, cap); o += size) offsets.push(o);
-    const pages = await bounded(
+    const pages = await serverFunctions.async.bounded(
       offsets.map((o) => () => read(o)),
       PAGE_CONCURRENCY,
     );

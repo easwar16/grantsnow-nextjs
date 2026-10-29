@@ -1,11 +1,10 @@
 "use client";
 import {
-  AWARD_PAGE_SIZE,
   serializeAwardFilters,
   type AwardFilters,
 } from "@/features/modules/awards/listing/schema";
 import type {
-  AwardChoices,
+  AwardChoiceList,
   AwardListPage,
   AwardListRow,
 } from "@/features/modules/awards/listing/types";
@@ -19,6 +18,7 @@ import type { CostDialogData } from "@/features/modules/awards/record/projects-t
 import type { CreatorCard } from "@/features/record/shell/creator-types";
 import { get, post } from "../http";
 import { endpoint, pagedEndpoint } from "../hooks";
+import { constants } from "@/lib/constants";
 
 /** The Awards listing, a page at a time: only the filters that differ from the defaults travel (the hook adds the page). */
 export const list = pagedEndpoint<AwardFilters, AwardListRow, AwardListPage>(
@@ -29,12 +29,13 @@ export const list = pagedEndpoint<AwardFilters, AwardListRow, AwardListPage>(
     ),
   }),
   (b) => ({ rows: b.rows, hasMore: b.hasMore, total: b.total ?? undefined }),
-  { size: AWARD_PAGE_SIZE },
+  { size: constants.paging.awards },
 );
-/** The drawer's org units, people and funders (held reference lists, read once the page shows). */
-export const choices = endpoint<void, AwardChoices>(() => ({
-  path: "/awards/choices",
-}));
+/** One of the drawer's held reference lists (org units, people, funders), read once the page shows. */
+export const choices = endpoint<"orgs" | "people" | "parties", AwardChoiceList>(
+  (list) => ({ path: "/awards/choices", query: { list } }),
+  { ttl: constants.ttl.session },
+);
 const action = (name: string) => `/awards/actions/${name}`;
 /** Award links: the linked records, and the proposals an award with none can be linked to. */
 export type AwardLinks = LinkedObjects & {

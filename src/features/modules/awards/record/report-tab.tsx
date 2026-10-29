@@ -1,11 +1,11 @@
 "use client";
 import { Fragment, useState } from "react";
 import { Icon } from "@/components/ui/icon";
-import { idPart } from "@/lib/ids";
 import { InsightChart } from "@/features/modules/home/components/insight-chart";
-import { moneyDisplay, type FormatSettings } from "@/lib/format";
+import { type FormatSettings } from "@/lib/format";
 import { reportTotals, type ReportView } from "./report-model";
 import styles from "./tabs.module.css";
+import { functions } from "@/lib/functions";
 
 const YEAR_COLUMNS = ["budget", "actual", "variance", "forecast"] as const;
 
@@ -26,7 +26,7 @@ export function ReportTab({
       return next;
     });
   const money = (v: number) =>
-    moneyDisplay(String(v), format?.currency, format);
+    functions.format.moneyDisplay(String(v), format?.currency, format);
   if (view.project === null)
     return (
       <div id="award-record-report" className={styles.tab}>
@@ -133,7 +133,9 @@ export function ReportTab({
               {view.months.rows.map((h) => (
                 <Fragment key={h.id}>
                   {/* Legacy tMonthlySplit depth 0: expander and name over all but the last two columns, which hold the total. */}
-                  <tr id={`award-report-month-${idPart(String(h.id))}`}>
+                  <tr
+                    id={`award-report-month-${functions.ids.idPart(String(h.id))}`}
+                  >
                     <th
                       scope="row"
                       colSpan={Math.max(view.months.columns.length - 1, 1)}
@@ -141,7 +143,7 @@ export function ReportTab({
                       <span className={styles.node}>
                         <button
                           type="button"
-                          id={`award-report-month-${idPart(String(h.id))}-toggle`}
+                          id={`award-report-month-${functions.ids.idPart(String(h.id))}-toggle`}
                           className={styles.expander}
                           aria-expanded={!closed.has(String(h.id))}
                           aria-label={h.name}

@@ -1,11 +1,5 @@
 import "server-only";
-import {
-  label,
-  resourceDescription,
-  resourceRequired,
-  resourceVisible,
-  resources,
-} from "@/server/platform/configuration/resources";
+import { resources } from "@/server/platform/configuration/resources";
 import { displayFormat } from "@/server/platform/configuration/formatting";
 import type {
   InstallmentsView,
@@ -14,6 +8,7 @@ import type {
 import { pageOf } from "@/shared/awards/award-record";
 import { awardPageLock, awardRecordRead, isDraft } from "../record";
 import { costLinesOf, projectsOf } from "./projects";
+import { serverFunctions } from "@/server/functions";
 
 const BUNDLE = "award";
 const DIALOG_FIELDS = [
@@ -36,7 +31,7 @@ export async function installmentsView(id: string): Promise<InstallmentsView> {
   ]);
   const lock = await awardPageLock(context, "installments");
   const t = (group: string, key: string, fallback: string) =>
-    label(rows, BUNDLE, group, key, fallback);
+    serverFunctions.resources.label(rows, BUNDLE, group, key, fallback);
   return {
     awardId: id,
     // Legacy defect (KB pitfall 10): it ignored view mode, the lock and finalize; changes follow every other tab's rule.
@@ -64,10 +59,26 @@ export async function installmentsView(id: string): Promise<InstallmentsView> {
       DIALOG_FIELDS.map(([field, key, fallback]) => [
         field,
         {
-          show: resourceVisible(rows, BUNDLE, "labels", key),
-          required: resourceRequired(rows, BUNDLE, "labels", key, false),
+          show: serverFunctions.resources.resourceVisible(
+            rows,
+            BUNDLE,
+            "labels",
+            key,
+          ),
+          required: serverFunctions.resources.resourceRequired(
+            rows,
+            BUNDLE,
+            "labels",
+            key,
+            false,
+          ),
           label: t("labels", key, fallback),
-          help: resourceDescription(rows, BUNDLE, "labels", key),
+          help: serverFunctions.resources.resourceDescription(
+            rows,
+            BUNDLE,
+            "labels",
+            key,
+          ),
         },
       ]),
     ) as InstallmentsView["fields"],
@@ -157,7 +168,7 @@ export async function milestonesView(id: string): Promise<MilestonesView> {
     resources(),
   ]);
   const t = (group: string, key: string, fallback: string) =>
-    label(rows, BUNDLE, group, key, fallback);
+    serverFunctions.resources.label(rows, BUNDLE, group, key, fallback);
   return {
     awardId: id,
     number: context.award.award_number ?? id,

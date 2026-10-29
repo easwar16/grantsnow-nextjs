@@ -2,8 +2,8 @@
 import { useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import { useFormat } from "@/components/layout/shell-context";
-import { dateDisplay, datePattern, parseDisplayDate } from "@/lib/format";
 import styles from "./date-input.module.css";
+import { functions } from "@/lib/functions";
 
 /** Whether a native date picker inside `root` is open: its Escape closes the picker, not the dialog around it. */
 export const pickerOpen = (root: Element | null) =>
@@ -43,7 +43,8 @@ export function DateInput({
   className?: string;
 }) {
   const format = useFormat();
-  const shown = (iso: string) => (iso ? dateDisplay(iso, format) : "");
+  const shown = (iso: string) =>
+    iso ? functions.format.dateDisplay(iso, format) : "";
   const [text, setText] = useState(() => shown(value)),
     [synced, setSynced] = useState(value),
     [bad, setBad] = useState(false),
@@ -61,7 +62,7 @@ export function DateInput({
       if (value !== "") onChange("");
       return;
     }
-    const iso = parseDisplayDate(text, format);
+    const iso = functions.format.parseDisplayDate(text, format);
     if (!iso || !inRange(iso)) return setBad(true);
     setBad(false);
     setText(shown(iso));
@@ -79,7 +80,7 @@ export function DateInput({
         aria-invalid={bad || invalid || undefined}
         aria-describedby={describedBy}
         aria-required={required || undefined}
-        placeholder={datePattern(format)}
+        placeholder={functions.format.datePattern(format)}
         value={text}
         disabled={disabled}
         onChange={(e) => setText(e.target.value)}

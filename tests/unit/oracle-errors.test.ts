@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { assertBusiness, oracle } from "@/server/oracle/connection";
 import { failure } from "@/server/http/response";
-import { publicError } from "@/lib/errors";
+import { functions } from "@/lib/functions";
+
 const caught = (fn: () => unknown) => {
   try {
     fn();
   } catch (e) {
-    return publicError(e);
+    return functions.errors.publicError(e);
   }
   throw new Error("expected a failure");
 };

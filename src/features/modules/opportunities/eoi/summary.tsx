@@ -1,20 +1,20 @@
-import { idPart } from "@/lib/ids";
 import Image from "next/image";
 import { SummaryActions } from "./summary-actions";
 import type { SummaryActionContext, SummaryField, SummaryView } from "./types";
 import styles from "./summary.module.css";
+import { functions } from "@/lib/functions";
 function Value({ field }: { field: SummaryField }) {
   if (field.html !== undefined)
     return (
       <dd
-        id={`eoi-summary-${idPart(field.key.replace(/^summary-/, ""))}`}
+        id={`eoi-summary-${functions.ids.idPart(field.key.replace(/^summary-/, ""))}`}
         className={`${styles.text} announcement-content`}
         dangerouslySetInnerHTML={{ __html: field.html }}
       />
     );
   return (
     <dd
-      id={`eoi-summary-${idPart(field.key.replace(/^summary-/, ""))}`}
+      id={`eoi-summary-${functions.ids.idPart(field.key.replace(/^summary-/, ""))}`}
       className={field.wide ? styles.text : undefined}
     >
       {field.href ? (

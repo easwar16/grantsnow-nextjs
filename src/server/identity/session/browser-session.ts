@@ -9,6 +9,7 @@ import {
 import { oracle } from "@/server/oracle/connection";
 import { mapValidatedIdentity } from "./contracts";
 import { AppError } from "@/lib/errors";
+import { serverConstants } from "@/server/constants";
 const schema = z.object({
   token: z.string().min(1).max(1600),
   capturedAt: z.string().datetime(),
@@ -16,7 +17,6 @@ const schema = z.object({
   baseUrl: z.string().url(),
   appsUrl: z.string().url(),
 });
-export const DEV_SESSION_LEASE_MS = 60 * 60 * 1000;
 export async function capturedBrowserSession() {
   if (!browserSessionMode())
     throw new AppError("FORBIDDEN", "Browser session mode is disabled.", 403);
@@ -116,7 +116,10 @@ async function validated(token: string, backendExpiresAt: number) {
     );
   return {
     token,
-    expiresAt: Math.min(backendExpiresAt, Date.now() + DEV_SESSION_LEASE_MS),
+    expiresAt: Math.min(
+      backendExpiresAt,
+      Date.now() + serverConstants.session.devLeaseMs,
+    ),
     backendExpiresAt,
     user: b.user,
   };

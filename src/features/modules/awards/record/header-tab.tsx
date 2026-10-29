@@ -19,8 +19,7 @@ import {
   type AttributesHandle,
 } from "@/features/record/attributes/object-attributes";
 import { awards } from "@/lib/api";
-import { dateDisplay, moneyDisplay, type FormatSettings } from "@/lib/format";
-import { idPart } from "@/lib/ids";
+import { type FormatSettings } from "@/lib/format";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
 import type { PageLock } from "@/shared/opportunities/eoi-record";
 import { AWARD_MODULE } from "@/shared/awards/award-record";
@@ -35,6 +34,7 @@ import {
 import { RECORD_SAVE, useAwardRecord } from "./record-shell";
 import dialog from "@/components/dialog/dialog.module.css";
 import styles from "./tabs.module.css";
+import { functions } from "@/lib/functions";
 
 /**
  * The Award Header tab (legacy awards-header): the header form (read-only until Edit Award Header), the object
@@ -131,12 +131,12 @@ export function HeaderTab({
         values[k]
       );
     return k === "actualDate" && values[k] !== ""
-      ? dateDisplay(values[k], format)
+      ? functions.format.dateDisplay(values[k], format)
       : values[k];
   };
   const field = (k: HeaderField) => {
     if (!f[k].show) return null;
-    const id = `award-header-${idPart(k)}`;
+    const id = `award-header-${functions.ids.idPart(k)}`;
     if (!editing)
       return (
         <ReadonlyField key={k} id={id} label={f[k].label} value={shown(k)} />
@@ -240,18 +240,25 @@ export function HeaderTab({
             </thead>
             <tbody>
               {view.periods.map((p) => (
-                <tr key={p.key} id={`award-header-period-${idPart(p.key)}`}>
-                  <td>{dateDisplay(p.start, format)}</td>
-                  <td>{dateDisplay(p.end, format)}</td>
+                <tr
+                  key={p.key}
+                  id={`award-header-period-${functions.ids.idPart(p.key)}`}
+                >
+                  <td>{functions.format.dateDisplay(p.start, format)}</td>
+                  <td>{functions.format.dateDisplay(p.end, format)}</td>
                   <td>
                     {p.amount === ""
                       ? ""
-                      : moneyDisplay(p.amount, format?.currency, format)}
+                      : functions.format.moneyDisplay(
+                          p.amount,
+                          format?.currency,
+                          format,
+                        )}
                   </td>
                   <td>
                     <button
                       type="button"
-                      id={`award-header-period-${idPart(p.key)}-edit`}
+                      id={`award-header-period-${functions.ids.idPart(p.key)}-edit`}
                       className="gn-btn gn-btn--borderless gn-btn--icon"
                       aria-label={view.texts.edit}
                       title={view.texts.edit}

@@ -1,7 +1,6 @@
 import "server-only";
 import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
-import { requireModule } from "@/server/platform/permissions";
 import {
   dynamicForm,
   lookups,
@@ -12,14 +11,8 @@ import {
   dashboardRoles,
   organizations,
 } from "@/server/platform/configuration/service";
-import {
-  label,
-  resourcePreference,
-  resources,
-  resourceVisible,
-} from "@/server/platform/configuration/resources";
+import { resources } from "@/server/platform/configuration/resources";
 import { formattingConfiguration } from "@/server/platform/configuration/formatting";
-import { sanitizeHtml } from "@/server/platform/sanitize";
 import {
   canCreate,
   splitFunders,
@@ -33,7 +26,6 @@ import {
   type ConvertKind,
   type Opener,
 } from "./gates";
-import { pageAccess } from "@/server/platform/permissions";
 import {
   applyInput,
   bookmarkInput,
@@ -46,6 +38,7 @@ import {
   shareInput,
   sharePayload,
 } from "./payloads";
+import { serverFunctions } from "@/server/functions";
 const DEFAULT_MAX_COMMENT = 2500;
 const SHARE_BUNDLE = "opportunities-eoi";
 const items = <T extends z.ZodTypeAny>(row: T) =>
@@ -55,11 +48,13 @@ const numeric = z.coerce.number().int().positive();
 /** Card actions need the finder's module grant, as both lists that show the card do. */
 async function actor() {
   const { user } = await authenticate();
-  requireModule(user, "opportunities-finder");
+  serverFunctions.permissions.requireModule(user, "opportunities-finder");
   return { user };
 }
 async function requireAccess(page: string, kind: "read" | "edit") {
-  if (!pageAccess(await dashboardRoles(), page)[kind])
+  if (
+    !serverFunctions.permissions.pageAccess(await dashboardRoles(), page)[kind]
+  )
     throw new AppError(
       "FORBIDDEN",
       "This action is not enabled for your account.",
@@ -108,7 +103,7 @@ export async function saveNotes(raw: unknown) {
     requireAccess("opportunity-notes", "edit"),
     readOpportunity(input.opportunityId),
   );
-  const notes = sanitizeHtml(input.notes);
+  const notes = serverFunctions.sanitize.sanitizeHtml(input.notes);
   await opportunities.saveNotes({ opportunityId: input.opportunityId, notes });
   return { notes };
 }
@@ -149,7 +144,7 @@ const SHARE_TEXTS = {
 } as const;
 function shareLimit(rows: Awaited<ReturnType<typeof resources>>) {
   return (
-    resourcePreference(
+    serverFunctions.resources.resourcePreference(
       rows,
       SHARE_BUNDLE,
       "labels",
@@ -168,10 +163,9 @@ export async function shareDialog() {
     texts: Object.fromEntries(
       Object.entries(SHARE_TEXTS).map(([key, [group, name, fallback]]) => [
         key,
-        label(rows, SHARE_BUNDLE, group, name, fallback).replaceAll(
-          "{num}",
-          String(maxLength),
-        ),
+        serverFunctions.resources
+          .label(rows, SHARE_BUNDLE, group, name, fallback)
+          .replaceAll("{num}", String(maxLength)),
       ]),
     ) as Record<keyof typeof SHARE_TEXTS, string>,
   };
@@ -192,7 +186,7 @@ export async function shareValues(type: string) {
   await actor();
   if (type === "INDIVIDUAL") {
     const [all, rows] = await Promise.all([peopleApi.all(), resources()]);
-    const withNumber = resourceVisible(
+    const withNumber = serverFunctions.resources.resourceVisible(
       rows,
       SHARE_BUNDLE,
       "labels",
@@ -398,7 +392,13 @@ function convertTexts(
   application = false,
 ) {
   const t = (group: string, key: string, fallback: string) =>
-    label(rows, bundleOf(opener), group, key, fallback);
+    serverFunctions.resources.label(
+      rows,
+      bundleOf(opener),
+      group,
+      key,
+      fallback,
+    );
   const title = application
     ? kind === "PROPOSAL"
       ? t(
@@ -636,7 +636,7 @@ export async function convert(raw: unknown) {
     }
   return {
     href: `/proposals/${input.kind}/${openId}`,
-    message: label(
+    message: serverFunctions.resources.label(
       rows,
       input.kind.toLowerCase(),
       "success-msg",

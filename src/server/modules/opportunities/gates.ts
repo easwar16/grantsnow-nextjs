@@ -6,14 +6,10 @@ import {
   type GlobalVariable,
 } from "@/server/platform/configuration/formatting";
 import { AppError } from "@/lib/errors";
-import {
-  label,
-  resourceRequired,
-  resourceVisible,
-  type Resources,
-} from "@/server/platform/configuration/resources";
+import { type Resources } from "@/server/platform/configuration/resources";
 import type { CardActions } from "@/features/modules/opportunities/types";
-import { pageAccess, type RoleRow } from "@/server/platform/permissions";
+import { type RoleRow } from "@/server/platform/permissions";
+import { serverFunctions } from "@/server/functions";
 export type Opener = CardActions["opener"];
 export type ConvertKind = "OUTLINE_PROPOSAL" | "PROPOSAL";
 /**
@@ -41,8 +37,9 @@ export function cardActions(
   const bundle = bundleOf(opener),
     finder = opener === "finder";
   const visible = (group: string, key: string) =>
-    resourceVisible(rows, bundle, group, key);
-  const access = (page: string) => pageAccess(roles, page);
+    serverFunctions.resources.resourceVisible(rows, bundle, group, key);
+  const access = (page: string) =>
+    serverFunctions.permissions.pageAccess(roles, page);
   return {
     opener,
     pills: {
@@ -128,7 +125,13 @@ export function cardLabelTexts(rows: Resources, opener: Opener) {
   return Object.fromEntries(
     cardLabels.map(([key, group, name, fallback]) => [
       key,
-      label(rows, bundleOf(opener), group, name, fallback),
+      serverFunctions.resources.label(
+        rows,
+        bundleOf(opener),
+        group,
+        name,
+        fallback,
+      ),
     ]),
   ) as Record<(typeof cardLabels)[number][0], string>;
 }
@@ -210,7 +213,12 @@ export function convertGates(
       : f);
   return Object.fromEntries(
     CONVERT_FIELDS.map((f) => {
-      const show = resourceVisible(rows, bundle, "labels", key(f));
+      const show = serverFunctions.resources.resourceVisible(
+        rows,
+        bundle,
+        "labels",
+        key(f),
+      );
       const seed = application
         ? APPLICATION_SEED_REQUIRED.includes(f)
         : SEED_REQUIRED.includes(f) && !(finder && f === "activity-type");
@@ -221,8 +229,20 @@ export function convertGates(
           required:
             show &&
             !NEVER_REQUIRED.includes(f) &&
-            resourceRequired(rows, bundle, "labels", key(f), seed),
-          label: label(rows, bundle, "labels", key(f), FIELD_FALLBACKS[f]),
+            serverFunctions.resources.resourceRequired(
+              rows,
+              bundle,
+              "labels",
+              key(f),
+              seed,
+            ),
+          label: serverFunctions.resources.label(
+            rows,
+            bundle,
+            "labels",
+            key(f),
+            FIELD_FALLBACKS[f],
+          ),
         },
       ];
     }),

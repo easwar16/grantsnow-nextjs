@@ -8,10 +8,10 @@ import { Pop } from "@/components/ui/pop";
 import { Skeleton } from "@/components/feedback/skeleton";
 import { useToast } from "@/components/feedback/toast";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
-import { dateDisplay } from "@/lib/format";
 import { groupByDay } from "./notification-days";
 import { useShell } from "./shell-context";
 import styles from "./notification-bell.module.css";
+import { functions } from "@/lib/functions";
 const time = (at: string) =>
   new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 /** The header bell: unread badge, the latest five by local day, and mark-all-read when the popup closes. */
@@ -129,7 +129,8 @@ export function NotificationBell() {
                     aria-label={day.label ?? day.day}
                   >
                     <div className={styles.day}>
-                      {day.label ?? dateDisplay(day.day, format)}
+                      {day.label ??
+                        functions.format.dateDisplay(day.day, format)}
                     </div>
                     {day.items.map((n) => (
                       <div

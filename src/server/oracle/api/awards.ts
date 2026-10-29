@@ -1,6 +1,6 @@
 import "server-only";
 import { read, write } from "../client";
-import { TTL } from "../cache";
+import { serverConstants } from "@/server/constants";
 
 /** Awards (post_awards); bodies come back as read and the services apply their schemas. */
 /** One listing page (AwardHeader); `query` is the page, clause and sort exactly as the listing's builder makes them. */
@@ -42,7 +42,7 @@ export const create = write<{ body: unknown }>({
 /** The parts of an award Clone can copy (copyAwardObjList, AWARD): `r` key, `d` label, `parent_object`, `default_value`. */
 export const copyObjects = read<void>({
   op: "getPost_awardsCopyAwardObjList",
-  ttl: TTL.config,
+  ttl: serverConstants.ttl.config,
   headers: () => ({ p_obj_type: "AWARD" }),
 });
 /** WRITES: clones an award with the chosen parts ({ award_id, objects: [{ object_name, object_val }] }). */
@@ -65,13 +65,13 @@ export const linkProposal = write<{ awardId: number; proposalId: number }>({
 /** One award as its record shows it (AwardDetails): the header, its lists and `locked_modules`. */
 export const details = read<{ awardId: string }>({
   op: "getPost_awardsAwardDetails",
-  ttl: TTL.access,
+  ttl: serverConstants.ttl.access,
   headers: (p) => ({ award_id: p.awardId }),
 });
 /** The award's periods (AwardPeriodDetails `Award Period Details`); the record's dates span them. */
 export const periods = read<{ awardId: string }>({
   op: "getPost_awardsAwardPeriodDetails",
-  ttl: TTL.access,
+  ttl: serverConstants.ttl.access,
   headers: (p) => ({ p_award_id: p.awardId }),
 });
 /** WRITES: one award period's dates and amount (the Header's period table). */
@@ -110,15 +110,15 @@ export const dueDiligence = read<{ awardId: string }>({
 /** Project roles (GetProjectrole), funding sections (getFundingHdr) and a cost category's items. */
 export const projectRoles = read<void>({
   op: "getPost_awardsGetProjectrole",
-  ttl: TTL.config,
+  ttl: serverConstants.ttl.config,
 });
 export const fundingSections = read<void>({
   op: "getPre_awards_costingGetFundingHdr",
-  ttl: TTL.config,
+  ttl: serverConstants.ttl.config,
 });
 export const costCategoryItems = read<{ type: string }>({
   op: "getPre_awardGetCostCategoryItems",
-  ttl: TTL.config,
+  ttl: serverConstants.ttl.config,
   headers: (p) => ({ cost_category_type_lkp_code: p.type }),
 });
 /** One cost line's items by period (AwardPrjCostItem GET). */
