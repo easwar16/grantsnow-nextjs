@@ -209,6 +209,8 @@
   height: 16px;
   background: #fff;
   border-radius: 50%;
+  /* The global switch centres its thumb with translateY(-50%); this one is placed by `top`. */
+  transform: none;
   transition: left var(--dur-fast) var(--ease);
 }
 .switch input[type="checkbox"][role="switch"]:checked {
