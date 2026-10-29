@@ -1,0 +1,25 @@
+# In-app guided learning (Guide menu, per-module tours)
+
+- **Date / author / agent:** 2026-10-29 / ayush / Claude Code
+- **Branch / base commit:** feature/guided-learning on d199073
+- **Why:** user request for interactive in-app user guides (in the spirit of Oracle Guided Learning) so users know what to click and where. Not a VBCS behaviour; new feature.
+- **What changed:**
+  - Header "Guide" menu (beside Help) lists every guide the user may run, grouped by module. Each module is one row: its name runs the module's full tour (the guide marked `auto`), and a chevron beside it expands the module's single guides. Home is labelled "Dashboard". A guide for another page navigates there, then starts once its first anchor is on the page (bounded 8 s wait). Each page's main tour auto-starts once per guide version; completion is a per-browser `localStorage` flag.
+  - Guides are modular: `src/features/guides/modules/<module>/index.ts` (menu metadata: label, route, access, guide list) and `steps.ts` (content, loaded on first use as its own chunk). Modules are listed in `modules/index.ts`.
+  - Steps point at stable element ids (`target`), or, for repeated records whose ids carry a record key, a CSS `selector` resolved to the first match. A step whose element is absent is skipped.
+  - A step may name a tab to `open` first (only `role="tab"` elements are clicked, so guides never trigger an action); steps whose element is missing are skipped while the tour runs.
+  - Guides: Dashboard (full tour across every tab, version 2, plus organisation, announcements, key figures, Need Attention, Insights, featured opportunities, notifications, dynamic charts); Opportunities (finder tour, search, filter, and the opportunity card: title, More info, status, bookmark, share, notes, Apply, Convert, Convert to Proposal); Awards (listing tour, find an award, and the award row: number, title, Link, Clone, View).
+  - Files: `src/features/guides/*`, `src/components/layout/app-shell.tsx` (optional `guide` header slot), `src/app/(authenticated)/layout.tsx` (mounts it), `tests/unit/guides.test.ts`.
+- **Shared pieces used or extended:** `AppShell` (new optional `guide` slot, backwards compatible), the user-menu dropdown classes and keyboard pattern, `Icon`, `idPart`, GN theme tokens (`--gn-*`), `gn-btn` button classes. New dependency **driver.js 1.10.2** (MIT, no dependencies), loaded client-only on first use.
+- **Replaces / overrides:** none.
+- **Rules touched:**
+  - _No new dependency without the owner:_ driver.js was added at the user's request; owner agreement still needed.
+  - _Labels from the RB:_ guide titles and step text are literal English for now, not RB-gated.
+  - _Authorization:_ guides receive only the granted navigation ids from `visibleNavigation`; a module's guides are hidden without its grant. Display only — guides never click or call anything, so no write is triggered.
+  - _Ids:_ new elements carry `guide-menu-*` ids.
+- **Checks:** guide unit tests 11/11 (includes a jsdom check that each card selector hits its own control, not a sibling such as Convert to Proposal or a dialog); eslint clean on changed files. `npm run typecheck`: `src` clean; errors only in stale generated `.next-check/types` (old Opportunities route paths from an earlier isolated build). `prettier --check` flags every guide file, including untouched ones — consistent with CRLF checkout line endings, not verified further. Full test suite, isolated build and `npm run test:e2e` not run for this change. No browser or live DEV check of the card guide.
+- **Open:**
+  - Owner agreement on driver.js.
+  - Move guide text to the RB.
+  - A Playwright journey per guide.
+  - Apply's Summary / Application Details are described in the Apply step, not toured, because reaching them needs Apply to be clicked.

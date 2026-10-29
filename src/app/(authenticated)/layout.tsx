@@ -26,6 +26,7 @@ import {
 } from "@/features/modules/account/shell-labels";
 import { externalToolUrls } from "./modules/external-tools";
 import { ChatbotMount } from "@/components/chatbot/chatbot-mount";
+import { GuideMount } from "@/features/guides/guide-mount";
 import { opportunities } from "@/server/oracle/api";
 import { AppError } from "@/lib/errors";
 type Labels = Awaited<ReturnType<typeof resources>>;
@@ -62,6 +63,9 @@ function navigationEntries(
     ];
   });
 }
+/** Granted navigation ids only; guides use them to stay within the user's access. */
+const grantedIds = (items: NavDefinition[]): string[] =>
+  items.flatMap((i) => [i.id, ...grantedIds(i.children ?? [])]);
 function shellLabels(rows: Labels): ShellLabels {
   return {
     ...(Object.fromEntries(
@@ -157,6 +161,7 @@ export default async function AuthLayout({
             Number(v.value) || 0,
           ]),
         )}
+        guide={<GuideMount access={grantedIds(items)} />}
         navigation={
           <Navigation
             items={navigationEntries(items, labels, externalToolUrls())}

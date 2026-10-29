@@ -22,6 +22,7 @@ export function AppShell({
   user,
   logo,
   navigation,
+  guide,
   labels,
   format,
 }: {
@@ -31,6 +32,7 @@ export function AppShell({
   /** The configured logo (already checked on the server); the GrantsNow logo when absent. */
   logo?: string;
   navigation: React.ReactNode;
+  guide?: React.ReactNode;
   labels: ShellLabels;
   format?: FormatSettings;
 }) {
@@ -108,6 +110,7 @@ export function AppShell({
                   )}
                 </Link>
                 <div className="header-end">
+                  {guide}
                   <Link
                     id="shell-help"
                     className="header-icon"

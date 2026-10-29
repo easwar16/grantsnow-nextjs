@@ -28,6 +28,7 @@
     "@tanstack/react-virtual": "3.14.13",
     "dompurify": "3.4.17",
     "downshift": "9.4.0",
+    "driver.js": "1.10.2",
     "echarts": "6.1.0",
     "exceljs": "4.4.0",
     "iron-session": "9.0.1",
