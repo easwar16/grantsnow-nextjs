@@ -121,7 +121,14 @@ export function Skeleton({
     </div>
   );
 }
-export function RecordSkeleton({
+/**
+ * Which skeleton where (owner, 2026-10-29): a placeholder has the shape of what replaces it.
+ * - A listing page (`(list)/loading.tsx`): `ListingSkeleton`. A list of record rows or cards: `ListSkeleton`.
+ * - A record page above its layout (`(record)/loading.tsx`): `DetailSkeleton` (header, tabs, fields).
+ * - A record's tab or section: the shape of its content: `FormSkeleton` (fields), `TableSkeleton`, `ChartSkeleton`,
+ *   `KpiSkeleton`, `ListSkeleton`.
+ */
+export function ListSkeleton({
   label = "Loading records",
   rows = 3,
   variant = "attention",
@@ -164,6 +171,40 @@ export function KpiSkeleton() {
     </section>
   );
 }
+function FieldBones({ count = 8 }: { count?: number }) {
+  return (
+    <div className="summary-grid">
+      {range(count).map((i) => (
+        <div className="summary-field" key={i}>
+          <span className="skeleton skeleton-reference" />
+          <span className="skeleton skeleton-title" />
+        </div>
+      ))}
+    </div>
+  );
+}
+/** A form or read-only section: label-value pairs in the form's grid. */
+export function FormSkeleton({
+  label = "Loading details",
+  fields = 8,
+}: {
+  label?: string;
+  fields?: number;
+}) {
+  return (
+    <section
+      className="skeleton-host"
+      role="status"
+      aria-busy="true"
+      aria-label={label}
+    >
+      <span className="sr-only">{label}</span>
+      <div aria-hidden="true">
+        <FieldBones count={fields} />
+      </div>
+    </section>
+  );
+}
 export function DetailSkeleton({
   label = "Loading record details",
 }: {
@@ -187,14 +228,7 @@ export function DetailSkeleton({
             <span className="skeleton skeleton-reference" />
           </nav>
           <div className="summary-panel">
-            <div className="summary-grid">
-              {range(8).map((i) => (
-                <div className="summary-field" key={i}>
-                  <span className="skeleton skeleton-reference" />
-                  <span className="skeleton skeleton-title" />
-                </div>
-              ))}
-            </div>
+            <FieldBones />
           </div>
         </div>
       </div>
@@ -215,7 +249,7 @@ export function HomeSkeleton() {
         <span className="skeleton" />
         <span className="skeleton" />
       </div>
-      <RecordSkeleton label="Loading dashboard" />
+      <ListSkeleton label="Loading dashboard" />
     </div>
   );
 }
@@ -235,7 +269,7 @@ export function ListingSkeleton({
         <div className="skeleton-toolbar" aria-hidden="true">
           <span className="skeleton" />
         </div>
-        <RecordSkeleton label={label} rows={5} />
+        <ListSkeleton label={label} rows={5} />
       </div>
     </div>
   );

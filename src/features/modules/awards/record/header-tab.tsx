@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Select } from "@/components/ui/select";
 import { DateInput } from "@/components/ui/date-input";
-import { Icon } from "@/components/ui/icon";
+import { DataTable } from "@/components/ui/data-table";
 import { HelpButton } from "@/components/ui/help-button";
 import { InsideField } from "@/components/ui/inside-field";
 import { ReadonlyField } from "@/components/ui/readonly-field";
@@ -137,7 +137,8 @@ export function HeaderTab({
   const field = (k: HeaderField) => {
     if (!f[k].show) return null;
     const id = `award-header-${functions.ids.idPart(k)}`;
-    if (!editing)
+    // A field that cannot be edited reads as label and value while the rest of the form is editing too.
+    if (!editable(k))
       return (
         <ReadonlyField key={k} id={id} label={f[k].label} value={shown(k)} />
       );
@@ -163,7 +164,6 @@ export function HeaderTab({
           label={f[k].label}
           options={view.choices[list]}
           value={values[k]}
-          disabled={!editable(k)}
           invalid={invalid}
           onChange={set(k)}
         />,
@@ -174,7 +174,6 @@ export function HeaderTab({
         <DateInput
           id={id}
           value={values[k]}
-          disabled={!editable(k)}
           invalid={invalid}
           onChange={set(k)}
         />,
@@ -187,7 +186,6 @@ export function HeaderTab({
         step={k === "period" ? 1 : undefined}
         value={values[k]}
         maxLength={f[k].maxLength}
-        readOnly={!editable(k)}
         aria-invalid={invalid || undefined}
         onChange={(e) => set(k)(e.target.value)}
       />,
@@ -226,60 +224,49 @@ export function HeaderTab({
         hideEmpty
       />
       <section id="award-header-periods" aria-label={view.texts.periodsTitle}>
-        <div className="gn-table-scroll" data-height="short">
-          <table className="gn-table">
-            <thead>
-              <tr>
-                <th scope="col">{view.periodFields.start.label}</th>
-                <th scope="col">{view.periodFields.end.label}</th>
-                <th scope="col">{view.periodFields.amount.label}</th>
-                <th scope="col">
-                  <span className="sr-only">{view.texts.edit}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {view.periods.map((p) => (
-                <tr
-                  key={p.key}
-                  id={`award-header-period-${functions.ids.idPart(p.key)}`}
-                >
-                  <td>{functions.format.dateDisplay(p.start, format)}</td>
-                  <td>{functions.format.dateDisplay(p.end, format)}</td>
-                  <td>
-                    {p.amount === ""
-                      ? ""
-                      : functions.format.moneyDisplay(
-                          p.amount,
-                          format?.currency,
-                          format,
-                        )}
-                  </td>
-                  <td>
-                    <button
-                      type="button"
-                      id={`award-header-period-${functions.ids.idPart(p.key)}-edit`}
-                      className="gn-btn gn-btn--borderless gn-btn--icon"
-                      aria-label={view.texts.edit}
-                      title={view.texts.edit}
-                      disabled={!view.canEditPeriods || !p.editable}
-                      onClick={() => setPeriod(p)}
-                    >
-                      <Icon name="edit" size={14} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {view.periods.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="gn-table-empty">
-                    {view.texts.noPeriods}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          id="award-header-periods-table"
+          rowIds="award-header-period"
+          height="short"
+          columns={[
+            {
+              id: "start",
+              header: view.periodFields.start.label,
+              cell: (p) => functions.format.dateDisplay(p.start, format),
+            },
+            {
+              id: "end",
+              header: view.periodFields.end.label,
+              cell: (p) => functions.format.dateDisplay(p.end, format),
+            },
+            {
+              id: "amount",
+              header: view.periodFields.amount.label,
+              cell: (p) =>
+                p.amount === ""
+                  ? ""
+                  : functions.format.moneyDisplay(
+                      p.amount,
+                      format?.currency,
+                      format,
+                    ),
+            },
+          ]}
+          rows={view.periods}
+          rowKey={(p) => p.key}
+          actions={[
+            {
+              id: "edit",
+              icon: "edit",
+              size: 14,
+              label: () => view.texts.edit,
+              disabled: (p) => !view.canEditPeriods || !p.editable,
+              onClick: setPeriod,
+            },
+          ]}
+          actionsLabel={view.texts.edit}
+          empty={view.texts.noPeriods}
+        />
       </section>
       {period && (
         <PeriodDialog

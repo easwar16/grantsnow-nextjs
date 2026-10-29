@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { State } from "@/components/feedback/state";
 import { Skeleton } from "@/components/feedback/skeleton";
 import { LocalTime } from "@/components/ui/local-time";
+import { DataTable } from "@/components/ui/data-table";
 import { useToast } from "@/components/feedback/toast";
 import { HelpButton } from "@/components/ui/help-button";
 import { Icon } from "@/components/ui/icon";
@@ -578,36 +579,34 @@ function ApprovalHistory({
         </ol>
       ) : (
         <div className={`gn-table-scroll ${styles.tableWrap}`}>
-          <table id={`${id}-history-table`} className="gn-table">
-            <thead>
-              <tr>
-                <th scope="col">{texts.historyName}</th>
-                <th scope="col">{texts.historyStatus}</th>
-                <th scope="col">{texts.historyStage}</th>
-                <th scope="col">{texts.historyComments}</th>
-                <th scope="col">{texts.historyUpdated}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.rows.map((row) => (
-                <tr
-                  key={row.id}
-                  id={`${id}-history-${functions.ids.idPart(row.id)}`}
-                  className="enter-rise"
-                >
-                  <td>{row.name}</td>
-                  <td>{row.status}</td>
-                  <td>{row.stage}</td>
-                  <td className={styles.comment} title={row.comments}>
-                    {row.comments}
-                  </td>
-                  <td>
-                    <LocalTime value={row.updated} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable
+            id={`${id}-history-table`}
+            rowIds={`${id}-history`}
+            columns={[
+              { id: "name", header: texts.historyName, cell: (r) => r.name },
+              {
+                id: "status",
+                header: texts.historyStatus,
+                cell: (r) => r.status,
+              },
+              { id: "stage", header: texts.historyStage, cell: (r) => r.stage },
+              {
+                id: "comments",
+                header: texts.historyComments,
+                // The ellipsis gets its full-text tooltip from the shell's TruncatedTitles.
+                className: styles.comment,
+                cell: (r) => r.comments,
+              },
+              {
+                id: "updated",
+                header: texts.historyUpdated,
+                cell: (r) => <LocalTime value={r.updated} />,
+              },
+            ]}
+            rows={history.rows}
+            rowKey={(r) => r.id}
+            rowClassName={() => "enter-rise"}
+          />
         </div>
       )}
     </details>

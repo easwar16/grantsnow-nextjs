@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { TableSkeleton } from "@/components/feedback/skeleton";
 import { State } from "@/components/feedback/state";
-import { Icon } from "@/components/ui/icon";
+import { DataTable } from "@/components/ui/data-table";
 import { useActionFailure } from "@/components/dialog/action-failure";
 import { useStoreApi } from "@/lib/store/app-store";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
@@ -121,54 +121,56 @@ export function FxRates({
         <p id={`${id}-empty`}>{texts.noData}</p>
       ) : (
         <div className={`gn-table-scroll ${styles.scroll}`}>
-          <table id={`${id}-table`} className={`gn-table ${styles.table}`}>
-            <thead>
-              <tr>
-                <th scope="col">{texts.currency}</th>
-                <th scope="col">{texts.cost}</th>
-                <th scope="col">{texts.price}</th>
-                {editable && (
-                  <th scope="col" className={styles.actions}>
-                    <span className="sr-only">{texts.reset}</span>
-                  </th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr
-                  key={r.currency}
-                  id={`${id}-${functions.ids.idPart(r.currency)}`}
-                >
-                  <td>
+          <DataTable
+            id={`${id}-table`}
+            rowIds={id}
+            className={styles.table}
+            columns={[
+              {
+                id: "currency",
+                header: texts.currency,
+                cell: (r) => (
+                  <>
                     {r.name}
                     {r.status !== ADMIN_DEFAULT && (
                       <span className={styles.dot} title={texts.edited}>
                         <span className="sr-only">{texts.edited}</span>
                       </span>
                     )}
-                  </td>
-                  <td>{cell(r.currency, "cost", r.cost, texts.cost)}</td>
-                  <td>{cell(r.currency, "price", r.price, texts.price)}</td>
-                  {editable && (
-                    <td className={styles.actions}>
-                      <button
-                        type="button"
-                        id={`${id}-${functions.ids.idPart(r.currency)}-reset`}
-                        className="gn-btn gn-btn--borderless gn-btn--icon"
-                        title={texts.reset}
-                        aria-label={`${texts.reset} ${r.currency}`}
-                        disabled={saving}
-                        onClick={() => reset(r.currency)}
-                      >
-                        <Icon name="reset" size={14} />
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </>
+                ),
+              },
+              {
+                id: "cost",
+                header: texts.cost,
+                cell: (r) => cell(r.currency, "cost", r.cost, texts.cost),
+              },
+              {
+                id: "price",
+                header: texts.price,
+                cell: (r) => cell(r.currency, "price", r.price, texts.price),
+              },
+            ]}
+            rows={rows}
+            rowKey={(r) => r.currency}
+            actions={
+              editable
+                ? [
+                    {
+                      id: "reset",
+                      icon: "reset",
+                      size: 14,
+                      label: (r) => `${texts.reset} ${r.currency}`,
+                      title: texts.reset,
+                      disabled: () => saving,
+                      onClick: (r) => reset(r.currency),
+                    },
+                  ]
+                : []
+            }
+            actionsLabel={texts.reset}
+            actionsClassName={styles.actions}
+          />
         </div>
       )}
       {editable && (

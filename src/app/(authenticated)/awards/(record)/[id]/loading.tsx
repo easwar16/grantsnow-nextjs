@@ -1,4 +1,4 @@
-import { RecordSkeleton } from "@/components/feedback/skeleton";
+import { FormSkeleton } from "@/components/feedback/skeleton";
 export default function Loading() {
-  return <RecordSkeleton label="Loading award" />;
+  return <FormSkeleton label="Loading award" />;
 }

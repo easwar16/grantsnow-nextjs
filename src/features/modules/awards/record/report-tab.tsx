@@ -1,13 +1,24 @@
 "use client";
-import { Fragment, useState } from "react";
-import { Icon } from "@/components/ui/icon";
+import { DataTable } from "@/components/ui/data-table";
 import { InsightChart } from "@/features/modules/home/components/insight-chart";
 import { type FormatSettings } from "@/lib/format";
-import { reportTotals, type ReportView } from "./report-model";
+import {
+  reportTotals,
+  type ReportMonth,
+  type ReportView,
+} from "./report-model";
 import styles from "./tabs.module.css";
 import { functions } from "@/lib/functions";
 
 const YEAR_COLUMNS = ["budget", "actual", "variance", "forecast"] as const;
+/** A funding header (with `head`) or one of its lines, as the monthly tree's rows. */
+type MonthRow = {
+  id: string;
+  name: string;
+  head?: ReportMonth;
+  parent?: string;
+  values?: Record<string, number>;
+};
 
 /** The Project Report tab (legacy awards-report): totals, the yearly chart and table, and actuals by month. */
 export function ReportTab({
@@ -18,13 +29,7 @@ export function ReportTab({
   format?: FormatSettings & { currency?: string };
 }) {
   const t = view.texts;
-  const [closed, setClosed] = useState<ReadonlySet<string>>(new Set());
-  const toggle = (key: string) =>
-    setClosed((c) => {
-      const next = new Set(c);
-      if (!next.delete(key)) next.add(key);
-      return next;
-    });
+  const months = view.months.columns.length;
   const money = (v: number) =>
     functions.format.moneyDisplay(String(v), format?.currency, format);
   if (view.project === null)
@@ -77,115 +82,75 @@ export function ReportTab({
         </section>
         <section id="award-report-years" className={styles.tile}>
           <h2>{t.table}</h2>
-          <table className="gn-table">
-            <thead>
-              <tr>
-                <th scope="col">{t.costPeriod}</th>
-                {YEAR_COLUMNS.map((k) => (
-                  <th key={k} scope="col" className={styles.number}>
-                    {t[k]}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {view.years.map((y) => (
-                <tr key={y.cost_period}>
-                  <td>{y.cost_period}</td>
-                  {YEAR_COLUMNS.map((k) => (
-                    <td key={k} className={styles.number}>
-                      {money(y[k])}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td>
-                  <strong>{t.total}</strong>
-                </td>
-                {YEAR_COLUMNS.map((k) => (
-                  <td key={k} className={styles.number}>
-                    <strong>{money(totals[k])}</strong>
-                  </td>
-                ))}
-              </tr>
-            </tfoot>
-          </table>
+          <DataTable
+            id="award-report-years-table"
+            columns={[
+              {
+                id: "period",
+                header: t.costPeriod,
+                cell: (y) => y.cost_period,
+                footer: <strong>{t.total}</strong>,
+              },
+              ...YEAR_COLUMNS.map((k) => ({
+                id: k,
+                header: t[k],
+                align: "end" as const,
+                cell: (y: ReportView["years"][number]) => money(y[k]),
+                footer: <strong>{money(totals[k])}</strong>,
+              })),
+            ]}
+            rows={view.years}
+            rowKey={(y) => String(y.cost_period)}
+          />
         </section>
       </div>
       <section id="award-report-months" className={styles.periods}>
         <h2>{t.monthly}</h2>
-        <div className="gn-table-scroll">
-          <table className="gn-table">
-            <thead>
-              <tr>
-                <th scope="col">{t.name}</th>
-                {view.months.columns.map((c) => (
-                  <th key={c.key} scope="col" className={styles.number}>
-                    {c.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {view.months.rows.map((h) => (
-                <Fragment key={h.id}>
-                  {/* Legacy tMonthlySplit depth 0: expander and name over all but the last two columns, which hold the total. */}
-                  <tr
-                    id={`award-report-month-${functions.ids.idPart(String(h.id))}`}
-                  >
-                    <th
-                      scope="row"
-                      colSpan={Math.max(view.months.columns.length - 1, 1)}
-                    >
-                      <span className={styles.node}>
-                        <button
-                          type="button"
-                          id={`award-report-month-${functions.ids.idPart(String(h.id))}-toggle`}
-                          className={styles.expander}
-                          aria-expanded={!closed.has(String(h.id))}
-                          aria-label={h.name}
-                          onClick={() => toggle(String(h.id))}
-                        >
-                          <Icon name="caret-down" size={14} />
-                        </button>
-                        <span className={styles.nodeName}>{h.name}</span>
-                      </span>
-                    </th>
-                    <td
-                      colSpan={2}
-                      className={`${styles.number} ${styles.strong}`}
-                    >
-                      {money(h.total)}
-                    </td>
-                  </tr>
-                  {(closed.has(String(h.id)) ? [] : h.children).map((c) => (
-                    <tr key={c.id}>
-                      <td>{c.name}</td>
-                      {view.months.columns.map((col) => (
-                        <td key={col.key} className={styles.number}>
-                          {money(c.values[col.key] ?? 0)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </Fragment>
-              ))}
-              {view.months.rows.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={view.months.columns.length + 1}
-                    className="gn-table-empty"
-                  >
-                    {t.noData}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable<MonthRow>
+          id="award-report-months-table"
+          rowIds="award-report-month"
+          height="default"
+          rows={view.months.rows.map((m) => ({
+            head: m,
+            id: m.id,
+            name: m.name,
+          }))}
+          rowKey={(r) => (r.head ? r.id : `${r.parent}-${r.id}`)}
+          childrenOf={(r) =>
+            r.head?.children.map((c) => ({ ...c, parent: r.id }))
+          }
+          rowLabel={(r) => r.name}
+          columns={[
+            {
+              id: "name",
+              header: t.name,
+              // Legacy tMonthlySplit depth 0: the name over all but the last two columns, which hold the total.
+              span: (r) => (r.head ? Math.max(months - 1, 1) : 1),
+              cell: (r) =>
+                r.head ? (
+                  <span className={styles.nodeName}>{r.name}</span>
+                ) : (
+                  r.name
+                ),
+            },
+            ...view.months.columns.map((col, i) => ({
+              id: col.key,
+              header: col.label,
+              className: styles.number,
+              span: (r: MonthRow) =>
+                r.head && i === Math.max(months - 2, 0)
+                  ? Math.min(2, months - i)
+                  : 1,
+              cell: (r: MonthRow) =>
+                r.head ? (
+                  <strong>{money(r.head.total)}</strong>
+                ) : (
+                  money(r.values?.[col.key] ?? 0)
+                ),
+            })),
+          ]}
+          empty={t.noData}
+        />
       </section>
     </div>
   );

@@ -1274,3 +1274,46 @@ test("Award record Projects: inner tabs, cost tree, the cost dialog's periods an
   await page.locator("#award-projects-tab-team").click();
   await expect(page.locator("#award-team-61")).toContainText("Alex Morgan");
 });
+test("Guided learning: the Dashboard tour starts once, steps, closes, and a single guide runs from the menu", async ({
+  page,
+}) => {
+  // Every guide is finished by the file's beforeEach; this journey unfinishes the Dashboard tour.
+  // Init scripts run on every load: unfinish it on the first Home load only (after sign-in), so the reload below sees
+  // it finished.
+  await page.addInitScript(() => {
+    if (
+      location.pathname !== "/home" ||
+      sessionStorage.getItem("guide-journey")
+    )
+      return;
+    sessionStorage.setItem("guide-journey", "1");
+    localStorage.removeItem("gn-guide:home-tour:v2");
+  });
+  await login(page);
+  const popover = page.locator("#driver-popover-content");
+  await expect(popover).toBeVisible({ timeout: 15000 });
+  const progress = popover.locator(".driver-popover-progress-text");
+  const first = await progress.textContent();
+  await popover.getByRole("button", { name: "Next" }).click();
+  await expect(progress).not.toHaveText(first ?? "");
+  await page.keyboard.press("Escape");
+  await expect(popover).toBeHidden();
+  expect(
+    await page.evaluate(() => localStorage.getItem("gn-guide:home-tour:v2")),
+  ).toBe("Y");
+  // Finished, it does not start again on the next visit.
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Example Research University" }),
+  ).toBeVisible();
+  await page.waitForTimeout(1500);
+  await expect(popover).toBeHidden();
+  // A single guide from the header menu.
+  await page.locator("#guide-menu-button").click();
+  await page.locator("#guide-menu-home-toggle").click();
+  await page.locator("#guide-menu-home-organization").click();
+  await expect(popover).toBeVisible({ timeout: 15000 });
+  await expect(popover).toContainText("Pick an organisation");
+  await page.keyboard.press("Escape");
+  await expect(popover).toBeHidden();
+});

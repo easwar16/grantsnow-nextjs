@@ -1,7 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Icon } from "@/components/ui/icon";
+import { DataTable } from "@/components/ui/data-table";
 import { InsideField } from "@/components/ui/inside-field";
 import { ActionDialog } from "@/components/dialog/action-dialog";
 import { useActionFailure } from "@/components/dialog/action-failure";
@@ -11,7 +11,6 @@ import { type FormatSettings } from "@/lib/format";
 import type { CreditRow, CreditView } from "./credit-types";
 import dialog from "@/components/dialog/dialog.module.css";
 import styles from "./tabs.module.css";
-import { functions } from "@/lib/functions";
 
 const percent = (n: number, decimals?: number | null) =>
   `${(n * 100).toFixed(decimals ?? 2)}%`;
@@ -33,63 +32,42 @@ export function CreditTab({
     [, startTransition] = useTransition();
   return (
     <div id="award-record-credit-allocation" className={styles.tab}>
-      <div className="gn-table-scroll" data-height="short">
-        <table id="award-credit-table" className="gn-table">
-          <thead>
-            <tr>
-              <th scope="col">{t.person}</th>
-              <th scope="col">{t.role}</th>
-              <th scope="col" className={styles.number}>
-                {t.credit}
-              </th>
-              <th scope="col" className={styles.number}>
-                {t.effort}
-              </th>
-              <th scope="col">
-                <span className="sr-only">{t.edit}</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {view.rows.map((r) => (
-              <tr key={r.id} id={`award-credit-${functions.ids.idPart(r.id)}`}>
-                <td>{r.person}</td>
-                <td>{r.role}</td>
-                <td className={styles.number}>
-                  {percent(r.credit, format?.decimals)}
-                </td>
-                <td className={styles.number}>
-                  {percent(r.effort, format?.decimals)}
-                </td>
-                <td>
-                  <button
-                    type="button"
-                    id={`award-credit-${functions.ids.idPart(r.id)}-edit`}
-                    className="gn-btn gn-btn--borderless gn-btn--icon"
-                    aria-label={`${t.edit} ${r.person}`}
-                    title={t.edit}
-                    disabled={!view.canEdit}
-                    onClick={() => setEditing(r)}
-                  >
-                    <Icon name="edit" size={14} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {view.rows.length === 0 && (
-              <tr>
-                <td
-                  id="award-credit-empty"
-                  colSpan={5}
-                  className="gn-table-empty"
-                >
-                  {t.noData}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        id="award-credit-table"
+        rowIds="award-credit"
+        height="short"
+        columns={[
+          { id: "person", header: t.person, cell: (r) => r.person },
+          { id: "role", header: t.role, cell: (r) => r.role },
+          {
+            id: "credit",
+            header: t.credit,
+            className: styles.number,
+            cell: (r) => percent(r.credit, format?.decimals),
+          },
+          {
+            id: "effort",
+            header: t.effort,
+            className: styles.number,
+            cell: (r) => percent(r.effort, format?.decimals),
+          },
+        ]}
+        rows={view.rows}
+        rowKey={(r) => r.id}
+        actions={[
+          {
+            id: "edit",
+            icon: "edit",
+            size: 14,
+            label: (r) => `${t.edit} ${r.person}`,
+            title: t.edit,
+            disabled: () => !view.canEdit,
+            onClick: setEditing,
+          },
+        ]}
+        actionsLabel={t.edit}
+        empty={t.noData}
+      />
       {editing && (
         <CreditDialog
           view={view}

@@ -2,7 +2,7 @@
 import { useMemo, useRef, useState } from "react";
 import { InsightChart } from "./insight-chart";
 import { State } from "@/components/feedback/state";
-import { RecordSkeleton, ChartSkeleton } from "@/components/feedback/skeleton";
+import { ListSkeleton, ChartSkeleton } from "@/components/feedback/skeleton";
 import { useToast } from "@/components/feedback/toast";
 import { Icon } from "@/components/ui/icon";
 import { ActionMenu } from "@/components/ui/action-menu";
@@ -98,7 +98,7 @@ export function NotificationsPanel({ format }: { format?: FormatSettings }) {
         ))}
         {loading && (
           <li className="list-skeleton">
-            <RecordSkeleton
+            <ListSkeleton
               label="Loading notifications"
               rows={rows.length ? 1 : 4}
             />
@@ -152,7 +152,7 @@ export function FeaturedPanel({ format }: { format?: FormatSettings }) {
         ))}
         {loading && (
           <li className="list-skeleton">
-            <RecordSkeleton
+            <ListSkeleton
               variant="opportunity"
               label="Loading featured opportunities"
               rows={rows.length ? 1 : 3}

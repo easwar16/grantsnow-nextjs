@@ -9,6 +9,7 @@ import { ActionDialog } from "@/components/dialog/action-dialog";
 import { awards, useApi } from "@/lib/api";
 import { conditionSchema, type AwardCondition } from "./schema";
 import styles from "./award-list.module.css";
+import { DataTable } from "@/components/ui/data-table";
 import dialog from "@/components/dialog/dialog.module.css";
 
 const BLANK = { attribute: "", op: "", value: "" };
@@ -142,58 +143,51 @@ export function AdvancedQuery({
             {s.texts.add}
           </button>
           {conditions.length > 0 && (
-            <table
+            <DataTable
               id="awards-advanced-conditions"
-              className={`gn-table ${styles.conditions}`}
-            >
-              <thead>
-                <tr>
-                  <th scope="col">{s.texts.attribute}</th>
-                  <th scope="col">{s.texts.operator}</th>
-                  <th scope="col">{s.texts.value}</th>
-                  <th scope="col">
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {conditions.map((c, i) => (
-                  <tr key={i} id={`awards-advanced-condition-${i}`}>
-                    <td>{labelOf(s.attributes, c.attribute)}</td>
-                    <td>{labelOf(s.operators, c.op)}</td>
-                    <td>{c.value}</td>
-                    <td className={styles.conditionActions}>
-                      <button
-                        type="button"
-                        id={`awards-advanced-condition-${i}-edit`}
-                        className="gn-btn gn-btn--borderless gn-btn--icon"
-                        aria-label={s.texts.edit}
-                        title={s.texts.edit}
-                        disabled={editing !== null}
-                        onClick={() =>
-                          setEditing({ index: i, draft: { ...c } })
-                        }
-                      >
-                        <Icon name="pen" size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        id={`awards-advanced-condition-${i}-delete`}
-                        className="gn-btn gn-btn--borderless gn-btn--icon"
-                        aria-label={s.texts.remove}
-                        title={s.texts.remove}
-                        disabled={editing !== null}
-                        onClick={() =>
-                          onChange(conditions.filter((_, j) => j !== i))
-                        }
-                      >
-                        <Icon name="trash" size={14} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              rowIds="awards-advanced-condition"
+              className={styles.conditions}
+              columns={[
+                {
+                  id: "attribute",
+                  header: s.texts.attribute,
+                  cell: ({ c }) => labelOf(s.attributes, c.attribute),
+                },
+                {
+                  id: "operator",
+                  header: s.texts.operator,
+                  cell: ({ c }) => labelOf(s.operators, c.op),
+                },
+                {
+                  id: "value",
+                  header: s.texts.value,
+                  cell: ({ c }) => c.value,
+                },
+              ]}
+              rows={conditions.map((c, i) => ({ c, i }))}
+              rowKey={(r) => String(r.i)}
+              actions={[
+                {
+                  id: "edit",
+                  icon: "pen",
+                  size: 14,
+                  label: () => s.texts.edit,
+                  disabled: () => editing !== null,
+                  onClick: ({ c, i }) =>
+                    setEditing({ index: i, draft: { ...c } }),
+                },
+                {
+                  id: "delete",
+                  icon: "trash",
+                  size: 14,
+                  label: () => s.texts.remove,
+                  disabled: () => editing !== null,
+                  onClick: ({ i }) =>
+                    onChange(conditions.filter((_, j) => j !== i)),
+                },
+              ]}
+              actionsClassName={styles.conditionActions}
+            />
           )}
           {editing && (
             <ActionDialog

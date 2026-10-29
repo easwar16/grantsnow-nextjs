@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { State } from "@/components/feedback/state";
 import { Skeleton } from "@/components/feedback/skeleton";
-import { Icon } from "@/components/ui/icon";
+import { DataTable } from "@/components/ui/data-table";
 import { InsideField } from "@/components/ui/inside-field";
 import { RichText } from "@/components/ui/rich-text";
 import { Select } from "@/components/ui/select";
@@ -172,115 +172,100 @@ export function ApproversDialog({
         <State id={`${id}-empty`} title={texts.noData} />
       ) : (
         <div className={`gn-table-scroll ${styles.tableWrap}`}>
-          <table id={`${id}-table`} className="gn-table">
-            <thead>
-              <tr>
-                <th scope="col">{texts.userName}</th>
-                <th scope="col">{texts.userEmail}</th>
-                <th scope="col">{texts.userStatus}</th>
-                <th scope="col">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.data.users.map((user) => {
-                const row = `${id}-user-${functions.ids.idPart(user.id)}`,
-                  edit = editing === user.id;
-                return (
-                  <tr key={user.id} id={row}>
-                    <td>
-                      {edit ? (
-                        <InsideField
-                          htmlFor={`${row}-new-trigger`}
-                          label={texts.newApprover}
-                          filled={replacement !== ""}
-                        >
-                          <Select
-                            id={`${row}-new`}
-                            label={texts.newApprover}
-                            options={options}
-                            value={replacement}
-                            disabled={busy || people.data === undefined}
-                            onChange={setReplacement}
-                          />
-                        </InsideField>
-                      ) : (
-                        user.name
-                      )}
-                    </td>
-                    <td>{user.id}</td>
-                    <td>{user.status}</td>
-                    <td className={styles.rowActions}>
-                      {gates?.change &&
-                        user.status === "Pending" &&
-                        (edit ? (
-                          <button
-                            type="button"
-                            id={`${row}-save`}
-                            className="gn-btn gn-btn--icon"
-                            aria-label={texts.save}
-                            title={texts.save}
-                            disabled={busy || replacement === ""}
-                            onClick={async () => {
-                              if (
-                                await write("approvers", {
-                                  op: "change-approver",
-                                  stageId: stage.id,
-                                  current: user.id,
-                                  personId: replacement,
-                                })
-                              )
-                                setEditing(null);
-                            }}
-                          >
-                            <Icon name="save" size={14} />
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            id={`${row}-change`}
-                            className="gn-btn gn-btn--icon"
-                            aria-label={texts.changeApprover}
-                            title={texts.changeApprover}
-                            disabled={busy}
-                            onClick={() => {
-                              setReplacement("");
-                              setEditing(user.id);
-                            }}
-                          >
-                            <Icon name="pen" size={14} />
-                          </button>
-                        ))}
-                      {gates?.remove && !edit && (
-                        <button
-                          type="button"
-                          id={`${row}-remove`}
-                          className="gn-btn gn-btn--icon"
-                          aria-label={texts.removeApprover}
-                          title={texts.removeApprover}
-                          disabled={busy}
-                          onClick={() =>
-                            void write(
-                              "approvers",
-                              {
-                                op: "remove-approver",
-                                stageId: stage.id,
-                                user: user.id,
-                              },
-                              "SUCCESS",
-                            )
-                          }
-                        >
-                          <Icon name="close" size={14} />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <DataTable
+            id={`${id}-table`}
+            rowIds={`${id}-user`}
+            columns={[
+              {
+                id: "name",
+                header: texts.userName,
+                cell: (user) =>
+                  editing === user.id ? (
+                    <InsideField
+                      htmlFor={`${id}-user-${functions.ids.idPart(user.id)}-new-trigger`}
+                      label={texts.newApprover}
+                      filled={replacement !== ""}
+                    >
+                      <Select
+                        id={`${id}-user-${functions.ids.idPart(user.id)}-new`}
+                        label={texts.newApprover}
+                        options={options}
+                        value={replacement}
+                        disabled={busy || people.data === undefined}
+                        onChange={setReplacement}
+                      />
+                    </InsideField>
+                  ) : (
+                    user.name
+                  ),
+              },
+              { id: "email", header: texts.userEmail, cell: (user) => user.id },
+              {
+                id: "status",
+                header: texts.userStatus,
+                cell: (user) => user.status,
+              },
+            ]}
+            rows={users.data.users}
+            rowKey={(user) => user.id}
+            actions={[
+              {
+                id: "save",
+                icon: "save",
+                size: 14,
+                className: "gn-btn gn-btn--icon",
+                label: () => texts.save,
+                hidden: (user) =>
+                  !gates?.change ||
+                  user.status !== "Pending" ||
+                  editing !== user.id,
+                disabled: () => busy || replacement === "",
+                onClick: async (user) => {
+                  if (
+                    await write("approvers", {
+                      op: "change-approver",
+                      stageId: stage.id,
+                      current: user.id,
+                      personId: replacement,
+                    })
+                  )
+                    setEditing(null);
+                },
+              },
+              {
+                id: "change",
+                icon: "pen",
+                size: 14,
+                className: "gn-btn gn-btn--icon",
+                label: () => texts.changeApprover,
+                hidden: (user) =>
+                  !gates?.change ||
+                  user.status !== "Pending" ||
+                  editing === user.id,
+                disabled: () => busy,
+                onClick: (user) => {
+                  setReplacement("");
+                  setEditing(user.id);
+                },
+              },
+              {
+                id: "remove",
+                icon: "close",
+                size: 14,
+                className: "gn-btn gn-btn--icon",
+                label: () => texts.removeApprover,
+                hidden: (user) => !gates?.remove || editing === user.id,
+                disabled: () => busy,
+                onClick: (user) =>
+                  void write(
+                    "approvers",
+                    { op: "remove-approver", stageId: stage.id, user: user.id },
+                    "SUCCESS",
+                  ),
+              },
+            ]}
+            actionsClassName={styles.rowActions}
+          />
         </div>
       )}
     </ActionDialog>

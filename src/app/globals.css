@@ -56,6 +56,8 @@
   --gn-dur-fast: 150ms;
   --gn-dur: 250ms;
   --gn-dur-slow: 400ms;
+  /* A pressed button's scale (owner, 2026-10-29: the old 0.97 read as bouncy); one value for every control. */
+  --gn-press-scale: 0.99;
 }
 /* This repo's names alias the GN tokens; declared on .app / .dark too so they re-resolve against the theme there. */
 :root,
@@ -243,7 +245,7 @@ button:hover,
 button:active:not(:disabled),
 .button:active,
 .gn-btn:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: scale(var(--gn-press-scale));
 }
 button:disabled,
 .gn-btn:disabled {
@@ -341,6 +343,18 @@ textarea {
   outline: none;
   border-color: var(--focus);
   box-shadow: 0 0 0 1px var(--focus);
+}
+/* A read-only control reads as a label-value pair, not a form control (owner, 2026-10-29; JET renders readonly as
+   text): no box, background or inset. Covers .gn-control and the inside-label box around one. */
+.gn-control:is(input, textarea)[readonly]:not(
+    [type="checkbox"],
+    [type="radio"]
+  ) {
+  padding-inline: 0;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  cursor: default;
 }
 /* D33 fields: a top label over its control. */
 .gn-field {
@@ -1461,6 +1475,18 @@ a.sr-only:focus {
   border-top: 1px solid var(--gn-gridline);
   border-bottom: 0;
 }
+/* Row actions (edit, delete, view…) stay at the row's end (owner, 2026-10-29): the last column, sized to its buttons,
+   pinned while the table scrolls sideways. Mark its th and every td with .gn-table-actions; the cell keeps the row's
+   own background (.gn-table) or the surface, so scrolled cells pass under it. */
+.gn-table-actions {
+  position: sticky;
+  inset-inline-end: 0;
+  z-index: 1;
+  width: 1%;
+  white-space: nowrap;
+  text-align: end;
+  background: var(--gn-surface);
+}
 /* The table's own scroller (legacy default-table-max-height 31.25rem; post-award-table-height 300px;
    scale-table-display 70vh / -55 55vh): the rows scroll under a pinned header, never the page. */
 .gn-table-scroll {
@@ -1482,7 +1508,11 @@ a.sr-only:focus {
 .gn-table-scroll .gn-table thead th {
   position: sticky;
   top: 0;
-  z-index: 1;
+  /* Above the pinned row actions as rows scroll under it; its own actions cell is the corner, above both. */
+  z-index: 2;
+}
+.gn-table-scroll .gn-table thead th.gn-table-actions {
+  z-index: 3;
 }
 .gn-table-scroll .gn-table tfoot td {
   position: sticky;
@@ -2296,16 +2326,6 @@ input[type="checkbox"][role="switch"]:disabled {
 .insight-data > summary {
   cursor: pointer;
   color: var(--muted);
-}
-.insight-data table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.insight-data td,
-.insight-data th {
-  padding: 6px;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
 }
 @media (max-width: 600px) {
   .insight-chart-host {

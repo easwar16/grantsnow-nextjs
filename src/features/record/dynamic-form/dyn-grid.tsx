@@ -1,6 +1,7 @@
 "use client";
 import { DateInput } from "@/components/ui/date-input";
 import { Icon } from "@/components/ui/icon";
+import { DataTable } from "@/components/ui/data-table";
 import { Select } from "@/components/ui/select";
 import { isGridEditable, sectionKey } from "./engine";
 import type { DynamicFormModel } from "./model";
@@ -29,6 +30,12 @@ function cellText(field: DynField, value: FieldValue): string {
  * A GRID section (port of GN-Angular dyn-grid): a table, one row edited at a time (Insert Row, Edit, Delete; Done,
  * Cancel). Columns are keyed by field id and labelled by the field's description.
  */
+/** A grid row with its position, which the row's actions and labels name. */
+type GridRow = {
+  row: Record<string, FieldValue>;
+  i: number;
+  editing: boolean;
+};
 export function DynGrid({
   id,
   model,
@@ -121,110 +128,77 @@ export function DynGrid({
         </div>
       )}
       <div className={`gn-table-scroll ${styles.tableWrap}`}>
-        <table id={`${id}-table`} className={`gn-table ${styles.table}`}>
-          <thead>
-            <tr>
-              {section.fields.map((f) => (
-                <th key={f.fieldId} scope="col">
-                  {f.description}
-                  {f.isRequired === "Y" && <span aria-hidden="true"> *</span>}
-                </th>
-              ))}
-              {editable && (
-                <th scope="col" className={styles.actionsCol}>
-                  <span className="sr-only">Actions</span>
-                </th>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td
-                  className={styles.gridEmpty}
-                  colSpan={section.fields.length + (editable ? 1 : 0)}
-                >
-                  {texts.noData}
-                </td>
-              </tr>
-            ) : (
-              rows.map((row, i) => {
-                const editing = model.isEditingRow(
-                  formId,
-                  section.sectionId,
-                  i,
-                );
-                return (
-                  <tr key={i} className={editing ? styles.editing : undefined}>
-                    {section.fields.map((f) => {
-                      const value = row[String(f.fieldId)] ?? null;
-                      return (
-                        <td key={f.fieldId}>
-                          {editing && isGridEditable(f)
-                            ? editor(f, value)
-                            : cellText(f, value)}
-                        </td>
-                      );
-                    })}
-                    {editable && (
-                      <td className={styles.actionsCol}>
-                        {editing ? (
-                          <>
-                            <button
-                              id={`${id}-done`}
-                              type="button"
-                              className="gn-btn gn-btn--borderless gn-btn--icon"
-                              title={texts.done}
-                              aria-label={texts.done}
-                              onClick={() => model.doneRow()}
-                            >
-                              <Icon name="success" size={14} />
-                            </button>
-                            <button
-                              id={`${id}-cancel`}
-                              type="button"
-                              className="gn-btn gn-btn--borderless gn-btn--icon"
-                              title={texts.cancel}
-                              aria-label={texts.cancel}
-                              onClick={() => model.cancelRow()}
-                            >
-                              <Icon name="close" size={14} />
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              type="button"
-                              className="gn-btn gn-btn--borderless gn-btn--icon"
-                              disabled={busy}
-                              title={texts.edit}
-                              aria-label={`${texts.edit} row ${i + 1}`}
-                              onClick={() => model.editRow(formId, section, i)}
-                            >
-                              <Icon name="pen" size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              className="gn-btn gn-btn--borderless gn-btn--icon"
-                              disabled={busy}
-                              title={texts.delete}
-                              aria-label={`${texts.delete} row ${i + 1}`}
-                              onClick={() =>
-                                model.deleteRow(formId, section, i)
-                              }
-                            >
-                              <Icon name="trash" size={14} />
-                            </button>
-                          </>
-                        )}
-                      </td>
-                    )}
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+        <DataTable
+          id={`${id}-table`}
+          rowIds={`${id}-row`}
+          className={styles.table}
+          columns={section.fields.map((f) => ({
+            id: String(f.fieldId),
+            header: (
+              <>
+                {f.description}
+                {f.isRequired === "Y" && <span aria-hidden="true"> *</span>}
+              </>
+            ),
+            cell: ({ row, editing }: GridRow) => {
+              const value = row[String(f.fieldId)] ?? null;
+              return editing && isGridEditable(f)
+                ? editor(f, value)
+                : cellText(f, value);
+            },
+          }))}
+          rows={rows.map((row, i) => ({
+            row,
+            i,
+            editing: model.isEditingRow(formId, section.sectionId, i),
+          }))}
+          rowKey={(r) => String(r.i)}
+          rowClassName={(r) => (r.editing ? styles.editing : undefined)}
+          actions={
+            editable
+              ? [
+                  {
+                    id: "done",
+                    icon: "success",
+                    size: 14,
+                    label: () => texts.done,
+                    hidden: (r) => !r.editing,
+                    onClick: () => model.doneRow(),
+                  },
+                  {
+                    id: "cancel",
+                    icon: "close",
+                    size: 14,
+                    label: () => texts.cancel,
+                    hidden: (r) => !r.editing,
+                    onClick: () => model.cancelRow(),
+                  },
+                  {
+                    id: "edit",
+                    icon: "pen",
+                    size: 14,
+                    label: (r) => `${texts.edit} row ${r.i + 1}`,
+                    title: texts.edit,
+                    hidden: (r) => r.editing,
+                    disabled: () => busy,
+                    onClick: (r) => model.editRow(formId, section, r.i),
+                  },
+                  {
+                    id: "delete",
+                    icon: "trash",
+                    size: 14,
+                    label: (r) => `${texts.delete} row ${r.i + 1}`,
+                    title: texts.delete,
+                    hidden: (r) => r.editing,
+                    disabled: () => busy,
+                    onClick: (r) => model.deleteRow(formId, section, r.i),
+                  },
+                ]
+              : []
+          }
+          actionsClassName={styles.actionsCol}
+          empty={texts.noData}
+        />
       </div>
       {error && (
         <span id={`${id}-error`} className={styles.error} role="alert">
