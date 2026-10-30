@@ -208,6 +208,11 @@
   flex: 0 0 calc((100% - (var(--cols) - 1) * 16px) / var(--cols));
   min-width: 0;
 }
+/* A full row inside .convert: a button or a table below the fields. */
+.wide {
+  flex: 0 0 100%;
+  min-width: 0;
+}
 fieldset.cell {
   margin: 0;
   padding: 0;

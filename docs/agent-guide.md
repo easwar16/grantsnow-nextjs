@@ -32,6 +32,17 @@ Then confirm three things before you edit anything:
 
 ## 2. Rebases, merges and conflicts
 
+- **Re-read the rules from the incoming tree, even mid-session.** A rebase, merge or pull can change `AGENTS.md`, this
+  guide, the foundations, the API layer doc and `docs/changes/`. What you read at the start of the session is out of
+  date.
+  1. When the rebase or merge stops, and before you resolve any conflict, re-read `AGENTS.md`, this guide (§2–§5 and
+     §8 onwards), `docs/grantsnow-foundations.md`, `docs/api-layer.md` and the top of `docs/progress.md`, as they are
+     on the incoming side (`git show <incoming>:<file>` while the rebase is in progress).
+  2. Read every `docs/changes/` record the incoming commits added, listed by
+     `git diff --name-only --diff-filter=A $(git merge-base ORIG_HEAD <incoming>) <incoming> -- docs/changes`,
+     plus every record that touches a file you change.
+  3. Resolve conflicts against those rules, not the ones you remember. After the rebase, read them once more from
+     the working tree, bring your own uncommitted work onto them, and run the §9 self-check before the checks below.
 - **Never resolve a conflict by taking your side wholesale.**
   - Keep both behaviours where they are compatible.
   - Where they clash, the framework and rule side wins, unless you can name the defect it causes.
@@ -50,44 +61,108 @@ Then confirm three things before you edit anything:
 
 ## 3. Reuse before you build: the house components and layers
 
-| Need                                                                                   | Use                                                                                                                                                        | Not                                                      |
-| -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| Any dropdown                                                                           | `Select` / `MultiSelect` (`components/ui`), `FormSelect` inside a plain form                                                                               | native `<select>`                                        |
-| Date field                                                                             | `DateInput`                                                                                                                                                | `<input type="date">`                                    |
-| Dialog                                                                                 | `ActionDialog`, `useConfirm` (`components/dialog`)                                                                                                         | `<dialog>` by hand, a fixed backdrop `div`               |
-| Table (flat or tree), row actions                                                      | `DataTable` (`components/ui`): `columns`, `rows`, `rowKey`, `actions`, `childrenOf`                                                                        | a hand-written `<table>`, unpinned action cells          |
-| Read-only value                                                                        | `ReadonlyField` (label and value)                                                                                                                          | a disabled or read-only control                          |
-| Loading / error / empty                                                                | the skeleton of the content's shape (`ListingSkeleton`, `DetailSkeleton`, `FormSkeleton`, `TableSkeleton`, `ListSkeleton`), `State`, toasts via `useToast` | "Loading…" text, ad-hoc error markup                     |
-| Status pill                                                                            | `StatusBadge` with a tone map                                                                                                                              | per-module chip CSS                                      |
-| Created by                                                                             | `CreatorLink` / `CreatorDialog`, `personCard` (server)                                                                                                     | a module's own creator dialog                            |
-| Timestamp in the viewer's zone                                                         | `LocalTime` (browser), `stampDisplay` / `dateTimeDisplay`                                                                                                  | formatting on the server, `Intl` with a fixed zone       |
-| Collapsible section                                                                    | `Collapsible`, `.gn-collapsible`                                                                                                                           | custom open/close state and CSS                          |
-| Listing filters                                                                        | `FilterPanel`, `FilterSection`, `StatusList`, `statusChoices` (server)                                                                                     | hard-coded status lists                                  |
-| Record page shell                                                                      | `RecordFrame`, record panels (comments, audit)                                                                                                             | a module's own header and panel wiring                   |
-| Approvals                                                                              | an `ApprovalHost` + `workflowView` / `workflowRead` + `ApprovalWorkflow`                                                                                   | a module's own route, graph or approvers reads           |
-| History, delegations, attachments, dynamic forms, linked objects, attributes, FX rates | the hosts in `src/server/record/*` and components in `src/features/record/*`                                                                               | a module copy                                            |
-| Record rights                                                                          | `objectAccessOf`, `recordRoleRows`, `finalizedOf`, `pageAccess`                                                                                            | hand-written `page_name` filters                         |
-| Oracle                                                                                 | named functions in `src/server/oracle/api/*` (`read` / `write`, allowlist in `operations.json`)                                                            | `oracle()`, a generic "read any op" passthrough          |
-| Browser to API                                                                         | `@/lib/api` endpoints + `useApi` / `usePagedApi`                                                                                                           | `fetch('/api…')`, server actions, hand-built `/api` URLs |
-| Motion                                                                                 | the presets in `@/lib/motion`, `Pop`, the CSS tokens                                                                                                       | one-off keyframes                                        |
-| Libraries                                                                              | lodash, moment, motion, downshift, the existing set in `package.json`                                                                                      | a new dependency (ask the owner first)                   |
-| App-wide constants and shared pure helpers                                             | `constants` / `serverConstants`, `functions` / `serverFunctions` (by category)                                                                             | a local copy or a module's own helper                    |
+| Need                                                                                   | Use                                                                                                                                                        | Not                                                       |
+| -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Any dropdown                                                                           | `Select` / `MultiSelect` (`components/ui`), `FormSelect` inside a plain form                                                                               | native `<select>`                                         |
+| Date field                                                                             | `DateInput`                                                                                                                                                | `<input type="date">`                                     |
+| Dialog                                                                                 | `ActionDialog`, `useConfirm` (`components/dialog`)                                                                                                         | `<dialog>` by hand, a fixed backdrop `div`                |
+| Table (flat or tree), row actions                                                      | `DataTable` (`components/ui`): `columns`, `rows`, `rowKey`, `actions`, `childrenOf`                                                                        | a hand-written `<table>`, unpinned action cells           |
+| Read-only value                                                                        | `ReadonlyField` (label and value)                                                                                                                          | a disabled or read-only control                           |
+| Loading / error / empty                                                                | the skeleton of the content's shape (`ListingSkeleton`, `DetailSkeleton`, `FormSkeleton`, `TableSkeleton`, `ListSkeleton`), `State`, toasts via `useToast` | "Loading…" text, ad-hoc error markup                      |
+| Status pill                                                                            | `StatusBadge` with a tone map                                                                                                                              | per-module chip CSS                                       |
+| Created by                                                                             | `CreatorLink` / `CreatorDialog`, `personCard` (server)                                                                                                     | a module's own creator dialog                             |
+| Timestamp in the viewer's zone                                                         | `LocalTime` (browser), `stampDisplay` / `dateTimeDisplay`                                                                                                  | formatting on the server, `Intl` with a fixed zone        |
+| Collapsible section                                                                    | `Collapsible` (owns the chevron, its rotation and the heading row; `headClassName` for size, `actions` for heading buttons)                                | a hand-written `<details>`, its own chevron or marker CSS |
+| Listing filters                                                                        | `FilterPanel`, `FilterSection`, `StatusList`, `statusChoices` (server)                                                                                     | hard-coded status lists                                   |
+| Record page shell                                                                      | `RecordFrame`, record panels (comments, audit)                                                                                                             | a module's own header and panel wiring                    |
+| Approvals                                                                              | an `ApprovalHost` + `workflowView` / `workflowRead` + `ApprovalWorkflow`                                                                                   | a module's own route, graph or approvers reads            |
+| History, delegations, attachments, dynamic forms, linked objects, attributes, FX rates | the hosts in `src/server/record/*` and components in `src/features/record/*`                                                                               | a module copy                                             |
+| Record rights                                                                          | `objectAccessOf`, `recordRoleRows`, `finalizedOf`, `pageAccess`                                                                                            | hand-written `page_name` filters                          |
+| Oracle                                                                                 | named functions in `src/server/oracle/api/*` (`read` / `write`, allowlist in `operations.json`)                                                            | `oracle()`, a generic "read any op" passthrough           |
+| Browser to API                                                                         | `@/lib/api` endpoints + `useApi` / `usePagedApi`                                                                                                           | `fetch('/api…')`, server actions, hand-built `/api` URLs  |
+| Motion                                                                                 | the presets in `@/lib/motion`, `Pop`, the CSS tokens                                                                                                       | one-off keyframes                                         |
+| Libraries                                                                              | lodash, moment, motion, downshift, the existing set in `package.json`                                                                                      | a new dependency (ask the owner first)                    |
+| App-wide constants and shared pure helpers                                             | `constants` / `serverConstants`, `functions` / `serverFunctions` (by category)                                                                             | a local copy or a module's own helper                     |
 
 When two modules need the same thing, it becomes one shared piece, and the modules differ only in data.
 
-## 4. Project structure
+## 4. Project structure (decided; follow it exactly)
 
-- **Routes** go in `src/app/(authenticated)/<module>/`. Use the `(list)` and `(record)` route groups, so that each
-  has its own `loading.tsx`. API routes go in `src/app/api/<module>/…`. Routes stay thin and call a server
-  function.
-- **Server code for a module** goes in `src/server/modules/<module>/`. It holds the module's record context, its
-  hosts for the shared fragments, and its services. Shared record features live in `src/server/record/`.
-- **Browser code for a module** goes in `src/features/modules/<module>/`. Shared record UI lives in
-  `src/features/record/`.
-- **Types and pure helpers** that both sides use go in `src/shared/<module>/`.
-- Oracle access happens only through `src/server/oracle/api/<area>.ts`.
-- **Test fixtures** live only in `src/test-support/`. They are labelled, development-only, and shaped like real
-  payloads.
+Copy the **Awards** module: it is the reference for every folder below. A module with two sub-applications (Claims:
+Unit Inquiry and Funds Inquiry) repeats the same layout once per sub-application, in a folder named after it.
+
+```text
+src/app/(authenticated)/<module>/
+  error.tsx
+  (list)/page.tsx, loading.tsx                      the listing route: reads the shell, renders <ModuleList>
+  (record)/[id]/layout.tsx, page.tsx, loading.tsx   the record route: access + context, renders the shared shell
+  (record)/[id]/[tab]/page.tsx                      one tab: reads its data, renders <TabComponent>
+src/app/api/<module>/
+  route.ts                                          the listing page (GET)
+  choices/route.ts                                  one dropdown list per `?list=`
+  actions/[action]/route.ts                         listing dialogs (GET setups, POST writes)
+  [id]/<tab or action>/route.ts                     a record's tab reads and writes
+src/server/modules/<module>/
+  listing.ts        listing view (gates, texts, statuses), filters to Oracle query, row mapping, choice lists
+  actions.ts        the listing's dialogs and writes (create, clone, link, export)
+  record.ts         record context: access, roles, RB bundle, tabs (the one place a record is authorised)
+  record/shell.ts   the shell's display model (header fields, tabs, finalize), read by the record layout
+  record/<tab>.ts   one file per tab: its reads, writes and display model
+src/features/modules/<module>/
+  listing/          the list component, its dialogs, schema.ts (filters), types.ts (display model)
+  record/           record-shell.tsx (renders RecordFrame), one <tab>-tab.tsx per tab, its dialogs and CSS
+  links.ts          the module's in-app hrefs
+src/shared/<module>/                                pure helpers and types both sides use
+src/lib/api/endpoints/<module>.ts                   the browser's endpoints for this module (one file)
+src/server/oracle/api/<area>.ts                     one named function per backend operation
+src/test-support/<module>*.ts                       labelled fixtures shaped like real payloads
+tests/unit/<module>-*.test.ts, tests/integration/<module>-*.test.ts, tests/e2e/workspace.spec.ts
+docs/changes/YYYY-MM-DD-<author>-<slug>.md          one record per change
+```
+
+- **A route folder holds only `page.tsx`, `layout.tsx`, `loading.tsx` and `error.tsx`.** Every component, hook and
+  CSS module, client or server, lives under `src/features/modules/<module>/` and the route imports it. A page reads
+  its data and renders one component; it does not hold the UI. API routes only parse the request and call one
+  `src/server/modules` function (`route` / `fileRoute`).
+- **No `components/` folder in a module** (Home, a dashboard of widgets rather than a listing and records, keeps
+  `home/components/`; it is the only exception). UI goes in `listing/` or `record/` (or the sub-application's folder).
+  Shared UI that two modules use goes in `src/components/` (house components) or `src/features/record/` (record
+  features), never copied into a module.
+- **Server code is never flat.** The listing, its actions, the record context and each tab are separate files as
+  above. A tab's service lives in `record/<tab>.ts`, not beside the listing.
+- **Names:** kebab-case files; a component file is named after its component (`unit-list.tsx` → `UnitList`); a tab
+  is `<tab>-tab.tsx` in the browser and `record/<tab>.ts` on the server.
+
+### The one request path (the framework)
+
+Every feature, read or write, goes through the same layers, in this order. Skipping or duplicating a layer is the
+mistake to avoid.
+
+1. **Page or component** (`src/app` → `src/features`): a server page awaits only its shell and streams the rest; a
+   client component calls `@/lib/api` endpoints through `useApi` / `usePagedApi` (reads) or the endpoint's write
+   function inside `useInFlight` (writes, control disabled until it settles).
+2. **Browser endpoint** (`src/lib/api/endpoints/<module>.ts`): `endpoint` / `pagedEndpoint` / `get` / `post` /
+   `download`. Never `fetch('/api…')` elsewhere.
+3. **API route** (`src/app/api/<module>/…`): `route` (JSON) or `fileRoute` (a file); `write: true` for writes
+   (same-origin check and fresh reads).
+4. **Server module** (`src/server/modules/<module>/…`): `authenticate()`, the drawer grant, RB gates and roles, input
+   validation (zod, strict), the explicit write pick, the display-model mapping. Everything the browser could forge is
+   checked here.
+5. **Oracle API function** (`src/server/oracle/api/<area>.ts`): `read` / `write` / `writeFile`, one per operation,
+   listed in `operations.json`. Identity, caching, paging and invalidation are the client's job.
+
+### The record framework
+
+Every record page (a proposal, an award, an EOI, a contract, a claims application) uses the shared record pieces.
+A module never builds its own:
+
+- **Shell:** `RecordFrame` (`src/features/record/shell`): header panel, tabs from the record context, Finalize,
+  Comments / Audit Trail, the unsaved-changes guard. The module passes data, not markup.
+- **Shared tabs:** attachments, approvals (`ApprovalHost` + `ApprovalWorkflow`), history, delegations, comments,
+  audit, dynamic forms, attributes, linked objects, FX rates: the hosts in `src/server/record/*` and the components
+  in `src/features/record/*`, mounted with the module's object type and role keys.
+- **Access:** `record.ts` computes the record's roles and tabs once (`objectAccessOf`, `pageAccess`,
+  `finalizedOf`); every tab service and route checks against it.
 
 ## 5. How to build (the short form of the rules)
 
@@ -97,7 +172,23 @@ When two modules need the same thing, it becomes one shared piece, and the modul
   - Never hard-code a list the backend configures.
 - **Every write payload is an explicit pick.** Identity, scope and the actor come from the server session. A write
   control stays disabled until its request settles.
-- **Every element gets a stable kebab-case `id`** (`<area>-<element>`, plus the record key for repeats).
+- **Every element gets a stable kebab-case `id`** (`<area>-<element>`, plus the record key for repeats): every
+  section, table, dialog, button, link and control, in new code too. Never rename an id a test or another page uses.
+- **Tables are `DataTable` from the first commit.** A hand-written `<table>` is never left as a later migration;
+  trees use `childrenOf`, totals a column `footer`, row buttons `actions`. If `DataTable` cannot show something,
+  extend it once (backwards compatible) instead of writing a table.
+- **Numbers, money, percentages and dates are formatted only by `functions.format`** (`moneyDisplay`,
+  `percentDisplay`, `dateDisplay`, …). No `Intl.*` or `toLocale*` in a module; add a helper to `functions.format`
+  when one is missing.
+- **Expandable panels are `Collapsible`** (it owns the chevron and its turn); read-only values `ReadonlyField`;
+  status chips `StatusBadge`.
+- **The shared layers name no module.** `connection.ts`, `client.ts`, `route.ts` and the shared components never
+  test an operation name or a module; fixture behaviour (which simulated write answers a body, a stub file) lives in
+  `src/test-support/`.
+- **One function per backend operation, app-wide.** Before adding one to `src/server/oracle/api/*`, search for the
+  operation name: report files are `reports.generate` (a write, behind the writes gate, as every POST), served with
+  `fileRoute` and fetched with `download` (`@/lib/api/http`); report bodies come from
+  `serverFunctions.reports.reportPayload`.
 - **Layout follows the viewport** (owner, 2026-10-26):
   - Widths and heights of layout containers are `vw` / `vh` wherever possible, and `%` / `fr` otherwise. Translate
     a measured JET grid fraction (`oj-sm-10` → `83.333%`).
@@ -184,3 +275,61 @@ Still open in Contracts (Easwar's area), to be built on the shared pieces:
 - the Summary tab's editable Contract Detail form;
 - New Contract's Create, which should mount the shared `DynamicForm`;
 - the listing's date filters (to `DateInput`).
+
+## 9. Before you finish: the self-check
+
+Run these on the files you changed and fix what they find, or write in your change record why one stays:
+
+- `grep -rn "<table\|<select\|<dialog\|<details\|type=\"date\"" src/app src/features` (only shared components
+  may hold these);
+- `grep -rln "Intl\.\|toLocale" src/app src/features src/server/modules` (formatting goes through `functions.format`);
+- route folders hold only pages and layouts:
+  `find src/app -name "*.tsx" | grep -vE "/(page|layout|loading|error|not-found)\.tsx$"` prints nothing;
+- every `<button`, `<a`, `<input`, `<DataTable` and `<ActionDialog` you added has an `id`;
+- the module follows §4: `find src/features/modules -type d -name components` prints only `home/components`; the module's server
+  folder has `listing.ts`, `actions.ts`, `record.ts` and `record/` (no tab service beside them); its browser folder
+  has `listing/` and `record/`;
+- every record page renders through `RecordFrame` and the shared hosts. Both commands print nothing:
+  `for f in $(find "src/app/(authenticated)" -path "*(record)*" -name layout.tsx); do grep -q record-shell "$f" || echo "$f"; done`
+  and `grep -L RecordFrame $(find src/features/modules -name record-shell.tsx)`; no module has its own tabs bar,
+  comments or audit drawer, approvals graph or attachments panel;
+- each new feature goes page → `@/lib/api` endpoint → API route (`route` / `fileRoute`) → `src/server/modules` →
+  `src/server/oracle/api`, with no layer skipped or duplicated;
+- `grep -nE '"(get|post|put|delete)[A-Z][A-Za-z_]+"' src/server/oracle/connection.ts src/server/oracle/client.ts`
+  shows no operation name except the session bootstrap guard (`getSessionLogin`);
+- then typecheck, lint, tests, the isolated build and `npm run test:e2e` (§2).
+
+## 10. What was corrected on 2026-10-30 (Proposals merge `aec5020`), and why
+
+Brought onto the framework by the owner; do not reintroduce:
+
+- **About 5,900 lines of Proposal record UI inside the route folders.** Moved to
+  `src/features/modules/proposals/record/`, routes in `(list)` / `(record)` groups. Why: §4.
+- **13 hand-written `<table>`s.** Replaced by `DataTable`. Why: §3, and "migrate later" never comes.
+- **Buttons without ids** (about half the new ones). Ids added. Why: the ids rule; tests and guides find elements
+  by id.
+- **Three local `Intl.NumberFormat` formatters.** Replaced by `functions.format`. Why: one formatting rule
+  (decimals and currency from the configured format).
+- **Three Proposal operation names inside `oracleWrite`'s fixture branch.** Moved to `mockOracleWrite` in
+  `src/test-support/transport.ts`. Why: the shared connection names no module.
+- **Two report-file paths built in parallel** (Proposals' `oracleFileWrite` / `writeFile` and Claims'
+  `oracleFile` read). Proposals' kept, as `generateReport` is a POST and so a write; the Claims read removed. On top,
+  one route helper (`fileRoute`), one browser fetch (`download`) and one payload builder (`reportPayload`), used by
+  Print and Claims Export.
+
+Still to bring onto §4 (owner, 2026-10-30; whoever next works in the module does it, recorded in `docs/changes/`):
+
+- **Proposals record shell:** its own header and tabs (`record/record-header.tsx`, `record/proposal-tabs.tsx`) →
+  `RecordFrame`, with the record context in `src/server/modules/proposals/record.ts`.
+- **Proposals server layout:** 19 files flat in `src/server/modules/proposals/` → `listing.ts` (the listing,
+  `service.ts`, `where-clause.ts`, `lookups.ts`), `actions.ts`, `record.ts` and `record/<tab>.ts` (budget, pricing,
+  quick-cost, viability, edit, finalize, print, ai, contracts, credit-allocation, linked-applications; history,
+  delegation, approval and attachments are host adapters and go in `record/` too).
+- **Proposals browser layout:** `components/` (`listing.tsx`, `record-card.tsx`) → `listing/`; `lookups.ts` and
+  `record.ts` at the module root → `listing/` or `record/` by use (types both sides use → `src/shared/proposals/`).
+- **Contracts record shell:** `record/contract-tabs.tsx` and its own header → `RecordFrame`; server
+  `service.ts` / `create.ts` / `workflow.ts` / `documents.ts` → `listing.ts`, `actions.ts`, `record.ts`, `record/<tab>.ts`.
+- **Opportunities:** `components/` → `finder/` / `listing/` by use.
+
+Kept, because they were right: the change records, the logged guided-tour fix with its reproduced defect, the named
+API functions, `functions` / `serverFunctions`, session-held lookups, `generateReport` as a write.

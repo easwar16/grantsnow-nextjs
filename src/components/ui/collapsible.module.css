@@ -1,0 +1,28 @@
+/* oj-collapsible: the heading row, its chevron and the end actions. Pages set only size and spacing (headClassName). */
+.panel {
+  display: block;
+}
+.head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  list-style: none;
+  cursor: pointer;
+}
+.head::-webkit-details-marker {
+  display: none;
+}
+.chevron {
+  flex: none;
+  transition: transform var(--dur) var(--ease);
+}
+.panel[data-open="false"] > .head > .chevron {
+  transform: rotate(-90deg);
+}
+.actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  cursor: default;
+}

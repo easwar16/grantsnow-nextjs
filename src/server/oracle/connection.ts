@@ -145,14 +145,9 @@ export async function oracleWrite(
   if (!writes(operation))
     throw new AppError("BAD_REQUEST", "Unapproved Oracle write.", 400);
   if (fixtureMode()) {
-    if (
-      operation !== "postProposalProposal" &&
-      operation !== "postPre_awards_costingInsertCostingHeaderN" &&
-      operation !== "postPre_awards_costingSaveCostingDataN"
-    )
-      return {};
-    const { mockOracle } = await import("@/test-support/transport");
-    return mockOracle(operation, headers, query, pathParams, body);
+    // Fixtures decide which simulated writes answer a body; the connection names no operation.
+    const { mockOracleWrite } = await import("@/test-support/transport");
+    return mockOracleWrite(operation, headers, query, pathParams, body);
   }
   assertWritesEnabled();
   return send(operation, headers, query, signal, pathParams, body);
@@ -166,12 +161,10 @@ export async function oracleFileWrite(
 ): Promise<{ bytes: Uint8Array; mime: string; filename: string }> {
   if (operation !== "generateReport" || !writes(operation))
     throw new AppError("BAD_REQUEST", "Unapproved Oracle file operation.", 400);
-  if (fixtureMode())
-    return {
-      bytes: new Uint8Array([37, 80, 68, 70]),
-      mime: "application/pdf",
-      filename: "report.pdf",
-    };
+  if (fixtureMode()) {
+    const { mockOracleFile } = await import("@/test-support/transport");
+    return mockOracleFile();
+  }
   assertWritesEnabled();
   return send(
     operation,

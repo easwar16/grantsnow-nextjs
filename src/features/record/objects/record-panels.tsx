@@ -23,6 +23,8 @@ export function RecordPanels({
 }) {
   const segment = useSelectedLayoutSegment();
   const page = `${area}-${segment ?? "summary"}`;
+  // e.g. proposal-10193-comments: the area's singular and the record, as the record's other ids.
+  const key = `${area.replace(/s$/, "")}-${objectId}`;
   const [panel, setPanel] = useState<Panel | null>(null);
   const opener = useRef<HTMLButtonElement | null>(null);
   const closeButton = useRef<HTMLButtonElement | null>(null);
@@ -55,6 +57,7 @@ export function RecordPanels({
     >
       <button
         type="button"
+        id={`${key}-comments`}
         className={styles.action}
         onClick={(event) => open("comments", event.currentTarget)}
       >
@@ -63,6 +66,7 @@ export function RecordPanels({
       {showAudit && (
         <button
           type="button"
+          id={`${key}-audit`}
           className={styles.action}
           onClick={(event) => open("audit", event.currentTarget)}
         >
@@ -77,6 +81,7 @@ export function RecordPanels({
           }}
         >
           <aside
+            id={`${key}-${panel}-drawer`}
             className={`${styles.drawer} ${panel === "comments" ? styles.commentsDrawer : ""}`}
             role="dialog"
             aria-modal="true"
@@ -105,6 +110,7 @@ export function RecordPanels({
               <h2>{panel === "comments" ? pageTitle : "Audit Trail"}</h2>
               <button
                 ref={closeButton}
+                id={`${key}-${panel}-close`}
                 type="button"
                 className="gn-btn gn-btn--borderless gn-btn--icon"
                 aria-label="Close drawer"

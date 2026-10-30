@@ -598,7 +598,7 @@ function TeamPanel({
           <Collapsible
             key={p.id}
             id={`award-team-project-${functions.ids.idPart(p.id)}`}
-            className={styles.collapsible}
+            headClassName={styles.collapsibleHead}
             heading={<span>{p.number || p.name}</span>}
           >
             <DataTable

@@ -28,3 +28,16 @@ it("fixture honours the server-built where clause", async () => {
   const o = await run("search=o'brien");
   expect(o.total_count).toBe(0);
 });
+it("simulated writes answer {} unless the fixture names a reply, and reports answer a stub file", async () => {
+  const { mockOracleWrite, mockOracleFile } =
+    await import("@/test-support/transport");
+  expect(
+    await mockOracleWrite("postUnitInquiry", {}, undefined, undefined, {}),
+  ).toEqual({});
+  expect(
+    await mockOracleWrite("postProposalProposal", {}, undefined, undefined, {
+      proposals: { main_proposal_id: 1001 },
+    }),
+  ).toEqual({ proposal: 1001 });
+  expect((await mockOracleFile()).mime).toBe("application/pdf");
+});

@@ -1,0 +1,96 @@
+/* Unit Inquiry's own parts; the drawer, rows and count are the shared listing styles. */
+.toolbar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 12px 0;
+}
+.push {
+  margin-left: auto;
+}
+li.row {
+  border-radius: 5px;
+}
+/* Legacy's number row (oj-flex) sits 6px inside the card. */
+.overline {
+  padding-top: 6px;
+}
+/* The fund and claim status panels' headings (legacy oj-collapsible: a 32px row, its 16px h5 12px bold and 18px in
+   from the chevron's edge; measured on DEV). */
+.sectionHead {
+  gap: 2px;
+  padding: 8px 0;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
+}
+/* Legacy claims-unit-fund-status: the fund's name (bold, underlined) over its status, cells divided on the right. */
+.funds {
+  display: flex;
+  flex-wrap: wrap;
+}
+/* JET's 300px cell is content-box (307px with padding and divider, measured). */
+.fund {
+  box-sizing: content-box;
+  min-width: 300px;
+  padding: 6px 6px 6px 0;
+  margin-right: 6px;
+  border-right: 1px solid var(--gn-divider);
+  font-size: 12px;
+  line-height: 14.4px;
+}
+.fundName {
+  font-weight: 700;
+  text-decoration: underline;
+}
+.fundStatus {
+  margin-top: 3px;
+}
+/* Legacy drawers put Clear Filters at their foot (margin-top: auto). */
+.drawer {
+  min-height: 100%;
+}
+.clear {
+  align-self: flex-start;
+  margin-top: auto;
+  margin-left: 3px;
+  margin-bottom: 8px;
+}
+/* oj-list-item-layout's action slot: the toolbar 15px below the card's inner top (measured on DEV). */
+.rowActions {
+  display: flex;
+  flex: none;
+  align-self: flex-start;
+  gap: 3px;
+  padding-top: 15px;
+}
+/* Funds rows: the View button sits in the row's middle. */
+.rowActionsCentre {
+  align-self: center;
+  padding-top: 0;
+}
+/* Legacy's fund panel opens 14px under the title. */
+.sections {
+  margin-top: 8px;
+}
+/* JET read-only fields (both listings' metadata): a 16px label (24px right padding) over a 15px value, 6px from
+   their divider. */
+.fields dl > div {
+  padding-right: 6px;
+  margin-right: 6px;
+}
+.fields dt {
+  padding-right: 24px;
+  line-height: 16px;
+}
+.fields dd {
+  line-height: 15px;
+}
+/* Unit's claim counts keep the form control's 9px margin below, in a panel body padded 6px. */
+.claims {
+  padding: 6px 0;
+}
+.claims dl > div {
+  padding-bottom: 9px;
+}

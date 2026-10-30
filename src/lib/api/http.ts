@@ -71,3 +71,51 @@ export const put = <T>(path: string, body?: unknown, query?: Query) =>
   call<T>("PUT", apiUrl(path, query), body);
 export const del = <T>(path: string, query?: Query, body?: unknown) =>
   call<T>("DELETE", apiUrl(path, query), body);
+/**
+ * A file the route answers (a document, a report): its bytes and the name from Content-Disposition. With a `body`
+ * it is a POST (a report the server generates), otherwise a GET.
+ */
+export async function download(
+  path: string,
+  query?: Query,
+  body?: unknown,
+): Promise<ApiResult<{ blob: Blob; filename: string }>> {
+  let response: Response;
+  try {
+    response = await fetch(apiUrl(path, query), {
+      cache: "no-store",
+      ...(body === undefined
+        ? {}
+        : {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          }),
+    });
+  } catch {
+    return { ok: false, error: OFFLINE };
+  }
+  if (response.ok) {
+    try {
+      const header = response.headers.get("content-disposition") ?? "";
+      const encoded = /filename\*=UTF-8''([^;]+)/i.exec(header)?.[1],
+        plain = /filename="?([^";]+)"?/i.exec(header)?.[1];
+      return {
+        ok: true,
+        data: {
+          blob: await response.blob(),
+          filename: (encoded && decodeURIComponent(encoded)) || plain || "file",
+        },
+      };
+    } catch {
+      return { ok: false, error: OFFLINE };
+    }
+  }
+  let error = OFFLINE;
+  try {
+    error = ((await response.json()) as { error?: ApiError }).error ?? OFFLINE;
+  } catch {
+    // A non-JSON failure (proxy page) keeps the generic message.
+  }
+  return { ok: false, error };
+}

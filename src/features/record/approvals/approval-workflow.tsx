@@ -10,6 +10,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { useToast } from "@/components/feedback/toast";
 import { HelpButton } from "@/components/ui/help-button";
 import { Icon } from "@/components/ui/icon";
+import { Collapsible } from "@/components/ui/collapsible";
 import { useConfirm } from "@/components/dialog/action-dialog";
 import { useActionFailure } from "@/components/dialog/action-failure";
 import { approvals, useApi } from "@/lib/api";
@@ -269,63 +270,61 @@ export function ApprovalWorkflow({
   return (
     <div id={id} className={styles.workflow}>
       {stages.length > 0 && (
-        <details
+        <Collapsible
           id={`${id}-route`}
-          className={`gn-collapsible ${styles.panel}`}
-          open
+          headClassName={styles.head}
+          heading={<h3 id={`${id}-route-heading`}>{texts.route}</h3>}
+          actions={
+            <>
+              {/* Legacy tabBarApprovals: Graph View only where the bundle shows it. */}
+              {view.views.graph && (
+                <span
+                  className={styles.viewSwitch}
+                  role="group"
+                  aria-label={`${texts.route} view`}
+                >
+                  <button
+                    type="button"
+                    id={`${id}-list-view`}
+                    aria-pressed={routeView === "list"}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      setRouteView("list");
+                    }}
+                  >
+                    {texts.listView}
+                  </button>
+                  <button
+                    type="button"
+                    id={`${id}-graph-view`}
+                    aria-pressed={routeView === "graph"}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      setRouteView("graph");
+                    }}
+                  >
+                    {texts.graphView}
+                  </button>
+                </span>
+              )}
+              {gates.addStage && (
+                <button
+                  type="button"
+                  id={`${id}-add-stage`}
+                  className="gn-btn gn-btn--outlined"
+                  disabled={busy}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setAdding(true);
+                  }}
+                >
+                  <Icon name="plus" size={14} />
+                  {texts.addStage}
+                </button>
+              )}
+            </>
+          }
         >
-          <summary className={styles.head}>
-            <h3 id={`${id}-route-heading`}>
-              <Icon name="chevron-down" size={16} className={styles.chevron} />
-              {texts.route}
-            </h3>
-            {/* Legacy tabBarApprovals: Graph View only where the bundle shows it. */}
-            {view.views.graph && (
-              <span
-                className={styles.viewSwitch}
-                role="group"
-                aria-label={`${texts.route} view`}
-              >
-                <button
-                  type="button"
-                  id={`${id}-list-view`}
-                  aria-pressed={routeView === "list"}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    setRouteView("list");
-                  }}
-                >
-                  {texts.listView}
-                </button>
-                <button
-                  type="button"
-                  id={`${id}-graph-view`}
-                  aria-pressed={routeView === "graph"}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    setRouteView("graph");
-                  }}
-                >
-                  {texts.graphView}
-                </button>
-              </span>
-            )}
-            {gates.addStage && (
-              <button
-                type="button"
-                id={`${id}-add-stage`}
-                className="gn-btn gn-btn--outlined"
-                disabled={busy}
-                onClick={(e) => {
-                  e.preventDefault();
-                  setAdding(true);
-                }}
-              >
-                <Icon name="plus" size={14} />
-                {texts.addStage}
-              </button>
-            )}
-          </summary>
           {routeView === "graph" ? (
             <RouteGraph id={`${id}-graph`} api={api} texts={texts} />
           ) : (
@@ -344,7 +343,7 @@ export function ApprovalWorkflow({
               ))}
             </ol>
           )}
-        </details>
+        </Collapsible>
       )}
       <ApprovalHistory
         id={id}
@@ -488,47 +487,45 @@ function ApprovalHistory({
   const [historyView, setHistoryView] = useState<"table" | "card">("table");
   const { data: history, error, retry } = useApi(approvals.history, api);
   return (
-    <details
+    <Collapsible
       id={`${id}-history`}
-      className={`gn-collapsible ${styles.panel}`}
-      open
+      headClassName={styles.head}
+      heading={<h3 id={`${id}-history-heading`}>{texts.history}</h3>}
+      actions={
+        <>
+          {cards && (
+            <span
+              className={styles.viewSwitch}
+              role="group"
+              aria-label={`${texts.history} view`}
+            >
+              <button
+                type="button"
+                id={`${id}-history-table-view`}
+                aria-pressed={historyView === "table"}
+                onClick={(event) => {
+                  event.preventDefault();
+                  setHistoryView("table");
+                }}
+              >
+                {texts.tableView}
+              </button>
+              <button
+                type="button"
+                id={`${id}-history-card-view`}
+                aria-pressed={historyView === "card"}
+                onClick={(event) => {
+                  event.preventDefault();
+                  setHistoryView("card");
+                }}
+              >
+                {texts.cardView}
+              </button>
+            </span>
+          )}
+        </>
+      }
     >
-      <summary className={styles.head}>
-        <h3 id={`${id}-history-heading`}>
-          <Icon name="chevron-down" size={16} className={styles.chevron} />
-          {texts.history}
-        </h3>
-        {cards && (
-          <span
-            className={styles.viewSwitch}
-            role="group"
-            aria-label={`${texts.history} view`}
-          >
-            <button
-              type="button"
-              id={`${id}-history-table-view`}
-              aria-pressed={historyView === "table"}
-              onClick={(event) => {
-                event.preventDefault();
-                setHistoryView("table");
-              }}
-            >
-              {texts.tableView}
-            </button>
-            <button
-              type="button"
-              id={`${id}-history-card-view`}
-              aria-pressed={historyView === "card"}
-              onClick={(event) => {
-                event.preventDefault();
-                setHistoryView("card");
-              }}
-            >
-              {texts.cardView}
-            </button>
-          </span>
-        )}
-      </summary>
       {error ? (
         <State
           id={`${id}-history-error`}
@@ -609,6 +606,6 @@ function ApprovalHistory({
           />
         </div>
       )}
-    </details>
+    </Collapsible>
   );
 }

@@ -19,7 +19,13 @@ export const linkedToProposal = read<{
 }>({
   op: "getGetAllContracts",
   headers: (p) => ({ p_object_ref_id: p.reference }),
-  query: (p) => ({ p_offset: p.offset, p_limit: p.limit }),
+  // Legacy also sends the filterCriterion object_ref_id $eq, which transforms.js turns into this clause; DEV
+  // ignores the header alone and answers unlinked contracts.
+  query: (p) => ({
+    p_offset: p.offset,
+    p_limit: p.limit,
+    p_where_clause: `("object_ref_id"='${p.reference.replace(/'/g, "''")}')`,
+  }),
 });
 /** One contract's header row. */
 export const byId = read<{ id: string }>({

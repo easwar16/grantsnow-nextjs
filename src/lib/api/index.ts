@@ -19,6 +19,7 @@ export * as dynamicForm from "./endpoints/dynamic-form";
 export * as attributes from "./endpoints/attributes";
 export * as fxRates from "./endpoints/fx-rates";
 export * as contracts from "./endpoints/contracts";
+export * as claims from "./endpoints/claims";
 export { useApi, usePagedApi, useForget } from "./hooks";
 export type { Endpoint } from "./hooks";
 export type { ApiError, ApiResult } from "./http";

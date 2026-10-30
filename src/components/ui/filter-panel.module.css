@@ -5,6 +5,8 @@
   min-height: 0;
 }
 .panel {
+  display: flex;
+  flex-direction: column;
   width: var(--filter-panel-width);
   flex-shrink: 0;
   overflow-y: auto;
@@ -38,7 +40,9 @@
   border: 0;
   color: var(--muted);
 }
+/* The body fills the panel, so a drawer can put an action at its foot (margin-top: auto). */
 .body {
+  flex: 1 0 auto;
   padding: 0 6px 12px;
 }
 .body[hidden] {

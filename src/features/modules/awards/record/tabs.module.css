@@ -89,24 +89,11 @@
   list-style: none;
 }
 /* Projects: one collapsible per project (legacy oj-collapsible): a plain chevron header. */
-.collapsible > summary {
-  display: flex;
+.collapsibleHead {
   align-items: flex-start;
-  gap: 6px;
   padding: 4px 0;
   font-size: 12px;
   line-height: 18px;
-  list-style: none;
-  cursor: pointer;
-}
-.collapsible > summary::-webkit-details-marker {
-  display: none;
-}
-.collapsible > summary > :first-child {
-  transition: transform var(--dur) var(--ease);
-}
-.collapsible[data-open="false"] > summary > :first-child {
-  transform: rotate(-90deg);
 }
 /* The cost tree (legacy prepareCostingData, measured 2026-10-26): expander and a warning-coloured 12px bold name,
    categories indented one step; group amounts bold, every percentage 15px bold. */

@@ -1,4 +1,5 @@
 import "server-only";
+import { serverFunctions } from "@/server/functions";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { reports } from "@/server/oracle/api";
@@ -106,22 +107,16 @@ export async function printProposal(type: string, id: string, raw: unknown) {
   const orgId = Number(context.user.organizationId);
   if (!Number.isSafeInteger(number) || !Number.isSafeInteger(orgId))
     throw new AppError("CONTRACT", "The report identity is unavailable.");
-  const bind = (type: "NUMBER" | "VARCHAR2", value: number | string) => ({
-    type,
-    value,
-  });
   return reports.generate({
-    body: {
-      report_code: [selected.page_name, selected.output_file_name ?? ""],
-      binds: {
-        object_type: bind("VARCHAR2", context.identity.type),
-        object_id: bind("NUMBER", number),
-        proposal_id: bind("NUMBER", number),
-        curr_code: bind("VARCHAR2", currency),
-        curr_symbol: bind("VARCHAR2", chosenCurrency.currency_symbol ?? ""),
-        conv_rate: bind("NUMBER", rate),
-        org_id: bind("NUMBER", orgId),
-      },
-    },
+    // Legacy PrintMenuActionChain sends selectedValue[0], the page name; the pair made report_code null.
+    body: serverFunctions.reports.reportPayload(selected.page_name, {
+      object_type: context.identity.type,
+      object_id: number,
+      proposal_id: number,
+      curr_code: currency,
+      curr_symbol: chosenCurrency.currency_symbol ?? "",
+      conv_rate: rate,
+      org_id: orgId,
+    }),
   });
 }

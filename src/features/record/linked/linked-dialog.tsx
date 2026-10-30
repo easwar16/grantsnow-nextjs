@@ -2,6 +2,7 @@
 import { StatusBadge } from "@/components/ui/status-badge";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
+import { Collapsible } from "@/components/ui/collapsible";
 import { RecordMetadata } from "@/components/ui/record-metadata";
 import { ActionDialog } from "@/components/dialog/action-dialog";
 import { type FormatSettings } from "@/lib/format";
@@ -35,13 +36,12 @@ export function LinkedObjectsDialog({
       <div id={`${id}-body`} className={styles.body}>
         {children}
         {groups.map((g) => (
-          <details
+          <Collapsible
             key={g.key}
             id={`${id}-${g.key}`}
-            open
-            className={styles.group}
+            headClassName={styles.groupHead}
+            heading={g.label}
           >
-            <summary>{g.label}</summary>
             <ul className={styles.records}>
               {g.records.map((r) => (
                 <li
@@ -85,7 +85,7 @@ export function LinkedObjectsDialog({
                 </li>
               ))}
             </ul>
-          </details>
+          </Collapsible>
         ))}
       </div>
     </ActionDialog>

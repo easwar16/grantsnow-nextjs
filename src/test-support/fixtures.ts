@@ -16,6 +16,9 @@ export const fixtureUser = {
     "CONTRACTS",
     "ETHICS",
     "AWARDS",
+    "claims-group",
+    "claims-unit-inquiry",
+    "claims-funds-inquiry",
   ].map((module_name) => ({ module_name, is_accessible: "Y" })),
 };
 export const proposals = Array.from({ length: 37 }, (_, i) => ({
