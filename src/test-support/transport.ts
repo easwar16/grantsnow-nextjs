@@ -91,6 +91,37 @@ function awardRows(advanced: boolean) {
       : {}),
   }));
 }
+// Simulated writes that answer a body (the record's new id, the saved costing); every other write answers {}.
+const WRITE_REPLIES = new Set<Operation>([
+  "postProposalProposal",
+  "postPre_awards_costingInsertCostingHeaderN",
+  "postPre_awards_costingSaveCostingDataN",
+  "postCopyClaimApp",
+]);
+/** A simulated write in fixture mode (the connection's writes gate never opens there). */
+export async function mockOracleWrite(
+  op: Operation,
+  headers: Record<string, string>,
+  query?: URLSearchParams,
+  pathParams?: Record<string, string>,
+  body?: unknown,
+): Promise<unknown> {
+  return WRITE_REPLIES.has(op)
+    ? mockOracle(op, headers, query, pathParams, body)
+    : {};
+}
+/** A simulated report file (a 4-byte PDF stub), so download journeys run without Oracle. */
+export async function mockOracleFile() {
+  if (!fixtureMode())
+    throw new Error(
+      "Fixture transport cannot run outside explicit development mode.",
+    );
+  return {
+    bytes: new Uint8Array([37, 80, 68, 70]),
+    mime: "application/pdf",
+    filename: "report.pdf",
+  };
+}
 export async function mockOracle(
   op: Operation,
   headers: Record<string, string>,
@@ -142,6 +173,8 @@ export async function mockOracle(
     headers,
   );
   if (award !== undefined) return award;
+  const claim = (await import("./claims")).claimsFixture(op, headers, query);
+  if (claim !== undefined) return claim;
   if (op === "getPre_awardGetLookupTypesCodes") {
     const types: Record<string, [string, string][]> = {
       PROPOSAL_STATUS: [
@@ -1097,6 +1130,12 @@ export async function mockOracle(
         { page_name: "home", read_access: "Y" },
         { page_name: "create-contract", read_access: "Y" },
         ...[
+          "create-claims-unit",
+          "edit-claims-unit",
+          "claims-clone",
+          "claims-export",
+        ].map((page_name) => ({ page_name, read_access: "Y" })),
+        ...[
           "opportunity-notes",
           "apply-opportunities",
           "convert-opportunity",
@@ -1531,13 +1570,30 @@ export async function mockOracle(
       "currency",
       "assigned-to",
       "tags",
-    ].map((label_name) => ({
-      module_name: "PROPOSAL",
-      label_type: "labels",
-      label_name,
-      label_value: null,
-      is_visible: "Y",
-    }));
+    ]
+      .map((label_name) => ({
+        module_name: "PROPOSAL",
+        label_type: "labels",
+        label_name,
+        label_value: null,
+        is_visible: "Y",
+      }))
+      .concat(
+        [
+          "units-listing-unitId",
+          "units-listing-fiscalYear",
+          "units-listing-fundType",
+          "listing-unit-id",
+          "grant-value-id",
+          "payment-account-code",
+        ].map((label_name) => ({
+          module_name: "CLAIMS",
+          label_type: "labels",
+          label_name,
+          label_value: null,
+          is_visible: "Y",
+        })),
+      );
   if (op === "getPre_awardGetLkpOrgUnitType")
     return {
       items: [

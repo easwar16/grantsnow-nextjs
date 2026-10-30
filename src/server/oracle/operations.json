@@ -931,5 +931,64 @@
     "headers": ["token"],
     "method": "POST",
     "write": true
+  },
+  "getUnitFundsList": {
+    "service": "apps",
+    "path": "/claims/unit-funds-list",
+    "headers": ["token", "org-id", "org_id"]
+  },
+  "postUnitInquiry": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "getFundTypes": {
+    "service": "apps",
+    "path": "/claims/fund-types",
+    "headers": ["token"]
+  },
+  "getClaimsOrgUnits": {
+    "service": "apps",
+    "path": "/claims/get-org-units",
+    "headers": ["token", "org-id"]
+  },
+  "getGrantValues": {
+    "service": "apps",
+    "path": "/claims/grant-values",
+    "headers": ["token"]
+  },
+  "getCopyClaimObjList": {
+    "service": "apps",
+    "path": "/claims/copy-claim-obj-list",
+    "headers": ["token"]
+  },
+  "postCopyClaimApp": {
+    "service": "apps",
+    "path": "/claims/copy-claim-app",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "getFundInquiries": {
+    "service": "apps",
+    "path": "/claims/fund-inquiry",
+    "headers": ["token", "org-id"]
+  },
+  "getAccountSummaries": {
+    "service": "apps",
+    "path": "/claims/fund-inquiry/account-summaries",
+    "headers": ["token", "app-fund-id"]
+  },
+  "getActivitiesSummary": {
+    "service": "apps",
+    "path": "/claims/fund-inquiry/activities-summary",
+    "headers": ["token", "app-fund-id"]
+  },
+  "getClaimLinesSummary": {
+    "service": "apps",
+    "path": "/claims/fund-inquiry/claim-lines-summary",
+    "headers": ["token", "app-fund-id", "status-type"]
   }
 }

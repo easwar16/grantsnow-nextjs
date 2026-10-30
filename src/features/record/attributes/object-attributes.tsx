@@ -242,7 +242,9 @@ export function ObjectAttributes({
   return (
     <section
       id={id}
-      className={displayOnly ? styles.viewPanel : plain ? styles.plain : styles.panel}
+      className={
+        displayOnly ? styles.viewPanel : plain ? styles.plain : styles.panel
+      }
       aria-label="Attributes"
     >
       {fields.map((f) => {

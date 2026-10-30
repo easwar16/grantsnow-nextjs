@@ -10,9 +10,9 @@ import {
 } from "@/components/dialog/action-failure";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
 import { awards } from "@/lib/api";
+import { CloneParts } from "@/components/dialog/clone-parts";
 import { toggleClonePart, type CloneSetup } from "./actions";
 import styles from "@/components/dialog/dialog.module.css";
-import { functions } from "@/lib/functions";
 
 /** Legacy dialogCopyAward: clone an award with the chosen parts ("Entire Award" ticks them all). */
 export function CloneAwardDialog({
@@ -56,7 +56,6 @@ export function CloneAwardDialog({
       </ActionDialog>
     );
   const { parts, texts } = setup;
-  const all = parts.length > 0 && parts.every((p) => chosen.includes(p.value));
   const clone = () =>
     run(async () => {
       const result = await awards.clone(Number(awardId), chosen);
@@ -74,41 +73,16 @@ export function CloneAwardDialog({
       onClose={onClose}
     >
       <div id={`${id}-parts`} className={styles.form}>
-        <label className={styles.radio}>
-          <input
-            id={`${id}-entire`}
-            type="checkbox"
-            checked={all}
-            disabled={saving}
-            onChange={(e) =>
-              setChosen(
-                e.target.checked
-                  ? parts.map((p) => p.value)
-                  : parts.filter((p) => p.fixed).map((p) => p.value),
-              )
-            }
-          />
-          {texts.entire}
-        </label>
-        <fieldset className={styles.choices} style={{ paddingLeft: 20 }}>
-          <legend className="sr-only">{texts.title}</legend>
-          {parts.map((p) => (
-            <label key={p.value} className={styles.radio}>
-              <input
-                id={`${id}-part-${functions.ids.idPart(p.value)}`}
-                type="checkbox"
-                checked={chosen.includes(p.value)}
-                disabled={saving || p.fixed}
-                onChange={(e) =>
-                  setChosen(
-                    toggleClonePart(parts, chosen, p.value, e.target.checked),
-                  )
-                }
-              />
-              {p.label}
-            </label>
-          ))}
-        </fieldset>
+        <CloneParts
+          id={id}
+          parts={parts}
+          chosen={chosen}
+          onChange={setChosen}
+          toggle={toggleClonePart}
+          entire={texts.entire}
+          legend={texts.title}
+          disabled={saving}
+        />
         <div className={styles.foot}>
           <button
             type="button"

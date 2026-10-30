@@ -1,5 +1,6 @@
 import { placeholderModules } from "@/lib/unavailable-modules";
 import { awardHref } from "@/features/modules/awards/links";
+import { fundHref } from "@/features/modules/claims/links";
 const recordId = /^[1-9]\d{0,14}$/;
 const proposalTypes = [
   "PROPOSAL",
@@ -66,7 +67,14 @@ export function legacyDeepLink(search: string): string | null {
       ? `/contracts/${id}`
       : "/contracts";
   }
-  // A page id names the drawer child (claims=claims-unit-inquiry…); otherwise the flow names the module.
+  if (flow === "claims") {
+    const fund = params.get("appFundId") ?? "";
+    if (page.startsWith("claims-funds-inquiry-info") && recordId.test(fund))
+      return fundHref(fund);
+    if (page.startsWith("claims-funds-inquiry")) return "/claims/funds-inquiry";
+    if (page.startsWith("claims-unit-inquiry")) return "/claims/unit-inquiry";
+  }
+  // A page id names the drawer child; otherwise the flow names the module.
   const placeholder =
     placeholderModules.find(
       (m) => page === m.id || page.startsWith(`${m.id}-`),

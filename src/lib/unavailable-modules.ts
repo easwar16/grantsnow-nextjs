@@ -68,8 +68,18 @@ export const navigationDefinitions: NavDefinition[] = [
     name: "Claims",
     icon: "money",
     children: [
-      { id: "claims-unit-inquiry", name: "Unit Inquiry", icon: "account" },
-      { id: "claims-funds-inquiry", name: "Funds Inquiry", icon: "analytics" },
+      {
+        id: "claims-unit-inquiry",
+        name: "Unit Inquiry",
+        icon: "account",
+        href: "/claims/unit-inquiry",
+      },
+      {
+        id: "claims-funds-inquiry",
+        name: "Funds Inquiry",
+        icon: "analytics",
+        href: "/claims/funds-inquiry",
+      },
     ],
   },
   { id: "reports", name: "Reports", icon: "report", external: true },

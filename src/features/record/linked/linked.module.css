@@ -6,11 +6,10 @@
   max-height: 70vh;
   overflow-y: auto;
 }
-.group > summary {
+.groupHead {
   padding: 6px 0;
   font-size: 12px;
   font-weight: 600;
-  cursor: pointer;
 }
 .records {
   display: flex;

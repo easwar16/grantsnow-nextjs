@@ -19,6 +19,7 @@ import type { ObjectHost } from "@/lib/api/endpoints/objects";
 import type { Delegate, DelegatedPage, DelegationView } from "./types";
 import styles from "./history-delegations.module.css";
 import { functions } from "@/lib/functions";
+import { Collapsible } from "@/components/ui/collapsible";
 type Access = Pick<DelegatedPage, "read" | "edit" | "delete">;
 /** The dialog's start: a new delegation, or Edit Access on one delegate (their read pages and common rights). */
 type Draft = {
@@ -194,12 +195,14 @@ export function ObjectDelegations({
                     )}
                   </summary>
                   {d.groups.map((g) => (
-                    <details
+                    <Collapsible
                       key={g.type}
                       id={`${key}-${functions.ids.idPart(g.type)}`}
-                      className={`gn-collapsible ${styles.group}`}
+                      className={styles.group}
+                      headClassName={styles.groupHead}
+                      heading={g.label}
+                      defaultOpen={false}
                     >
-                      <summary>{g.label}</summary>
                       <ul className={styles.pages}>
                         {g.pages.map((p) => {
                           const rowKey = `${key}-page-${functions.ids.idPart(p.id)}`;
@@ -248,7 +251,7 @@ export function ObjectDelegations({
                           );
                         })}
                       </ul>
-                    </details>
+                    </Collapsible>
                   ))}
                 </details>
               </li>

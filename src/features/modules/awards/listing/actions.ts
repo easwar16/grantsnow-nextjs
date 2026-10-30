@@ -1,3 +1,5 @@
+import type { ClonePart, CloneToggle } from "@/components/dialog/clone-parts";
+
 /** The listing's actions (legacy awards-start toolbar and row buttons), each gated on the server. */
 export interface AwardActionGates {
   create: boolean;
@@ -35,13 +37,6 @@ export interface CreateAwardSetup {
   currencies: Option[];
 }
 
-/** One part Clone can copy; `fixed` parts are always copied and cannot be unticked. */
-export interface ClonePart {
-  value: string;
-  label: string;
-  parent: string | null;
-  fixed: boolean;
-}
 export interface CloneSetup {
   parts: ClonePart[];
   texts: Record<"title" | "entire" | "cancel" | "clone", string>;
@@ -72,12 +67,7 @@ export interface AdvancedSetup {
  * Legacy checkboxValueUpdate: ticking a parent ticks its children and ticking a child ticks its parent; unticking a
  * parent unticks its children, and unticking a parent's last child unticks the parent. Fixed parts stay ticked.
  */
-export function toggleClonePart(
-  parts: ClonePart[],
-  chosen: string[],
-  key: string,
-  checked: boolean,
-): string[] {
+export const toggleClonePart: CloneToggle = (parts, chosen, key, checked) => {
   const children = (k: string) =>
     parts.filter((p) => p.parent === k).map((p) => p.value);
   const parent = parts.find((p) => p.value === key)?.parent ?? null;
@@ -95,4 +85,4 @@ export function toggleClonePart(
   for (const p of parts) if (p.fixed) next.add(p.value);
   next = new Set(parts.map((p) => p.value).filter((v) => next.has(v)));
   return [...next];
-}
+};

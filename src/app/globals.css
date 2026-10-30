@@ -635,6 +635,9 @@ main {
 .record-metadata dt {
   font-weight: 600;
 }
+.record-metadata--muted dt {
+  color: var(--gn-text-secondary);
+}
 .record-metadata dd {
   margin: 0;
   overflow-wrap: anywhere;

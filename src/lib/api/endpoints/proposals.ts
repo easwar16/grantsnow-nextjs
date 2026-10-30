@@ -8,7 +8,7 @@ import type {
   ChoiceGroup,
   ChoiceGroupResult,
 } from "@/features/modules/proposals/lookups";
-import { apiUrl, get, post, OFFLINE, type ApiResult } from "../http";
+import { download, get, post } from "../http";
 import { endpoint } from "../hooks";
 import { constants } from "@/lib/constants";
 
@@ -136,31 +136,13 @@ export const saveQuickCost = (
 ) =>
   post<{ saved: boolean }>(`/proposals/${type}/${id}/budget/quick-cost`, input);
 
-export async function printReport(
+/** WRITES (generate-report): a Print report file, as the server names it. */
+export const printReport = (
   type: string,
   id: string,
   code: string,
   currency: string,
-): Promise<ApiResult<{ blob: Blob; filename: string }>> {
-  try {
-    const response = await fetch(apiUrl(`/proposals/${type}/${id}/print`), {
-      method: "POST",
-      cache: "no-store",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code, currency }),
-    });
-    if (response.ok) {
-      const disposition = response.headers.get("Content-Disposition") ?? "";
-      const filename =
-        /filename="?([^";]+)"?/i.exec(disposition)?.[1] ?? "report.pdf";
-      return { ok: true, data: { blob: await response.blob(), filename } };
-    }
-    const body = await response.json();
-    return { ok: false, error: body.error ?? OFFLINE };
-  } catch {
-    return { ok: false, error: OFFLINE };
-  }
-}
+) => download(`/proposals/${type}/${id}/print`, undefined, { code, currency });
 
 export interface StaffContact {
   fullName: string;

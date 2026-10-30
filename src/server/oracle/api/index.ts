@@ -23,3 +23,4 @@ export * as account from "./account";
 export * as notifications from "./notifications";
 export * as home from "./home";
 export * as reports from "./reports";
+export * as claims from "./claims";

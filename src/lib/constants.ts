@@ -20,6 +20,10 @@ export const constants = {
     /** The original's fetch size for allRequests (opportunity.service.ts EOI_PAGE_SIZE). */
     eoi: 10,
     opportunities: 25,
+    /** Claims listings: oj-list-view's default fetch size (legacy paging transform sends offset / limit). */
+    claims: 25,
+    /** How many of a year's funds the Summary's visibility check reads (one fund-inquiry page). */
+    claimsScan: 500,
     /** Within this many pixels of a list's end, its next page loads (legacy loadMoreOnScroll). */
     loadMorePx: 80,
     /** Home's queues load their next page within this many pixels of the end (legacy). */

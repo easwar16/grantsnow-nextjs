@@ -169,7 +169,8 @@ export function InstallmentsTab({
           <Collapsible
             key={`${s.index}:${list.length}`}
             id={key}
-            className={`${styles.collapsible} ${own.installment}`}
+            className={own.installment}
+            headClassName={styles.collapsibleHead}
             // Legacy: only the newest installment starts open.
             defaultOpen={s.index === list.length - 1}
             heading={
@@ -229,7 +230,7 @@ export function InstallmentsTab({
               <Collapsible
                 key={p.project_id}
                 id={`${key}-project-${p.project_id}`}
-                className={styles.collapsible}
+                headClassName={styles.collapsibleHead}
                 heading={<span className={own.projectTitle}>{p.title}</span>}
               >
                 <InstallmentTable

@@ -61,13 +61,9 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.section > summary,
-.group > summary {
+/* The Approvals section and the delegation page groups' headings (Collapsible owns the chevron). */
+.sectionHead {
   padding: 12px 0;
-  font-weight: 700;
-  cursor: pointer;
-}
-.section > summary {
   font-size: 15px;
   font-weight: 800;
 }
@@ -101,7 +97,7 @@
 .group {
   padding-left: 16px;
 }
-.group > summary {
+.groupHead {
   padding: 8px 0;
   font-weight: 400;
   color: var(--gn-text-secondary);

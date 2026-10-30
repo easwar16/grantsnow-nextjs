@@ -95,7 +95,7 @@ it("builds report binds from the authorized record and server session", async ()
   });
   expect(state.generate).toHaveBeenCalledWith({
     body: {
-      report_code: ["PROPOSAL_REPORT", "proposal.pdf"],
+      report_code: "PROPOSAL_REPORT",
       binds: {
         object_type: { type: "VARCHAR2", value: "PROPOSAL" },
         object_id: { type: "NUMBER", value: 123 },

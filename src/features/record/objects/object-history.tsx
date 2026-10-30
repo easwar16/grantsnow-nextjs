@@ -20,6 +20,7 @@ import {
 } from "./types";
 import styles from "./history-delegations.module.css";
 import { functions } from "@/lib/functions";
+import { Collapsible } from "@/components/ui/collapsible";
 import { DataTable } from "@/components/ui/data-table";
 /** Legacy convertUserComments: the table shows the first 15 characters, the popup the whole comment. */
 const preview = (c: string) => (c.length >= 15 ? `${c.slice(0, 15)}...` : c);
@@ -128,12 +129,13 @@ export function ObjectHistory({
         />
       </div>
       {view.approvals && (
-        <details
+        <Collapsible
           id={`${id}-approvals`}
-          className={`gn-collapsible ${styles.section}`}
-          open
+          headClassName={styles.sectionHead}
+          heading={
+            <span id={`${id}-approvals-title`}>{texts.approvalTitle}</span>
+          }
         >
-          <summary id={`${id}-approvals-title`}>{texts.approvalTitle}</summary>
           {"error" in view.approvals ? (
             <State
               id={`${id}-approvals-error`}
@@ -201,7 +203,7 @@ export function ObjectHistory({
               />
             </div>
           )}
-        </details>
+        </Collapsible>
       )}
       {dialog && (
         <StatusDialog

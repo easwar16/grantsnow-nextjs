@@ -549,7 +549,41 @@ function orgUnitRows(raw: unknown) {
   }));
 }
 
+// Legacy app-flow fieldLkp: each report bind's type; anything unlisted is a string.
+const REPORT_BINDS: Record<string, "NUM" | "DT"> = {
+  proposal_id: "NUM",
+  object_id: "NUM",
+  conv_rate: "NUM",
+  costing_header_id: "NUM",
+  org_id: "NUM",
+  creation_date: "DT",
+  app_fund_id: "NUM",
+  fy_code: "NUM",
+  unit_id: "NUM",
+};
+type Bind = string | number | null;
+/** Legacy generateReportPayload: `{ report_code, binds: { name: { type, value } } }` for generate-report. */
+function reportPayload(code: string, binds: Record<string, Bind>) {
+  return {
+    report_code: code,
+    binds: Object.fromEntries(
+      Object.entries(binds).map(([key, value]) => {
+        const type = REPORT_BINDS[key];
+        return [
+          key,
+          type === "NUM"
+            ? { type: "NUMBER", value: value ? Number(value) : value }
+            : type === "DT"
+              ? { type: "DATE", value }
+              : { type: "VARCHAR2", value: `${value}` },
+        ];
+      }),
+    ),
+  };
+}
+
 export const serverFunctions = {
+  reports: { reportPayload },
   async: { early, bounded },
   sanitize: { plainText, sanitizeHtml },
   choices: { statusChoices, objectDateChoices, nameChoices, choiceList },

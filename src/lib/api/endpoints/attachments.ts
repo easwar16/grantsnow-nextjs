@@ -1,13 +1,6 @@
 "use client";
 import type { AttachmentList } from "@/features/record/attachments/model";
-import {
-  OFFLINE,
-  apiUrl,
-  del,
-  post,
-  type ApiError,
-  type ApiResult,
-} from "../http";
+import { apiUrl, del, download, post, type ApiResult } from "../http";
 import { endpoint } from "../hooks";
 
 /**
@@ -26,26 +19,8 @@ export async function fileBytes(
   path: string,
   query: Parameters<typeof apiUrl>[1],
 ): Promise<ApiResult<Blob>> {
-  let response: Response;
-  try {
-    response = await fetch(apiUrl(path, query), { cache: "no-store" });
-  } catch {
-    return { ok: false, error: OFFLINE };
-  }
-  if (response.ok) {
-    try {
-      return { ok: true, data: await response.blob() };
-    } catch {
-      return { ok: false, error: OFFLINE };
-    }
-  }
-  let error = OFFLINE;
-  try {
-    error = ((await response.json()) as { error?: ApiError }).error ?? OFFLINE;
-  } catch {
-    // A non-JSON failure (proxy page) keeps the generic message.
-  }
-  return { ok: false, error };
+  const r = await download(path, query);
+  return r.ok ? { ok: true, data: r.data.blob } : r;
 }
 export const documentBytes = (query: string, id: number) =>
   fileBytes(`/files/${id}`, record(query));

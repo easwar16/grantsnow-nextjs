@@ -122,6 +122,24 @@ function moneyDisplay(
 }
 
 /**
+ * A fraction as legacy's `style: percent` converter shows it (at most DECIMAL_PLACES_COUNT || 2 digits); `fixed` pads
+ * to that many digits, as a converter with `minimumFractionDigits` does.
+ */
+function percentDisplay(
+  fraction: number | null,
+  settings?: FormatSettings,
+  fixed = false,
+) {
+  if (fraction === null || !Number.isFinite(fraction)) return "—";
+  const digits = settings?.decimals || 2;
+  return new Intl.NumberFormat("en-GB", {
+    style: "percent",
+    minimumFractionDigits: fixed ? digits : 0,
+    maximumFractionDigits: digits,
+  }).format(fraction);
+}
+
+/**
  * A record or config key as a readable id part (owner rule: unique, short, kebab-case ids): camelCase splits on its
  * capitals, and anything outside a-z0-9 becomes one dash, e.g. "pPendingApprovals" → "p-pending-approvals",
  * "UK Research Council" → "uk-research-council".
@@ -659,6 +677,7 @@ export const functions = {
     dateTimeDisplay,
     stampDisplay,
     moneyDisplay,
+    percentDisplay,
   },
   ids: { idPart },
   errors: { publicError, settle },

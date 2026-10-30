@@ -294,7 +294,7 @@ export function ProjectCostsPanel({
           <Collapsible
             key={p.projectId}
             id={`award-costs-project-${pid}`}
-            className={styles.collapsible}
+            headClassName={styles.collapsibleHead}
             heading={
               <span>
                 {project?.number}

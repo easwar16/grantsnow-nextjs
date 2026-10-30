@@ -25,6 +25,7 @@ import { displayFormat } from "@/server/platform/configuration/formatting";
 import { fixtureMode } from "@/server/platform/configuration/environment";
 import { eoiAttachmentHost } from "@/server/modules/opportunities/record";
 import { awardAttachmentHost } from "@/server/modules/awards/record";
+import { fundAttachmentHost } from "@/server/modules/claims/funds/record";
 import { proposalAttachmentHost } from "@/server/modules/proposals/attachments";
 import { recordIdentity } from "@/features/modules/proposals/record";
 import { fileProblem } from "@/features/record/dynamic-form/engine";
@@ -71,7 +72,11 @@ type Mode = "read" | "view" | "edit";
 const HOSTS: Record<
   string,
   (id: string, mode: Mode) => Promise<AttachmentHost>
-> = { eoi: eoiAttachmentHost, award: awardAttachmentHost };
+> = {
+  eoi: eoiAttachmentHost,
+  award: awardAttachmentHost,
+  "claim-funds": fundAttachmentHost,
+};
 
 for (const type of recordIdentity.shape.type.options)
   HOSTS[type.toLowerCase()] = (id, mode) =>

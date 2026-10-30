@@ -170,7 +170,8 @@ export function AppShell({
                   path.startsWith("/proposals") ||
                   path.startsWith("/opportunities") ||
                   path.startsWith("/contracts") ||
-                  path.startsWith("/awards")
+                  path.startsWith("/awards") ||
+                  path.startsWith("/claims")
                     ? "proposal-workspace"
                     : "home-workspace"
                 }

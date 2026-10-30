@@ -29,7 +29,7 @@ it.each([
   ],
   [
     "?page=shell&shell=claims&claims=claims-unit-inquiry-info",
-    "/modules/claims-unit-inquiry",
+    "/claims/unit-inquiry",
   ],
   ["?page=shell&shell=tutorials&tutorials=x", "/modules/tutorials"],
   ["?page=shell", "/home"],

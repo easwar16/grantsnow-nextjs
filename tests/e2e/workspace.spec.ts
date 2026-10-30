@@ -1616,3 +1616,134 @@ test("Guided learning: the Dashboard tour starts once, steps, closes, and a sing
   await page.keyboard.press("Escape");
   await expect(popover).toBeHidden();
 });
+
+test("Claims Unit Inquiry: drawer link, status and filters, panels, the unit dialog, Clone and Export", async ({
+  page,
+}) => {
+  await login(page);
+  await page
+    .getByRole("button", { name: "Application Navigation Drawer" })
+    .click();
+  // Claims is a drawer group (legacy claims-group), closed until opened.
+  await page.locator("#navigation-claims-group").click();
+  await page.locator("#navigation-claims-unit-inquiry").click();
+  await expect(page).toHaveURL(/\/claims\/unit-inquiry$/);
+  const rows = page.locator("#claims-units-rows > li[id^='claims-unit-']");
+  await expect(page.locator("#claims-units-count")).toContainText("25 of 30");
+  // Approved funds: every third application.
+  await page.locator("#claims-units-status-ia").click();
+  await expect(page.locator("#claims-units-count")).toContainText("10");
+  await expect(page.locator("#claims-units-clear")).toBeEnabled();
+  // 76 years in a windowed list: type to filter, as a user does.
+  await page.getByRole("combobox", { name: "Fiscal Year" }).fill("2027");
+  await page.getByRole("option", { name: "2027", exact: true }).click();
+  await expect(page.locator("#claims-units-count")).toContainText("5");
+  await page.locator("#claims-units-clear").click();
+  await expect(page.locator("#claims-units-count")).toContainText("25 of 30");
+  await expect(page.locator("#claims-units-clear")).toBeDisabled();
+  // The panels close and open with their chevron (shared Collapsible).
+  const funds = page.locator("#claims-unit-6000-funds");
+  await page.locator("#claims-unit-6000-funds-heading").click();
+  await expect(funds).toHaveAttribute("data-open", "false");
+  await page.locator("#claims-unit-6000-funds-heading").click();
+  await expect(funds).toHaveAttribute("data-open", "true");
+  await expect(rows.first()).toContainText("TITLE I Low Income (84.010A)");
+  // Create: one fund type and grant once only.
+  await page.locator("#claims-units-create").click();
+  const unitDialog = page.locator("#claims-unit-dialog");
+  await unitDialog.getByRole("combobox", { name: "Program Type" }).click();
+  await page.getByRole("option", { name: "Schoolwide" }).click();
+  for (let i = 0; i < 2; i++) {
+    await unitDialog.getByRole("combobox", { name: "Fund Type" }).click();
+    await page.getByRole("option", { name: "TITLE II (84.367A)" }).click();
+    // TITLE II's single grant is picked by the backend's auto_select.
+    await expect(
+      unitDialog.getByRole("combobox", { name: "Grant" }),
+    ).toHaveValue(/494102/);
+    await page.locator("#claims-unit-dialog-add-fund").click();
+  }
+  await expect(
+    page.getByText("This fund has already been added"),
+  ).toBeVisible();
+  await expect(page.locator("#claims-unit-dialog-funds tbody tr")).toHaveCount(
+    1,
+  );
+  await page.locator("#claims-unit-dialog-cancel").click();
+  // Clone: Goals takes its descendants; a year is required.
+  await page.locator("#claims-unit-6000-clone").click();
+  await page.locator("#claims-unit-clone-dialog-part-unit-goals").check();
+  await expect(
+    page.locator("#claims-unit-clone-dialog-part-roster"),
+  ).toBeChecked();
+  await page.locator("#claims-unit-clone-dialog-clone").click();
+  await expect(page.locator("#claims-unit-clone-dialog-parts")).toBeVisible();
+  await page.getByRole("combobox", { name: "Fiscal Year" }).last().fill("2028");
+  await page.getByRole("option", { name: "2028", exact: true }).click();
+  await page.locator("#claims-unit-clone-dialog-clone").click();
+  await expect(
+    page.getByText("Application Cloned Successfully!"),
+  ).toBeVisible();
+  // Export: the listing's report and one application's report.
+  const [listing] = await Promise.all([
+    page.waitForEvent("download"),
+    page.locator("#claims-units-export").click(),
+  ]);
+  expect(listing.suggestedFilename()).toBe("report.pdf");
+  const [one] = await Promise.all([
+    page.waitForEvent("download"),
+    page.locator("#claims-unit-6000-export").click(),
+  ]);
+  expect(one.suggestedFilename()).toBe("report.pdf");
+});
+
+test("Claims Funds Inquiry: listing, Summary dialog, the record's tabs, filters in the URL, Export and access", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/claims/funds-inquiry");
+  await expect(page.locator("#claims-funds-count")).toContainText("25 of 30");
+  await page.locator("#claims-fund-7001-view").click();
+  const dialog = page.locator("#claims-fund-summary-dialog");
+  await expect(dialog.locator("tbody tr")).toHaveCount(3);
+  // The backend sends 63.92 (a percentage): it reads 63.92%, not 6,392%.
+  await expect(dialog).toContainText("63.92%");
+  await page.keyboard.press("Escape");
+  await page.locator("#claims-fund-7001-title").click();
+  await expect(page).toHaveURL(/\/claims\/funds-inquiry\/7001\/summary$/);
+  await expect(page.locator("#claims-fund-summary tbody tr")).toHaveCount(3);
+  await expect(page.locator("#claims-fund-filters")).toHaveCount(0);
+  // Budget opens on the lists' first codes (Instruction, Salaries).
+  await page.locator("#claims-fund-tab-budget").click();
+  await expect(page.locator("#claims-fund-budget")).toContainText("£10,000.00");
+  await page.getByRole("combobox", { name: "Object" }).click();
+  await page.getByRole("option", { name: "Employee Benefits" }).click();
+  await expect(page).toHaveURL(/object=200/);
+  await expect(page.locator("#claims-fund-budget")).toContainText("£22.90");
+  // The filter travels with the tab links.
+  await expect(page.locator("#claims-fund-tab-claims")).toHaveAttribute(
+    "href",
+    /object=200/,
+  );
+  await page.getByRole("combobox", { name: "Object" }).click();
+  await page.getByRole("option", { name: "Salaries" }).click();
+  await page.locator("#claims-fund-tab-claims").click();
+  await expect(page.locator("#claims-fund-claims tbody tr")).toHaveCount(4);
+  await page.getByRole("combobox", { name: "Status" }).click();
+  await page.getByRole("option", { name: "In Process" }).click();
+  await expect(page).toHaveURL(/status=IN-PROCESS/);
+  await expect(page.locator("#claims-fund-claims")).toContainText(
+    "No data to display",
+  );
+  const [report] = await Promise.all([
+    page.waitForEvent("download"),
+    page.locator("#claims-fund-export").click(),
+  ]);
+  expect(report.suggestedFilename()).toBe("report.pdf");
+  // No report for Attachments, and no filter bar.
+  await page.locator("#claims-fund-tab-attachments").click();
+  await expect(page.locator("#claims-fund-export")).toHaveCount(0);
+  await expect(page.locator("#claims-fund-filters")).toHaveCount(0);
+  // Summary read N: the fund is refused and the user goes back to the listing.
+  await page.goto("/claims/funds-inquiry/7002/summary");
+  await expect(page).toHaveURL(/\/claims\/funds-inquiry$/);
+});

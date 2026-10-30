@@ -9,21 +9,10 @@
   margin: 27px auto 0;
   padding: 0 0 40px;
 }
-.panel {
-  display: block;
-}
+/* The Route and History headings (Collapsible): spacing only; the panel owns the chevron. */
 .head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 2px;
   padding: 8px 0;
-  cursor: pointer;
-  list-style: none;
-}
-
-.head::-webkit-details-marker {
-  display: none;
 }
 
 .head h3 {
@@ -33,14 +22,6 @@
   margin: 0;
   font-size: 16px;
   font-weight: 700;
-}
-/* oj-collapsible's disclosure chevron: down while open, right while closed. */
-.chevron {
-  flex: none;
-  transition: transform var(--dur) var(--ease);
-}
-.panel:not([open]) .chevron {
-  transform: rotate(-90deg);
 }
 
 .viewSwitch {
