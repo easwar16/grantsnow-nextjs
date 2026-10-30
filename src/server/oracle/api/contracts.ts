@@ -12,6 +12,15 @@ export const list = read<{
   headers: (p) => ({ p_status: p.status, p_level: p.level }),
   query: (p) => p.query,
 });
+export const linkedToProposal = read<{
+  reference: string;
+  offset: number;
+  limit: number;
+}>({
+  op: "getGetAllContracts",
+  headers: (p) => ({ p_object_ref_id: p.reference }),
+  query: (p) => ({ p_offset: p.offset, p_limit: p.limit }),
+});
 /** One contract's header row. */
 export const byId = read<{ id: string }>({
   op: "getContractsContract_id",

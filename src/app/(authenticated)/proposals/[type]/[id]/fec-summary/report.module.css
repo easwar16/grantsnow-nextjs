@@ -1,0 +1,137 @@
+.root {
+  padding: 14px;
+  display: grid;
+  gap: 16px;
+}
+.queryPanel,
+.results {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+}
+.queryPanel,
+.panel {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+}
+.queryPanel textarea {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  font: inherit;
+}
+.queryPanel label,
+.queryPanel strong {
+  font-weight: 700;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.actions button,
+.filters button {
+  border: 1px solid #999;
+  border-radius: 3px;
+  padding: 6px 12px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.actions button:first-child {
+  color: white;
+  background: #365257;
+}
+.actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.suggestions {
+  padding: 0;
+  margin: 8px 0 0;
+  list-style: none;
+  max-height: 120px;
+  overflow: auto;
+  border: 1px solid var(--border);
+}
+.suggestions li + li {
+  border-top: 1px solid var(--border);
+}
+.suggestions button {
+  width: 100%;
+  text-align: left;
+  padding: 8px;
+  border: 0;
+  color: var(--text);
+  background: transparent;
+  cursor: pointer;
+}
+.results {
+  grid-template-columns: 1fr 1fr;
+}
+.panel h2 {
+  font-size: 16px;
+  margin: 0 0 12px;
+}
+.filters,
+.axes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+.filters label {
+  flex: 1 1 120px;
+  font-size: 12px;
+}
+.filters input {
+  display: block;
+  width: 100%;
+  padding: 6px;
+}
+.axes > * {
+  flex: 1 1 130px;
+}
+.chartHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.chartHeader > *:last-child {
+  min-width: 160px;
+}
+.chartCanvas {
+  width: 100%;
+  min-height: 300px;
+}
+.tableScroll {
+  max-width: 100%;
+  overflow: auto;
+}
+.tableScroll table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.tableScroll th {
+  background: #365257;
+  color: white;
+  text-align: left;
+}
+.tableScroll th,
+.tableScroll td {
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.error {
+  color: #b53625;
+}
+@media (max-width: 800px) {
+  .queryPanel,
+  .results {
+    grid-template-columns: 1fr;
+  }
+}

@@ -8,6 +8,10 @@ One file for where the rebuild stands. It merges four earlier documents verbatim
 
 ## 1. Progress
 
+### Azure integration: guided tour completion, 2026-10-30
+
+The full fixture suite reproduced a guided-learning defect after the Azure pull: Escape hid the tour, but `gn-guide:home-tour:v2` stayed unset. In driver.js 1.10.2, calling `destroy()` while `onDestroyStarted` remains registered invokes that hook again and returns before cleanup. The shared guide launcher now records completion in its close path, clears the hook after its exit animation, and destroys the tour. This changes the owner framework only for the reproduced defect; the existing Motion exit animation remains. The Playwright assertion waits for completion after the popover hides.
+
 ## VBCS parity implementation — current progress
 
 Updated 2026-10-14. Approved plan: § 2 below. This records an implementation batch, **not completion of the full migration**.

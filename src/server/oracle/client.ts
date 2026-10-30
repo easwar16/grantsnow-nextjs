@@ -1,6 +1,11 @@
 import "server-only";
 import { cache } from "react";
-import { oracle, oracleWrite, type Operation } from "./connection";
+import {
+  oracle,
+  oracleWrite,
+  oracleFileWrite,
+  type Operation,
+} from "./connection";
 import { forget, forgetOperation, memo, operationKey, refresh } from "./cache";
 import { inWrite } from "./scope";
 import { oracleContext, type IdentityField } from "./context";
@@ -206,6 +211,23 @@ export function write<P = void, R = unknown>(def: WriteDef<P, R>) {
   };
   // What this write changes, so a fixture stand-in for it can drop the same reads (`invalidate`).
   return Object.assign(run, { invalidates: def.invalidates ?? [] });
+}
+/** An allowlisted write that returns a binary report instead of JSON. */
+export function writeFile<P>(def: WriteDef<P, never>) {
+  return async (params: P, options: Options = {}) => {
+    const { token, headers } = await request(def, params, options);
+    try {
+      return await oracleFileWrite(
+        def.op,
+        headers,
+        def.body?.(params),
+        options.signal,
+      );
+    } finally {
+      for (const op of def.invalidates ?? []) forgetOperation(op, token);
+      requestReads().clear();
+    }
+  };
 }
 /** Drops the session's held reads of `operations`: for code that changes data without a write function (fixtures). */
 export async function invalidate(operations: readonly Operation[]) {

@@ -144,9 +144,48 @@ export async function oracleWrite(
 ): Promise<unknown> {
   if (!writes(operation))
     throw new AppError("BAD_REQUEST", "Unapproved Oracle write.", 400);
-  if (fixtureMode()) return {};
+  if (fixtureMode()) {
+    if (
+      operation !== "postProposalProposal" &&
+      operation !== "postPre_awards_costingInsertCostingHeaderN" &&
+      operation !== "postPre_awards_costingSaveCostingDataN"
+    )
+      return {};
+    const { mockOracle } = await import("@/test-support/transport");
+    return mockOracle(operation, headers, query, pathParams, body);
+  }
   assertWritesEnabled();
   return send(operation, headers, query, signal, pathParams, body);
+}
+/** A report operation whose successful body is a file, using the same allowlist and write gate. */
+export async function oracleFileWrite(
+  operation: Operation,
+  headers: Record<string, string>,
+  body: unknown,
+  signal?: AbortSignal,
+): Promise<{ bytes: Uint8Array; mime: string; filename: string }> {
+  if (operation !== "generateReport" || !writes(operation))
+    throw new AppError("BAD_REQUEST", "Unapproved Oracle file operation.", 400);
+  if (fixtureMode())
+    return {
+      bytes: new Uint8Array([37, 80, 68, 70]),
+      mime: "application/pdf",
+      filename: "report.pdf",
+    };
+  assertWritesEnabled();
+  return send(
+    operation,
+    headers,
+    undefined,
+    signal,
+    undefined,
+    body,
+    true,
+  ) as Promise<{
+    bytes: Uint8Array;
+    mime: string;
+    filename: string;
+  }>;
 }
 async function send(
   operation: Operation,
@@ -155,6 +194,7 @@ async function send(
   signal?: AbortSignal,
   pathParams?: Record<string, string>,
   body?: unknown,
+  file = false,
 ): Promise<unknown> {
   if (browserSessionMode() && operation === "getSessionLogin")
     throw new AppError(
@@ -206,7 +246,9 @@ async function send(
             ...(config.authorization
               ? { Authorization: config.authorization }
               : {}),
-            Accept: "application/json",
+            Accept: file
+              ? "application/pdf, application/octet-stream, application/json"
+              : "application/json",
           },
           cache: "no-store",
           redirect: "error",
@@ -242,6 +284,45 @@ async function send(
   if (response.status === 401) throw expired();
   if (response.status === 403)
     throw new AppError("FORBIDDEN", "Oracle denied access to this data.", 403);
+  if (
+    file &&
+    response.ok &&
+    !response.headers.get("content-type")?.includes("json")
+  ) {
+    const length = Number(response.headers.get("content-length"));
+    if (Number.isFinite(length) && length > 4_000_000)
+      throw new AppError("CONTRACT", "Oracle returned an invalid report file.");
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    for await (const chunk of response.body ?? []) {
+      size += chunk.length;
+      if (size > 4_000_000)
+        throw new AppError(
+          "CONTRACT",
+          "Oracle returned an invalid report file.",
+        );
+      chunks.push(chunk);
+    }
+    const bytes = new Uint8Array(size);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.length;
+    }
+    if (bytes.length === 0 || bytes.length > 4_000_000)
+      throw new AppError("CONTRACT", "Oracle returned an invalid report file.");
+    const disposition = response.headers.get("content-disposition") ?? "";
+    const rawName =
+      /filename="?([^";]+)"?/i.exec(disposition)?.[1] ?? "report.pdf";
+    const filename = rawName.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
+    return {
+      bytes,
+      mime:
+        response.headers.get("content-type")?.split(";")[0] ??
+        "application/octet-stream",
+      filename,
+    };
+  }
   let reply: unknown;
   try {
     const text = await response.text();

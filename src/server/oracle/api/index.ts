@@ -22,3 +22,4 @@ export * as configuration from "./configuration";
 export * as account from "./account";
 export * as notifications from "./notifications";
 export * as home from "./home";
+export * as reports from "./reports";

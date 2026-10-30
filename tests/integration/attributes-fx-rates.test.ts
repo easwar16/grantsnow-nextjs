@@ -226,7 +226,7 @@ describe("object attributes (EOI Application tab)", () => {
       expect((await read()).status).toBe(403);
       expect(calls("getSharedGetObjectAttributes")).toHaveLength(0);
     }
-    expect((await read("host=proposals-summary&objectId=1")).status).toBe(400);
+    expect((await read("host=unknown-module&objectId=1")).status).toBe(400);
     expect(
       (await read("host=opportunities-eoi-application&objectId=0")).status,
     ).toBe(400);

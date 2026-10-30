@@ -59,6 +59,10 @@ export const querySchema = z
     message: "The date range is reversed.",
   });
 export type ProposalQuery = z.infer<typeof querySchema>;
+export const proposalModeSchema = z.enum(["view", "edit"]);
+export function parseProposalMode(value: string | undefined) {
+  return proposalModeSchema.safeParse(value ?? "view");
+}
 export function parseQuery(params: URLSearchParams): ProposalQuery {
   const result = querySchema.safeParse(Object.fromEntries(params));
   if (!result.success)

@@ -34,6 +34,125 @@ async function login(page: import("@playwright/test").Page) {
     page.getByRole("heading", { name: "Example Research University" }),
   ).toBeVisible();
 }
+test("Draft Proposal exposes Edit, editable summary fields, and Cancel", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 2048, height: 1190 });
+  await login(page);
+  await page.goto("/proposals/OUTLINE_PROPOSAL/1000");
+  await expect(page.getByRole("link", { name: "Edit Proposal" })).toBeVisible();
+  await page.getByRole("link", { name: "Edit Proposal" }).click();
+  await expect(page).toHaveURL(/mode=edit/);
+  await expect(page.getByRole("link", { name: "Edit Proposal" })).toHaveCount(
+    0,
+  );
+  await expect(page.getByRole("button", { name: "Save" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "AI Summary" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Comments" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Open Audit Trail" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("textbox", { name: "Full Project Title" }),
+  ).toHaveValue(/Climate resilient communities/);
+  await expect(
+    page.getByRole("textbox", { name: "Project description" }),
+  ).toHaveValue(/Synthetic project description/);
+  await expect(
+    page.getByRole("combobox", { name: "Activity type" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("combobox", { name: "Funder Type" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("combobox", { name: "Add Funder" }),
+  ).toBeVisible();
+  await expect(page.locator("#proposal-1000-pi-editor")).toHaveCSS(
+    "grid-template-columns",
+    /px .*px .*px .*px/,
+  );
+  await page.screenshot({ path: "test-results/proposal-edit-expanded.png" });
+  await page.getByRole("button", { name: "Change PI" }).click();
+  const piDialog = page.getByRole("dialog", {
+    name: "Search for Principal Investigator",
+  });
+  await expect(piDialog).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Search for Principal Investigator" }),
+  ).toBeHidden();
+  await expect(piDialog).toHaveCSS("opacity", "1");
+  await page.screenshot({ path: "test-results/proposal-pi-dialog.png" });
+  await page.getByRole("searchbox", { name: "Search" }).fill("Sam");
+  await page.locator("#proposal-1000-pi-candidate-102").click();
+  await page.getByRole("button", { name: "Okay" }).click();
+  await expect(page.locator("#proposal-1000-pi-full-name")).toContainText(
+    "Sam Taylor",
+  );
+  const deleteSponsor = page.getByRole("button", {
+    name: "Delete Research Council",
+  });
+  await expect(deleteSponsor).toBeEnabled();
+  await deleteSponsor.click();
+  await expect(page.getByRole("dialog", { name: "Warning" })).toContainText(
+    "remove this record permanently",
+  );
+  await page.locator("#proposal-1000-delete-sponsor-dialog-cancel").click();
+  await expect(deleteSponsor).toBeVisible();
+  await deleteSponsor.click();
+  await page
+    .getByRole("dialog", { name: "Warning" })
+    .getByRole("button", {
+      name: "Yes",
+    })
+    .click();
+  await expect(deleteSponsor).toHaveCount(0);
+  await page.getByRole("link", { name: "Cancel" }).click();
+  await expect(page).toHaveURL(/\/proposals\/OUTLINE_PROPOSAL\/1000$/);
+  await expect(
+    page.getByRole("textbox", { name: "Full Project Title" }),
+  ).toHaveCount(0);
+});
+test("Draft Proposal Save completes in the fixture workspace", async ({
+  page,
+}) => {
+  await login(page);
+  let dynamicSaves = 0;
+  await page.route("**/api/dynamic-form", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    dynamicSaves += 1;
+    await route.fulfill({ status: 503, body: "Dynamic form unavailable" });
+  });
+  await page.goto("/proposals/OUTLINE_PROPOSAL/1000?mode=edit");
+  await expect(page.getByRole("button", { name: "Save" })).toBeEnabled();
+  await page
+    .getByRole("textbox", { name: "Full Project Title" })
+    .fill("Climate resilient communities — fixture save");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page).toHaveURL(/\/proposals\/OUTLINE_PROPOSAL\/1000$/);
+  expect(dynamicSaves).toBe(0);
+  await expect(page.locator("#proposal-1000-edit-error")).toHaveCount(0);
+});
+test("Proposal Summary partner editors follow the VBCS Yes/No flow", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/proposals/PROPOSAL/1004?mode=edit");
+  const partners = page.locator("#proposal-1004-research-partners");
+  const subproposals = page.locator("#proposal-1004-subproposals");
+  await expect(partners).toBeVisible();
+  await expect(subproposals).toBeVisible();
+  await partners.getByRole("radio", { name: "Yes" }).check();
+  await expect(
+    partners.getByRole("combobox", { name: "Add Research partners" }),
+  ).toBeVisible();
+  await subproposals.getByRole("radio", { name: "Yes" }).check();
+  await expect(
+    subproposals.getByRole("combobox", { name: "Sub-proposal type" }),
+  ).toBeVisible();
+  await expect(
+    subproposals.getByRole("combobox", { name: "Add Subproject" }),
+  ).toBeDisabled();
+});
 test("Contracts listing filters, paging and guarded Summary", async ({
   page,
 }) => {
@@ -616,7 +735,10 @@ test("Proposal Summary guards, safe navigation, announcements and dashboard keyb
   await page.locator(".record-title a").first().click();
   await expect(page).toHaveURL(/proposals\/(PROPOSAL|OUTLINE_PROPOSAL)\/\d+/);
   await expect(
-    page.getByRole("heading", { name: "Summary", exact: true }),
+    page.getByRole("heading", { name: "Principal Investigator Details" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Proposal Details" }),
   ).toBeVisible();
   await expect(
     page.getByText("Synthetic project description for local UI verification."),
@@ -630,6 +752,181 @@ test("Proposal Summary guards, safe navigation, announcements and dashboard keyb
     fullPage: true,
     caret: "initial",
   });
+});
+
+test("Proposal record keeps its header while shared read tabs load", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/proposals/PROPOSAL/1001");
+  const heading = page.locator("#proposal-1001-heading");
+  await expect(heading).toBeVisible();
+  const title = await heading.getByRole("heading").textContent();
+  await page.getByRole("link", { name: "Proposal Detail" }).click();
+  await expect(page).toHaveURL(/\/dynamic-form-1$/);
+  await expect(heading.getByRole("heading")).toHaveText(title ?? "");
+  await page.getByRole("link", { name: "Approvals" }).click();
+  await expect(page.locator("#proposal-1001-workflow")).toBeVisible();
+  await page.screenshot({
+    path: "test-results/proposal-approvals.png",
+    fullPage: true,
+  });
+  expect(
+    (
+      await page.request.post("/api/proposals/PROPOSAL/1001/approvals")
+    ).status(),
+  ).toBe(405);
+  await page.getByRole("link", { name: "History" }).click();
+  await expect(page.locator("#proposal-1001-history-panel")).toBeVisible();
+  await page.getByRole("link", { name: "Attachments" }).click();
+  await expect(page.locator("#proposal-1001-attachments-panel")).toBeVisible();
+  await page.getByRole("link", { name: "Contracts" }).click();
+  await expect(page.locator("#proposal-1001-contracts")).toContainText(
+    "No data to display.",
+  );
+  await page.getByRole("link", { name: "Delegation" }).click();
+  await expect(page.locator("#proposal-1001-delegation-panel")).toBeVisible();
+  await page.getByRole("button", { name: "Comments" }).click();
+  await expect(page.getByRole("dialog", { name: "Comments" })).toBeVisible();
+});
+
+test("Proposal FEC Summary generates a filterable report and chart from the analysis response", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/proposals/PROPOSAL/1001/fec-summary");
+  await expect(page.locator("#proposal-1001-fec-summary")).toBeVisible();
+  await page.route(
+    "**/api/proposals/PROPOSAL/1001/fec-summary",
+    async (route) => {
+      expect(route.request().method()).toBe("POST");
+      expect(route.request().postDataJSON()).toEqual({
+        query: "Annual cost trend analysis",
+      });
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          rows: [
+            { YEAR: "2026", TOTAL_COST: 10 },
+            { YEAR: "2027", TOTAL_COST: 20 },
+          ],
+          chart: { name: "Annual cost", types: ["bar", "line"] },
+        }),
+      });
+    },
+  );
+  await page
+    .locator("#proposal-1001-fec-query")
+    .fill("Annual cost trend analysis");
+  await page.locator("#proposal-1001-fec-generate").click();
+  await expect(page.locator("#proposal-1001-fec-table tbody tr")).toHaveCount(
+    2,
+  );
+  await expect(page.locator("#proposal-1001-fec-chart")).toBeVisible();
+  await page.locator("#proposal-1001-fec-filter-YEAR").fill("2027");
+  await expect(page.locator("#proposal-1001-fec-table tbody tr")).toHaveCount(
+    1,
+  );
+  await expect(page.locator("#proposal-1001-fec-table tbody tr")).toContainText(
+    "20",
+  );
+});
+
+test("Proposal Budget keeps funding and category rows aligned as an expandable tree", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/proposals/PROPOSAL/1001/budget");
+  const table = page.locator("#proposal-1001-budget-tree-1001-primary");
+  const partner = page.locator("#proposal-1001-budget-tree-1001-42");
+  await expect(partner).toContainText("Travel");
+  await expect(partner).toContainText("£10.73");
+  await expect(table).not.toContainText("Travel");
+  await page.getByLabel("Show Year Split").check();
+  await expect(
+    partner.getByRole("columnheader", { name: "2026/27 (Indexed)" }),
+  ).toBeVisible();
+  await expect(
+    table.getByRole("columnheader", { name: "2026/27 (Indexed)" }),
+  ).toHaveCount(0);
+  await expect(table).toContainText("Directly Allocated");
+  await expect(table).toContainText("Alex Morgan");
+  await table.getByRole("button", { name: "Directly Allocated" }).click();
+  await expect(table.getByRole("row", { name: /Staff/ })).toHaveCount(0);
+  await table.getByRole("button", { name: "Directly Allocated" }).click();
+  await table.getByRole("button", { name: "Staff" }).click();
+  await expect(table.getByRole("row", { name: /Alex Morgan/ })).toHaveCount(0);
+  await table.getByRole("button", { name: "Staff" }).click();
+  await expect(table.getByRole("row", { name: /Alex Morgan/ })).toBeVisible();
+  await page.getByRole("button", { name: "Viability Checks" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Viability Checks" }),
+  ).toContainText("Budget coverage");
+  await expect(
+    page.getByRole("dialog", { name: "Viability Checks" }),
+  ).not.toContainText("DO-NOT-EXPOSE");
+  await page.screenshot({
+    path: "test-results/proposal-budget-tree.png",
+    fullPage: true,
+  });
+});
+
+test("Proposal Budget opens the VBCS staff and nonstaff costing flows", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/proposals/OUTLINE_PROPOSAL/1000/budget");
+  const actions = page.locator("#proposal-1000-budget-add-actions");
+  await expect(
+    actions.getByRole("button", { name: "Add Staff Cost" }),
+  ).toBeVisible();
+  await expect(
+    actions.getByRole("button", { name: "Add Non Staff Cost" }),
+  ).toBeVisible();
+  await expect(
+    actions.getByRole("button", { name: "Add Research Partner Costs" }),
+  ).toBeVisible();
+  await actions.getByRole("button", { name: "Add Staff Cost" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Add Staff Cost" }),
+  ).toContainText("Project role");
+  const staff = page.getByRole("dialog", { name: "Add Staff Cost" });
+  await staff.getByRole("combobox", { name: "Funding section" }).click();
+  await page.getByRole("option", { name: "Directly Allocated" }).click();
+  await staff.getByRole("combobox", { name: "Project role" }).click();
+  await page.getByRole("option", { name: "Principal investigator" }).click();
+  await staff.getByRole("combobox", { name: "Person" }).click();
+  await page.getByRole("option", { name: "Alex Morgan" }).click();
+  await staff.getByRole("textbox", { name: "Start date" }).fill("01-Jan-2027");
+  await staff.getByRole("textbox", { name: "End date" }).fill("31-Dec-2027");
+  await staff.getByRole("button", { name: "Save" }).click();
+  await expect(staff).toHaveCount(0);
+  await actions.getByRole("button", { name: "Add Non Staff Cost" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Add Non Staff Cost" }),
+  ).toContainText("Cost category");
+  const nonstaff = page.getByRole("dialog", { name: "Add Non Staff Cost" });
+  await nonstaff.getByRole("combobox", { name: "Funding section" }).click();
+  await page.getByRole("option", { name: "Directly Allocated" }).click();
+  await nonstaff.getByRole("combobox", { name: "Cost category" }).click();
+  await page
+    .getByRole("listbox", { name: "Cost category" })
+    .getByRole("option", { name: "Equipment" })
+    .click();
+  await nonstaff.getByRole("combobox", { name: "Cost item" }).click();
+  await page
+    .getByRole("listbox", { name: "Cost item" })
+    .getByRole("option", { name: "Equipment" })
+    .click();
+  await nonstaff.getByLabel("Item description").fill("Microscope");
+  await nonstaff
+    .getByRole("textbox", { name: "Start date" })
+    .fill("01-Jan-2027");
+  await nonstaff.getByRole("textbox", { name: "End date" }).fill("31-Dec-2027");
+  await nonstaff.getByLabel("Unit cost").fill("10");
+  await nonstaff.getByRole("button", { name: "Save" }).click();
+  await expect(nonstaff).toHaveCount(0);
 });
 
 test("Proposal scroll loading preserves records, retries failures and resets on a new filter", async ({
@@ -1298,9 +1595,11 @@ test("Guided learning: the Dashboard tour starts once, steps, closes, and a sing
   await expect(progress).not.toHaveText(first ?? "");
   await page.keyboard.press("Escape");
   await expect(popover).toBeHidden();
-  expect(
-    await page.evaluate(() => localStorage.getItem("gn-guide:home-tour:v2")),
-  ).toBe("Y");
+  await expect
+    .poll(() =>
+      page.evaluate(() => localStorage.getItem("gn-guide:home-tour:v2")),
+    )
+    .toBe("Y");
   // Finished, it does not start again on the next visit.
   await page.reload();
   await expect(

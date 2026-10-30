@@ -102,6 +102,10 @@ async function run(g: Guide, content: GuideStep[]): Promise<Tour> {
       shade &&
         animate(shade, { opacity: 0 }, still ? out : fade.exit.transition),
     ]);
+    // Closing a tour records completion even when driver.js has no active step to pass to onDestroyed.
+    markDone(g);
+    // The second destroy must skip this hook so driver.js can finish cleanup.
+    tour.setConfig({ ...tour.getConfig(), onDestroyStarted: undefined });
     tour.destroy();
   };
   // A step behind a tab stays while its tab exists; its element is checked when the step is reached.

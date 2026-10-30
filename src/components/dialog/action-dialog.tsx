@@ -12,6 +12,7 @@ export function ActionDialog({
   title,
   subtitle,
   width,
+  className,
   busy = false,
   closeLabel = "Close",
   onClose,
@@ -23,6 +24,7 @@ export function ActionDialog({
   subtitle?: string;
   /** A vw length from the legacy width class; omitted, Redwood's default 600px dialog, at most 70vh tall (owner, 2026-10-27). */
   width?: string;
+  className?: string;
   busy?: boolean;
   closeLabel?: string;
   onClose: () => void;
@@ -37,7 +39,7 @@ export function ActionDialog({
     <dialog
       ref={ref}
       id={id}
-      className={width ? styles.dialog : `${styles.dialog} ${styles.standard}`}
+      className={`${styles.dialog}${width ? "" : ` ${styles.standard}`}${className ? ` ${className}` : ""}`}
       style={{ width: `min(${width ?? "34.384vw"}, calc(100vw - 32px))` }}
       aria-labelledby={`${id}-title`}
       onCancel={(e) => {

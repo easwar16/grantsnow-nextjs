@@ -43,6 +43,7 @@ export type AttributeValues = Record<string, FieldValue>;
 export const ATTRIBUTE_HOSTS = [
   "opportunities-eoi-application",
   "award-header",
+  "proposals-summary",
 ] as const;
 export type AttributeHost = (typeof ATTRIBUTE_HOSTS)[number];
 /** A dependent LOV's choices follow its parent attribute's current value. */

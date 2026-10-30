@@ -3,6 +3,7 @@ import { z } from "zod";
 import { attributes } from "@/server/oracle/api";
 import { resources } from "@/server/platform/configuration/resources";
 import { authorizeForm } from "@/server/record/dynamic-form/access";
+import { proposalPage } from "@/server/modules/proposals/record";
 import { formGlobals } from "@/server/record/dynamic-form/globals";
 import { AppError } from "@/lib/errors";
 import {
@@ -32,6 +33,15 @@ interface Host {
   authorize: (q: Query) => Promise<unknown>;
 }
 const HOSTS: Record<AttributeHost, Host> = {
+  "proposals-summary": {
+    objectType: "PROPOSAL",
+    bundle: "proposal",
+    authorize: async (q) => {
+      if (!q.objectId)
+        throw new AppError("BAD_REQUEST", "Proposal identity required.", 400);
+      await proposalPage("PROPOSAL", q.objectId, "proposals-summary");
+    },
+  },
   "opportunities-eoi-application": {
     // ponytail: legacy's misspelt type (opportunities-eoi-application-start-page.html:18), kept on the wire until the
     // backend confirms which type EOI attributes are stored under (KB Framework-Patterns § 5).

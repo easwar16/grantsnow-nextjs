@@ -12,14 +12,17 @@ import { authorizeForm, formTarget, type FormTarget } from "./access";
 import { checkAnswers, mapAnswers, mapForms } from "./forms";
 import { formGlobals } from "./globals";
 import { serverFunctions } from "@/server/functions";
-
-/** The fragment's translationsModule defaults to the object type: AWARD reads the award bundle, EOI its own. */
+import { recordIdentity } from "@/features/modules/proposals/record";
+import { proposalBundle } from "@/server/modules/proposals/record";
+/** The fragment's translationsModule defaults to its host object's bundle. */
 const bundleOf = (t: FormTarget) =>
   t.objectType === "AWARD"
     ? "award"
     : t.objectType === "CONTRACT"
       ? "contract"
-      : "opportunities-eoi";
+      : recordIdentity.shape.type.safeParse(t.objectType).success
+        ? t.objectType.toLowerCase()
+        : "opportunities-eoi";
 const TEXTS: Record<DynamicFormText, [string, string, string]> = {
   noData: ["helper-texts", "no-data", "No data to display."],
   dragAndDrop: ["labels", "drag-and-drop", "Drag and drop, or select a file"],
@@ -51,10 +54,14 @@ const TEXTS: Record<DynamicFormText, [string, string, string]> = {
 };
 async function formTexts(t: FormTarget) {
   const rows = await resources();
+  const proposalType = recordIdentity.shape.type.safeParse(t.objectType);
+  const resolved = proposalType.success
+    ? proposalBundle(rows, proposalType.data)
+    : bundleOf(t);
   return Object.fromEntries(
     Object.entries(TEXTS).map(([k, [group, key, fallback]]) => [
       k,
-      serverFunctions.resources.label(rows, bundleOf(t), group, key, fallback),
+      serverFunctions.resources.label(rows, resolved, group, key, fallback),
     ]),
   ) as Record<DynamicFormText, string>;
 }

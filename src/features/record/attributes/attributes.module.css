@@ -45,3 +45,25 @@
 .readonlyField > :last-child:empty {
   display: none;
 }
+.readonly:not(.panel) {
+  margin-top: 14px;
+}
+.viewPanel {
+  display: grid;
+  gap: 14px;
+  margin: 14px 0 0;
+}
+.viewField {
+  min-height: 27px;
+  font-size: 13px;
+}
+.viewLabel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #666;
+  font-weight: 600;
+}
+.viewValue {
+  min-height: 17px;
+}

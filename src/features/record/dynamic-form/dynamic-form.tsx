@@ -354,7 +354,11 @@ export function DynamicForm({
       toast.show("error", data.texts.fileUnique);
   };
   return (
-    <div ref={host} id={`${prefix}-form`} className={styles.form}>
+    <div
+      ref={host}
+      id={`${prefix}-form`}
+      className={`${styles.form} ${slot === "PROPOSALS-SUMMARY" ? styles.proposalSummary : ""}`}
+    >
       <fieldset
         id={`${prefix}-sections`}
         className={styles.sections}

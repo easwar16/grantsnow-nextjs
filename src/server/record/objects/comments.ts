@@ -106,7 +106,7 @@ const readThread = async (host: PanelHost) => {
     objectId: host.objectId,
   });
   if (
-    host.objectType === "CONTRACT" &&
+    (host.objectType === "CONTRACT" || host.objectType === "PROPOSAL") &&
     thread.some(
       (row) =>
         String(row.object_id) !== host.objectId || row.module !== host.page,
@@ -114,7 +114,7 @@ const readThread = async (host: PanelHost) => {
   )
     throw new AppError(
       "FORBIDDEN",
-      "Oracle returned another Contract's comments.",
+      "Oracle returned another record's comments.",
       403,
     );
   return thread;

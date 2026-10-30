@@ -96,11 +96,19 @@ export async function mockOracle(
   headers: Record<string, string>,
   query?: URLSearchParams,
   pathParams?: Record<string, string>,
+  body?: unknown,
 ): Promise<unknown> {
   if (!fixtureMode())
     throw new Error(
       "Fixture transport cannot run outside explicit development mode.",
     );
+  if (op === "postProposalProposal") {
+    const proposal = (body as { proposals?: { main_proposal_id?: number } })
+      ?.proposals?.main_proposal_id;
+    if (!Number.isSafeInteger(proposal) || !proposal)
+      throw new Error("Fixture Proposal identity is missing.");
+    return { proposal };
+  }
   // The isolated Playwright run can hold one lookup to verify that list results and
   // status navigation render before this filter is ready. Never used by live ORDS.
   if (
@@ -156,6 +164,25 @@ export async function mockOracle(
         ["SINGLE", "Single"],
         ["MULTI", "Multi"],
       ],
+      SUB_PROPOSAL_TYPE: [
+        ["INTERNAL_DEPT", "Internal Department"],
+        ["RES_PARTNER", "Research Partner"],
+      ],
+      COLLABORATOR_ROLE_TYPE_FLAG: [
+        ["PRM", "Primary Provider"],
+        ["SEC", "Secondary Provider"],
+      ],
+      SPONSOR_TYPE_FLAG: [
+        ["PRM", "Primary Provider"],
+        ["SEC", "Secondary Provider"],
+        ["BIL", "Billing Provider"],
+        ["INK", "In-Kind"],
+      ],
+      DEADLINE_TYPE: [
+        ["FUNDER", "Funder deadline"],
+        ["INST", "Institutional deadline"],
+        ["NONE", "None"],
+      ],
       FILTER_OPERATOR: [
         ["BETWEEN", "Between"],
         ["GT", "Greater Than"],
@@ -166,6 +193,11 @@ export async function mockOracle(
       CURRENCY_CODES: [
         ["GBP", "Pound Sterling"],
         ["USD", "US Dollar"],
+      ],
+      COST_CATEGORY_TYPES: [
+        ["STAFF", "Staff"],
+        ["EQUIP", "Equipment"],
+        ["TRAVEL", "Travel"],
       ],
       EOI_STATUS: [
         ["DRFT", "Draft"],
@@ -221,12 +253,17 @@ export async function mockOracle(
           org_unit_id: 202,
           org_unit_name: "Example Research University",
           is_pi_flag: "true",
+          costing_allowed_flag: "Y",
           email_address: "alex.morgan@example.org",
         },
         {
           person_id: 102,
           employee_number: "EMP102",
           full_name: "Sam Taylor",
+          org_unit_id: 203,
+          org_unit_name: "Faculty of Science",
+          is_pi_flag: "true",
+          costing_allowed_flag: "Y",
           email_address: "sam.taylor@example.org",
         },
       ],
@@ -234,9 +271,30 @@ export async function mockOracle(
   if (op === "GetSponsorList")
     return {
       items: [
-        { sponsor_party_id: 301, party_name: "Research Council" },
-        { sponsor_party_id: 302, party_name: "Health Foundation" },
+        {
+          sponsor_party_id: 301,
+          party_name: "Research Council",
+          sponsor_type: "GOV",
+        },
+        {
+          sponsor_party_id: 302,
+          party_name: "Health Foundation",
+          sponsor_type: "CHARITY",
+        },
       ],
+    };
+  if (op === "getPre_awardGetSponsorTypes")
+    return {
+      items: [
+        { sponsor_type_code: "GOV", sponsor_type_name: "Government" },
+        { sponsor_type_code: "CHARITY", sponsor_type_name: "Charity" },
+      ],
+    };
+  if (op === "getOpportunitiesGetOpportunityCategory")
+    return { items: [{ category: "Research" }, { category: "Teaching" }] };
+  if (op === "getPre_awards_costingGetCostModel")
+    return {
+      items: [{ costmodel_id: 338, costmodel_name: "Example cost model" }],
     };
   if (op === "getSessionLogout") return { response_msg: "SUCCESS" };
   if (op.startsWith("getSession"))
@@ -1062,15 +1120,32 @@ export async function mockOracle(
       items: [
         {
           person_id: 101,
+          org_unit_id: 202,
           full_name: "Alex Morgan",
           org_unit_name: "Example Research University",
           employee_number: "EMP101",
         },
         {
           person_id: 102,
+          org_unit_id: 203,
           full_name: "Sam Taylor",
           org_unit_name: "Faculty of Science",
           employee_number: "EMP102",
+        },
+      ],
+    };
+  if (op === "getPre_awardGetCollaboratorList")
+    return {
+      items: [
+        {
+          id: 252,
+          collaborator_name: "Lancaster University",
+          collaborator_code: "LANCUNI",
+        },
+        {
+          id: 255,
+          collaborator_name: "University College London",
+          collaborator_code: "UCL",
         },
       ],
     };
@@ -1082,15 +1157,56 @@ export async function mockOracle(
   )
     return {
       items: [
-        { page_name: "proposals-summary", read_access: "Y" },
-        ...["proposals-budget", "proposals-pricing", "proposal-fx-rates"].map(
-          (page_name, i) => ({
-            page_id: 40 + i,
-            page_name,
-            read_access: "Y",
-            edit_access: "Y",
-          }),
-        ),
+        {
+          page_id: 1,
+          page_name: "proposals-summary",
+          read_access: "Y",
+          edit_access: "Y",
+          delete_access: "Y",
+        },
+        {
+          page_id: 2,
+          page_name: "proposals-edit-pi",
+          read_access: "Y",
+          edit_access: "Y",
+        },
+        ...[
+          "proposals-dynamic-form-1",
+          "proposals-approvals",
+          "proposals-history",
+          "proposals-attachments",
+          "proposals-delegation",
+          "proposals-contracts",
+        ].map((page_name, i) => ({
+          page_id: 50 + i,
+          page_name,
+          read_access: "Y",
+          edit_access: "N",
+        })),
+        ...[
+          "proposals-budget",
+          "proposals-pricing",
+          "proposal-fx-rates",
+          "proposals-fec-summary",
+        ].map((page_name, i) => ({
+          page_id: 40 + i,
+          page_name,
+          read_access: "Y",
+          edit_access: "Y",
+        })),
+        ...[
+          "proposals-budget-staff",
+          "proposals-budget-student",
+          "proposals-budget-pool-tech",
+          "proposals-budget-non-staff",
+          "proposals-budget-collab",
+          "quick-costing",
+        ].map((page_name, i) => ({
+          page_id: 60 + i,
+          page_name,
+          read_access: "Y",
+          edit_access: "Y",
+        })),
       ],
     };
   // FX rates of any proposal version (shape as legacy fx-rates-fragment.json fxRatesData).
@@ -1114,6 +1230,121 @@ export async function mockOracle(
         default_pricing_fx_rate: base,
         rate_status: status,
       })),
+    };
+  if (op === "getPre_awards_costingBudget_version")
+    return {
+      items: [{ proposal_period_version_id: 12113, version: "Version 1" }],
+    };
+  if (op === "getPre_awards_costingGetFundingHdr")
+    return {
+      items: [
+        { lookup_code: "DA", lookup_code_value: "Directly Allocated" },
+        { lookup_code: "DC", lookup_code_value: "Direct Cost" },
+      ],
+    };
+  if (op === "getPre_awardGetProjectRoles")
+    return {
+      items: [
+        {
+          project_role_code: "PI",
+          project_role_name: "Principal investigator",
+        },
+        { project_role_code: "STUD", project_role_name: "Student" },
+        {
+          project_role_code: "POOL_TECH",
+          project_role_name: "Pool technician",
+        },
+      ],
+    };
+  if (op === "getPre_awards_costingGetCostItem")
+    return {
+      items: [
+        {
+          cost_category_type_lkp_code: "EQUIP",
+          cost_item_lkp_code: "EQUIPMENT",
+          cost_item_desc: "Equipment",
+        },
+        {
+          cost_category_type_lkp_code: "TRAVEL",
+          cost_item_lkp_code: "TRAVEL",
+          cost_item_desc: "Travel",
+        },
+      ],
+    };
+  if (op === "postInsertCostingBulk") return { status: "success" };
+  if (op === "postPre_awards_costingInsertCostingHeaderN")
+    return {
+      costing_line_json: [
+        {
+          costing_header_id: 80001,
+          costing_line_id: 80002,
+          costmodel_id: "338",
+        },
+      ],
+      cost_summary: [],
+    };
+  if (op === "postPre_awards_costingSaveCostingDataN")
+    return { costing_line_json: [] };
+  if (op === "getPre_awards_costingGetCostSummary")
+    return {
+      items:
+        query?.get("pid") === "1001"
+          ? [
+              {
+                proposal_id: 1001,
+                proposal_number: "P_0002",
+                costing_header_id: 57993,
+                funding_header: 1,
+                funding_header_description: "Directly Allocated",
+                cost_category_lkp_code: "STAFF",
+                cost_category_type_value: "Staff",
+                staff_name: "Alex Morgan",
+                project_role: "Principal investigator",
+                fte: 0.5,
+                avg_fte: 0.5,
+                project_hours: 800,
+                project_months: 12,
+                unindex_cost: 1000,
+                fec_cost: 1200,
+              },
+              {
+                proposal_id: 1001,
+                proposal_number: "P_0002",
+                collab_id: 42,
+                collab_name: "Lancaster University",
+                costing_header_id: 57994,
+                funding_header: 2,
+                funding_header_description: "Direct Cost",
+                cost_category_lkp_code: "EQUIP",
+                cost_category_type_value: "Equipment",
+                staff_name: "Travel",
+                project_role: "Research partner",
+                fte: 0,
+                avg_fte: 0,
+                project_hours: 0,
+                project_months: 0,
+                unindex_cost: 10,
+                fec_cost: 10.73,
+                cost_year_splits: [
+                  {
+                    period_label: "2026/27",
+                    unindexed_cost: 10,
+                    indexed_cost: 10.73,
+                  },
+                ],
+              },
+            ]
+          : [],
+    };
+  if (op === "getSharedGetCustomerReport2")
+    return {
+      data: [
+        {
+          Metric: "Budget coverage",
+          Value: "Complete",
+          internal_note: "DO-NOT-EXPOSE",
+        },
+      ],
     };
   if (op === "getContractsGetRelationType")
     return {
@@ -1202,10 +1433,31 @@ export async function mockOracle(
       pi_name: p.full_name,
       activity_type_value: p.activity_type_descr,
       proposal_type_value: p.proposal_type_descr,
+      cost_model: 338,
       cost_model_name: "Example cost model",
+      currency_code: "GBP",
+      sponsors:
+        p.proposal_id === 1000
+          ? [
+              {
+                prop_sponsors_rltn_id: 701,
+                sponsor_party_id: 301,
+                party_name: "Research Council",
+                funder_type: "Government",
+                sponsor_type: "Primary Provider",
+                sponsor_type_flag_lkp_code: "PRM",
+                sponsor_priority: 1,
+              },
+            ]
+          : [],
+      proposal_period_version_id:
+        p.proposal_id === 1000 || p.proposal_id === 1001 ? 12113 : null,
       departments: [
         {
           investigator_type_lkp_code: "PI",
+          person_id: 101,
+          employee_number: "EMP101",
+          org_unit_id: 202,
           full_name: p.full_name,
           org_unit_name: p.org_unit_name,
           proposal_title: p.proposal_title,
@@ -1231,6 +1483,8 @@ export async function mockOracle(
         (!headers.p_status || r.status_lkp_code === headers.p_status) &&
         (!headers.p_level ||
           headers.p_level.split(",").includes(r.contract_level)) &&
+        (!headers.p_object_ref_id ||
+          r.object_ref_id === headers.p_object_ref_id) &&
         (!where || whereMatcher(where)(r)),
     );
     const sort = query?.get("p_order_by")?.replaceAll('"', "");

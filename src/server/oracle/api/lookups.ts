@@ -34,6 +34,14 @@ export const sponsors = read({
   op: "GetSponsorList",
   ttl: serverConstants.ttl.session,
 });
+export const collaborators = read<void>({
+  op: "getPre_awardGetCollaboratorList",
+  ttl: serverConstants.ttl.session,
+});
+export const sponsorTypes = read({
+  op: "getPre_awardGetSponsorTypes",
+  ttl: serverConstants.ttl.session,
+});
 /** Notification recipients of one kind: `ROLE` or `GROUP` (getGroupsAndRoles). */
 export const groupsAndRoles = read<{ shareTo: string }>({
   op: "getNotificationsGetGroupsAndRoles",

@@ -15,6 +15,8 @@ import {
   CONTRACT_PAGES,
   contractRecordContext,
 } from "@/server/modules/contracts/service";
+import { proposalPage } from "@/server/modules/proposals/record";
+import { recordIdentity } from "@/features/modules/proposals/record";
 
 /**
  * One host of the shared comments and audit panels (legacy `object-comments` and each detail page's audit drawer).
@@ -99,6 +101,47 @@ const HOSTS: Record<
     contractRecordContext,
   ),
 };
+const proposalPages = new Set([
+  "proposals-summary",
+  ...Array.from(
+    { length: 5 },
+    (_, index) => `proposals-dynamic-form-${index + 1}`,
+  ),
+  "proposals-approvals",
+  "proposals-history",
+  "proposals-attachments",
+  "proposals-delegation",
+]);
+async function proposalPanelHost(
+  type: string,
+  id: string,
+  page: string,
+  mode: PanelMode,
+): Promise<PanelHost> {
+  const parsed = recordIdentity.shape.type.safeParse(type);
+  if (!parsed.success || !proposalPages.has(page))
+    throw new AppError("BAD_REQUEST", "Invalid Proposal page.", 400);
+  const context = await proposalPage(parsed.data, id, page);
+  const canComment =
+    context.rights.edit && context.summary.statusCode !== "ABANDON";
+  if (mode === "write" && !canComment)
+    throw new AppError(
+      "FORBIDDEN",
+      "Comment access has not been granted.",
+      403,
+    );
+  return {
+    objectType: "PROPOSAL",
+    objectId: id,
+    page,
+    bundle: context.bundle,
+    token: context.session.token,
+    user: context.user,
+    canComment,
+  };
+}
+for (const type of recordIdentity.shape.type.options)
+  HOSTS[type] = (id, page, mode) => proposalPanelHost(type, id, page, mode);
 const hostQuery = z.object({
   type: z.enum(Object.keys(HOSTS) as [string, ...string[]]),
   id: z.string().regex(/^[1-9]\d{0,14}$/),

@@ -12,11 +12,11 @@ import { canCreate } from "@/features/modules/opportunities/display";
 import { AppError } from "@/lib/errors";
 import { loadContract } from "@/server/modules/contracts/service";
 import { serverFunctions } from "@/server/functions";
+import { proposalPage } from "@/server/modules/proposals/record";
+import { proposalEditContext } from "@/server/modules/proposals/edit";
+import { recordIdentity } from "@/features/modules/proposals/record";
 /**
- * Who may read or change a dynamic form (and its files), decided on the server and failing closed. Today only the EOI
- * hosts: the Application tab (OPPORTUNITIES / OPPORTUNITIES-EOI-APPLICATION) and Dynamic Form 1–5
- * (OPPORTUNITIES-EOI / OPPORTUNITIES-EOI-DYNAMIC-FORM-N); the award record (AWARD / AWARDS-HEADER and
- * AWARDS-DYNAMIC-FORM-N). Other object types are refused until their hosts exist.
+ * Who may read or change a dynamic form (and its files), decided on the server and failing closed.
  */
 const recordId = z.string().regex(/^[1-9]\d{0,14}$/);
 export const formTarget = z
@@ -48,6 +48,11 @@ const denied = (message = "You do not have access to this page.") =>
   new AppError("FORBIDDEN", message, 403);
 /** The record's role page for the slot (`opportunities-eoi-<tab>`, GN-Angular eoi.ts); null for an unsupported host. */
 export function pageOf(t: Pick<FormTarget, "objectType" | "slot">) {
+  if (
+    recordIdentity.shape.type.safeParse(t.objectType).success &&
+    /^PROPOSALS-(SUMMARY|DYNAMIC-FORM-[1-5])$/.test(t.slot)
+  )
+    return t.slot.toLowerCase();
   if (t.objectType === "CONTRACT" && t.slot === "CONTRACTS-SUMMARY")
     return "contracts-summary";
   if (
@@ -167,6 +172,23 @@ export async function authorizeForm(t: FormTarget, mode: "read" | "edit") {
   const page = pageOf(t);
   if (page === null)
     throw denied("Forms are not available for this record type.");
+  const proposalType = recordIdentity.shape.type.safeParse(t.objectType);
+  if (proposalType.success) {
+    if (t.objectId === undefined || (t.parentId && t.parentId !== t.objectId))
+      throw new AppError("BAD_REQUEST", "Invalid Proposal form request.", 400);
+    const context =
+      mode === "edit"
+        ? page === "proposals-summary"
+          ? await proposalEditContext(proposalType.data, t.objectId)
+          : null
+        : await proposalPage(proposalType.data, t.objectId, page);
+    if (!context) throw denied("Proposal form editing is unavailable.");
+    return {
+      user: context.user,
+      page,
+      record: { id: context.summary.id, number: context.summary.reference },
+    };
+  }
   if (t.objectType === "CONTRACT") {
     serverFunctions.permissions.requireModule(user, "CONTRACTS");
     if (t.objectId === undefined || (t.parentId && t.parentId !== t.objectId))

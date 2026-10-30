@@ -9,10 +9,20 @@ import styles from "./record-panels.module.css";
 
 type Panel = "comments" | "audit";
 
-/** Contract detail actions share the record Comments and Audit fragments on every tab. */
-export function ContractRecordPanels({ objectId }: { objectId: string }) {
+/** Shared detail actions; each tab keeps its own thread and audit scope. */
+export function RecordPanels({
+  objectId,
+  objectType,
+  area,
+  showAudit = true,
+}: {
+  objectId: string;
+  objectType: string;
+  area: "contracts" | "proposals";
+  showAudit?: boolean;
+}) {
   const segment = useSelectedLayoutSegment();
-  const page = `contracts-${segment === "workflow" || segment === "signers" || segment === "history" || segment === "delegation" ? segment : "summary"}`;
+  const page = `${area}-${segment ?? "summary"}`;
   const [panel, setPanel] = useState<Panel | null>(null);
   const opener = useRef<HTMLButtonElement | null>(null);
   const closeButton = useRef<HTMLButtonElement | null>(null);
@@ -33,11 +43,11 @@ export function ContractRecordPanels({ objectId }: { objectId: string }) {
     opener.current = target;
     setPanel(next);
   };
-  const props = { objectType: "CONTRACT", objectId, page };
+  const props = { objectType, objectId, page };
   const pageTitle =
-    segment === "delegation"
+    area === "contracts" && segment === "delegation"
       ? "Contracts Summary"
-      : `Contracts ${segment ? segment[0].toUpperCase() + segment.slice(1) : "Summary"}`;
+      : `${area === "contracts" ? "Contracts" : "Proposals"} ${segment ? segment[0].toUpperCase() + segment.slice(1) : "Summary"}`;
   return (
     <div
       className={styles.actions}
@@ -50,13 +60,15 @@ export function ContractRecordPanels({ objectId }: { objectId: string }) {
       >
         <Icon name="chat" /> Comments
       </button>
-      <button
-        type="button"
-        className={styles.action}
-        onClick={(event) => open("audit", event.currentTarget)}
-      >
-        <Icon name="audits" /> Open Audit Trail
-      </button>
+      {showAudit && (
+        <button
+          type="button"
+          className={styles.action}
+          onClick={(event) => open("audit", event.currentTarget)}
+        >
+          <Icon name="audits" /> Open Audit Trail
+        </button>
+      )}
       {panel && (
         <div
           className={`${styles.backdrop} ${panel === "comments" ? styles.commentsBackdrop : ""}`}
@@ -104,13 +116,13 @@ export function ContractRecordPanels({ objectId }: { objectId: string }) {
             {panel === "comments" ? (
               <ObjectComments
                 key={`comments-${page}`}
-                id="contract-comments-panel"
+                id={`${area}-comments-panel`}
                 {...props}
               />
             ) : (
               <ObjectAudit
                 key={`audit-${page}`}
-                id="contract-audit-panel"
+                id={`${area}-audit-panel`}
                 {...props}
               />
             )}
@@ -118,5 +130,11 @@ export function ContractRecordPanels({ objectId }: { objectId: string }) {
         </div>
       )}
     </div>
+  );
+}
+
+export function ContractRecordPanels({ objectId }: { objectId: string }) {
+  return (
+    <RecordPanels objectId={objectId} objectType="CONTRACT" area="contracts" />
   );
 }

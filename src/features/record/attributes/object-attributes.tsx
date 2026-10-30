@@ -45,6 +45,7 @@ export function ObjectAttributes({
   parentId,
   objectId,
   editable,
+  displayOnly = false,
   initial = {},
   plain,
   ref,
@@ -55,6 +56,8 @@ export function ObjectAttributes({
   parentId?: string;
   objectId?: string;
   editable: boolean;
+  /** Render view-mode values as text, as on the legacy Proposal Summary. */
+  displayOnly?: boolean;
   /** The record's `attribute_N` values (legacy getAttributeValues). */
   initial?: AttributeValues;
   /** Inside the host's own panel (the award header): no border of its own. */
@@ -239,7 +242,7 @@ export function ObjectAttributes({
   return (
     <section
       id={id}
-      className={plain ? styles.plain : styles.panel}
+      className={displayOnly ? styles.viewPanel : plain ? styles.plain : styles.panel}
       aria-label="Attributes"
     >
       {fields.map((f) => {
@@ -247,6 +250,24 @@ export function ObjectAttributes({
           message = errors[f.name],
           shownError =
             message !== undefined && (checked || touched.has(f.name));
+        if (displayOnly)
+          return (
+            <div id={fieldId} key={f.name} className={styles.viewField}>
+              <div className={styles.viewLabel}>
+                <span>{f.description}</span>
+                <HelpButton
+                  id={`${fieldId}-help`}
+                  html={f.helperText}
+                  label={data.texts.moreInfo}
+                />
+              </div>
+              <div className={styles.viewValue}>
+                {values[f.name] === null || values[f.name] === undefined
+                  ? ""
+                  : String(values[f.name])}
+              </div>
+            </div>
+          );
         return (
           <div
             key={f.name}

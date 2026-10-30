@@ -437,6 +437,18 @@
     "path": "/pre_award/getPersonListAll",
     "headers": ["token"]
   },
+  "getPre_awardGetCollaboratorList": {
+    "service": "apps",
+    "path": "/pre_award/getCollaboratorList/",
+    "headers": ["token"]
+  },
+  "deletePre_awardDeleteCollaboratorProp_collab_rltn_id": {
+    "service": "apps",
+    "method": "DELETE",
+    "path": "/pre_award/deleteCollaborator/{prop_collab_rltn_id}",
+    "headers": ["token"],
+    "write": true
+  },
   "getSharedDigitalPresence": {
     "service": "apps",
     "path": "/shared/digitalPresence",
@@ -730,6 +742,37 @@
     "path": "/pre_awards_costing/getFundingHdr/",
     "headers": ["token", "cost_model"]
   },
+  "getPre_awardGetProjectRoles": {
+    "service": "apps",
+    "path": "/pre_award/getProjectRoles/",
+    "headers": ["token", "cost_type"]
+  },
+  "getPre_awards_costingGetCostItem": {
+    "service": "apps",
+    "path": "/pre_awards_costing/getCostItem/",
+    "headers": ["token"]
+  },
+  "postInsertCostingBulk": {
+    "service": "apps",
+    "path": "/pre_awards_costing/insertCostingBulk/",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "postPre_awards_costingInsertCostingHeaderN": {
+    "service": "apps",
+    "path": "/pre_awards_costing/insertCostingHeaderN/",
+    "headers": ["token", "legal_id", "org_id", "auto_save", "p_del_old_lines"],
+    "method": "POST",
+    "write": true
+  },
+  "postPre_awards_costingSaveCostingDataN": {
+    "service": "apps",
+    "path": "/pre_awards_costing/saveCostingDataN/",
+    "headers": ["token", "legal_id", "org_id"],
+    "method": "POST",
+    "write": true
+  },
   "getPre_awardGetCostCategoryItems": {
     "service": "apps",
     "path": "/pre_award/getCostCategoryItems/",
@@ -821,5 +864,72 @@
     "service": "apps",
     "path": "/contracts/getPlaceholderTags/",
     "headers": []
+  },
+  "getPre_awardGetSponsorTypes": {
+    "service": "apps",
+    "path": "/pre_award/getSponsorTypes/",
+    "headers": ["token"]
+  },
+  "getOpportunitiesGetOpportunityCategory": {
+    "service": "apps",
+    "path": "/opportunities/getOpportunityCategory",
+    "headers": []
+  },
+  "getPre_awards_costingGetCostModel": {
+    "service": "apps",
+    "path": "/pre_awards_costing/getCostModel/",
+    "headers": ["token"]
+  },
+  "getPre_awards_costingBudget_version": {
+    "service": "apps",
+    "path": "/pre_awards_costing/budget_version",
+    "headers": ["token"]
+  },
+  "getPre_awards_costingGetCostSummary": {
+    "service": "apps",
+    "path": "/pre_awards_costing/getCostSummary/",
+    "headers": ["token"]
+  },
+  "getSharedGetCustomerReport2": {
+    "service": "apps",
+    "path": "/shared/getCustomerReport",
+    "headers": ["token", "p_report_code", "p_param1", "p_param2"]
+  },
+  "getPre_awards_costingGetCostHeaderDetails": {
+    "service": "apps",
+    "path": "/pre_awards_costing/getCostHeaderDetails/",
+    "headers": ["token"]
+  },
+  "getPre_awards_costingGetCostingLines": {
+    "service": "apps",
+    "path": "/pre_awards_costing/getCostingLines/",
+    "headers": ["token"]
+  },
+  "getPre_awards_costingGetPricingDetails": {
+    "service": "apps",
+    "path": "/pre_awards_costing/getPricingDetails/",
+    "headers": ["token"]
+  },
+  "getCreditAllocation": {
+    "service": "apps",
+    "path": "/Proposal/creditAllocation",
+    "headers": ["token", "p_prop_period_version_id"]
+  },
+  "getReportsGetObjectRef": {
+    "service": "apps",
+    "path": "/reports/getObjectRef",
+    "headers": ["token", "p_object_id", "p_object_type"]
+  },
+  "getSharedGetCurrencyRate": {
+    "service": "apps",
+    "path": "/shared/getCurrencyRate",
+    "headers": ["token", "currency_code", "mode", "proposal_id", "version_id"]
+  },
+  "generateReport": {
+    "service": "apps",
+    "path": "/reports/generate-report",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
   }
 }

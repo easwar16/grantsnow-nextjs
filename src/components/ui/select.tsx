@@ -33,6 +33,7 @@ export function Select({
   value,
   onChange,
   emptyText = "No options available",
+  placeholder,
   clearable = true,
   name,
   className,
@@ -48,6 +49,7 @@ export function Select({
   value: string;
   onChange: (next: string) => void;
   emptyText?: string;
+  placeholder?: string;
   clearable?: boolean;
   name?: string;
   className?: string;
@@ -138,6 +140,7 @@ export function Select({
       "aria-controls": panel,
       disabled,
       title: chosen || undefined,
+      placeholder,
       onKeyDown: (e) => keepNativeKeys(e, open),
     }),
     menu = getMenuProps(
