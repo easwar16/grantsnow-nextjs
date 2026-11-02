@@ -22,7 +22,7 @@ Generated from the legacy repo (read-only): `node scripts/oracle-catalogue.mjs -
 
 ## Run locally now
 
-Use Node **24 LTS** (the project has `.nvmrc`) and npm. The lockfile pins dependencies.
+Use Node **24 LTS** (the `engines` range in package.json) and npm. The lockfile pins dependencies.
 
 ```sh
 nvm use 24
