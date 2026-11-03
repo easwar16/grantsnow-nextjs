@@ -5,6 +5,8 @@ import { RecordMetadata } from "@/components/ui/record-metadata";
 import { type FormatSettings } from "@/lib/format";
 import type { Column, ProposalRow } from "../types";
 import { functions } from "@/lib/functions";
+import { Icon } from "@/components/ui/icon";
+import styles from "./listing.module.css";
 function tone(code?: string): StatusTone {
   if (["REJ", "ABANDON", "HIGH", "CRITICAL"].includes(code || ""))
     return "danger";
@@ -17,10 +19,23 @@ export function RecordCard({
   row,
   columns,
   format,
+  actions,
+  onAction,
 }: {
   row: ProposalRow;
   columns: Column[];
   format?: FormatSettings;
+  actions: {
+    view: string | null;
+    link: string | null;
+    share: string | null;
+    clone: string | null;
+    delete: string | null;
+  };
+  onAction: (
+    action: "link" | "share" | "clone" | "delete",
+    row: ProposalRow,
+  ) => void;
 }) {
   const identity = recordIdentity.safeParse({
     type: row.type,
@@ -49,7 +64,9 @@ export function RecordCard({
       <div className="record-overline">
         <span aria-hidden="true">▧</span>
         <strong>{row.reference}</strong>
-        <StatusBadge tone={tone(row.statusCode)}>{row.status}</StatusBadge>
+        {row.status && (
+          <StatusBadge tone={tone(row.statusCode)}>{row.status}</StatusBadge>
+        )}
         {row.risk && (
           <StatusBadge tone={tone(row.riskCode)}>{row.risk}</StatusBadge>
         )}
@@ -76,6 +93,54 @@ export function RecordCard({
         )}
       </h2>
       <RecordMetadata fields={fields} />
+      <div
+        className={styles.cardActions}
+        aria-label={`Actions for ${row.reference}`}
+      >
+        {actions.view && identity.success && (
+          <Link
+            id={`proposal-${functions.ids.idPart(row.id)}-view`}
+            href={`/proposals/${identity.data.type}/${identity.data.id}`}
+            className="gn-btn gn-btn--borderless gn-btn--icon"
+            aria-label={`${actions.view} ${row.reference}`}
+            title={actions.view}
+          >
+            <Icon name="view" />
+          </Link>
+        )}
+        {(["link", "share", "clone", "delete"] as const).map((action) => {
+          const label = actions[action];
+          if (!label) return null;
+          const disabled =
+            (action === "clone" && !!row.parentId) ||
+            (action === "delete" &&
+              (row.statusCode !== "DRFT" || !!row.parentId));
+          return (
+            <button
+              key={action}
+              id={`proposal-${functions.ids.idPart(row.id)}-${action}`}
+              type="button"
+              className="gn-btn gn-btn--borderless gn-btn--icon"
+              aria-label={`${label} ${row.reference}`}
+              title={label}
+              disabled={disabled}
+              onClick={() => onAction(action, row)}
+            >
+              <Icon
+                name={
+                  action === "link"
+                    ? "link"
+                    : action === "clone"
+                      ? "copy"
+                      : action === "delete"
+                        ? "trash"
+                        : "share"
+                }
+              />
+            </button>
+          );
+        })}
+      </div>
       {row.tags && (
         <p className="record-tags">
           {row.tags.split(",").map((tag) => (

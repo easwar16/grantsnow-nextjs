@@ -20,6 +20,8 @@ export * as attributes from "./endpoints/attributes";
 export * as fxRates from "./endpoints/fx-rates";
 export * as contracts from "./endpoints/contracts";
 export * as claims from "./endpoints/claims";
+export * as ethics from "./endpoints/ethics";
+export * as dueDiligence from "./endpoints/due-diligence";
 export { useApi, usePagedApi, useForget } from "./hooks";
 export type { Endpoint } from "./hooks";
 export type { ApiError, ApiResult } from "./http";

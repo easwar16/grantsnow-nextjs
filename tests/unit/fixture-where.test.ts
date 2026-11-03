@@ -41,3 +41,22 @@ it("simulated writes answer {} unless the fixture names a reply, and reports ans
   ).toEqual({ proposal: 1001 });
   expect((await mockOracleFile()).mime).toBe("application/pdf");
 });
+it("fixture uses the advanced proposal operation and applies conditions", async () => {
+  const query = parseQuery(
+    new URLSearchParams({
+      conditions: JSON.stringify([
+        { attribute: "proposal_title", op: "$co", value: "climate" },
+      ]),
+    }),
+  );
+  const result = (await mockOracle(
+    "getProposalsListAdvanced",
+    {},
+    oracleQuery(query, true),
+  )) as { items: { proposal_title: string }[]; total_count: number };
+  expect(result.total_count).toBeGreaterThan(0);
+  expect(result.total_count).toBeLessThan(37);
+  expect(result.items.every((row) => /climate/i.test(row.proposal_title))).toBe(
+    true,
+  );
+});

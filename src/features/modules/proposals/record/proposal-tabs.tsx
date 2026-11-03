@@ -43,18 +43,18 @@ const tabs: ProposalTab[] = [
     label: "Proposal Funder Rules",
     icon: "proposal-pricing",
   },
-  {
-    segment: "fec-summary",
-    page: "proposals-fec-summary",
-    label: "FEC Summary",
-    icon: "proposal-budget",
-  },
   ...dynamicTabs,
   {
     segment: "allocation-for-credit",
     page: "proposals-allocation-for-credit",
     label: "Credit Allocation",
     icon: "proposal-credit",
+  },
+  {
+    segment: "fec-summary",
+    page: "proposals-fec-summary",
+    label: "FEC Summary",
+    icon: "proposal-budget",
   },
   {
     segment: "ethics",
@@ -104,13 +104,16 @@ export function ProposalTabs({
   type,
   id,
   access,
+  finalizedPages,
 }: {
   type: string;
   id: string;
   access: [string, { read: boolean }][];
+  finalizedPages: string[];
 }) {
   const segment = useSelectedLayoutSegment();
   const rights = new Map(access);
+  const finalized = new Set(finalizedPages);
   return (
     <nav
       id={`proposal-${id}-tabs`}
@@ -125,6 +128,13 @@ export function ProposalTabs({
             <span id={`${tab.page}-tab`} aria-current="page" key={tab.page}>
               <Icon name={tab.icon} />
               {tab.label}
+              {finalized.has(tab.page) && (
+                <Icon
+                  name="success"
+                  className={styles.tabFinalized}
+                  label="Finalized"
+                />
+              )}
             </span>
           ) : (
             <Link
@@ -135,6 +145,13 @@ export function ProposalTabs({
             >
               <Icon name={tab.icon} />
               {tab.label}
+              {finalized.has(tab.page) && (
+                <Icon
+                  name="success"
+                  className={styles.tabFinalized}
+                  label="Finalized"
+                />
+              )}
             </Link>
           );
         })}

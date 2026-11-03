@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { proposals } from "@/lib/api";
 import styles from "./proposal-record.module.css";
 
@@ -15,16 +15,23 @@ export function ProposalFinalize({
   checked: boolean;
   editable: boolean;
 }) {
-  const [checked, setChecked] = useState(initial);
+  const [updated, setUpdated] = useState<{
+    initial: boolean;
+    value: boolean;
+  } | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const router = useRouter();
   const editing = useSearchParams().get("mode") === "edit";
+  const checked = updated?.initial === initial ? updated.value : initial;
   const update = async (next: boolean) => {
     setPending(true);
     setError("");
     const result = await proposals.setSummaryFinalized(type, id, next);
-    if (result.ok) setChecked(result.data.finalized);
-    else setError(result.error.message);
+    if (result.ok) {
+      setUpdated({ initial, value: result.data.finalized });
+      router.refresh();
+    } else setError(result.error.message);
     setPending(false);
   };
   return (

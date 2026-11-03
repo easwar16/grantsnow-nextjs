@@ -1,15 +1,159 @@
 .query {
-  border: 0;
-  padding: 0;
-  margin: 12px 6px;
+  margin: 0;
   min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px;
+  gap: 4px;
+  align-items: center;
+}
+.sortDirection {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.sortDirection :global(.gn-icon) {
+  font-size: 22px;
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 48px;
+  margin: -12px -12px 0;
+  padding: 12px 10px 6px;
+}
+.toolbarGroup {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cardActions {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+:global(.proposal-card) {
+  position: relative;
+  padding-right: 150px;
+}
+.cardActions :is(button, a) {
+  width: 32px;
+  height: 32px;
+}
+:global(.proposal-card):has(.cardActions a) {
+  padding-right: 190px;
+}
+.deletedList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.deletedList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.copyOptions {
+  border: 0;
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+}
+.copyOptions label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px;
+}
+@media (max-width: 600px) {
+  :global(.proposal-card) {
+    padding-right: 6px;
+  }
+  .cardActions {
+    position: static;
+    transform: none;
+    justify-content: flex-end;
+    margin-top: 8px;
+  }
+}
+.advanced {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 5;
+  top: 48px;
+  right: 0;
+  width: min(30rem, 100%);
+  height: calc(100% - 48px);
+  padding: 8px 12px;
+  border-left: 1px solid var(--border);
+  background: var(--bg);
+  box-shadow: -4px 0 12px rgb(0 0 0 / 12%);
+  overflow-y: auto;
+}
+.advanced > button:not(:first-child) {
+  align-self: flex-start;
+}
+.advancedHead {
+  display: flex;
+  justify-content: flex-end;
+}
+.advancedForm {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
-.query legend {
+.conditions td {
+  overflow-wrap: anywhere;
+}
+.conditionActions {
+  white-space: nowrap;
+  text-align: center;
+}
+:global(.proposal-results) {
+  position: relative;
+}
+.toggleButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
   padding: 0;
-  margin: 0 0 10px;
-  color: var(--muted);
-  font-weight: 600;
+  border: 1px solid #999;
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.toggleButton:focus-visible {
+  outline: 2px solid var(--accent-fg);
+  outline-offset: 2px;
 }

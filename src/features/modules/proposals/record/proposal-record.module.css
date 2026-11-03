@@ -259,7 +259,7 @@
   display: flex;
   gap: 0;
   overflow-x: auto;
-  padding: 0 14px;
+  padding: 0 24px;
   border-top: 2px solid #a5a5a5;
   border-bottom: 1px solid var(--border);
   background: #f4f4f4;
@@ -268,21 +268,30 @@
 .tabs > span {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
-  flex: 1 0 auto;
+  flex: 0 0 auto;
   min-height: 38px;
-  padding: 10px 12px 8px;
-  border-top: 2px solid #999;
+  padding: 10px 22px 8px;
+  border-top: 2px solid transparent;
   color: #696969;
   text-decoration: none;
   white-space: nowrap;
+}
+.tabFinalized {
+  color: #3d6f1d;
 }
 .tabs > span {
   border-bottom: 3px solid var(--accent-fg);
   background: var(--surface);
   color: var(--text);
   font-weight: 700;
+}
+.finalizedBy {
+  padding: 8px 24px 12px;
+  color: #b53320;
+  font-weight: 600;
+  text-align: right;
 }
 .summary {
   margin: 7px 14px;

@@ -24,4 +24,5 @@ export type RoleRow = {
   page_name: string;
   read_access: string | null;
   edit_access?: string | null;
+  delete_access?: string | null;
 };

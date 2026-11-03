@@ -15,6 +15,7 @@ import { proposalEditContext } from "@/server/modules/proposals/edit";
 import { ProposalTabs } from "./proposal-tabs";
 import { BudgetVersionControl } from "./budget-version-control";
 import { ProposalFinalize } from "./proposal-finalize";
+import { Icon } from "@/components/ui/icon";
 import { ProposalAiActions } from "./proposal-ai-actions";
 import { ProposalPrint } from "./proposal-print";
 import { ProposalBudgetActions } from "./proposal-budget-actions";
@@ -208,7 +209,17 @@ export async function ProposalHeader({
   const format = await displayFormat();
   return (
     <>
-      <ProposalTabs type={type} id={id} access={[...access]} />
+      <ProposalTabs
+        type={type}
+        id={id}
+        access={[...access]}
+        finalizedPages={[...context.pageIds]
+          .filter(
+            ([, pageId]) =>
+              pageId != null && summary.lockedPageIds.includes(pageId),
+          )
+          .map(([page]) => page)}
+      />
       <section id={`proposal-${id}-heading`} className={styles.heading}>
         <h1 className={styles.recordTitle}>{summary.title}</h1>
         <div className={styles.infoGrid}>
@@ -260,6 +271,11 @@ export async function ProposalHeader({
           ))}
         </div>
       </section>
+      {context.finalize.lockedBy && (
+        <div id={`proposal-${id}-finalized-by`} className={styles.finalizedBy}>
+          <Icon name="lock" /> {context.finalize.lockedBy}
+        </div>
+      )}
     </>
   );
 }

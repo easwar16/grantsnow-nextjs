@@ -1,10 +1,24 @@
 import "server-only";
-import { read, writeFile } from "../client";
+import { read, write, writeFile } from "../client";
 
 /** VBCS Print menu for one Proposal. */
 export const forObject = read<{ id: string }>({
   op: "getReportsGetObjectRef",
   headers: (p) => ({ p_object_id: p.id, p_object_type: "PROPOSAL" }),
+});
+export const share = write<{
+  id: string;
+  emails: string[];
+  report: string;
+  body: unknown;
+}>({
+  op: "getReportsShareReport",
+  headers: (p) => ({
+    proposal_id: p.id,
+    username: p.emails.join(","),
+    report_name: p.report,
+  }),
+  body: (p) => p.body,
 });
 
 /** VBCS Print currency choices and current version rates. */

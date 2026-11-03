@@ -607,6 +607,24 @@ export const proposalContext = cache(
           () => false,
         )
       : false;
+    const lock =
+      summaryPage?.page_id &&
+      summary.lockedPageIds.includes(summaryPage.page_id)
+        ? await proposals
+            .lockStatus({ type, id, pageId: summaryPage.page_id })
+            .then((raw) =>
+              z
+                .object({
+                  status: z.string(),
+                  user_id: z.number().nullish(),
+                  user_lock_token: z.string().nullish(),
+                  user_name: z.string().nullish(),
+                  msg: z.string().nullish(),
+                })
+                .parse(raw),
+            )
+            .catch(() => null)
+        : null;
     return {
       identity,
       session,
@@ -622,6 +640,14 @@ export const proposalContext = cache(
           ? summary.lockedPageIds.includes(summaryPage.page_id)
           : false,
         editable: access.get("proposals-summary")?.edit === true,
+        lockedBy:
+          lock &&
+          lock.status !== "UNLOCK" &&
+          lock.user_id &&
+          lock.user_lock_token !== session.token &&
+          lock.user_name
+            ? `${lock.msg || "Module finalized"}: ${lock.user_name}`
+            : null,
       },
     };
   },

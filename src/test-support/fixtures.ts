@@ -15,13 +15,14 @@ export const fixtureUser = {
     "opportunities-analytics",
     "CONTRACTS",
     "ETHICS",
+    "DUE-DILIGENCE",
     "AWARDS",
     "claims-group",
     "claims-unit-inquiry",
     "claims-funds-inquiry",
   ].map((module_name) => ({ module_name, is_accessible: "Y" })),
 };
-export const proposals = Array.from({ length: 37 }, (_, i) => ({
+const proposalSeed = Array.from({ length: 37 }, (_, i) => ({
   proposal_id: 1000 + i,
   proposal_number: `${i % 6 === 0 ? "OP" : "P"}_${String(i + 1).padStart(4, "0")}`,
   proposal_title:
@@ -58,6 +59,11 @@ export const proposals = Array.from({ length: 37 }, (_, i) => ({
   total_cost: i === 4 ? "****" : String(25000 + i * 7123),
   currency_code: "GBP",
 }));
+// Next dev compiles route handlers and pages separately; both need the same fixture writes.
+const fixtureState = globalThis as typeof globalThis & {
+  __grantsnowProposals?: typeof proposalSeed;
+};
+export const proposals = (fixtureState.__grantsnowProposals ??= proposalSeed);
 export const contracts = Array.from({ length: 24 }, (_, i) => ({
   contract_id: 1300 + i,
   contract_number: `C_${1300 + i}`,

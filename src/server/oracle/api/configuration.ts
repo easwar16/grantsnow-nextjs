@@ -74,6 +74,7 @@ const roles = z.object({
       page_name: z.string(),
       read_access: z.string(),
       edit_access: z.string().nullish(),
+      delete_access: z.string().nullish(),
     }),
   ),
 });

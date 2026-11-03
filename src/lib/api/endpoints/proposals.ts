@@ -25,6 +25,105 @@ export const page = (q: ProposalQuery, signal?: AbortSignal) =>
     Object.fromEntries(new URLSearchParams(serializeQuery(q))),
     signal,
   );
+export type DeletedProposal = {
+  id: number;
+  type: string;
+  reference: string;
+  title: string;
+  status: string;
+  canRestore: boolean;
+};
+export type CopyOption = { value: string; label: string; required: boolean };
+export type ShareOptions = {
+  reports: { value: string; label: string }[];
+  people: { value: string; label: string; detail: string }[];
+};
+export type AdvancedSetup = {
+  attributes: { value: string; label: string }[];
+  operators: { value: string; label: string }[];
+  texts: Record<
+    | "title"
+    | "attribute"
+    | "operator"
+    | "value"
+    | "add"
+    | "edit"
+    | "remove"
+    | "save"
+    | "cancel"
+    | "close"
+    | "editTitle",
+    string
+  >;
+};
+export const advancedSetup = endpoint<void, AdvancedSetup>(() => ({
+  path: "/proposals/advanced",
+}));
+export const recycle = () =>
+  get<DeletedProposal[]>("/proposals/list-actions", { action: "recycle" });
+export const links = (type: string, id: string) =>
+  get<import("@/features/record/linked/model").LinkedObjects>(
+    "/proposals/list-actions",
+    { action: "links", type, id },
+  );
+export const copyOptions = (type: string, id: string) =>
+  get<CopyOption[]>("/proposals/list-actions", {
+    action: "copy-options",
+    type,
+    id,
+  });
+export const shareOptions = (type: string, id: string) =>
+  get<ShareOptions>("/proposals/list-actions", {
+    action: "share-options",
+    type,
+    id,
+  });
+export const shareDocument = (
+  type: string,
+  id: string,
+  report: string,
+  emails: string[],
+) =>
+  post<{ shared: boolean }>("/proposals/list-actions", {
+    action: "share-document",
+    type,
+    id,
+    report,
+    emails,
+  });
+export const clone = (type: string, id: string, objects: string[]) =>
+  post<{ id: number; type: string }>("/proposals/list-actions", {
+    action: "copy",
+    type,
+    id,
+    objects,
+  });
+export const removeFromList = (type: string, id: string) =>
+  post<{ deleted: boolean }>("/proposals/list-actions", {
+    action: "delete",
+    type,
+    id,
+  });
+export const restoreFromRecycle = (id: number) =>
+  post<{ restored: boolean }>("/proposals/list-actions", {
+    action: "restore",
+    id,
+  });
+export const create = (input: {
+  type: "PROPOSAL" | "OUTLINE_PROPOSAL";
+  title: string;
+  description: string;
+  piPersonId: number;
+  activityType: string;
+  proposalStage: string;
+  proposalType: string;
+  category: string;
+  startDate: string;
+  endDate: string;
+  costModel: number;
+  confidential: "Y" | "N";
+  sponsorId: number;
+}) => post<{ id: number; type: string }>("/proposals/create", input);
 export const setSummaryFinalized = (
   type: string,
   id: string,

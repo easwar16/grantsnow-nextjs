@@ -18,6 +18,37 @@ const date = z
   })
   .or(z.literal(""))
   .default("");
+export const PROPOSAL_OPERATORS = [
+  "$eq",
+  "$co",
+  "$gt",
+  "$lt",
+  "$ge",
+  "$le",
+] as const;
+export const conditionSchema = z
+  .object({
+    attribute: z.string().regex(/^[A-Za-z][A-Za-z0-9_]{0,62}$/),
+    op: z.enum(PROPOSAL_OPERATORS),
+    value: z.string().trim().min(1).max(200),
+  })
+  .strict();
+export type ProposalCondition = z.infer<typeof conditionSchema>;
+const conditions = z
+  .string()
+  .max(6000)
+  .default("")
+  .refine((value) => {
+    if (!value) return true;
+    try {
+      return z.array(conditionSchema).max(20).safeParse(JSON.parse(value))
+        .success;
+    } catch {
+      return false;
+    }
+  }, "Invalid Advanced Query conditions.");
+export const parseConditions = (value: string): ProposalCondition[] =>
+  value ? z.array(conditionSchema).max(20).parse(JSON.parse(value)) : [];
 export const querySchema = z
   .object({
     search: text,
@@ -48,6 +79,7 @@ export const querySchema = z
       .regex(/^([A-Za-z][A-Za-z0-9_]{0,62})?$/)
       .default(""),
     direction: z.enum(["ASC", "DESC"]).default("DESC"),
+    conditions,
     page: z.coerce.number().int().min(1).max(100000).default(1),
     pageSize: z.coerce
       .number()

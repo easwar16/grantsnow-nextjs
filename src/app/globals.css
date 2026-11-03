@@ -683,7 +683,7 @@ main {
   padding-left: 9px;
 }
 .filter-panel {
-  padding: 8px 6px;
+  padding: 8px 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1173,6 +1173,7 @@ main {
   font-weight: 600;
 }
 .category-options label {
+  display: flex;
   flex-direction: row;
   align-items: center;
   gap: 6px;
@@ -1210,6 +1211,7 @@ main {
 }
 .inside-field .floating-label {
   position: absolute;
+  z-index: 1;
   top: 12px;
   left: 10px;
   pointer-events: none;
@@ -1235,6 +1237,19 @@ main {
   top: 4px;
   font-size: 10px;
 }
+#proposal-filters .inside-field:has([data-part="field"]) {
+  padding: 0;
+}
+#proposal-filters .inside-field [data-part="field"] {
+  min-height: 37px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+#proposal-filters .inside-field [data-part="field"] > input {
+  min-height: 37px;
+  padding: 10px 28px 0 10px;
+}
 .status-tabs {
   padding-bottom: 6px;
 }
@@ -1249,6 +1264,9 @@ main {
   flex-shrink: 0;
 }
 @media (max-width: 600px) {
+  .filter-panel > * {
+    flex-basis: 100%;
+  }
   .proposal-cards {
     max-height: 65dvh;
   }

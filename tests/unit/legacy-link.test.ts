@@ -25,7 +25,7 @@ it.each([
   ["?page=shell&shell=home&home=home-start", "/home"],
   [
     "?access_type=EA_ACCESS&setup_flow_id=1694&page=shell&shell=ethics&ethics=ethics-detail",
-    "/modules/ethics",
+    "/ethics/1694?access=EA_ACCESS",
   ],
   [
     "?page=shell&shell=claims&claims=claims-unit-inquiry-info",

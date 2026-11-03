@@ -8,6 +8,46 @@ One file for where the rebuild stands. It merges four earlier documents verbatim
 
 ## 1. Progress
 
+### Proposal Summary finalization parity, 2026-11-03
+
+The Proposal tabs now show the VBCS green success mark from locked module page IDs, with the tab spacing and FEC Summary placement adjusted toward the source navigation. A finalized Summary shows the server lock-status message and finalizing user when the lock belongs to another session. Finalize no longer rejects blank Summary display fields such as Keywords or Assigned To; VBCS validates the rendered read-only controls instead. The record refreshes after a successful write. Fixture tests cover the icon, attribution and write with blank display fields. Live DEV finalization has not been run. See `docs/changes/2026-11-03-easwar-proposal-finalized-tab-indicator.md`.
+
+### Ethics listing visual parity, 2026-11-03
+
+The Ethics listing now places its toolbar and access tabs like the VBCS page, uses Ethics Type radios and the source filter order, and renders compact cards with configured date formatting and the response status badge. The shared listing styling also affects the Due Diligence entry, which passed its fixture browser journeys. This is a visual listing increment; linked-object, clone, and delete actions remain open as recorded in the initial Ethics entry. See `docs/changes/2026-11-03-easwar-ethics-listing-visual-parity.md`.
+
+### Due Diligence module entry, 2026-11-03
+
+The Due Diligence drawer now opens a role-gated listing with administration, participant and approver views, VBCS filters, separate Due Diligence Oracle reads, paging and recycle/restore. A protected create page saves a setup draft with validated organization, type, enabled form sections, participants and supervisor. A scoped record overview shows the saved header and people. The existing resource bundle key was corrected; the drawer and service gates use the legacy `DUE-DILIGENCE` access grant while Oracle objects/resources use `DUE_DILIGENCE`. Ethics listing now sends its own object headers. Fixture journeys cover listing, recycle, draft creation and record opening; see `docs/changes/2026-11-03-easwar-due-diligence-entry.md`. This is **not full module parity**: both Due Diligence and Ethics still need rendered and persisted dynamic responses, submit/edit workflows, additional record tabs, links and listing clone/delete.
+
+### Ethics module entry, 2026-11-02
+
+The Ethics drawer now opens a protected listing instead of a placeholder. The first increment includes role-gated administration, respondent and approver views; source filters and paging; application cards; a scoped record overview; recycle list and restore; a general overview draft creation path; and a validated legacy deep link. VBCS source chains and operation definitions were read before mapping Oracle calls. This is **not full Ethics parity**: response forms, stakeholder/reviewer workflows, attachments, history, reference linking, clone/delete and submit/approval flows remain to be built. The create form still needs the rendered dynamic form and participant panel. See `docs/changes/2026-11-02-easwar-ethics-entry.md`.
+
+### Proposal listing create actions, 2026-11-02
+
+The listing's Create new Grant App and Create outline proposal controls now open protected create routes. The outline action opens a choice dialog and its fresh-outline option. A create form loads the same PI, sponsor, cost model, and lookup operations used by the existing Proposal module, then posts the VBCS Summary create envelope through the shared Oracle API layer. Fixture browser journeys created both a Grant App and a fresh outline and opened their records. Outline creation from an Application of Interest and full create-form parity remain open. See `docs/changes/2026-11-02-easwar-proposal-create-entry.md`.
+
+### Proposal Date Sort and Contracts New Contract placement, 2026-11-02
+
+The Proposal listing's Date Sort now uses the single VBCS-style inside-label dropdown with its circular direction switch, replacing separate Sort by and Direction fields. A live Creation Date sort exposed an Oracle row whose status label was null; the display mapper now accepts it and leaves its status badge empty rather than rejecting the whole page. Both ascending and descending Creation Date loaded 10 of 1338 proposals in DEV. The Contracts New Contract action now sits beside the filter toggle and uses the source icon. The URL sort state and permission-gated create route remain unchanged. See `docs/changes/2026-11-02-easwar-listing-sort-and-contract-toolbar.md` for checks.
+
+### Proposal listing Advanced Query, 2026-11-02
+
+The top toolbar's Advanced Query button now opens the VBCS condition builder rather than a placeholder. Attribute choices are read from the advanced listing view and shared attribute metadata; operator/value conditions use the source operation and combine with the existing listing filters. Date Sort remains a separate sidebar control, placed before the created-date fields as in VBCS. Fixture browser and isolated build checks are in `docs/changes/2026-11-02-easwar-proposal-advanced-query.md`. The live DEV query has not been verified; disabled Proposal creation remains incomplete.
+
+### Proposal listing record actions, 2026-11-02
+
+The listing now exposes the VBCS Recycle bin and source-gated linked objects, share, clone, and delete card actions. The matching Oracle operations run through the server API layer with record/role/resource checks; clone, delete, and restore use explicit write payloads and draft/parent rules. The VBCS share-as-document route is wired to the report and people lookups, while share access enters the existing Delegation route. Details and check results are in `docs/changes/2026-11-02-easwar-proposal-list-record-actions.md`. Create remains incomplete as recorded there; this is not full Proposal parity.
+
+### Proposal and Contract listing filters at phone width, 2026-10-30
+
+The supplied phone screenshots show squeezed listing filters and blank Contracts dropdowns. The Contracts form hid the label for an empty `Select`, while `Select` itself had no placeholder; its two-column phone grid made each control narrow. The Proposal listing likewise kept two filter columns at 390px. The listing styles now use one aligned filter column through 600px, and the Contracts empty dropdown label remains visible. This is a reproduced listing layout defect; the shared `Select` and `FilterPanel` behavior is unchanged. Fixture browser measurements and full checks are recorded in `docs/changes/2026-10-30-easwar-listing-filter-alignment.md`.
+
+The side-by-side desktop browser check at 904px found another Proposal layout defect: Category choices rendered inline without spacing, and the filter controls were narrower than VBCS. The Proposal filter form now fills the same sidebar inset as VBCS and stacks Category choices in separate rows. The VBCS Contracts list returned `undefined : undefined` errors and no data during this check; the Next.js DEV browser session had expired, so the Next.js comparison used the explicitly labelled synthetic fixture preview. No live DEV data behavior was inferred from the fixture.
+
+The follow-up browser comparison found the searchable LOVs had two visible outlines, the Proposal filter toggle sat inside the sidebar instead of the results toolbar, and a Rows per page footer appeared in Next.js but not VBCS. The listing-only field styles now keep one outline around each LOV, the Proposal toggle uses the existing Contracts collapse icon in the results toolbar, and the Proposal footer is removed while scroll loading remains. These are UI parity fixes; query parsing and Oracle pagination remain unchanged.
+
 ### Azure integration: guided tour completion, 2026-10-30
 
 The full fixture suite reproduced a guided-learning defect after the Azure pull: Escape hid the tour, but `gn-guide:home-tour:v2` stayed unset. In driver.js 1.10.2, calling `destroy()` while `onDestroyStarted` remains registered invokes that hook again and returns before cleanup. The shared guide launcher now records completion in its close path, clears the hook after its exit animation, and destroys the tour. This changes the owner framework only for the reproduced defect; the existing Motion exit animation remains. The Playwright assertion waits for completion after the popover hides.

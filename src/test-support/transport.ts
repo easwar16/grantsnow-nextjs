@@ -3,6 +3,29 @@ import { fixtureMode } from "@/server/platform/configuration/environment";
 import type { Operation } from "@/server/oracle/connection";
 import { fixtureUser, proposals, contracts } from "./fixtures";
 import { widgets } from "@/server/modules/home/widgets";
+// Fixture requests may run in separate Next processes, so the synthetic saved record has a stable read model.
+const createdEthics = {
+  setup_flow_id: 941,
+  application_number: "ETH_809",
+  setup_description: "Fixture ethics draft",
+  status_lkp_code: "DRFT",
+  status: "Draft",
+  org_unit_id: 203,
+  org_unit_name: "Faculty of Science",
+  ethics_form_type: "Standard Ethics Form",
+  ethics_type: "Individual",
+};
+const createdDueDiligence = {
+  setup_flow_id: 951,
+  application_number: "DD_809",
+  setup_description: "Fixture due diligence draft",
+  status_lkp_code: "DRFT",
+  status: "Draft",
+  org_unit_id: 203,
+  org_unit_name: "Faculty of Science",
+  ethics_form_type: "Standard Due Diligence Form",
+  ethics_type: "Standard",
+};
 /**
  * Evaluates the p_where_clause grammar that src/server/proposals/where-clause.ts emits:
  * `( atom (AND|OR atom)* )`, atoms `LOWER("c") LIKE LOWER('%v%') ESCAPE '\'`, `"c"='v'`, `"c">='v'`, `"c"<='v'`.
@@ -29,10 +52,12 @@ function whereMatcher(
           .toLowerCase()
           .includes(want);
     }
-    const cmp = /^"(\w+)"(>=|<=|=)/.exec(clause.slice(i));
+    const cmp = /^"(\w+)"(>=|<=|>|<|=)/.exec(clause.slice(i));
     if (!cmp) throw new Error("Fixture where clause: atom expected.");
     i += cmp[0].length;
-    const want = literal();
+    const number = /^\d+/.exec(clause.slice(i));
+    if (number) i += number[0].length;
+    const want = number ? number[0] : literal();
     return (row) => {
       // Fixture dates are ISO; compare their calendar-day form with the bound.
       const v = String(row[cmp[1]] ?? "")
@@ -42,7 +67,11 @@ function whereMatcher(
         ? v >= want
         : cmp[2] === "<="
           ? v <= want
-          : v === want;
+          : cmp[2] === ">"
+            ? v > want
+            : cmp[2] === "<"
+              ? v < want
+              : v === want;
     };
   };
   const group = (): ((row: Record<string, unknown>) => boolean) => {
@@ -97,6 +126,11 @@ const WRITE_REPLIES = new Set<Operation>([
   "postPre_awards_costingInsertCostingHeaderN",
   "postPre_awards_costingSaveCostingDataN",
   "postCopyClaimApp",
+  "postDynamicFormsApplicationSetup",
+  "getDynamicFormsRestoreApplicationSetup_flow_id",
+  "postProposalCopyProposal",
+  "deleteProposalProposalProposal_id",
+  "getProposalRestoreProposalProposal_id",
 ]);
 /** A simulated write in fixture mode (the connection's writes gate never opens there). */
 export async function mockOracleWrite(
@@ -133,12 +167,71 @@ export async function mockOracle(
     throw new Error(
       "Fixture transport cannot run outside explicit development mode.",
     );
+  if (op === "getPre_awardGetDeletedProposalsList") return { items: [] };
+  if (op === "getProposalCopyProposalObjList")
+    return {
+      items: [
+        { r: "proposal", d: "Proposal Summary", default_value: "true" },
+        { r: "costing", d: "Costing & Pricing", default_value: "false" },
+      ],
+    };
+  if (op === "postProposalCopyProposal") return { proposal: 9001 };
+  if (op === "deleteProposalProposalProposal_id")
+    return { response: "Deleted" };
+  if (op === "getProposalRestoreProposalProposal_id")
+    return { response: "Restored" };
   if (op === "postProposalProposal") {
-    const proposal = (body as { proposals?: { main_proposal_id?: number } })
-      ?.proposals?.main_proposal_id;
-    if (!Number.isSafeInteger(proposal) || !proposal)
-      throw new Error("Fixture Proposal identity is missing.");
-    return { proposal };
+    const data = (
+      body as {
+        proposals?: {
+          main_proposal_id?: number | null;
+          proposal_title?: string;
+          proposal_type?: string;
+          proposal_status?: string;
+          proposal_departments?: { person_id?: number }[];
+          proposal_sponsors?: {
+            sponsor_party_id?: number;
+            sponsor_type?: string;
+          }[];
+          start_date?: string;
+          end_date?: string;
+        };
+      }
+    )?.proposals;
+    if (!data) throw new Error("Fixture Proposal payload is missing.");
+    if (data.main_proposal_id) return { proposal: data.main_proposal_id };
+    if (
+      !data.proposal_title ||
+      !["PROPOSAL", "OUTLINE_PROPOSAL"].includes(data.proposal_type ?? "") ||
+      data.proposal_status !== "DRFT" ||
+      data.proposal_departments?.length !== 1 ||
+      data.proposal_sponsors?.filter((row) => row.sponsor_type === "PRM")
+        .length !== 1
+    )
+      throw new Error("Fixture Proposal creation payload is invalid.");
+    const proposalId = Math.max(...proposals.map((row) => row.proposal_id)) + 1;
+    const investigator =
+      data.proposal_departments[0].person_id === 102
+        ? "Sam Taylor"
+        : "Alex Morgan";
+    const sponsor =
+      data.proposal_sponsors[0].sponsor_party_id === 302
+        ? "Health Foundation"
+        : "Research Council";
+    proposals.push({
+      ...proposals[0],
+      proposal_id: proposalId,
+      proposal_number: `${data.proposal_type === "PROPOSAL" ? "P" : "OP"}_${proposalId}`,
+      proposal_title: data.proposal_title,
+      proposal_type: data.proposal_type!,
+      proposal_status_value: "Draft",
+      proposal_status_code: "DRFT",
+      full_name: investigator,
+      primary_sponsorer: sponsor,
+      proposal_start_date: data.start_date ?? "",
+      proposal_end_date: data.end_date ?? "",
+    });
+    return { proposal: proposalId };
   }
   // The isolated Playwright run can hold one lookup to verify that list results and
   // status navigation render before this filter is ready. Never used by live ORDS.
@@ -264,6 +357,31 @@ export async function mockOracle(
       ],
       CONTRACT_TYPE: [["RESEARCH", "Research Contract"]],
       CTR_DEADLINE_TYPE: [["SIGNING", "Signing deadline"]],
+      DYN_FORM_SETUP_STATUS: [
+        ["DRFT", "Draft"],
+        ["WIP", "In Progress"],
+        ["SUB", "Submitted"],
+      ],
+      ETHICS_STATUS: [
+        ["DRFT", "Draft"],
+        ["SUB", "Submitted"],
+        ["AIA", "Awaiting Internal Approval"],
+      ],
+      ETHICS_TYPE: [
+        ["INDIVIDUAL", "Individual"],
+        ["COLLAB", "Collaborative"],
+      ],
+      ETHICS_FORM_TYPE: [["STANDARD", "Standard Ethics Form"]],
+      DUE_DILIGENCE_STATUS: [
+        ["DRFT", "Draft"],
+        ["SUB", "Submitted"],
+      ],
+      DUE_DILIGENCE_TYPE: [["STANDARD", "Standard"]],
+      DUE_DILIGENCE_FORM_TYPE: [["STANDARD", "Standard Due Diligence Form"]],
+      RISK: [
+        ["NONE", "No Risk"],
+        ["LOW", "Low Risk"],
+      ],
     };
     return {
       items: Object.entries(types).flatMap(([lookup_type_code, rows]) =>
@@ -298,6 +416,23 @@ export async function mockOracle(
           is_pi_flag: "true",
           costing_allowed_flag: "Y",
           email_address: "sam.taylor@example.org",
+        },
+      ],
+    };
+  if (op === "getDynamicFormsGetApplicationApprover")
+    return {
+      items: [
+        {
+          person_id: 101,
+          full_name: "Alex Morgan",
+          org_unit_id: 202,
+          org_unit_name: "Example Research University",
+        },
+        {
+          person_id: 102,
+          full_name: "Sam Taylor",
+          org_unit_id: 203,
+          org_unit_name: "Faculty of Science",
         },
       ],
     };
@@ -642,10 +777,19 @@ export async function mockOracle(
       query?.get("prop_id"),
     );
   if (op === "getProposalGetLockStatus")
-    return (await import("./eoi-writes")).fixtureLockStatus(
-      headers.prop_id,
-      headers.lock_level,
-    );
+    return Number(headers.prop_id) === 1001 && Number(headers.lock_level) === 1
+      ? {
+          status: "FINALIZE",
+          lock_module_id: 701,
+          user_id: 4533,
+          user_lock_token: "fixture-other-session",
+          user_name: "Mitchell Carole",
+          msg: "Module finalized",
+        }
+      : (await import("./eoi-writes")).fixtureLockStatus(
+          headers.prop_id,
+          headers.lock_level,
+        );
   // Fixture comment thread for any record page: one from a colleague, one of the fixture user's own with a mention.
   if (op === "getProposalComments") {
     const thread = {
@@ -940,6 +1084,44 @@ export async function mockOracle(
   // Dynamic forms (shapes as GN-Angular's specs and GrantsNow-Dynamic-Forms.md): conditions, dependent fields and
   // LOVs, every field type, an optional section, a GRID and a FILE field.
   if (op === "getProposalEthical_dynFormsP_ref_module") {
+    if (headers.p_obj_type === "DUE_DILIGENCE")
+      return [
+        {
+          formId: 84,
+          formName: "Standard Due Diligence Form",
+          refModule: "DUE_DILIGENCE",
+          sections: [
+            {
+              sectionId: 502,
+              sectionName: "Application",
+              sectionType: "FORM",
+              enabled: "true",
+              isVisible: "Y",
+              isMandatory: "N",
+              fields: [],
+            },
+          ],
+        },
+      ];
+    if (headers.p_obj_type === "ETHICS")
+      return [
+        {
+          formId: 83,
+          formName: "Standard Ethics Form",
+          refModule: "ETHICS",
+          sections: [
+            {
+              sectionId: 501,
+              sectionName: "Application",
+              sectionType: "FORM",
+              enabled: "true",
+              isVisible: "Y",
+              isMandatory: "N",
+              fields: [],
+            },
+          ],
+        },
+      ];
     if (
       headers.p_obj_type === "CONTRACT" &&
       headers.p_obj_id &&
@@ -1129,6 +1311,24 @@ export async function mockOracle(
       items: [
         { page_name: "home", read_access: "Y" },
         { page_name: "create-contract", read_access: "Y" },
+        { page_name: "create-proposal", read_access: "Y" },
+        { page_name: "create-outline-proposal", read_access: "Y" },
+        { page_name: "ethics-administration", read_access: "Y" },
+        { page_name: "ethics-participent-view", read_access: "Y" },
+        { page_name: "create-ethics-application", read_access: "Y" },
+        { page_name: "ethics-recycle-bin", read_access: "Y" },
+        { page_name: "ethics-recycle-restore", read_access: "Y" },
+        { page_name: "due-diligence-administration", read_access: "Y" },
+        { page_name: "due-diligence-participent-view", read_access: "Y" },
+        { page_name: "create-due-diligence-application", read_access: "Y" },
+        { page_name: "due-diligence-recycle-bin", read_access: "Y" },
+        { page_name: "dd-clone", read_access: "Y" },
+        { page_name: "proposal-clone", read_access: "Y" },
+        {
+          page_name: "proposal-listing-delete",
+          read_access: "Y",
+          delete_access: "Y",
+        },
         ...[
           "create-claims-unit",
           "edit-claims-unit",
@@ -1154,6 +1354,30 @@ export async function mockOracle(
           ? [{ value: "RESEARCH_OFFICER", description: "Research Officer" }]
           : [{ value: "GRANTS_TEAM", description: "Grants Team" }],
     };
+  if (op === "getReportsGetObjectRef")
+    return {
+      items: [
+        {
+          page_name: "proposal-summary",
+          page_desc: "Proposal Summary",
+          show_item: "Y",
+        },
+      ],
+    };
+  if (op === "getReportsShareReport") {
+    const payload = body as {
+      report_code?: string;
+      binds?: Record<string, { type: string; value: unknown }>;
+    };
+    if (
+      headers.username !== "alex@example.test" ||
+      payload.report_code !== "proposal-summary" ||
+      payload.binds?.object_type?.value !== "OUTLINE_PROPOSAL" ||
+      payload.binds?.proposal_id?.type !== "NUMBER"
+    )
+      throw new Error("Invalid fixture share payload.");
+    return { response: "Success" };
+  }
   if (op === "getPre_awardGetPersonListAll")
     return {
       items: [
@@ -1163,6 +1387,7 @@ export async function mockOracle(
           full_name: "Alex Morgan",
           org_unit_name: "Example Research University",
           employee_number: "EMP101",
+          email_address: "alex@example.test",
         },
         {
           person_id: 102,
@@ -1170,6 +1395,7 @@ export async function mockOracle(
           full_name: "Sam Taylor",
           org_unit_name: "Faculty of Science",
           employee_number: "EMP102",
+          email_address: "sam@example.test",
         },
       ],
     };
@@ -1430,6 +1656,26 @@ export async function mockOracle(
         },
       ],
     };
+  if (op === "getSecurityUser_roles" && headers.p_obj_type === "ETHICS")
+    return {
+      items: [
+        {
+          page_name: "ethics-general-overview",
+          read_access: "Y",
+          edit_access: "Y",
+        },
+      ],
+    };
+  if (op === "getSecurityUser_roles" && headers.p_obj_type === "DUE_DILIGENCE")
+    return {
+      items: [
+        {
+          page_name: "duediligence-general-overview",
+          read_access: "Y",
+          edit_access: "Y",
+        },
+      ],
+    };
   if (op === "getSecurityUser_roles")
     return {
       items: [
@@ -1468,6 +1714,7 @@ export async function mockOracle(
     if (!p) throw new Error("Fixture record not found.");
     return {
       ...p,
+      locked_modules: p.proposal_id === 1001 ? [{ page_id: 1 }] : [],
       proposal_status: p.proposal_status_code,
       pi_name: p.full_name,
       activity_type_value: p.activity_type_descr,
@@ -1593,6 +1840,93 @@ export async function mockOracle(
           label_value: null,
           is_visible: "Y",
         })),
+      )
+      .concat(
+        [
+          "recycle-bin",
+          "list-link",
+          "list-share",
+          "list-clone",
+          "list-delete",
+        ].map((label_name) => ({
+          module_name: "PROPOSAL",
+          label_type: "button-labels",
+          label_name,
+          label_value: null,
+          is_visible: "Y",
+        })),
+      )
+      .concat(
+        [
+          "list-ethics-number",
+          "list-created-by",
+          "list-ethics-type",
+          "list-response-status",
+          "list-form-type",
+          "list-org-unit",
+          "list-title",
+          "list-risk",
+          "list-date-sort",
+          "list-creation-date",
+          "list-deadline-date",
+          "list-expiry-date",
+          "list-last-updated-by",
+          "list-last-updated-date",
+          "list-supervisor-name",
+        ].map((label_name) => ({
+          module_name: "ETHICS",
+          label_type: "labels",
+          label_name,
+          label_value: null,
+          is_visible: "Y",
+        })),
+      )
+      .concat(
+        ["list-view-record", "list-link", "list-clone", "list-delete"].map(
+          (label_name) => ({
+            module_name: "ETHICS",
+            label_type: "button-labels",
+            label_name,
+            label_value: null,
+            is_visible: "Y",
+          }),
+        ),
+      )
+      .concat(
+        [
+          "list-due-diligence-number",
+          "list-created-by",
+          "list-due-diligence-type",
+          "list-response-status",
+          "list-form-type",
+          "list-org-unit",
+          "list-title",
+          "list-risk",
+          "list-date-sort",
+          "list-creation-date",
+          "list-deadline-date",
+          "list-expiry-date",
+          "list-last-updated-by",
+          "list-last-updated-date",
+          "list-supervisor-name",
+        ].map((label_name) => ({
+          module_name: "DUE_DILIGENCE",
+          label_type: "labels",
+          label_name,
+          label_value: null,
+          is_visible: "Y",
+        })),
+      )
+      .concat(
+        ["list-view-record", "list-link", "list-clone", "list-delete"].map(
+          (label_name) => ({
+            module_name: "DUE_DILIGENCE",
+            label_type: "button-labels",
+            label_name,
+            label_value: null,
+            is_visible: "Y",
+          }),
+        ),
       );
   if (op === "getPre_awardGetLkpOrgUnitType")
     return {
@@ -1612,7 +1946,154 @@ export async function mockOracle(
     };
   // Fixture user may open Ethics rows (legacy checkApplApprAccess).
   if (op === "getDynamicFormsCheckApplApprAccess") return { hasAccess: "Y" };
-  if (op === "getPre_awardGetProposalsList") {
+  if (op === "getDynamicFormsApplicationList") {
+    const ethicsRows = [
+      {
+        setup_flow_id: 939,
+        application_number: "ETH_808",
+        setup_description: "Research ethics application",
+        access_type: "EA_ACCESS",
+        status_lkp_code: "DRFT",
+        status: "Draft",
+        response_status: "Draft",
+        response_status_lkp_code: "DRFT",
+        risk_code: "NONE",
+        risk_desc: "No Risk",
+        created_by: "Brock Philips",
+        last_updated_by: "Brock Philips",
+        person_id: 101,
+        creation_date: "2026-10-20T00:00:00Z",
+        last_update_date: "2026-10-21T00:00:00Z",
+        deadline_date: "2026-12-20T00:00:00Z",
+        expiry_date: "2027-10-20T00:00:00Z",
+        ethics_type: "Individual",
+        ethics_type_code: "INDIVIDUAL",
+        ethics_form_type: "Standard Ethics Form",
+        ethics_form_type_code: "STANDARD",
+        org_unit_name: "Faculty of Science",
+        org_unit_id: 203,
+        reviewer_name: "Mitchell Carole",
+      },
+    ];
+    const where = query?.get("p_where_clause"),
+      offset = Number(query?.get("p_offset") || 0),
+      limit = Number(query?.get("p_limit") || 10);
+    const dueDiligenceRows = [
+      {
+        ...ethicsRows[0],
+        setup_flow_id: 949,
+        application_number: "DD_808",
+        setup_description: "Supplier due diligence application",
+        access_type: "DDA_ACCESS",
+        ethics_type: "Standard",
+        ethics_type_code: "STANDARD",
+        ethics_form_type: "Standard Due Diligence Form",
+        ethics_form_type_code: "STANDARD",
+      },
+    ];
+    const isDueDiligence = headers.object_type === "DUE_DILIGENCE";
+    const source = isDueDiligence
+      ? where?.includes('"setup_flow_id"=951')
+        ? [...dueDiligenceRows, createdDueDiligence]
+        : dueDiligenceRows
+      : where?.includes('"setup_flow_id"=941')
+        ? [...ethicsRows, createdEthics]
+        : ethicsRows;
+    const rows = where ? source.filter(whereMatcher(where)) : source;
+    return {
+      items: rows.slice(offset, offset + limit),
+      hasMore: offset + limit < rows.length,
+    };
+  }
+  if (op === "getDynamicFormsApplicationSetup") {
+    if (query?.get("setup_flow_id") === "951")
+      return {
+        ...createdDueDiligence,
+        sections: [],
+        stakeholders: [],
+        reference_objects: [],
+      };
+    if (query?.get("setup_flow_id") === "949")
+      return {
+        ...createdDueDiligence,
+        setup_flow_id: 949,
+        application_number: "DD_808",
+        setup_description: "Supplier due diligence application",
+        created_by: 101,
+        sections: [],
+        stakeholders: [],
+        reference_objects: [],
+      };
+    if (query?.get("setup_flow_id") === "941")
+      return {
+        ...createdEthics,
+        sections: [],
+        stakeholders: [],
+        reference_objects: [],
+      };
+    if (query?.get("setup_flow_id") !== "939")
+      throw new Error("Fixture ethics application not found.");
+    return {
+      setup_flow_id: 939,
+      form_id: 83,
+      created_by: 101,
+      application_number: "ETH_808",
+      setup_description: "Research ethics application",
+      status: "Draft",
+      status_lkp_code: "DRFT",
+      org_unit_id: 203,
+      org_unit_name: "Faculty of Science",
+      ethics_type: "Individual",
+      ethics_form_type: "Standard Ethics Form",
+      risk_code: "NONE",
+      risk_desc: "No Risk",
+      deadline_date: "2026-12-20T00:00:00Z",
+      expiry_date: "2027-10-20T00:00:00Z",
+      sections: [],
+      stakeholders: [],
+      reference_objects: [],
+    };
+  }
+  if (op === "getDynamicFormsGetDeletedApplicationList")
+    return {
+      items:
+        headers.p_obj_type === "DUE_DILIGENCE"
+          ? [
+              {
+                setup_flow_id: 950,
+                application_number: "DD_807",
+                setup_description: "Previous due diligence application",
+                status: "Draft",
+                org_unit_id: 203,
+                org_unit_name: "Faculty of Science",
+              },
+            ]
+          : [
+              {
+                setup_flow_id: 940,
+                application_number: "ETH_807",
+                setup_description: "Previous ethics application",
+                status: "Draft",
+                org_unit_id: 203,
+                org_unit_name: "Faculty of Science",
+              },
+            ],
+    };
+  if (op === "getDynamicFormsRestoreApplicationSetup_flow_id")
+    return {
+      setup_flow_id: Number(pathParams?.setup_flow_id),
+      status: "Draft",
+    };
+  if (op === "postDynamicFormsApplicationSetup") {
+    const payload = body as { object_type?: string } | undefined;
+    return payload?.object_type === "DUE_DILIGENCE"
+      ? createdDueDiligence
+      : createdEthics;
+  }
+  if (
+    op === "getPre_awardGetProposalsList" ||
+    op === "getProposalsListAdvanced"
+  ) {
     const where = query?.get("p_where_clause"),
       offset = Number(query?.get("p_offset") || 0),
       limit = Number(query?.get("p_limit") || 10);

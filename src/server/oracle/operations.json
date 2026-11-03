@@ -24,6 +24,49 @@
     "path": "/pre_award/getProposalsList/",
     "headers": ["token"]
   },
+  "getProposalsListAdvanced": {
+    "service": "apps",
+    "path": "/pre_award/getProposalsListAdvanced/",
+    "headers": ["token"]
+  },
+  "getPre_awardGetDeletedProposalsList": {
+    "service": "apps",
+    "path": "/pre_award/getDeletedProposalsList/",
+    "headers": ["token"]
+  },
+  "getProposalCopyProposalObjList": {
+    "service": "apps",
+    "path": "/Proposal/copyProposalObjList/",
+    "headers": ["token", "P_OBJ_TYPE"]
+  },
+  "postProposalCopyProposal": {
+    "service": "apps",
+    "path": "/Proposal/copyProposal",
+    "headers": ["token", "legal_id", "org_id"],
+    "method": "POST",
+    "write": true
+  },
+  "deleteProposalProposalProposal_id": {
+    "service": "apps",
+    "path": "/Proposal/proposal/{proposal_id}",
+    "headers": ["token"],
+    "method": "DELETE",
+    "write": true
+  },
+  "getProposalRestoreProposalProposal_id": {
+    "service": "apps",
+    "path": "/Proposal/restoreProposal/{proposal_id}",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "getReportsShareReport": {
+    "service": "apps",
+    "path": "/reports/shareReport/",
+    "headers": ["token", "proposal_id", "username", "report_name"],
+    "method": "POST",
+    "write": true
+  },
   "getSharedGetObjectDates": {
     "service": "apps",
     "path": "/shared/getObjectDates",
@@ -73,6 +116,40 @@
     "service": "apps",
     "path": "/dynamicForms/applicationStatistics",
     "headers": ["chart_type", "token", "p_org_id", "quarter", "year", "month"]
+  },
+  "getDynamicFormsApplicationList": {
+    "service": "apps",
+    "path": "/dynamicForms/applicationList",
+    "headers": ["token", "access_type", "ref_module", "object_type"]
+  },
+  "getDynamicFormsApplicationSetup": {
+    "service": "apps",
+    "path": "/dynamicForms/applicationSetup",
+    "headers": ["token"]
+  },
+  "getDynamicFormsGetApplicationApprover": {
+    "service": "apps",
+    "path": "/dynamicForms/getApplicationApprover",
+    "headers": ["token", "p_emp_num"]
+  },
+  "getDynamicFormsGetDeletedApplicationList": {
+    "service": "apps",
+    "path": "/dynamicForms/getDeletedApplicationList",
+    "headers": ["token", "p_obj_type"]
+  },
+  "getDynamicFormsRestoreApplicationSetup_flow_id": {
+    "service": "apps",
+    "path": "/dynamicForms/restoreApplication/{setup_flow_id}",
+    "method": "POST",
+    "write": true,
+    "headers": ["token"]
+  },
+  "postDynamicFormsApplicationSetup": {
+    "service": "apps",
+    "path": "/dynamicForms/applicationSetup",
+    "method": "POST",
+    "write": true,
+    "headers": ["token"]
   },
   "getDynamicFormsApplApprDeadline2": {
     "service": "apps",

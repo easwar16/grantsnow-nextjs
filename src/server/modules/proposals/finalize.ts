@@ -1,9 +1,7 @@
-import { serverFunctions } from "@/server/functions";
 import "server-only";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { proposals } from "@/server/oracle/api";
-import { resources } from "@/server/platform/configuration/resources";
 import { loadAttributes } from "@/server/record/attributes/service";
 import { attributeErrors } from "@/features/record/attributes/model";
 import { proposalPage } from "./record";
@@ -56,27 +54,6 @@ export async function setProposalSummaryFinalized(
         "Select one primary funder and at most one billing funder before finalizing.",
         400,
       );
-    const rb = await resources();
-    for (const field of [
-      ...context.summary.piFields,
-      ...context.summary.proposalFields,
-    ]) {
-      if (
-        serverFunctions.resources.resourceRequired(
-          rb,
-          context.bundle,
-          "labels",
-          field.key,
-          false,
-        ) &&
-        field.value.trim() === ""
-      )
-        throw new AppError(
-          "BAD_REQUEST",
-          `${field.label} is required before finalizing.`,
-          400,
-        );
-    }
     if (record.type === "PROPOSAL") {
       const attributes = await loadAttributes({
         host: "proposals-summary",

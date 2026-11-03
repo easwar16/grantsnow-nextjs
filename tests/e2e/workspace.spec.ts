@@ -40,6 +40,9 @@ test("Draft Proposal exposes Edit, editable summary fields, and Cancel", async (
   await page.setViewportSize({ width: 2048, height: 1190 });
   await login(page);
   await page.goto("/proposals/OUTLINE_PROPOSAL/1000");
+  await expect(
+    page.locator("#proposals-summary-tab [aria-label='Finalized']"),
+  ).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Edit Proposal" })).toBeVisible();
   await page.getByRole("link", { name: "Edit Proposal" }).click();
   await expect(page).toHaveURL(/mode=edit/);
@@ -158,6 +161,14 @@ test("Contracts listing filters, paging and guarded Summary", async ({
 }) => {
   await login(page);
   await page.goto("/contracts");
+  await expect(page.locator("#contracts-new")).toBeVisible();
+  const contractToggleRight = await page
+    .locator("#contracts-toolbar label[for='contract-filter-toggle']")
+    .evaluate((element) => element.getBoundingClientRect().right);
+  const contractNewLeft = await page
+    .locator("#contracts-new")
+    .evaluate((element) => element.getBoundingClientRect().left);
+  expect(contractNewLeft - contractToggleRight).toBeLessThan(24);
   await expect(
     page.getByRole("heading", { name: "Contracts", exact: true }),
   ).toBeVisible();
@@ -245,6 +256,172 @@ test("Contracts listing filters, paging and guarded Summary", async ({
     path: "test-results/contracts-summary.png",
     fullPage: true,
   });
+});
+test("Proposal and Contract filters fit and align on a phone", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page);
+  await page.goto("/contracts");
+  const contractFields = [
+    "#contracts-filter-number",
+    "#contracts-filter-sort",
+    "#contracts-filter-contractType",
+    "#contracts-filter-orgUnit",
+    "#contracts-filter-reference",
+  ];
+  await expect(page.locator("#contracts-filter-sort-trigger")).toBeVisible();
+  expect(
+    await page
+      .locator("#contracts-filter-sort [data-part='field']")
+      .evaluate((field) => getComputedStyle(field).borderTopWidth),
+  ).toBe("0px");
+  for (const label of ["Date Sort", "Contract Type", "Org Unit"]) {
+    await expect(
+      page.locator("#contracts-filter-form").getByText(label),
+    ).toBeVisible();
+  }
+  const contractRects = await page
+    .locator(contractFields.join(", "))
+    .evaluateAll((fields) =>
+      fields.map((field) => {
+        const { left, right } =
+          field.closest("label")?.getBoundingClientRect() ??
+          field.getBoundingClientRect();
+        return { left, right };
+      }),
+    );
+  for (const rect of contractRects) {
+    expect(rect.left).toBeCloseTo(contractRects[0].left, 0);
+    expect(rect.right).toBeGreaterThanOrEqual(contractRects[0].right - 24);
+    expect(rect.right).toBeLessThanOrEqual(contractRects[0].right);
+    expect(rect.right).toBeLessThanOrEqual(390);
+  }
+  await page.screenshot({ path: "test-results/contracts-filters-phone.png" });
+
+  await page.goto("/proposals");
+  await expect(page.getByRole("combobox", { name: "Date Sort" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Direction" })).toHaveCount(
+    0,
+  );
+  await page.locator("#proposals-direction").click();
+  await expect(page.locator("#proposals-direction")).toHaveAttribute(
+    "aria-label",
+    "Sort descending",
+  );
+  await page.locator("#proposals-direction").click();
+  await expect(page.locator("#proposals-create")).toBeVisible();
+  await expect(page.locator("#proposals-create-outline")).toBeVisible();
+  await expect(page.locator("#proposals-recycle-bin")).toBeVisible();
+  await expect(
+    page.locator("#proposal-outline-proposal-1000-link"),
+  ).toBeVisible();
+  await expect(
+    page.locator("#proposal-outline-proposal-1000-share"),
+  ).toBeVisible();
+  await expect(
+    page.locator("#proposal-outline-proposal-1000-clone"),
+  ).toBeVisible();
+  await expect(
+    page.locator("#proposal-outline-proposal-1000-delete"),
+  ).toBeVisible();
+  await expect(page.locator("#proposal-proposal-1001-delete")).toBeDisabled();
+  await expect(page.locator("#proposals-advanced-toggle")).toBeVisible();
+  await expect(page.getByText("Advanced Query")).toHaveCount(1);
+  await page.locator("#proposals-advanced-toggle").click();
+  await expect(page.locator("#proposals-advanced")).toBeVisible();
+  await expect(
+    page.locator("#proposal-filters").getByText("Advanced Query"),
+  ).toHaveCount(0);
+  await expect(
+    page.locator("#proposals-advanced-attribute-trigger"),
+  ).toBeVisible();
+  await page.locator("#proposals-advanced-attribute-trigger").click();
+  await page.getByRole("option", { name: "Proposal Title" }).click();
+  await page.locator("#proposals-advanced-operator-trigger").click();
+  await page.getByRole("option", { name: "Contains (LIKE)" }).click();
+  await page.locator("#proposals-advanced-value").fill("climate");
+  await page.locator("#proposals-advanced-add").click();
+  await expect(page).toHaveURL(/conditions=/);
+  await expect(page.locator("#proposals-advanced-conditions")).toBeVisible();
+  await expect(
+    page.locator("#proposal-outline-proposal-1000-link"),
+  ).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: "test-results/proposals-advanced-query.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator("#proposals-advanced-close").click();
+  await expect(page.locator("#proposals-advanced")).toHaveCount(0);
+  await expect(
+    page.locator("#proposals-filter-investigator-trigger"),
+  ).toBeVisible();
+  expect(
+    await page
+      .locator("#proposals-filter-investigator [data-part='field']")
+      .evaluate((field) => getComputedStyle(field).borderTopWidth),
+  ).toBe("0px");
+  await expect(page.getByText("Rows per page")).toHaveCount(0);
+  const proposalRects = await page
+    .locator(".filter-panel > .inside-field")
+    .evaluateAll((fields) =>
+      fields.map((field) => {
+        const { left, right } = field.getBoundingClientRect();
+        return { left, right };
+      }),
+    );
+  expect(proposalRects.length).toBeGreaterThan(1);
+  for (const rect of proposalRects) {
+    expect(rect.left).toBeCloseTo(proposalRects[0].left, 0);
+    expect(rect.right).toBeCloseTo(proposalRects[0].right, 0);
+    expect(rect.right).toBeLessThanOrEqual(390);
+  }
+  await page.screenshot({ path: "test-results/proposals-filters-phone.png" });
+  await page.setViewportSize({ width: 904, height: 986 });
+  await page.getByRole("button", { name: "Close filters" }).click();
+  await expect(page.locator("#proposal-filters-panel")).toHaveAttribute(
+    "data-collapsed",
+    "true",
+  );
+  await page.getByRole("button", { name: "Open filters" }).click();
+  await expect(page.locator("#proposal-filters-panel")).not.toHaveAttribute(
+    "data-collapsed",
+    "true",
+  );
+  await expect(page.locator("#proposal-filters-panel")).toHaveCSS(
+    "width",
+    "240px",
+  );
+  const desktopSidebar = await page
+    .locator("#proposal-filters")
+    .evaluate((element) => element.getBoundingClientRect().right);
+  const desktopFields = await page
+    .locator(".filter-panel > .inside-field")
+    .evaluateAll((fields) =>
+      fields.map((field) => {
+        const { left, right } = field.getBoundingClientRect();
+        return { left, right };
+      }),
+    );
+  for (const rect of desktopFields) {
+    expect(rect.left).toBeCloseTo(6, 0);
+    expect(rect.right).toBeLessThanOrEqual(desktopSidebar - 6);
+  }
+  await expect(page.locator(".category-options label")).toHaveCount(5);
+  const categoryChoices = await page
+    .locator(".category-options label")
+    .evaluateAll((labels) =>
+      labels.map((label) => {
+        const { top, bottom } = label.getBoundingClientRect();
+        return { top, bottom };
+      }),
+    );
+  for (let index = 1; index < categoryChoices.length; index++) {
+    expect(categoryChoices[index].top).toBeGreaterThan(
+      categoryChoices[index - 1].bottom,
+    );
+  }
+  await page.screenshot({ path: "test-results/proposals-filters-desktop.png" });
 });
 test("Contracts status and results stream before a slow filter lookup", async ({
   page,
@@ -540,7 +717,54 @@ test("Home queues, organization/year filters, independent failure/retry, navigat
     caret: "initial",
   });
 });
-test("listing search, filter, reset, paging, back, reload, masked values", async ({
+test("Proposal listing opens recycle and clone options from VBCS actions", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/proposals");
+  await page.locator("#proposals-recycle-bin").click();
+  await expect(page.getByRole("dialog", { name: "Recycle bin" })).toContainText(
+    "No data to display.",
+  );
+  await page.locator("#proposals-recycle-dialog-close").click();
+  await page.locator("#proposal-outline-proposal-1000-clone").click();
+  await expect(
+    page.getByRole("dialog", { name: "Clone proposal" }),
+  ).toContainText("Costing & Pricing");
+  await page.locator("#proposals-clone-dialog-close").click();
+  await page.locator("#proposal-outline-proposal-1000-share").click();
+  await page.locator("#proposals-share-as-document").click();
+  await expect(
+    page.getByRole("dialog", { name: "Share as document" }),
+  ).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Report" })).toBeVisible();
+  await page.locator("#proposals-share-document-dialog-close").click();
+  const shared = await page.evaluate(async () => {
+    const response = await fetch("/api/proposals/list-actions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "share-document",
+        type: "OUTLINE_PROPOSAL",
+        id: "1000",
+        report: "proposal-summary",
+        emails: ["alex@example.test"],
+      }),
+    });
+    return response.status;
+  });
+  expect(shared).toBe(200);
+  const forbidden = await page.evaluate(async () => {
+    const response = await fetch("/api/proposals/list-actions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "delete", type: "PROPOSAL", id: "1001" }),
+    });
+    return response.status;
+  });
+  expect(forbidden).toBe(403);
+});
+test("listing search, filter, reset, scroll loading, back, reload, masked values", async ({
   page,
 }) => {
   await login(page);
@@ -548,15 +772,13 @@ test("listing search, filter, reset, paging, back, reload, masked values", async
   await expect(
     page.locator(".listing-count").filter({ hasText: "10 of 37" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Next", exact: true }).click();
-  await expect(
-    page
-      .getByRole("region", { name: "Proposal listing" })
-      .getByText("Page 2", { exact: true }),
-  ).toBeVisible();
-  await expect(page.locator(".proposal-card")).toHaveCount(10);
+  await page.locator(".proposal-cards").evaluate((list) => {
+    list.scrollTop = list.scrollHeight;
+    list.dispatchEvent(new Event("scroll"));
+  });
+  await expect(page.locator(".proposal-card")).toHaveCount(20);
   await page.reload();
-  await expect(page.getByText("Page 2", { exact: true })).toBeVisible();
+  await expect(page.locator(".proposal-card")).toHaveCount(10);
   await page.getByLabel("Title", { exact: true }).fill("Climate");
   await page.getByLabel("Title", { exact: true }).press("Enter");
   await expect(page).toHaveURL(/search=Climate/);
@@ -656,8 +878,8 @@ test("narrow layout keyboard, private cache and no tokens in client payload; log
   await expect(
     page.locator(".listing-count").filter({ hasText: "10 of 37" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: /^Filters/ }).click();
-  await page.getByRole("button", { name: /^Filters/ }).focus();
+  await page.getByRole("button", { name: "Close filters" }).click();
+  await page.getByRole("button", { name: "Open filters" }).focus();
   await page.keyboard.press("Enter");
   await expect(
     page.getByRole("radio", { name: "Outline Proposal", exact: true }),
@@ -759,6 +981,15 @@ test("Proposal record keeps its header while shared read tabs load", async ({
 }) => {
   await login(page);
   await page.goto("/proposals/PROPOSAL/1001");
+  await expect(page.locator("#proposals-summary-tab")).toContainText(
+    "Proposal Summary",
+  );
+  await expect(
+    page.locator("#proposals-summary-tab [aria-label='Finalized']"),
+  ).toBeVisible();
+  await expect(page.locator("#proposal-1001-finalized-by")).toHaveText(
+    "Module finalized: Mitchell Carole",
+  );
   const heading = page.locator("#proposal-1001-heading");
   await expect(heading).toBeVisible();
   const title = await heading.getByRole("heading").textContent();

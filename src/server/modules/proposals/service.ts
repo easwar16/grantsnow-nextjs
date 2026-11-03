@@ -3,9 +3,13 @@ import "server-only";
 import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
 import { proposals } from "@/server/oracle/api";
-import type { ProposalQuery } from "@/features/modules/proposals/schemas";
+import {
+  parseConditions,
+  type ProposalQuery,
+} from "@/features/modules/proposals/schemas";
 import { oracleQuery } from "./where-clause";
 import { sortChoices } from "./lookups";
+import { checkConditions } from "./advanced";
 import type {
   Column,
   ProposalPage,
@@ -18,8 +22,9 @@ const rowSchema = z.object({
   proposal_id: z.number().int(),
   proposal_number: z.string(),
   proposal_title: z.string(),
-  proposal_status_value: z.string(),
+  proposal_status_value: optional,
   proposal_type: z.string(),
+  parent_proposal_id: z.number().int().nullish(),
   full_name: optional,
   proposal_status_code: optional,
   risk_desc: optional,
@@ -65,8 +70,9 @@ export function mapProposals(
       id: `${r.proposal_type}:${r.proposal_id}`,
       reference: r.proposal_number,
       title: r.proposal_title,
-      status: r.proposal_status_value,
+      status: r.proposal_status_value ?? "",
       type: r.proposal_type,
+      parentId: r.parent_proposal_id,
       statusCode: r.proposal_status_code ?? undefined,
       risk: r.risk_desc ?? undefined,
       riskCode: r.risk_code ?? undefined,
@@ -87,7 +93,7 @@ export function mapProposals(
       value: r.total_cost == null ? undefined : String(r.total_cost),
     };
     for (const [key, value] of Object.entries(fields))
-      if (visible.has(key as keyof ProposalRow))
+      if (visible.has(key as Column["key"]))
         Object.assign(mapped, { [key]: value ?? undefined });
     if (visible.has("value")) mapped.currency = r.currency_code ?? undefined;
     return mapped;
@@ -115,10 +121,15 @@ export async function listProposals(
   serverFunctions.permissions.requireModule(user, "PROPOSALS");
   if (q.sort !== "" && !(await sortChoices()).some((c) => c.value === q.sort))
     throw new AppError("BAD_REQUEST", "Unsupported listing sort.", 400);
+  const advanced = parseConditions(q.conditions);
+  await checkConditions(advanced);
   const formatting = await formattingConfiguration();
   // Token defines row scope in the existing listing. Never accept a browser identity/org header.
   const page = mapProposals(
-    await proposals.list({ query: oracleQuery(q) }, { signal }),
+    await (advanced.length ? proposals.advancedList : proposals.list)(
+      { query: oracleQuery(q, advanced.length > 0) },
+      { signal },
+    ),
     q,
     columns,
   );

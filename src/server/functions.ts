@@ -398,6 +398,7 @@ function drawerAccess(modules: Record<string, boolean>, id: string) {
   const group = groupOf.get(id);
   if (group) return modules[group] === true && modules[id] === true;
   if (groups.has(id)) return modules[id] === true;
+  if (id === "due-diligence") return modules["DUE-DILIGENCE"] === true;
   return modules[id.toUpperCase()] === true;
 }
 
@@ -512,6 +513,10 @@ function pageAccess(roles: RoleRow[] | null, page: string) {
     edit: rows.length > 0 && rows.every((r) => r.edit_access === "Y"),
   };
 }
+function pageDeleteAccess(roles: RoleRow[] | null, page: string) {
+  const rows = (roles ?? []).filter((r) => r.page_name === page);
+  return rows.length > 0 && rows.every((r) => r.delete_access === "Y");
+}
 
 /** A bad or missing depth degrades to no indentation rather than failing the org list. */
 function orgDepth(raw: unknown) {
@@ -607,6 +612,7 @@ export const serverFunctions = {
     objectAccessOf,
     finalizedOf,
     pageAccess,
+    pageDeleteAccess,
   },
   organizations: { orgDepth, orgUnitRows },
 };

@@ -65,6 +65,7 @@ const icons = {
   "add-level": { ux: "add-level", material: "playlist_add" },
   "file-spreadsheet": { ux: "file-spreadsheet", material: "table" },
   "composite-form": { ux: "composite-form", material: "dynamic_form" },
+  certification: { ux: "certification", material: "workspace_premium" },
   // The bundle's own spelling.
   "due-diligence": { ux: "due-dillegence", material: "fact_check" },
   deposits: { ux: "deposits", material: "savings" },
@@ -74,6 +75,8 @@ const icons = {
   administration: { ux: "administration", material: "admin_panel_settings" },
   support: { ux: "support-services", material: "support_agent" },
   "document-link": { ux: "document-link", material: "link" },
+  link: { ux: "link", material: "link" },
+  undo: { ux: "undo", material: "undo" },
   "user-configuration": {
     ux: "user-configuration",
     material: "manage_accounts",
@@ -91,6 +94,7 @@ const icons = {
   "opportunity-logo": { ux: "customer-refund", material: "request_quote" },
   overflow: { ux: "overflow-h", material: "more_horiz" },
   trash: { ux: "trash", material: "delete" },
+  lock: { ux: "lock", material: "lock" },
   check: { ux: "check", material: "check" },
   multiply: { ux: "multiply", material: "close" },
   reset: { ux: "reset", material: "restart_alt" },
@@ -110,7 +114,6 @@ const icons = {
   view: { ux: "view", material: "visibility" },
   list: { ux: "list", material: "view_list" },
   copy: { ux: "copy", material: "content_copy" },
-  link: { ux: "link", material: "link" },
   "smart-filter": { ux: "smart-filter", material: "filter_list" },
   "new-application": { ux: "new-application", material: "note_add" },
   "grid-view": { ux: "grid-view-small", material: "grid_view" },

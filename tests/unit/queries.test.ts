@@ -101,6 +101,22 @@ it("distinguishes page rows/API total and never uses size as total", () => {
   expect(page.hasMore).toBe(true);
   expect(page.rows[0].id).toBe("OUTLINE_PROPOSAL:1000");
 });
+it("keeps sorted pages when Oracle returns a proposal without a status label", () => {
+  const sorted = parseQuery(
+    new URLSearchParams("sort=creation_date&direction=ASC"),
+  );
+  const page = mapProposals(
+    {
+      items: [{ ...proposals[0], proposal_status_value: null }],
+      offset: 0,
+      total_count: 1,
+    },
+    sorted,
+    [],
+  );
+  expect(page.rows[0].status).toBe("");
+  expect(page.total).toBe(1);
+});
 it("removes configured hidden fields before client serialization", () => {
   const row = mapProposals({ items: [proposals[0]], total_count: 1 }, q, [])
     .rows[0];
@@ -203,3 +219,29 @@ it("maps advanced codes and match-any tags without accepting raw query input", (
 });
 it("rejects calendar-invalid dates", () =>
   expect(() => parseQuery(new URLSearchParams("from=2026-02-31"))).toThrow());
+it("round trips and combines VBCS Advanced Query conditions with basic filters", () => {
+  const conditions = JSON.stringify([
+    { attribute: "proposal_title", op: "$co", value: "climate" },
+    { attribute: "total_cost", op: "$gt", value: "10" },
+  ]);
+  const query = parseQuery(
+    new URLSearchParams({ search: "research", conditions }),
+  );
+  expect(
+    parseQuery(new URLSearchParams(serializeQuery(query))).conditions,
+  ).toBe(conditions);
+  expect(oracleQuery(query, true).get("p_where_clause")).toBe(
+    `((LOWER("proposal_title") LIKE LOWER('%research%') ESCAPE '\\') AND LOWER("proposal_title") LIKE LOWER('%climate%') ESCAPE '\\' AND "total_cost">'10')`,
+  );
+});
+it.each([
+  [{ attribute: "proposal_title", op: "$bad", value: "climate" }],
+  [{ attribute: 'proposal_title" OR 1=1', op: "$eq", value: "x" }],
+  [{ attribute: "proposal_title", op: "$eq", value: "" }],
+])("rejects malformed Advanced Query conditions %j", (condition) => {
+  expect(() =>
+    parseQuery(
+      new URLSearchParams({ conditions: JSON.stringify([condition]) }),
+    ),
+  ).toThrow();
+});

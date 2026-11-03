@@ -1,6 +1,9 @@
 import "server-only";
 import { containsClause } from "@/server/oracle/where";
-import type { ProposalQuery } from "@/features/modules/proposals/schemas";
+import {
+  parseConditions,
+  type ProposalQuery,
+} from "@/features/modules/proposals/schemas";
 /**
  * The getProposalsList query: legacy `fetchFilterCriteria` (proposals-start-page.js) through the `apiList`
  * branch of `prepareQuery` / `addQParam` / `paginate` (services/transforms.js), built only on the server.
@@ -84,11 +87,25 @@ export function proposalCriteria(q: ProposalQuery): Criterion[] {
  * The Oracle query string. `sort` must already be checked against the configured sort columns;
  * no sort sends no `p_order_by`, as the live initial load does.
  */
-export function oracleQuery(q: ProposalQuery) {
+export function oracleQuery(q: ProposalQuery, advancedMode = false) {
   const params = new URLSearchParams(),
-    where = whereClause(proposalCriteria(q));
-  if (where !== null) params.set("p_where_clause", where);
-  if (q.sort !== "") {
+    base = whereClause(proposalCriteria(q));
+  const advanced = parseConditions(q.conditions).map((condition) => {
+    const column = `"${condition.attribute}"`;
+    if (condition.op === "$co") return containsClause(column, condition.value);
+    const symbol = { $eq: "=", $gt: ">", $lt: "<", $ge: ">=", $le: "<=" }[
+      condition.op
+    ];
+    const value = /^\d{4}-\d{2}-\d{2}$/.test(condition.value)
+      ? `${condition.value} ${condition.op === "$le" ? "23:59:59" : "00:00:00"}`
+      : condition.value;
+    return `${column}${symbol}${literal(value)}`;
+  });
+  const where = advanced.length
+    ? `(${[base, ...advanced].filter(Boolean).join(" AND ")})`
+    : (base ?? "");
+  if (where !== "") params.set("p_where_clause", where);
+  if (q.sort !== "" && !advancedMode) {
     params.set("p_order_by", `"${q.sort}"`);
     params.set("p_sort_order", q.direction);
   }

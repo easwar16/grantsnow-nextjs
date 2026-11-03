@@ -20,7 +20,7 @@ const MODULE_BUNDLES: Record<string, string[]> = {
   ETHICS: ["ETHICS"],
   AWARDS: ["AWARD"],
   CONTRACTS: ["CONTRACT"],
-  "DUE-DILIGENCE": ["DUE_DILIGENCE"],
+  DUE_DILIGENCE: ["DUE_DILIGENCE"],
 };
 
 export function labelBundles(modules: Record<string, boolean>) {

@@ -3,15 +3,36 @@ import type { FormatSettings } from "@/lib/format";
 import { ListSkeleton } from "@/components/feedback/skeleton";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { parseQuery, serializeQuery, type ProposalQuery } from "../schemas";
+import {
+  parseConditions,
+  parseQuery,
+  serializeQuery,
+  type ProposalQuery,
+} from "../schemas";
 import type { Column, FilterLabels, ProposalPage } from "../types";
 import { State } from "@/components/feedback/state";
 import { RecordCard } from "./record-card";
+import { AdvancedQuery } from "./advanced-query";
 import type { ListingChoices } from "../lookups";
 import { LatestRequest } from "@/lib/store/latest-request";
 import { proposals, session, useApi } from "@/lib/api";
 import { FilterPanel } from "@/components/ui/filter-panel";
+import { InsideField } from "@/components/ui/inside-field";
 import { Select, type SelectOption } from "@/components/ui/select";
+import { MultiSelect } from "@/components/ui/multi-select";
+import { Icon } from "@/components/ui/icon";
+import { ActionDialog, useConfirm } from "@/components/dialog/action-dialog";
+import { LinkedObjectsDialog } from "@/features/record/linked/linked-dialog";
+import type { LinkedObjects } from "@/features/record/linked/model";
+import type { ProposalRow } from "../types";
+import type {
+  CopyOption,
+  DeletedProposal,
+  ShareOptions,
+} from "@/lib/api/endpoints/proposals";
+import { useToast } from "@/components/feedback/toast";
+import { useInFlight } from "@/lib/hooks/use-in-flight";
+import Link from "next/link";
 import styles from "./listing.module.css";
 type Result =
   | { ok: true; data: ProposalPage }
@@ -73,6 +94,7 @@ export function Listing({
   filters,
   initialQuery,
   format,
+  actions,
 }: {
   /** The URL query's first page, streaming from the server. */
   initial: Promise<Result>;
@@ -80,6 +102,17 @@ export function Listing({
   filters: FilterLabels;
   initialQuery: ProposalQuery;
   format?: FormatSettings;
+  actions: {
+    create: string | null;
+    createOutline: string | null;
+    advanced: string | null;
+    recycle: string | null;
+    view: string | null;
+    link: string | null;
+    share: string | null;
+    clone: string | null;
+    delete: string | null;
+  };
 }) {
   // Each choice group fills its filters as it arrives; a slow lookup never holds the others.
   const groups = [
@@ -103,7 +136,24 @@ export function Listing({
     [loadingMore, setLoadingMore] = useState(false),
     [moreError, setMoreError] = useState(""),
     [retry, setRetry] = useState(0),
-    [formError, setFormError] = useState("");
+    [formError, setFormError] = useState(""),
+    [filtersOpen, setFiltersOpen] = useState(true),
+    [advancedOpen, setAdvancedOpen] = useState(false),
+    [outlineOpen, setOutlineOpen] = useState(false);
+  const [recycleOpen, setRecycleOpen] = useState(false),
+    [deleted, setDeleted] = useState<DeletedProposal[] | null>(null),
+    [linked, setLinked] = useState<LinkedObjects | null>(null),
+    [copyRow, setCopyRow] = useState<ProposalRow | null>(null),
+    [shareRow, setShareRow] = useState<ProposalRow | null>(null),
+    [shareDocumentOpen, setShareDocumentOpen] = useState(false),
+    [shareOptions, setShareOptions] = useState<ShareOptions | null>(null),
+    [shareReport, setShareReport] = useState(""),
+    [shareEmails, setShareEmails] = useState<string[]>([]),
+    [copyOptions, setCopyOptions] = useState<CopyOption[] | null>(null),
+    [copySelection, setCopySelection] = useState<string[]>([]);
+  const toast = useToast(),
+    confirm = useConfirm("proposals-list-confirm"),
+    { run, isActive } = useInFlight();
   const leftInitialQuery = useRef(false),
     latest = useRef(new LatestRequest()),
     initialKey = useRef(queryKey);
@@ -222,12 +272,135 @@ export function Listing({
       },
     });
   }
+  async function refreshRows() {
+    setLoading(true);
+    const response = await proposals.page(query);
+    setResult(response);
+    setLoading(false);
+  }
+  async function openRecycle() {
+    setRecycleOpen(true);
+    setDeleted(null);
+    const response = await proposals.recycle();
+    if (response.ok) setDeleted(response.data);
+    else {
+      toast.error(response.error);
+      setRecycleOpen(false);
+    }
+  }
+  async function rowAction(
+    action: "link" | "share" | "clone" | "delete",
+    row: ProposalRow,
+  ) {
+    const [type, id] = row.id.split(":");
+    if (action === "share") {
+      setShareRow(row);
+      return;
+    }
+    if (action === "link") {
+      const response = await proposals.links(type, id);
+      if (!response.ok) return toast.error(response.error);
+      if (!response.data.groups.length)
+        return toast.show("info", response.data.texts.none);
+      setLinked(response.data);
+      return;
+    }
+    if (action === "clone") {
+      setCopyRow(row);
+      setCopyOptions(null);
+      const response = await proposals.copyOptions(type, id);
+      if (!response.ok) {
+        toast.error(response.error);
+        setCopyRow(null);
+        return;
+      }
+      setCopyOptions(response.data);
+      setCopySelection(
+        response.data
+          .filter((option) => option.required)
+          .map((option) => option.value),
+      );
+      return;
+    }
+    if (
+      !(await confirm.ask({
+        title: "Warning",
+        message: `Permanently delete ${row.reference}?`,
+        confirm: "Delete",
+        cancel: "Cancel",
+        danger: true,
+      }))
+    )
+      return;
+    await run(async () => {
+      const response = await proposals.removeFromList(type, id);
+      if (!response.ok) return toast.error(response.error);
+      toast.show("success", "Proposal deleted.");
+      await refreshRows();
+    }, `delete-${row.id}`);
+  }
+  async function restore(row: DeletedProposal) {
+    if (
+      !(await confirm.ask({
+        title: "Restore proposal",
+        message: `Restore ${row.reference}?`,
+        confirm: "Restore",
+        cancel: "Cancel",
+      }))
+    )
+      return;
+    await run(async () => {
+      const response = await proposals.restoreFromRecycle(row.id);
+      if (!response.ok) return toast.error(response.error);
+      toast.show("success", "Proposal restored.");
+      setRecycleOpen(false);
+      await refreshRows();
+    }, `restore-${row.id}`);
+  }
+  async function cloneSelected() {
+    if (!copyRow) return;
+    const [type, id] = copyRow.id.split(":");
+    await run(async () => {
+      const response = await proposals.clone(type, id, copySelection);
+      if (!response.ok) return toast.error(response.error);
+      setCopyRow(null);
+      router.push(`/proposals/${response.data.type}/${response.data.id}`);
+    }, "clone");
+  }
+  async function openShareDocument() {
+    if (!shareRow) return;
+    const [type, id] = shareRow.id.split(":");
+    setShareOptions(null);
+    const response = await proposals.shareOptions(type, id);
+    if (!response.ok) return toast.error(response.error);
+    setShareOptions(response.data);
+    setShareReport("");
+    setShareEmails([]);
+    setShareDocumentOpen(true);
+  }
+  async function sendShareDocument() {
+    if (!shareRow || !shareReport || !shareEmails.length) return;
+    const [type, id] = shareRow.id.split(":");
+    await run(async () => {
+      const response = await proposals.shareDocument(
+        type,
+        id,
+        shareReport,
+        shareEmails,
+      );
+      if (!response.ok) return toast.error(response.error);
+      toast.show("success", "Report shared.");
+      setShareDocumentOpen(false);
+      setShareRow(null);
+    }, "share-document");
+  }
   return (
     <section className="page-fill" aria-label="Proposal listing">
       <FilterPanel
         id="proposal-filters"
         label="Proposal filters"
         page="proposals"
+        open={filtersOpen}
         filters={
           <>
             <div
@@ -254,6 +427,11 @@ export function Listing({
               onSubmit={submit}
               onKeyDown={(event) => {
                 if (
+                  event.target instanceof Element &&
+                  event.target.closest("#proposals-sort, #proposals-direction")
+                )
+                  return;
+                if (
                   event.key === "Enter" &&
                   event.target instanceof HTMLInputElement &&
                   event.target.type !== "radio"
@@ -263,6 +441,11 @@ export function Listing({
                 }
               }}
               onBlur={(event) => {
+                if (
+                  event.target instanceof Element &&
+                  event.target.closest("#proposals-sort, #proposals-direction")
+                )
+                  return;
                 if (
                   event.target instanceof HTMLInputElement &&
                   event.target.type !== "radio"
@@ -411,6 +594,50 @@ export function Listing({
                   />
                 </label>
               )}
+              <div className={styles.query} aria-label="Date Sort">
+                <InsideField
+                  htmlFor="proposals-sort-trigger"
+                  label="Date Sort"
+                  filled={query.sort !== ""}
+                >
+                  <Select
+                    id="proposals-sort"
+                    label="Date Sort"
+                    value={query.sort}
+                    options={choices.sorts}
+                    onChange={(next) =>
+                      update(
+                        { sort: next as ProposalQuery["sort"], page: 1 },
+                        true,
+                      )
+                    }
+                  />
+                </InsideField>
+                <button
+                  type="button"
+                  id="proposals-direction"
+                  className={styles.sortDirection}
+                  aria-label={`Sort ${query.direction === "DESC" ? "ascending" : "descending"}`}
+                  title={`Sort ${query.direction === "DESC" ? "ascending" : "descending"}`}
+                  onClick={() =>
+                    update(
+                      {
+                        direction: query.direction === "DESC" ? "ASC" : "DESC",
+                        page: 1,
+                      },
+                      true,
+                    )
+                  }
+                >
+                  <Icon
+                    name={
+                      query.direction === "DESC"
+                        ? "arrow-circle-down"
+                        : "arrow-circle-up"
+                    }
+                  />
+                </button>
+              </div>
               {filters.from !== null && (
                 <label className="inside-field">
                   <span className="floating-label">{filters.from}</span>
@@ -429,45 +656,6 @@ export function Listing({
                 {formError}
               </p>
             )}
-            <fieldset className={styles.query}>
-              <legend>Advanced Query</legend>
-              <label>
-                Sort by
-                <Select
-                  id="proposals-sort"
-                  label="Sort by"
-                  value={query.sort}
-                  clearable={false}
-                  options={[
-                    { value: "", label: "Default order" },
-                    ...choices.sorts,
-                  ]}
-                  onChange={(next) =>
-                    update(
-                      { sort: next as ProposalQuery["sort"], page: 1 },
-                      true,
-                    )
-                  }
-                />
-              </label>
-              <label>
-                Direction
-                <Select
-                  id="proposals-direction"
-                  label="Direction"
-                  value={query.direction}
-                  clearable={false}
-                  disabled={query.sort === ""}
-                  options={[
-                    { value: "DESC", label: "Descending" },
-                    { value: "ASC", label: "Ascending" },
-                  ]}
-                  onChange={(next) =>
-                    update({ direction: next as "ASC" | "DESC", page: 1 }, true)
-                  }
-                />
-              </label>
-            </fieldset>
             <div className="filter-actions">
               <button
                 type="button"
@@ -486,6 +674,82 @@ export function Listing({
       >
         <div className="proposal-results">
           <h1 className="sr-only">Proposals</h1>
+          <div className={styles.toolbar}>
+            <div className={styles.toolbarGroup}>
+              <button
+                id="proposal-filters-toggle"
+                type="button"
+                className={styles.toggleButton}
+                aria-label={filtersOpen ? "Close filters" : "Open filters"}
+                aria-expanded={filtersOpen}
+                aria-controls="proposal-filters"
+                onClick={() => setFiltersOpen((shown) => !shown)}
+              >
+                <Icon name="collapse-menu" />
+              </button>
+              {actions.create && (
+                <Link
+                  id="proposals-create"
+                  href="/proposals/new/PROPOSAL"
+                  prefetch={false}
+                  className="gn-btn gn-btn--outlined"
+                >
+                  <Icon name="new-application" /> {actions.create}
+                </Link>
+              )}
+              {actions.createOutline && (
+                <button
+                  id="proposals-create-outline"
+                  type="button"
+                  className="gn-btn gn-btn--outlined"
+                  onClick={() => setOutlineOpen(true)}
+                >
+                  <Icon name="draft" /> {actions.createOutline}
+                </button>
+              )}
+            </div>
+            <div className={styles.toolbarGroup}>
+              {actions.recycle && (
+                <button
+                  id="proposals-recycle-bin"
+                  type="button"
+                  className="gn-btn gn-btn--borderless"
+                  onClick={() => void openRecycle()}
+                >
+                  <Icon name="trash" /> {actions.recycle}
+                </button>
+              )}
+              {actions.advanced && (
+                <button
+                  id="proposals-advanced-toggle"
+                  type="button"
+                  className="gn-btn gn-btn--borderless"
+                  aria-expanded={advancedOpen}
+                  aria-controls="proposals-advanced"
+                  onClick={() => setAdvancedOpen((open) => !open)}
+                >
+                  <Icon name="smart-filter" /> {actions.advanced}
+                </button>
+              )}
+            </div>
+          </div>
+          {advancedOpen && (
+            <AdvancedQuery
+              conditions={parseConditions(query.conditions)}
+              onChange={(conditions) =>
+                update(
+                  {
+                    conditions: conditions.length
+                      ? JSON.stringify(conditions)
+                      : "",
+                    page: 1,
+                  },
+                  true,
+                )
+              }
+              onClose={() => setAdvancedOpen(false)}
+            />
+          )}
           {invalid ? (
             <State
               title="Invalid listing filters"
@@ -515,12 +779,13 @@ export function Listing({
                 query.type ||
                 query.faculty ||
                 query.sponsor ||
+                query.conditions ||
                 query.from ||
                 query.to
                   ? "No matching proposals"
                   : "No proposals on this page"
               }
-              message="Clear filters or select a previous page to adjust your view."
+              message="Clear filters to adjust your view."
             />
           ) : (
             current && (
@@ -543,6 +808,10 @@ export function Listing({
                     row={row}
                     columns={columns}
                     format={format}
+                    actions={actions}
+                    onAction={(action, selected) =>
+                      void rowAction(action, selected)
+                    }
                   />
                 ))}
                 {loadingMore && (
@@ -566,39 +835,223 @@ export function Listing({
                 ? null
                 : "Listing unavailable"}
           </p>
-          <div className="pagination">
-            <label>
-              Rows per page
-              <Select
-                id="proposals-page-size"
-                label="Rows per page"
-                value={String(query.pageSize)}
-                clearable={false}
-                options={[10, 20, 50].map((n) => ({
-                  value: String(n),
-                  label: String(n),
-                }))}
-                onChange={(next) =>
-                  update({ pageSize: Number(next), page: 1 }, true)
-                }
-              />
-            </label>
-            <span>Page {query.page}</span>
-            <button
-              disabled={query.page === 1 || loading}
-              onClick={() => update({ page: query.page - 1 }, true)}
-            >
-              Previous
-            </button>
-            <button
-              disabled={!current?.hasMore || loading}
-              onClick={() => update({ page: query.page + 1 }, true)}
-            >
-              Next
-            </button>
-          </div>
         </div>
       </FilterPanel>
+      {confirm.element}
+      {outlineOpen && (
+        <ActionDialog
+          id="proposals-outline-options"
+          title="Create outline proposal"
+          onClose={() => setOutlineOpen(false)}
+        >
+          <p id="proposals-outline-options-message">
+            Create a new outline proposal.
+          </p>
+          <div className={styles.dialogActions}>
+            <Link
+              id="proposals-outline-new"
+              href="/proposals/new/OUTLINE_PROPOSAL"
+              prefetch={false}
+              className="gn-btn gn-btn--primary"
+              onClick={() => setOutlineOpen(false)}
+            >
+              Create new outline
+            </Link>
+          </div>
+        </ActionDialog>
+      )}
+      {linked && (
+        <LinkedObjectsDialog
+          id="proposals-list-linked"
+          linked={linked}
+          format={format}
+          onClose={() => setLinked(null)}
+        />
+      )}
+      {recycleOpen && (
+        <ActionDialog
+          id="proposals-recycle-dialog"
+          title={actions.recycle ?? "Recycle bin"}
+          onClose={() => setRecycleOpen(false)}
+        >
+          {deleted === null ? (
+            <ListSkeleton label="Loading deleted proposals" rows={2} />
+          ) : deleted.length === 0 ? (
+            <p>No data to display.</p>
+          ) : (
+            <ul className={styles.deletedList}>
+              {deleted.map((row) => (
+                <li key={row.id} id={`proposals-deleted-${row.id}`}>
+                  <div>
+                    <strong>{row.reference}</strong> {row.status}
+                    <br />
+                    {row.title}
+                  </div>
+                  <button
+                    id={`proposals-restore-${row.id}`}
+                    type="button"
+                    className="gn-btn gn-btn--borderless gn-btn--icon"
+                    title="Restore"
+                    aria-label={`Restore ${row.reference}`}
+                    disabled={!row.canRestore || isActive(`restore-${row.id}`)}
+                    onClick={() => void restore(row)}
+                  >
+                    <Icon name="undo" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </ActionDialog>
+      )}
+      {copyRow && (
+        <ActionDialog
+          id="proposals-clone-dialog"
+          title="Clone proposal"
+          busy={isActive("clone")}
+          onClose={() => setCopyRow(null)}
+        >
+          {copyOptions === null ? (
+            <ListSkeleton label="Loading clone options" rows={2} />
+          ) : (
+            <>
+              <fieldset className={styles.copyOptions}>
+                <legend>Include in copied proposal</legend>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={copySelection.length === copyOptions.length}
+                    onChange={(event) =>
+                      setCopySelection(
+                        event.target.checked
+                          ? copyOptions.map((option) => option.value)
+                          : copyOptions
+                              .filter((option) => option.required)
+                              .map((option) => option.value),
+                      )
+                    }
+                  />
+                  Entire proposal
+                </label>
+                {copyOptions.map((option) => (
+                  <label key={option.value}>
+                    <input
+                      type="checkbox"
+                      checked={copySelection.includes(option.value)}
+                      disabled={option.required}
+                      onChange={(event) =>
+                        setCopySelection((values) =>
+                          event.target.checked
+                            ? [...values, option.value]
+                            : values.filter((value) => value !== option.value),
+                        )
+                      }
+                    />
+                    {option.label}
+                  </label>
+                ))}
+              </fieldset>
+              <div className={styles.dialogActions}>
+                <button
+                  type="button"
+                  className="gn-btn gn-btn--outlined"
+                  onClick={() => setCopyRow(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="gn-btn gn-btn--primary"
+                  disabled={isActive("clone")}
+                  onClick={() => void cloneSelected()}
+                >
+                  <Icon name="copy" /> Clone
+                </button>
+              </div>
+            </>
+          )}
+        </ActionDialog>
+      )}
+      {shareRow && !shareDocumentOpen && (
+        <ActionDialog
+          id="proposals-share-dialog"
+          title="Share options"
+          onClose={() => setShareRow(null)}
+        >
+          <div className={styles.dialogActions}>
+            <button
+              id="proposals-share-as-document"
+              type="button"
+              className="gn-btn gn-btn--outlined"
+              onClick={() => void openShareDocument()}
+            >
+              Share as document
+            </button>
+            <Link
+              href={`/proposals/${shareRow.id.replace(":", "/")}/delegation`}
+              className="gn-btn gn-btn--primary"
+              onClick={() => setShareRow(null)}
+            >
+              Share access
+            </Link>
+          </div>
+        </ActionDialog>
+      )}
+      {shareRow && shareDocumentOpen && (
+        <ActionDialog
+          id="proposals-share-document-dialog"
+          title="Share as document"
+          busy={isActive("share-document")}
+          onClose={() => {
+            setShareDocumentOpen(false);
+            setShareRow(null);
+          }}
+        >
+          {shareOptions && (
+            <>
+              <MultiSelect
+                id="proposals-share-recipients"
+                label="Search by name"
+                variant="control"
+                options={shareOptions.people}
+                value={shareEmails}
+                onChange={setShareEmails}
+              />
+              <Select
+                id="proposals-share-report"
+                label="Report"
+                options={shareOptions.reports}
+                value={shareReport}
+                onChange={setShareReport}
+              />
+              <div className={styles.dialogActions}>
+                <button
+                  type="button"
+                  className="gn-btn gn-btn--outlined"
+                  onClick={() => {
+                    setShareDocumentOpen(false);
+                    setShareRow(null);
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="gn-btn gn-btn--primary"
+                  disabled={
+                    !shareReport ||
+                    !shareEmails.length ||
+                    isActive("share-document")
+                  }
+                  onClick={() => void sendShareDocument()}
+                >
+                  Share
+                </button>
+              </div>
+            </>
+          )}
+        </ActionDialog>
+      )}
     </section>
   );
 }

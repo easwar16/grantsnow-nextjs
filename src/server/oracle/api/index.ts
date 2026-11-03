@@ -11,6 +11,8 @@ export * as objects from "./objects";
 export * as approvals from "./approvals";
 export * as attachments from "./attachments";
 export * as dynamicForm from "./dynamic-form";
+export * as ethics from "./ethics";
+export * as dueDiligence from "./due-diligence";
 export * as attributes from "./attributes";
 export * as fxRates from "./fx-rates";
 export * as opportunities from "./opportunities";

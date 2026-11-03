@@ -240,7 +240,7 @@ export async function NewContractAction() {
       className={styles.newContract}
       prefetch={false}
     >
-      <span aria-hidden="true">＋</span>
+      <Icon name="new-application" />
       {serverFunctions.resources.label(
         rb,
         "contract",

@@ -1,0 +1,13 @@
+# Ethics listing and first record flow
+
+- **Date / author / agent:** 2026-11-02 / easwar / Codex
+- **Branch / base commit:** `codex/proposals-azure-integration-20261030` on `aec5020`
+- **Why:** The owner requested VBCS Ethics module migration. The drawer previously opened a placeholder. Source: `webApps/app/flows/ethics/pages/ethics-start-page.html` and Ethics general overview chains in legacy `origin/development`.
+- **What changed:** The Ethics drawer opens a role-gated listing with VBCS access views, resource-gated filters, Oracle paging, application cards, an object-role-gated record overview, a recycle dialog and restore call. New Ethics opens a form for the VBCS general overview header and can save a draft only after tagged form metadata supplies enabled sections. Legacy deep links route to the new record.
+- **Shared pieces used or extended:** `FilterPanel`, `StatusList`, searchable `Select`, `DateInput`, `ReadonlyField`, `ActionDialog`, `useApi`/`usePagedApi`, the Oracle operation allowlist and API layer.
+- **Replaces / overrides:** Replaces the Ethics `/modules/ethics` placeholder and its legacy deep-link target; no foundation component was forked.
+- **Rules touched:** Module/role/org gates, explicit write payload, server-only Oracle access, resource visibility and dynamic form metadata read.
+- **Checks:** Typecheck, lint (one existing TanStack Virtual warning), 886 unit tests, isolated production build, two focused Ethics Playwright journeys, and the full Playwright suite (34 passed, 2 pre-existing skips) passed. No live DEV Ethics write was attempted.
+- **Failure fixes:** The fixture clause reader now accepts numeric IDs used by the access-scoped record read. Empty optional dates are accepted as absent on draft save. Ethics fixture writes are routed through the same explicit development write gate as other implemented modules, and the synthetic saved record is stable across separate Next.js request processes.
+- **Object access:** The record read now requires the object-scoped `ethics-general-overview` role used by VBCS `getTabs()`, in addition to listing access and organization scope. The fixture grants this role explicitly; the focused browser journeys still pass.
+- **Open:** The VBCS record has responses, stakeholders, reviewer/approver work, attachments, history, linked references, full dynamic form answers, clone/delete and submit/approve actions. Those are not migrated here. The draft create page currently shows metadata availability rather than the full dynamic form UI. Live Oracle payloads and permissions require DEV read verification before parity can be signed off.

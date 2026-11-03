@@ -74,6 +74,13 @@ export function legacyDeepLink(search: string): string | null {
     if (page.startsWith("claims-funds-inquiry")) return "/claims/funds-inquiry";
     if (page.startsWith("claims-unit-inquiry")) return "/claims/unit-inquiry";
   }
+  if (flow === "ethics") {
+    const id = params.get("setup_flow_id") ?? "";
+    const access = params.get("access_type") ?? "";
+    return page === "ethics-detail" && recordId.test(id)
+      ? `/ethics/${id}${["EA_ACCESS", "RESPONDENT_ACCESS", "APPROVER_ACCESS"].includes(access) ? `?access=${access}` : ""}`
+      : "/ethics";
+  }
   // A page id names the drawer child; otherwise the flow names the module.
   const placeholder =
     placeholderModules.find(

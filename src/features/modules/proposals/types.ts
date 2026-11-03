@@ -5,6 +5,7 @@ export interface ProposalRow {
   title: string;
   status: string;
   type: string;
+  parentId?: number | null;
   investigator?: string;
   statusCode?: string;
   risk?: string;
@@ -40,7 +41,7 @@ export type FilterLabels = Record<
   string | null
 >;
 export interface Column {
-  key: keyof ProposalRow;
+  key: Exclude<keyof ProposalRow, "parentId">;
   label: string;
 }
 export interface ProposalPage {

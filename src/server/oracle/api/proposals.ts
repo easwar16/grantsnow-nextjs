@@ -10,6 +10,46 @@ export const list = read<{ query: URLSearchParams }>({
   op: "getPre_awardGetProposalsList",
   query: (p) => Object.fromEntries(p.query),
 });
+export const advancedList = read<{ query: URLSearchParams }>({
+  op: "getProposalsListAdvanced",
+  query: (p) => Object.fromEntries(p.query),
+});
+export const deleted = read<void>({
+  op: "getPre_awardGetDeletedProposalsList",
+});
+export const copyObjects = read<{ type: string }>({
+  op: "getProposalCopyProposalObjList",
+  headers: (p) => ({ P_OBJ_TYPE: p.type }),
+});
+export const copy = write<{ id: number; objects: string[] }>({
+  op: "postProposalCopyProposal",
+  identity: ["legal_id", "org_id"],
+  body: (p) => ({
+    proposal_id: p.id,
+    convert_proposal: "N",
+    objects: p.objects.map((object_name) => ({
+      object_name,
+      object_val: "true",
+    })),
+  }),
+  invalidates: ["getPre_awardGetProposalsList"],
+});
+export const remove = write<{ id: string }>({
+  op: "deleteProposalProposalProposal_id",
+  path: (p) => ({ proposal_id: p.id }),
+  invalidates: [
+    "getPre_awardGetProposalsList",
+    "getPre_awardGetDeletedProposalsList",
+  ],
+});
+export const restore = write<{ id: string }>({
+  op: "getProposalRestoreProposalProposal_id",
+  path: (p) => ({ proposal_id: p.id }),
+  invalidates: [
+    "getPre_awardGetProposalsList",
+    "getPre_awardGetDeletedProposalsList",
+  ],
+});
 /** One Proposal's summary record. */
 export const summary = read<{ id: string }>({
   op: "getProposalProposal_id",
