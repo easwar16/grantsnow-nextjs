@@ -14,3 +14,4 @@ coverage/
 
 # scripts/oracle-catalogue.mjs preview
 .catalogue-preview/
+.claude
