@@ -1,0 +1,36 @@
+/* Legacy fx-rates: a grid table with brand headers, a frozen actions column and Save below, right-aligned. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.scroll {
+  position: relative;
+}
+.table {
+  table-layout: fixed;
+}
+.actions {
+  width: 5rem;
+  text-align: center;
+}
+.input {
+  width: 100%;
+}
+.input[aria-invalid="true"] {
+  border-color: var(--gn-danger);
+}
+.dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-inline-start: 6px;
+  vertical-align: middle;
+  border-radius: 50%;
+  background: var(--gn-spark);
+}
+.foot {
+  display: flex;
+  justify-content: flex-end;
+}

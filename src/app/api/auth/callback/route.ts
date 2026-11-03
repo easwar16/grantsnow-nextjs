@@ -1,17 +1,23 @@
 import * as oidc from "openid-client";
-import { idcs } from "@/server/auth/oidc";
+import { idcs } from "@/server/identity/auth/oidc";
 import {
   appOrigin,
   fixtureMode,
   oidcSettings,
-} from "@/server/configuration/environment";
-import { storage } from "@/server/session/storage";
-import { trustedUsername, safeReturn } from "@/lib/security";
-import { oracle } from "@/server/api/transport";
-import { mapBootstrap } from "@/server/session/contracts";
+} from "@/server/platform/configuration/environment";
+import { storage } from "@/server/identity/session/storage";
+import { oracle } from "@/server/oracle/connection";
+import { mapBootstrap } from "@/server/identity/session/contracts";
+import { functions } from "@/lib/functions";
 export async function GET(request: Request) {
   const store = await storage(),
     transaction = store.transaction;
+  // No sign-in in progress: a forged or replayed callback must not end the session this browser holds.
+  if (!transaction)
+    return Response.redirect(
+      new URL("/login?reason=LOGIN_FAILED", appOrigin()),
+      303,
+    );
   // Consume transaction even on a failed callback; no automatic bootstrap retries.
   delete store.transaction;
   await store.save();
@@ -34,13 +40,17 @@ export async function GET(request: Request) {
       claims.exp * 1000 <= Date.now()
     )
       throw new Error("Invalid identity lifetime.");
-    const username = trustedUsername(claims, oidcSettings().usernameClaim);
+    const username = functions.security.trustedUsername(
+      claims,
+      oidcSettings().usernameClaim,
+    );
     const b = mapBootstrap(await oracle("getSessionLogin", { username }));
     backendToken = b.token;
     store.app = {
       token: b.token,
       expiresAt: Math.min(b.expiresAt, claims.exp * 1000),
       subject: claims.sub,
+      username,
       identityExpiresAt: claims.exp * 1000,
       fixture: false,
     };
@@ -50,7 +60,7 @@ export async function GET(request: Request) {
       b.user.landing === "PROPOSALS" &&
       b.user.modules.PROPOSALS
         ? "/proposals"
-        : safeReturn(transaction.returnTo);
+        : functions.security.safeReturn(transaction.returnTo);
     return Response.redirect(new URL(destination, appOrigin()), 303);
   } catch {
     store.destroy();

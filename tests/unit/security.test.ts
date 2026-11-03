@@ -1,20 +1,16 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { trustedUsername, safeReturn, sameOrigin } from "@/lib/security";
-import { fixtureMode } from "@/server/configuration/environment";
-import { mapBootstrap, expiry } from "@/server/session/contracts";
-import { LatestRequest } from "@/lib/latest-request";
-import { assertBusiness } from "@/server/api/transport";
-import {
-  requireModule,
-  requireRead,
-  scopeOrganization,
-} from "@/server/permissions/policy";
+import { fixtureMode } from "@/server/platform/configuration/environment";
+import { mapBootstrap, expiry } from "@/server/identity/session/contracts";
+import { LatestRequest } from "@/lib/store/latest-request";
+import { assertBusiness } from "@/server/oracle/connection";
 import { fixtureUser } from "@/test-support/fixtures";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
 afterEach(() => vi.unstubAllEnvs());
 describe("trusted identity", () => {
   it("maps only the configured verified claim", () =>
     expect(
-      trustedUsername(
+      functions.security.trustedUsername(
         { sub: "idcs-123", preferred_username: "owner" },
         "preferred_username",
       ),
@@ -25,7 +21,9 @@ describe("trusted identity", () => {
     { username: "owner" },
     { sub: "id", username: "evil\r\nusername:admin" },
   ])("rejects missing/unsafe identity %j", (claims) =>
-    expect(() => trustedUsername(claims, "username")).toThrow(),
+    expect(() =>
+      functions.security.trustedUsername(claims, "username"),
+    ).toThrow(),
   );
   it.each([
     "https://evil.example",
@@ -34,14 +32,16 @@ describe("trusted identity", () => {
     "/api/auth/logout",
     "/proposals\n",
     "javascript:alert(1)",
-  ])("rejects redirect %s", (value) => expect(safeReturn(value)).toBe("/home"));
+  ])("rejects redirect %s", (value) =>
+    expect(functions.security.safeReturn(value)).toBe("/home"),
+  );
   it("preserves only implemented internal routes", () =>
-    expect(safeReturn("/proposals?search=climate")).toBe(
+    expect(functions.security.safeReturn("/proposals?search=climate")).toBe(
       "/proposals?search=climate",
     ));
   it("denies cross-origin POST", () =>
     expect(() =>
-      sameOrigin(
+      functions.security.sameOrigin(
         new Request("https://app/api/auth/logout", {
           headers: { origin: "https://evil" },
         }),
@@ -86,16 +86,51 @@ describe("access policy", () => {
   }).user;
   it("denies missing module access", () =>
     expect(() =>
-      requireModule({ ...user, modules: {} }, "PROPOSALS"),
+      serverFunctions.permissions.requireModule(
+        { ...user, modules: {} },
+        "PROPOSALS",
+      ),
     ).toThrow());
   it("denies missing read configuration", () =>
-    expect(() => requireRead([], "home")).toThrow());
+    expect(() =>
+      serverFunctions.permissions.requireRead([], "home"),
+    ).toThrow());
+  it("denies object read when any duplicate role row withholds it", () => {
+    const page = "opportunities-eoi-summary";
+    expect(() =>
+      serverFunctions.permissions.requireRead(
+        [{ page_name: page, read_access: "Y" }],
+        page,
+      ),
+    ).not.toThrow();
+    expect(() =>
+      serverFunctions.permissions.requireRead(
+        [
+          { page_name: page, read_access: "Y" },
+          { page_name: page, read_access: "N" },
+        ],
+        page,
+      ),
+    ).toThrow();
+    expect(() =>
+      serverFunctions.permissions.requireRead(
+        [{ page_name: page, read_access: null }],
+        page,
+      ),
+    ).toThrow();
+  });
   it("denies widening org filters", () =>
     expect(() =>
-      scopeOrganization("admin-org", [{ id: "own-org" }]),
+      serverFunctions.permissions.scopeOrganization("admin-org", [
+        { id: "own-org" },
+      ]),
     ).toThrow());
   it("allows an organization returned by trusted service", () =>
-    expect(scopeOrganization("own-org", [{ id: "own-org" }])).toBe("own-org"));
+    expect(
+      serverFunctions.permissions.scopeOrganization("own-org", [
+        { id: "own-org" },
+      ]),
+    ).toBe("own-org"));
 });
 describe("development isolation", () => {
   it("prohibits production fixtures even for development marker", () =>
@@ -125,4 +160,24 @@ it("aborts and rejects out-of-order responses", () => {
   expect(b.current()).toBe(true);
   latest.cancel();
   expect(b.current()).toBe(false);
+});
+
+it("accepts only https or same-origin paths as a configured image", () => {
+  expect(functions.security.safeImageUrl("https://cdn.example/a.png")).toBe(
+    "https://cdn.example/a.png",
+  );
+  expect(functions.security.safeImageUrl("/brand/logo.svg")).toBe(
+    "/brand/logo.svg",
+  );
+  for (const bad of [
+    "http://cdn.example/a.png",
+    "//evil.example/a.png",
+    "/\\evil.example",
+    "data:image/svg+xml,<svg/>",
+    "javascript:alert(1)",
+    "",
+    null,
+    42,
+  ])
+    expect(functions.security.safeImageUrl(bad)).toBeUndefined();
 });

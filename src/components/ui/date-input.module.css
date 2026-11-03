@@ -1,0 +1,40 @@
+/* A 28px .gn-control with the calendar button inside its end edge. */
+.field {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+.field > input:first-child {
+  padding-right: 30px;
+}
+.field > input[aria-invalid="true"] {
+  border-color: var(--gn-danger);
+}
+.button {
+  position: absolute;
+  top: 50%;
+  right: 3px;
+  width: 22px;
+  min-height: 0;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--gn-radius);
+  color: var(--gn-text-secondary);
+  transform: translateY(-50%);
+}
+.button:active:not(:disabled) {
+  transform: translateY(-50%) scale(var(--gn-press-scale));
+}
+/* Covers the field, invisible and click-through, so the native picker anchors under it: a zero-size anchor makes
+   Chrome open the picker at the window's top-left (seen in the convert dialog). */
+.field > .picker {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}

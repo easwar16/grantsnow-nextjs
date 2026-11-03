@@ -1,13 +1,13 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { browserSessionMode } from "@/server/configuration/environment";
 import {
-  mergeResourceDefaults,
-  proposalColumns,
-} from "@/server/configuration/resources";
-import { mapProposals } from "@/server/proposals/service";
-import { parseQuery } from "@/features/proposals/schemas";
-import { mapWidget } from "@/server/home/service";
-import { widgets } from "@/server/home/widgets";
+  assertWritesEnabled,
+  browserSessionMode,
+} from "@/server/platform/configuration/environment";
+import { mapProposals } from "@/server/modules/proposals/service";
+import { parseQuery } from "@/features/modules/proposals/schemas";
+import { mapWidget } from "@/server/modules/home/service";
+import { widgets } from "@/server/modules/home/widgets";
+import { serverFunctions } from "@/server/functions";
 afterEach(() => vi.unstubAllEnvs());
 const local = {
   DEV_BROWSER_SESSION: "true",
@@ -32,9 +32,11 @@ it.each([
 });
 it("inherits current VBCS resource defaults but honors explicit visibility overrides", () => {
   expect(
-    proposalColumns(mergeResourceDefaults([])).some((c) => c.key === "value"),
+    serverFunctions.resources
+      .proposalColumns(serverFunctions.resources.mergeResourceDefaults([]))
+      .some((c) => c.key === "value"),
   ).toBe(true);
-  const rows = mergeResourceDefaults([
+  const rows = serverFunctions.resources.mergeResourceDefaults([
     {
       module_name: "PROPOSAL",
       label_type: "labels",
@@ -43,17 +45,52 @@ it("inherits current VBCS resource defaults but honors explicit visibility overr
       is_visible: "N",
     },
   ]);
-  expect(proposalColumns(rows).some((c) => c.key === "value")).toBe(false);
-  expect(() => mergeResourceDefaults({ response_msg: "ERROR" })).toThrow();
+  expect(
+    serverFunctions.resources
+      .proposalColumns(rows)
+      .some((c) => c.key === "value"),
+  ).toBe(false);
+  expect(() =>
+    serverFunctions.resources.mergeResourceDefaults({ response_msg: "ERROR" }),
+  ).toThrow();
 });
-it("maps the actual ORDS string paging flags without coercing false to true", () => {
+it("shows each listing filter only on its list-* entry's 'Y', labelled from the bundle", () => {
+  const rows = serverFunctions.resources.mergeResourceDefaults([
+    {
+      module_name: "PROPOSAL",
+      label_type: "labels",
+      label_name: "list-title",
+      label_value: "Project title",
+      is_visible: "Y",
+    },
+    {
+      module_name: "PROPOSAL",
+      label_type: "labels",
+      label_name: "list-tags",
+      label_value: "Tags",
+      is_visible: "N",
+    },
+  ]);
+  const filters = serverFunctions.resources.proposalFilters(rows);
+  expect(filters.search).toBe("Project title");
+  expect(filters.tags).toBeNull();
+  // A key missing from the bundle and the seed stays hidden (fail closed).
+  expect(
+    serverFunctions.resources.proposalFilters(
+      rows.filter((r) => r.label_name !== "list-category"),
+    ).category,
+  ).toBeNull();
+});
+it("ignores the unreliable ORDS hasMore flag: total_count, else a full page, decides", () => {
   const q = parseQuery(new URLSearchParams());
-  expect(mapProposals({ items: [], hasMore: "false" }, q, []).hasMore).toBe(
+  // DEV says "true" on a short last page and "false" mid-list (GN-Dashboard paging note).
+  expect(mapProposals({ items: [], hasMore: "true" }, q, []).hasMore).toBe(
     false,
   );
-  expect(mapProposals({ items: [], hasMore: "true" }, q, []).hasMore).toBe(
-    true,
-  );
+  expect(
+    mapProposals({ items: [], hasMore: "false", total_count: 25 }, q, [])
+      .hasMore,
+  ).toBe(true);
 });
 it("preserves a null statistics category without inventing a label or losing other groups", () => {
   const w = widgets.find((w) => w.id === "pByStatusChart")!;
@@ -71,4 +108,11 @@ it("preserves a null statistics category without inventing a label or losing oth
     ["", 2],
     ["Draft", 3],
   ]);
+});
+it("keeps live Oracle writes off unless explicitly enabled", () => {
+  for (const env of [{}, { WRITES_ENABLED: "false" }, { WRITES_ENABLED: "1" }])
+    expect(() => assertWritesEnabled(env)).toThrow(
+      expect.objectContaining({ code: "WRITES_DISABLED" }),
+    );
+  expect(() => assertWritesEnabled({ WRITES_ENABLED: "true" })).not.toThrow();
 });

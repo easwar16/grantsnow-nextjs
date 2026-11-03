@@ -34,7 +34,7 @@ afterEach(() => {
 it("constructs the real OIDC library with approved tenant metadata and issuer", async () => {
   const fetch = vi.fn().mockResolvedValue(Response.json(metadata()));
   vi.stubGlobal("fetch", fetch);
-  const { idcs } = await import("@/server/auth/oidc");
+  const { idcs } = await import("@/server/identity/auth/oidc");
   const config = await idcs();
   expect(config.serverMetadata().issuer).toBe(
     "https://identity.oraclecloud.com/",
@@ -57,7 +57,7 @@ it("retries failed metadata requests instead of caching a rejected promise", asy
     .mockResolvedValueOnce(new Response("", { status: 502 }))
     .mockResolvedValueOnce(Response.json(metadata()));
   vi.stubGlobal("fetch", fetch);
-  const { idcs } = await import("@/server/auth/oidc");
+  const { idcs } = await import("@/server/identity/auth/oidc");
   await expect(idcs()).rejects.toThrow(/metadata/);
   await expect(idcs()).resolves.toBeDefined();
   expect(fetch).toHaveBeenCalledTimes(2);
@@ -71,13 +71,13 @@ it("does not construct a configuration from substituted issuer metadata", async 
         Response.json({ ...metadata(), issuer: "https://evil.example/" }),
       ),
   );
-  const { idcs } = await import("@/server/auth/oidc");
+  const { idcs } = await import("@/server/identity/auth/oidc");
   await expect(idcs()).rejects.toThrow(/issuer/);
 });
 it("supports the explicitly registered client-secret-post method", async () => {
   vi.stubEnv("IDCS_CLIENT_AUTH_METHOD", "client_secret_post");
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(metadata())));
-  const { idcs } = await import("@/server/auth/oidc");
+  const { idcs } = await import("@/server/identity/auth/oidc");
   const config = await idcs();
   expect(config.clientMetadata().token_endpoint_auth_method).toBe(
     "client_secret_post",

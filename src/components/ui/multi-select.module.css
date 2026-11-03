@@ -1,0 +1,190 @@
+/* GN-Angular shared/multi-select, inside variant. */
+.host {
+  position: relative;
+  display: flex;
+}
+.field {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  min-height: 45px;
+  padding: 4px 32px 4px 13px;
+  cursor: pointer;
+  background: var(--gn-surface);
+  border: 1px solid var(--gn-border-input);
+  border-radius: var(--gn-radius);
+}
+:global(:where(:root:not([data-input="pointer"]))) .field:focus-within,
+:global(:where(:root:not([data-input="pointer"]))) .field[data-open] {
+  border-color: var(--gn-brand);
+  box-shadow: 0 0 0 1px var(--gn-brand);
+}
+.label {
+  color: var(--gn-text-secondary);
+}
+.label {
+  font-size: 11px;
+}
+/* Chips, then the typing surface, wrapping as one line of content. */
+.line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.line > .input {
+  flex: 1 1 60px;
+  min-width: 60px;
+  height: 20px;
+  min-height: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  cursor: inherit;
+}
+.line > .input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+.line > .input::placeholder {
+  color: var(--gn-text-secondary);
+  opacity: 1;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 4px 1px 8px;
+  background: var(--gn-hover-tint);
+  border-radius: 10px;
+}
+.chip button {
+  display: flex;
+  min-height: 0;
+  padding: 2px;
+  border: 0;
+  background: none;
+  color: inherit;
+}
+.caret {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+/* The control variant: the same box as .gn-control (28px, 4px 8px, one line). */
+.host[data-variant="control"] .field {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  height: var(--control-height);
+  min-height: 0;
+  padding: 0 28px 0 8px;
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
+}
+.host[data-variant="control"] .line {
+  flex: 1;
+  flex-wrap: nowrap;
+}
+.host[data-variant="control"] .line > .input {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.host[data-variant="control"] .caret {
+  right: 8px;
+}
+.count {
+  flex: none;
+  min-width: 18px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+  color: var(--gn-on-brand);
+  background: var(--gn-brand);
+  border-radius: 9px;
+}
+/* A fixed overlay placed by useDropdownPanel (position, width and the room for it), above any popup it opens from.
+   280px tall at most, so Floating UI flips it on that height. */
+.panel {
+  z-index: 30;
+  max-height: min(280px, var(--panel-room, 280px));
+  /* The panel scrolls, not the list: the option window pads the list to its full height. */
+  overflow-x: hidden;
+  overflow-y: auto;
+  color: var(--gn-text);
+  background: var(--gn-surface);
+  border: 1px solid var(--gn-divider);
+  border-radius: var(--gn-radius-menu);
+  box-shadow: var(--gn-shadow-menu);
+}
+.panel ul {
+  margin: 0;
+  padding: 6px 0;
+  list-style: none;
+}
+/* GN-Angular option rows: a native checkbox, 8px to the label, 6/12 padding. */
+.panel li[role="option"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  color: var(--gn-text);
+  cursor: pointer;
+}
+.panel li[data-active] {
+  background: var(--gn-hover-tint);
+}
+.panel li input {
+  margin: 0;
+  pointer-events: none;
+}
+.none {
+  padding: 6px 12px;
+  color: var(--gn-text-secondary);
+}
+/* The typed text's matches within each option. */
+.panel [data-match] {
+  font-weight: 700;
+}
+/* Option text: the label and, below it, a quieter detail line (live: org unit and employee number). */
+.text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.detail {
+  font-size: 11px;
+  color: var(--gn-text-secondary);
+}
+.panel li[aria-selected="true"] .text > :first-child {
+  font-weight: 600;
+}
+/* Live's cap note, above the rows. */
+.note {
+  padding: 6px 12px 8px;
+  margin-bottom: 4px;
+  color: var(--gn-text-secondary);
+  border-bottom: 1px solid var(--gn-divider);
+}
+.field[aria-disabled] {
+  opacity: 0.6;
+  cursor: default;
+}
+/* The chips variant: chips and typing on one wrapping line, no label of its own (an InsideField supplies it). */
+.host[data-variant="chips"] .field {
+  min-height: 0;
+  padding: 0;
+}

@@ -1,16 +1,14 @@
-import { eoiQuerySchema, listEois } from "@/server/opportunities/eoi";
-import { json, failure } from "@/server/api/http";
-export async function GET(request: Request) {
+import { listEois } from "@/server/modules/opportunities/eoi";
+import { parseEoiFilters } from "@/features/modules/opportunities/eoi-list/schema";
+import { route, searchOf } from "@/server/http/route";
+import { AppError } from "@/lib/errors";
+/** One page of the EOI list from structured filters; the server builds the SQL and checks every gate. */
+export const GET = route((request) => {
+  let filters;
   try {
-    return json(
-      await listEois(
-        eoiQuerySchema.parse(
-          Object.fromEntries(new URL(request.url).searchParams),
-        ),
-        request.signal,
-      ),
-    );
-  } catch (error) {
-    return failure(error);
+    filters = parseEoiFilters(searchOf(request));
+  } catch {
+    throw new AppError("BAD_REQUEST", "Invalid application filters.", 400);
   }
-}
+  return listEois(filters, request.signal);
+});

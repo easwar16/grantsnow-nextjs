@@ -1,12 +1,5 @@
-import { renewSession } from "@/server/session/service";
-import { sameOrigin } from "@/lib/security";
-import { appOrigin } from "@/server/configuration/environment";
-import { failure, json } from "@/server/api/http";
-export async function POST(request: Request) {
-  try {
-    sameOrigin(request, appOrigin());
-    return json({ expiresAt: await renewSession() });
-  } catch (e) {
-    return failure(e);
-  }
-}
+import { renewSession } from "@/server/identity/session/service";
+import { route } from "@/server/http/route";
+export const POST = route(async () => ({ expiresAt: await renewSession() }), {
+  write: true,
+});

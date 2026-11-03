@@ -1,0 +1,274 @@
+/* Launcher: 55px brand circle, default bottom-right 15px in (owner); GN-Angular shell.css .chatbot. */
+.launcher {
+  position: fixed;
+  right: 15px;
+  bottom: 15px;
+  z-index: 40;
+  width: 55px;
+  height: 55px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, #fff 5%, var(--accent) 65%);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 20%);
+  cursor: grab;
+  touch-action: none;
+  transition:
+    left var(--dur-slow) var(--ease),
+    top var(--dur-slow) var(--ease);
+}
+/* GN-Angular's launcher does not change on hover; the global button:hover tint would replace the gradient. */
+.launcher:hover {
+  background: radial-gradient(circle at center, #fff 5%, var(--accent) 65%);
+}
+/* Speech bubble with three flashing dots (GN-Angular shell.css, from the original app.css .chat-icon). */
+.bubbleIcon {
+  position: relative;
+  display: block;
+  width: 37px;
+  height: 27px;
+  margin: auto;
+  border-radius: 100%;
+  background: #fff;
+}
+.bubbleIcon::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  left: -10px;
+  border: 13px solid transparent;
+  border-top: 21px solid #fff;
+  transform: rotate(45deg);
+}
+.bubbleIcon::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--accent);
+  box-shadow:
+    10px 0 var(--accent),
+    -10px 0 var(--accent);
+  animation: flash 0.5s ease-out infinite alternate;
+}
+@keyframes flash {
+  0% {
+    background: var(--gn-badge-warning);
+    box-shadow:
+      10px 0 var(--gn-badge-warning),
+      -10px 0 var(--accent);
+  }
+  50% {
+    background: var(--accent);
+    box-shadow:
+      10px 0 var(--gn-badge-warning),
+      -10px 0 var(--gn-badge-warning);
+  }
+  100% {
+    background: var(--gn-badge-warning);
+    box-shadow:
+      10px 0 var(--accent),
+      -10px 0 var(--gn-badge-warning);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bubbleIcon::after {
+    animation: none;
+  }
+}
+.launcher[data-moving] {
+  cursor: grabbing;
+  transition: none;
+}
+.launcher:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+/* Modal dialog placed by chatPosition (inline top/left/width/height); geometry and colours measured on the live app. */
+.dialog {
+  position: fixed;
+  inset: auto;
+  z-index: 41;
+  display: none;
+  flex-direction: column;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 16px;
+  background: #fff;
+  color: var(--gn-text);
+  box-shadow: 0 8px 32px rgb(0 0 0 / 18%);
+}
+.dialog[open] {
+  display: flex;
+}
+.dialog::backdrop {
+  background: rgb(22 21 19 / 30%);
+}
+.head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 56px;
+  padding: 6px 12px 6px 24px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.head img {
+  width: 24px;
+  height: 24px;
+  margin: 10px 8px 10px 0;
+}
+.head h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 27px;
+}
+.close {
+  min-height: 0;
+  padding: 4px;
+  border: 0;
+  color: var(--on-accent);
+}
+.close:hover {
+  background: var(--on-accent-hover);
+  color: var(--on-accent);
+}
+.log {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 12px 24px;
+  overflow-y: auto;
+}
+.bubble {
+  max-width: 75%;
+  margin: 0;
+  padding: 12px 16px;
+  /* Answer tables render inline and scroll sideways here (legacy opened them in a separate dialog). */
+  overflow-x: auto;
+  font-size: 12px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+.bot {
+  align-self: flex-start;
+  margin: 12px 20px 8px 0;
+  border-radius: 5px 16px 16px;
+  background: rgb(240 242 245);
+  color: #1a1a1a;
+}
+.bubble table {
+  border-collapse: collapse;
+}
+.bubble th,
+.bubble td {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+.bubble th {
+  background: var(--table-head-bg);
+}
+.mine {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin: 8px 0;
+}
+.user {
+  max-width: 100%;
+  border-radius: 16px 5px 16px 16px;
+  background: rgb(69 117 121);
+  color: #fff;
+  white-space: pre-wrap;
+}
+.meta {
+  margin-top: 6px;
+  color: var(--gn-text-secondary);
+  font-size: 10px;
+}
+/* Quick replies: stacked outlined buttons inside the answer bubble; the chosen/hovered one fills with the brand. */
+.options {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.options button {
+  height: auto;
+  margin: 5px;
+  padding: 10px 14px;
+  border: 1.8px solid var(--accent-fg);
+  border-radius: 8px;
+  background: #fff;
+  color: #000;
+  font-weight: 400;
+  white-space: normal;
+  text-align: left;
+}
+.options button:hover:not(:disabled),
+.options button:focus-visible,
+.options button[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.typing {
+  align-self: flex-start;
+  margin: 12px 20px 8px 0;
+  border-radius: 5px 16px 16px;
+  background: rgb(240 242 245);
+  color: var(--gn-text-secondary);
+}
+.failure {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border-radius: 3px;
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+.foot {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 0 0 16px 16px;
+  background: rgb(250 250 250);
+}
+.foot input {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--gn-input-border, rgb(22 21 19 / 50%));
+  border-radius: 3px;
+  background: #fff;
+}
+:global(:where(:root:not([data-input="pointer"]))) .foot input:focus {
+  border-color: rgb(14 114 151);
+}
+/* 28px borderless icon buttons (Speak, Send), as the live app. */
+.icon {
+  width: 28px;
+  height: 28px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+}
+.icon[data-on] {
+  color: var(--danger);
+}
+.icon:disabled {
+  opacity: 0.4;
+}

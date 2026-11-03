@@ -1,0 +1,244 @@
+/* The record drawer's comments and audit panels (legacy object-comments and the audit drawer-popup). */
+.panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+/* The one scrolling part; positioned so screen-reader text stays inside it. */
+.thread {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  padding: 12px;
+  overflow-y: auto;
+}
+.empty {
+  margin: 32px 0;
+  text-align: center;
+  color: var(--gn-text-secondary);
+}
+.comments,
+.audits {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.comment {
+  display: flex;
+}
+/* oj-panel with a 1rem radius; the user's own on oj-bg-brand-30. */
+.bubble {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--gn-divider);
+  border-radius: 16px;
+  background: var(--gn-surface);
+  user-select: text;
+  transition:
+    background-color var(--gn-dur-slow) var(--gn-ease),
+    box-shadow var(--gn-dur-slow) var(--gn-ease);
+}
+.own .bubble {
+  background: color-mix(in srgb, var(--gn-brand) 12%, var(--gn-surface));
+}
+/* A mention link's comment, opened from its notification. */
+.flash .bubble {
+  box-shadow: 0 0 0 2px var(--gn-badge-warning);
+  background: var(--gn-tone-warning-bg);
+}
+.body {
+  display: flex;
+  gap: 8px;
+}
+.html {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.html > :first-child {
+  margin-top: 0;
+}
+.html > :last-child {
+  margin-bottom: 0;
+}
+.actions {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+}
+/* oj-typography-caption-2: author left, time right. */
+.meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--gn-text-secondary);
+}
+.author {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.footer {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid var(--gn-divider);
+}
+.input {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.count {
+  align-self: flex-end;
+  font-size: 11px;
+  color: var(--gn-text-secondary);
+}
+.over {
+  color: var(--gn-danger);
+}
+.dialogFoot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+/* Quill's snow theme on the app's tokens (as rich-text.module.css), positioned for the mention list. */
+.editor {
+  position: relative;
+}
+.editor :global(.ql-toolbar.ql-snow) {
+  border-color: var(--gn-border-input);
+  border-radius: var(--gn-radius) var(--gn-radius) 0 0;
+  font-family: var(--gn-font);
+}
+.editor :global(.ql-container.ql-snow) {
+  border-color: var(--gn-border-input);
+  border-radius: 0 0 var(--gn-radius) var(--gn-radius);
+  font-family: var(--gn-font);
+  font-size: var(--gn-font-size);
+  color: var(--gn-text);
+  background: var(--gn-surface);
+}
+.editor :global(.ql-editor) {
+  min-height: 64px;
+  max-height: 200px;
+}
+.editor :global(.ql-snow .ql-stroke) {
+  stroke: var(--gn-text-secondary);
+}
+.editor :global(.ql-snow .ql-fill) {
+  fill: var(--gn-text-secondary);
+}
+.mentions {
+  position: absolute;
+  z-index: 10;
+  width: 260px;
+  max-height: 220px;
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+  list-style: none;
+  background: var(--gn-surface);
+  border-radius: var(--gn-radius-menu);
+  box-shadow: var(--gn-shadow-menu);
+}
+.mention {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.mention small {
+  color: var(--gn-text-secondary);
+}
+.mention[aria-selected="true"],
+.mention:hover {
+  background: var(--gn-hover-tint);
+}
+/* The audit drawer's event tab bar. */
+.tabs {
+  display: flex;
+  flex: none;
+  margin: 0 12px;
+  border-bottom: 1px solid var(--gn-divider);
+}
+.tabs button {
+  flex: 1;
+  height: 36px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  color: var(--gn-text-secondary);
+  font-weight: 400;
+}
+.tabs button[aria-selected="true"] {
+  font-weight: 600;
+  color: var(--gn-text);
+  border-bottom-color: var(--accent-fg, var(--gn-brand));
+}
+/* oj-panel, square, tinted per event (audit-green-light, oj-bg-info-30, oj-bg-danger-30). */
+.audit {
+  padding: 12px;
+  border: 1px solid var(--gn-divider);
+}
+.audit[data-tone="success"] {
+  background: var(--gn-tone-success-bg);
+}
+.audit[data-tone="info"] {
+  background: var(--gn-tone-info-bg);
+}
+.audit[data-tone="danger"] {
+  background: var(--gn-tone-danger-bg);
+}
+.auditHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.who {
+  display: flex;
+  gap: 8px;
+  font-weight: 700;
+}
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+}
+.field {
+  display: flex;
+  gap: 16px;
+}
+.field dt {
+  flex: 1;
+  min-width: 0;
+  padding-left: 16px;
+  overflow: hidden;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.field dd {
+  display: flex;
+  flex: 2;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}

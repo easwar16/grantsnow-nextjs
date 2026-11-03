@@ -1,0 +1,69 @@
+/* Legacy object-attributes: one bordered panel above the host's form, fields in up to 6 columns by colspan. */
+.panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  min-width: 0;
+  margin: 0 0 8px;
+  padding: 12px 16px;
+  background: var(--gn-surface);
+  border: 1px solid var(--gn-divider);
+}
+.cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: none;
+  min-width: 200px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.row > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+.error {
+  font-size: 12px;
+  color: var(--gn-danger);
+}
+.plain {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  min-width: 0;
+}
+/* Readonly (live award header, 2026-10-26): one field under another, 11px apart; a blank value adds no line. */
+.readonly {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 11px;
+}
+.readonlyField > :last-child:empty {
+  display: none;
+}
+.readonly:not(.panel) {
+  margin-top: 14px;
+}
+.viewPanel {
+  display: grid;
+  gap: 14px;
+  margin: 14px 0 0;
+}
+.viewField {
+  min-height: 27px;
+  font-size: 13px;
+}
+.viewLabel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #666;
+  font-weight: 600;
+}
+.viewValue {
+  min-height: 17px;
+}

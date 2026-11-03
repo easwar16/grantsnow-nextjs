@@ -1,0 +1,59 @@
+/* The EOI rows' own parts (measured on live); the drawer, rows and count are the shared listing styles. Logo 100px,
+   12px to the text; 10px funder pills. */
+.logo {
+  flex: none;
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+}
+/* No logo, or a broken one: the finder card's teal tile at the logo's size, so every row lines up. */
+.logoTile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: #3e7a7d;
+  border-radius: 5px;
+}
+.funders {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.funder {
+  padding: 0 6px;
+  font-size: 10px;
+  line-height: 15px;
+  color: var(--gn-text);
+  background: rgba(143, 191, 208, 0.4);
+  border-radius: 7.5px;
+}
+/* Read-only fields in a row, each closed by a divider. */
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+}
+.meta > div {
+  padding: 0 12px;
+  border-right: 1px solid var(--gn-divider);
+}
+.meta > div:first-child {
+  padding-left: 0;
+}
+.meta dt {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--gn-text-secondary);
+}
+.meta dd {
+  margin: 1px 0 0;
+  line-height: 15px;
+}
+
+@media (max-width: 768px) {
+  .logo {
+    display: none;
+  }
+}

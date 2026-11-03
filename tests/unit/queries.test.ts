@@ -2,14 +2,14 @@ import { it, expect } from "vitest";
 import {
   parseQuery,
   serializeQuery,
-  oracleQuery,
-} from "@/features/proposals/schemas";
-import { mapProposals } from "@/server/proposals/service";
+} from "@/features/modules/proposals/schemas";
+import { oracleQuery } from "@/server/modules/proposals/where-clause";
+import { mapProposals } from "@/server/modules/proposals/service";
 import { proposals } from "@/test-support/fixtures";
-import { moneyDisplay, dateDisplay } from "@/lib/format";
-import { homeFilters } from "@/features/home/schemas";
-import { mapWidget } from "@/server/home/service";
-import { widgets } from "@/server/home/widgets";
+import { homeFilters } from "@/features/modules/home/schemas";
+import { mapWidget } from "@/server/modules/home/service";
+import { widgets } from "@/server/modules/home/widgets";
+import { functions } from "@/lib/functions";
 const q = parseQuery(new URLSearchParams());
 it("round trips URL queries and reset restores defaults", () => {
   const data = parseQuery(
@@ -23,23 +23,72 @@ it.each([
   "page=0",
   "page=-1",
   "pageSize=10000",
-  "sort=token",
+  "sort=to ken",
   "direction=DROP",
   "from=2026-02-01&to=2026-01-01",
 ])("rejects unsafe query %s", (s) =>
   expect(() => parseQuery(new URLSearchParams(s))).toThrow(),
 );
-it("constructs actual ORDS pagination and inclusive creation dates", () => {
+it("sends the live initial-load contract: paging only, no where clause or sort", () => {
+  expect(oracleQuery(q).toString()).toBe("p_offset=0&p_limit=10");
+});
+it("matches the live title-filter where clause exactly", () => {
+  const p = oracleQuery(parseQuery(new URLSearchParams("search=test")));
+  expect(p.get("p_where_clause")).toBe(
+    `(LOWER("proposal_title") LIKE LOWER('%test%') ESCAPE '\\')`,
+  );
+  expect([...p.keys()]).toEqual(["p_where_clause", "p_offset", "p_limit"]);
+});
+it("builds legacy date bounds, equality, groups and paging in legacy order", () => {
   const p = oracleQuery(
     parseQuery(
-      new URLSearchParams("page=3&from=2026-01-01&to=2026-12-31&search=health"),
+      new URLSearchParams(
+        "page=3&from=2026-01-01&to=2026-12-31&reference=P_1&status=DRFT&investigator=E1",
+      ),
     ),
+  );
+  expect(p.get("p_where_clause")).toBe(
+    `(LOWER("proposal_number") LIKE LOWER('%P\\_1%') ESCAPE '\\' AND "proposal_status_code"='DRFT' AND "creation_date">='2026-01-01 00:00:00' AND "creation_date"<='2026-12-31 23:59:59' AND ("pi_employee_number"='E1'))`,
   );
   expect(p.get("p_offset")).toBe("20");
   expect(p.get("p_limit")).toBe("10");
-  expect(JSON.parse(p.get("q")!).$and).toContainEqual({
-    creation_date: { $lte: { $date: "2026-12-31T23:59:59Z" } },
-  });
+});
+it.each([
+  [
+    "search=O'Brien",
+    `(LOWER("proposal_title") LIKE LOWER('%O''Brien%') ESCAPE '\\')`,
+  ],
+  [
+    "search=x') OR 1=1 --",
+    `(LOWER("proposal_title") LIKE LOWER('%x'') OR 1=1 --%') ESCAPE '\\')`,
+  ],
+  ["sponsor='", `(LOWER("primary_sponsorer") LIKE LOWER('%''%') ESCAPE '\\')`],
+  [
+    "search=50%25 a_b c%5C",
+    `(LOWER("proposal_title") LIKE LOWER('%50\\% a\\_b c\\\\%') ESCAPE '\\')`,
+  ],
+])("escapes quotes so %s stays one literal", (input, clause) =>
+  expect(
+    oracleQuery(parseQuery(new URLSearchParams(input))).get("p_where_clause"),
+  ).toBe(clause),
+);
+it.each([
+  "status=DRFT'--",
+  "investigator=1 OR 1=1",
+  'activityType=A"',
+  "department=1;DROP",
+  "assignedTo=x",
+  'sort=creation_date" DESC --',
+  "sort=1col",
+])("rejects unsafe codes, ids and sort columns %s", (s) =>
+  expect(() => parseQuery(new URLSearchParams(s))).toThrow(),
+);
+it("sorts only on a chosen column, quoted as legacy sends it", () => {
+  const p = oracleQuery(
+    parseQuery(new URLSearchParams("sort=creation_date&direction=ASC")),
+  );
+  expect(p.get("p_order_by")).toBe('"creation_date"');
+  expect(p.get("p_sort_order")).toBe("ASC");
 });
 it("distinguishes page rows/API total and never uses size as total", () => {
   const page = mapProposals(
@@ -52,6 +101,22 @@ it("distinguishes page rows/API total and never uses size as total", () => {
   expect(page.hasMore).toBe(true);
   expect(page.rows[0].id).toBe("OUTLINE_PROPOSAL:1000");
 });
+it("keeps sorted pages when Oracle returns a proposal without a status label", () => {
+  const sorted = parseQuery(
+    new URLSearchParams("sort=creation_date&direction=ASC"),
+  );
+  const page = mapProposals(
+    {
+      items: [{ ...proposals[0], proposal_status_value: null }],
+      offset: 0,
+      total_count: 1,
+    },
+    sorted,
+    [],
+  );
+  expect(page.rows[0].status).toBe("");
+  expect(page.total).toBe(1);
+});
 it("removes configured hidden fields before client serialization", () => {
   const row = mapProposals({ items: [proposals[0]], total_count: 1 }, q, [])
     .rows[0];
@@ -59,17 +124,58 @@ it("removes configured hidden fields before client serialization", () => {
   expect(row).not.toHaveProperty("investigator");
   expect(JSON.stringify(row)).not.toContain("pi_employee_number");
 });
-it("uses explicit hasMore without inventing totals", () => {
-  const page = mapProposals({ items: [], hasMore: false }, q, []);
+it("ignores an unreliable hasMore and trusts total_count", () => {
+  const short = mapProposals(
+    {
+      items: proposals.slice(0, 3),
+      hasMore: "true",
+      total_count: 13,
+      offset: 10,
+    },
+    { ...q, page: 2 },
+    [],
+  );
+  expect(short.hasMore).toBe(false);
+  const mid = mapProposals(
+    {
+      items: proposals.slice(0, 10),
+      hasMore: false,
+      total_count: 37,
+      offset: 10,
+    },
+    { ...q, page: 2 },
+    [],
+  );
+  expect(mid.hasMore).toBe(true);
+});
+it("without total_count, only a full page implies more and no total is invented", () => {
+  const full = mapProposals(
+    { items: proposals.slice(0, 10), hasMore: false },
+    q,
+    [],
+  );
+  expect(full.hasMore).toBe(true);
+  expect(full.total).toBeUndefined();
+  const partial = mapProposals(
+    { items: proposals.slice(0, 2), hasMore: true },
+    q,
+    [],
+  );
+  expect(partial.hasMore).toBe(false);
+});
+it("never treats loaded-so-far size as the total", () => {
+  const page = mapProposals({ items: proposals.slice(0, 2), size: 12 }, q, []);
   expect(page.total).toBeUndefined();
 });
-it("fails without paging metadata", () =>
+it("rejects a page for a different offset", () =>
   expect(() =>
-    mapProposals({ items: proposals.slice(0, 2) }, q, []),
+    mapProposals({ items: [], total_count: 0, offset: 10 }, q, []),
   ).toThrow());
 it("preserves masked money and calendar-date semantics", () => {
-  expect(moneyDisplay("****", "GBP")).toBe("****");
-  expect(dateDisplay("2026-01-01T23:00:00-08:00")).toBe("01-Jan-2026");
+  expect(functions.format.moneyDisplay("****", "GBP")).toBe("****");
+  expect(functions.format.dateDisplay("2026-01-01T23:00:00-08:00")).toBe(
+    "01-Jan-2026",
+  );
 });
 it("dashboard accepts verified filters and rejects invalid months", () => {
   expect(homeFilters(new URLSearchParams("year=2026&month=10")).month).toBe(
@@ -97,21 +203,45 @@ it("statistics refuses malformed values", () =>
       { offset: 0 },
     ),
   ).toThrow());
-it("maps the verified advanced codes and match-any tags without accepting raw ORDS expressions", () => {
+it("maps advanced codes and match-any tags without accepting raw query input", () => {
   const p = oracleQuery(
     parseQuery(
       new URLSearchParams(
-        "department=42&assignedTo=17&activityType=RESEARCH&proposalCategory=GRANT&tags=health,climate&q=evil",
+        "department=42&assignedTo=17&activityType=RESEARCH&proposalCategory=GRANT&tags=health,climate&q=evil&p_where_clause=evil",
       ),
     ),
   );
-  const body = JSON.parse(p.get("q")!);
-  expect(body.$and).toContainEqual({ pi_dept_code: { $eq: 42 } });
-  expect(body.$and).toContainEqual({ assigned_to: { $eq: 17 } });
-  expect(body.$and).toContainEqual({
-    $or: [{ tags: { $instr: "health" } }, { tags: { $instr: "climate" } }],
-  });
-  expect(p.get("q")).not.toContain("evil");
+  expect(p.get("p_where_clause")).toBe(
+    `("pi_dept_code"='42' AND "activity_type_lkp_code"='RESEARCH' AND "proposal_type_lkp_code"='GRANT' AND ("assigned_to"='17') AND (LOWER("tags") LIKE LOWER('%health%') ESCAPE '\\' OR LOWER("tags") LIKE LOWER('%climate%') ESCAPE '\\'))`,
+  );
+  expect(p.toString()).not.toContain("evil");
+  expect(p.has("q")).toBe(false);
 });
 it("rejects calendar-invalid dates", () =>
   expect(() => parseQuery(new URLSearchParams("from=2026-02-31"))).toThrow());
+it("round trips and combines VBCS Advanced Query conditions with basic filters", () => {
+  const conditions = JSON.stringify([
+    { attribute: "proposal_title", op: "$co", value: "climate" },
+    { attribute: "total_cost", op: "$gt", value: "10" },
+  ]);
+  const query = parseQuery(
+    new URLSearchParams({ search: "research", conditions }),
+  );
+  expect(
+    parseQuery(new URLSearchParams(serializeQuery(query))).conditions,
+  ).toBe(conditions);
+  expect(oracleQuery(query, true).get("p_where_clause")).toBe(
+    `((LOWER("proposal_title") LIKE LOWER('%research%') ESCAPE '\\') AND LOWER("proposal_title") LIKE LOWER('%climate%') ESCAPE '\\' AND "total_cost">'10')`,
+  );
+});
+it.each([
+  [{ attribute: "proposal_title", op: "$bad", value: "climate" }],
+  [{ attribute: 'proposal_title" OR 1=1', op: "$eq", value: "x" }],
+  [{ attribute: "proposal_title", op: "$eq", value: "" }],
+])("rejects malformed Advanced Query conditions %j", (condition) => {
+  expect(() =>
+    parseQuery(
+      new URLSearchParams({ conditions: JSON.stringify([condition]) }),
+    ),
+  ).toThrow();
+});

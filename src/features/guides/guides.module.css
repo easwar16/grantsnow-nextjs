@@ -1,0 +1,126 @@
+.button {
+  padding: 0 6px 0 8px;
+  font-weight: 600;
+}
+.button:focus-visible {
+  outline: 2px solid var(--gn-on-brand);
+  outline-offset: 1px;
+}
+.menu {
+  min-width: 240px;
+}
+.menu [role="group"] + [role="group"] {
+  border-top: 1px solid var(--gn-divider);
+}
+/* Module row: the name runs the full tour; the chevron opens its single guides. */
+.row {
+  display: flex;
+}
+.menu .tour {
+  flex: 1;
+  font-weight: 600;
+}
+.menu .toggle {
+  justify-content: center;
+  width: 36px;
+  padding: 0;
+  border-left: 1px solid var(--gn-divider);
+}
+.toggle[aria-expanded="true"] {
+  background: var(--hover-tint);
+}
+.items {
+  /* The single guides slide open (expand animates the height). */
+  overflow: hidden;
+}
+.menu .items button {
+  padding-left: 28px;
+  color: var(--gn-text-secondary);
+}
+.menu .items button:hover,
+.menu .items button:focus-visible {
+  color: var(--gn-text);
+}
+.menu button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.menu button:hover,
+.menu button:focus-visible {
+  outline: none;
+  background: var(--hover-tint);
+}
+/* driver.js popover in GN tokens; :global reaches the library's class names. */
+.popover:global(.driver-popover) {
+  min-width: 260px;
+  max-width: 340px;
+  padding: 16px;
+  border: 1px solid var(--gn-divider);
+  border-radius: var(--gn-radius);
+  background: var(--gn-surface);
+  color: var(--gn-text);
+  font-family: var(--gn-font);
+  font-size: var(--gn-font-size);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.2);
+}
+.popover :global(.driver-popover-title) {
+  margin-right: 20px;
+  color: var(--gn-brand);
+  font: 600 14px/1.3 var(--gn-font);
+}
+.popover :global(.driver-popover-description) {
+  margin-top: 6px;
+  color: var(--gn-text-secondary);
+  font: inherit;
+  line-height: 1.5;
+}
+.popover :global(.driver-popover-close-btn) {
+  color: var(--gn-text-secondary);
+}
+.popover :global(.driver-popover-close-btn):hover {
+  color: var(--gn-text);
+}
+.popover :global(.driver-popover-footer) {
+  margin-top: 14px;
+}
+.popover :global(.driver-popover-progress-text) {
+  color: var(--gn-text-secondary);
+}
+.popover :global(.driver-popover-navigation-btns) {
+  gap: 6px;
+}
+.popover :global(.driver-popover-footer button) {
+  margin: 0;
+  text-shadow: none;
+  font: inherit;
+}
+/* The arrow takes the surface colour on whichever side it points from. */
+.popover :global(.driver-popover-arrow-side-bottom) {
+  border-bottom-color: var(--gn-surface);
+}
+.popover :global(.driver-popover-arrow-side-top) {
+  border-top-color: var(--gn-surface);
+}
+.popover :global(.driver-popover-arrow-side-left) {
+  border-left-color: var(--gn-surface);
+}
+.popover :global(.driver-popover-arrow-side-right) {
+  border-right-color: var(--gn-surface);
+}
+/* driver.js's own fades give way to the app's motion (guide-launcher animates with the shared presets). */
+:global(body.driver-fade) :global(.driver-overlay),
+:global(body.driver-fade) :global(.driver-popover) {
+  /* body.: outranks driver.css, which loads after this module. */
+  animation: none;
+}

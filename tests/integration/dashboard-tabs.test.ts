@@ -14,27 +14,38 @@ const state = vi.hoisted(() => ({
   },
   modules: { PROPOSALS: true, "opportunities-finder": true },
 }));
-vi.mock("@/server/home/service", () => ({
+vi.mock("@/server/modules/home/service", () => ({
   homeAccess: async () => ({
     session: { token: "isolated-token" },
     user: { modules: state.modules },
   }),
 }));
-vi.mock("@/server/configuration/service", () => ({
+vi.mock("@/server/platform/configuration/service", () => ({
   dashboardConfiguration: async () => state.config,
   organizations: async () => [{ id: "202", name: "Fixture organization" }],
 }));
-vi.mock("@/server/configuration/resources", () => ({
-  resources: async () =>
-    ["notifications", "opportunities", "dynamic-charts"].map((label_name) => ({
-      module_name: "DASHBOARD",
-      label_type: "button-labels",
-      label_name,
-      is_visible: "Y",
-    })),
+vi.mock(
+  "@/server/platform/configuration/resources",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("@/server/platform/configuration/resources")
+    >()),
+    resources: async () =>
+      ["notifications", "opportunities", "dynamic-charts"].map(
+        (label_name) => ({
+          module_name: "DASHBOARD",
+          label_type: "button-labels",
+          label_name,
+          is_visible: "Y",
+        }),
+      ),
+  }),
+);
+vi.mock("@/server/oracle/connection", () => ({ oracle: state.oracle }));
+vi.mock("@/server/oracle/context", () => ({
+  oracleContext: async () => ({ token: "isolated-token", identity: {} }),
 }));
-vi.mock("@/server/api/transport", () => ({ oracle: state.oracle }));
-vi.mock("@/server/opportunities/service", () => ({
+vi.mock("@/server/modules/opportunities/service", () => ({
   listOpportunities: vi.fn(),
 }));
 import {
@@ -42,7 +53,7 @@ import {
   dynamicChart,
   notifications,
   notificationPage,
-} from "@/server/home/extra-tabs";
+} from "@/server/modules/home/extra-tabs";
 beforeEach(() => {
   state.oracle.mockReset();
   state.config.notifications = true;
@@ -81,17 +92,37 @@ it("passes only enabled chart ID and scoped organization", async () => {
     },
   ]);
   const result = await dynamicChart("201", "202");
-  expect(state.oracle).toHaveBeenCalledWith(
-    "getSharedGetDynamicCharts",
-    { token: "isolated-token", report_name: "201", p_org_id: "202" },
-    undefined,
-    undefined,
-  );
+  // The client also passes its optional path argument; compare the leading ones.
+  expect(state.oracle.mock.calls.map((c) => c.slice(0, 4))).toEqual([
+    [
+      "getSharedGetDynamicCharts",
+      { token: "isolated-token", report_name: "201", p_org_id: "202" },
+      undefined,
+      undefined,
+    ],
+  ]);
   expect(result[0]).toMatchObject({
     columns: 6,
     rows: 3,
     points: [{ series: "Draft", group: "2026", value: 12 }],
   });
+});
+it("draws an unknown or missing chart code as a pie and keeps null values as gaps", async () => {
+  state.oracle.mockResolvedValue([
+    {
+      infolet_id: 201,
+      chart: null,
+      name: "Proposal status",
+      ModuleName: "PROPOSAL",
+      dataProvider: [
+        { series: "Draft", group: "2026", value: null },
+        { series: "Sent", group: "2026", value: "4" },
+      ],
+    },
+  ]);
+  const [chart] = await dynamicChart("201", "202");
+  expect(chart.type).toBe("PIE");
+  expect(chart.points.map((p) => p.value)).toEqual([null, 4]);
 });
 it("rejects a chart returned for another report", async () => {
   state.oracle.mockResolvedValue([
@@ -135,15 +166,42 @@ it("sanitizes notification HTML and strips identity data", () => {
     },
     0,
   );
+  expect(page.rows[0].html).not.toMatch(/script|onerror|src=/);
   expect(page.rows[0]).toEqual({
     id: "1",
-    html: "<p>Hello</p>",
+    html: expect.stringContaining("<p>Hello"),
     read: false,
     date: "2026-10-14T10:00:00Z",
   });
 });
-it("rejects incorrect notification paging", () => {
-  expect(() =>
-    notificationPage({ items: [], offset: 25, limit: 25, hasMore: false }, 0),
-  ).toThrow();
+it("rejects duplicate notifications within a page", () => {
+  const row = {
+    id: 1,
+    notific_content: "<p>x</p>",
+    is_read: "Y",
+    datetime: "2026-10-14T10:00:00Z",
+  };
+  expect(() => notificationPage({ items: [row, row] }, 0)).toThrow();
+});
+it("treats only a full notification page as having more, whatever the envelope says", () => {
+  const rows = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      id: i,
+      notific_content: "<p>x</p>",
+      is_read: "Y",
+      datetime: "2026-10-14T10:00:00Z",
+    }));
+  expect(
+    notificationPage({ items: rows(25), hasMore: "false" }, 0).hasMore,
+  ).toBe(true);
+  expect(notificationPage({ items: rows(5), hasMore: true }, 25).hasMore).toBe(
+    false,
+  );
+});
+it("requests notifications with p_offset/p_limit", async () => {
+  state.oracle.mockResolvedValue({ items: [] });
+  await notifications(25);
+  expect(
+    Object.fromEntries(state.oracle.mock.calls[0][2] as URLSearchParams),
+  ).toEqual({ p_offset: "25", p_limit: "25" });
 });

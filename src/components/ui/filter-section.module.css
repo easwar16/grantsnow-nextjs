@@ -1,0 +1,95 @@
+/* GN-Angular finder drawer, measured from live (KB D8): 27px section headings, 28px controls (D36), 27px choice
+   rows. Shared by every listing page's filter column so they look and behave alike. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.clear {
+  align-self: flex-start;
+  margin: 0 6px 8px;
+}
+.section > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 27px;
+  padding: 0 0 0 2px;
+  font-weight: 700;
+  list-style: none;
+  cursor: pointer;
+}
+.section > summary::-webkit-details-marker {
+  display: none;
+}
+.chevron {
+  transform: rotate(-90deg);
+  transition: transform var(--dur-fast) var(--ease);
+}
+.section[data-open="true"] > summary .chevron {
+  transform: none;
+}
+/* Motion slides the body (filter-section.tsx); the native details-content fade would run on top of it. */
+@supports selector(::details-content) {
+  .section::details-content {
+    transition: none;
+  }
+}
+.panel {
+  overflow: hidden;
+}
+.body {
+  padding-bottom: 6px;
+}
+.action {
+  display: flex;
+  min-height: 0;
+  padding: 2px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+}
+.action:hover {
+  background: var(--hover-tint);
+}
+/* oj-checkboxset in a 180px box that always shows its scroll bar (live: overflow-y: scroll); 27px rows of 12px text. */
+.choices {
+  display: flex;
+  flex-direction: column;
+  max-height: 180px;
+  overflow-y: scroll;
+}
+.choices label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-height: 27px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 15px;
+  color: var(--gn-text);
+  cursor: pointer;
+}
+.choices input[type="radio"] {
+  width: 14px;
+  height: 14px;
+  margin: 0 6px 0 0;
+  accent-color: var(--accent);
+}
+.sort {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sortField {
+  flex: 1;
+  min-width: 0;
+}
+.direction {
+  display: flex;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+}

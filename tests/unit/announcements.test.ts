@@ -1,36 +1,44 @@
 import { expect, it } from "vitest";
-import { cleanAnnouncement } from "@/server/home/announcements";
-it("preserves formatting while removing scripts, handler attributes and unsafe URLs", () => {
-  const html = cleanAnnouncement(
+import { serverFunctions } from "@/server/functions";
+
+it("removes scripts, handler attributes and unsafe URLs, keeping formatting", () => {
+  const html = serverFunctions.sanitize.sanitizeHtml(
     '<p><strong>Notice</strong><script>alert(1)</script><img src=x onerror=alert(1)><a href="javascript:alert(1)" onclick="bad()">Link</a></p>',
   );
   expect(html).toContain("<strong>Notice</strong>");
-  expect(html).not.toMatch(/script|onclick|onerror|<img|javascript:/);
+  expect(html).not.toMatch(/<script|onclick|onerror|javascript:/);
 });
-it("retains bounded VBCS text colors/sizes without layout or asset injection", () => {
-  const html = cleanAnnouncement(
-    '<span style="font-size:10px;background-color:#a3f28c;position:fixed;background-image:url(https://evil.example);width:9999px">Notice</span>',
+it("keeps authored inline styles (D15) but drops positioning and url() declarations", () => {
+  const html = serverFunctions.sanitize.sanitizeHtml(
+    '<span style="font-size:10px;background-color:#a3f28c;position:fixed;z-index:9;background-image:url(https://evil.example)">Notice</span>',
   );
   expect(html).toContain("font-size:10px");
   expect(html).toContain("background-color:#a3f28c");
-  expect(html).not.toMatch(/position|url|width/);
+  expect(html).not.toMatch(/position|z-index|url\(/);
   expect(
-    cleanAnnouncement('<span style="font-size:999px">Huge</span>'),
+    serverFunctions.sanitize.sanitizeHtml('<span style="top:0">x</span>'),
   ).not.toContain("style=");
 });
-it("restricts external links and removes uncontrolled styles and protocol-relative URLs", () => {
-  const html = cleanAnnouncement(
-    '<a href="https://example.org">Read</a><a href="//evil.example">Bad</a><span style="background:url(https://evil.example)">Text</span>',
+it("keeps tables and CKEditor classes, drops <style> and form controls", () => {
+  const html = serverFunctions.sanitize.sanitizeHtml(
+    '<style>body{display:none}</style><table><tr><td><span class="text-tiny"><mark class="marker-green">Cell</mark></span></td></tr></table><form><input value="x"><button>Go</button></form>',
   );
-  expect(html).toContain('rel="noopener noreferrer"');
-  expect(html).not.toContain("//evil.example");
-  expect(html).not.toContain("style=");
-});
-it("preserves only verified CKEditor typography/highlight classes", () => {
-  const html = cleanAnnouncement(
-    '<span class="text-tiny navigation-drawer"><mark class="marker-green untrusted">Notice</mark></span>',
-  );
+  expect(html).toContain("<table>");
   expect(html).toContain('class="text-tiny"');
   expect(html).toContain('class="marker-green"');
-  expect(html).not.toMatch(/navigation-drawer|untrusted/);
+  expect(html).not.toMatch(/<style|<form|<input|<button/);
+});
+it("opens links in a new tab and refuses protocol-relative URLs", () => {
+  const html = serverFunctions.sanitize.sanitizeHtml(
+    '<a href="https://example.org">Read</a><a href="//evil.example">Bad</a><a href="/\\evil.example">Bad</a><a href="/proposals">In app</a>',
+  );
+  expect(html).toContain('rel="noopener noreferrer"');
+  expect(html).toContain('target="_blank"');
+  expect(html).not.toContain("evil.example");
+  expect(html).toContain('href="/proposals"');
+});
+it("normalises the backend's literal \\r\\n sequences as legacy renderAsHTML does", () => {
+  expect(serverFunctions.sanitize.sanitizeHtml("<p>a\\r\\nb</p>")).toBe(
+    "<p>ab</p>",
+  );
 });

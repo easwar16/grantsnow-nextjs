@@ -5,10 +5,14 @@ import {
   sessionPassword,
   fixtureMode,
   browserSessionMode,
-} from "@/server/configuration/environment";
-import type { StoredSession } from "@/server/session/storage";
-import { safeReturn } from "@/lib/security";
+} from "@/server/platform/configuration/environment";
+import type { StoredSession } from "@/server/identity/session/storage";
+import { legacyDeepLink } from "@/shared/auth/legacy-link";
+import { functions } from "@/lib/functions";
 export async function proxy(request: NextRequest) {
+  // H26: old notification/report emails; the target route authenticates and keeps the deep link through login.
+  const legacy = legacyDeepLink(request.nextUrl.search);
+  if (legacy) return NextResponse.redirect(new URL(legacy, appOrigin()));
   const response = NextResponse.next();
   const session = await getIronSession<StoredSession>(
     nextProxyCookies(request, response),
@@ -29,7 +33,9 @@ export async function proxy(request: NextRequest) {
     const url = new URL("/login", appOrigin());
     url.searchParams.set(
       "returnTo",
-      safeReturn(request.nextUrl.pathname + request.nextUrl.search),
+      functions.security.safeReturn(
+        request.nextUrl.pathname + request.nextUrl.search,
+      ),
     );
     url.searchParams.set("reason", session.app ? "EXPIRED" : "UNAUTHENTICATED");
     return NextResponse.redirect(url);
@@ -38,5 +44,16 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 export const config = {
-  matcher: ["/home", "/proposals/:path*", "/opportunities/:path*"],
+  matcher: [
+    "/",
+    "/home",
+    "/proposals/:path*",
+    "/awards/:path*",
+    "/claims/:path*",
+    "/opportunities/:path*",
+    {
+      source: "/((?!api/|_next/).*)",
+      has: [{ type: "query", key: "page", value: "shell" }],
+    },
+  ],
 };

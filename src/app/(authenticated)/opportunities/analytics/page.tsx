@@ -1,10 +1,11 @@
 import { ChartSkeleton } from "@/components/feedback/skeleton";
 import { Suspense } from "react";
-import { pageIdentity } from "@/server/auth/page";
-import { requireModule } from "@/server/permissions/policy";
-import { opportunityStatistics } from "@/server/opportunities/analytics";
+import { pageIdentity } from "@/server/identity/auth/page";
+import { opportunityStatistics } from "@/server/modules/opportunities/analytics";
 import { State } from "@/components/feedback/state";
-import { publicError } from "@/lib/errors";
+import { functions } from "@/lib/functions";
+import { serverFunctions } from "@/server/functions";
+
 export const metadata = { title: "Opportunity analytics" };
 const colors = [
   "#267db3",
@@ -21,17 +22,19 @@ async function Chart({
   type: "TOP_FUNDERS" | "FUNDING_TYPE";
   title: string;
 }) {
+  const id = `opportunity-analytics-${type === "TOP_FUNDERS" ? "top-funders" : "funding-type"}`;
   let rows;
   try {
     rows = await opportunityStatistics(type);
   } catch (error) {
-    const e = publicError(error);
+    const e = functions.errors.publicError(error);
     return (
-      <article className="analytics-panel">
-        <h2>{title}</h2>
+      <article id={id} className="analytics-panel">
+        <h2 id={`${id}-title`}>{title}</h2>
         <State
           title="Statistics unavailable"
           message={e.message}
+          action={e.action}
           code={e.code}
         />
       </article>
@@ -53,13 +56,14 @@ async function Chart({
     { end: 0, stops: [] },
   ).stops;
   return (
-    <article className="analytics-panel">
-      <h2>{title}</h2>
+    <article id={id} className="analytics-panel">
+      <h2 id={`${id}-title`}>{title}</h2>
       {!rows.length ? (
         <State title="No statistics returned" />
       ) : type === "TOP_FUNDERS" ? (
         <>
           <div
+            id={`${id}-chart`}
             className="funding-bars"
             role="img"
             aria-label={`Average funding amount by funder: ${rows.map((r) => `${r.label}: ${r.value}`).join("; ")}`}
@@ -86,13 +90,14 @@ async function Chart({
         <div className="funding-pie-layout">
           {total > 0 && (
             <div
+              id={`${id}-chart`}
               className="funding-pie"
               role="img"
               aria-label={rows.map((r) => `${r.label}: ${r.value}`).join("; ")}
               style={{ background: `conic-gradient(${segments.join(",")})` }}
             />
           )}
-          <dl>
+          <dl id={`${id}-legend`}>
             {rows.map((r, i) => (
               <div key={r.id}>
                 <dt>
@@ -114,14 +119,20 @@ async function Chart({
 export default async function Analytics() {
   const { user } = await pageIdentity("/opportunities/analytics");
   try {
-    requireModule(user, "opportunities-analytics");
+    serverFunctions.permissions.requireDrawerAccess(
+      user,
+      "opportunities-analytics",
+    );
   } catch {
     return <State title="Access denied" code="FORBIDDEN" />;
   }
   return (
-    <section className="analytics-workspace">
+    <section id="opportunity-analytics" className="analytics-workspace">
       <h1>Analytics Dashboard</h1>
-      <div className="opportunity-analytics-grid">
+      <div
+        id="opportunity-analytics-grid"
+        className="opportunity-analytics-grid"
+      >
         {(
           [
             ["TOP_FUNDERS", "Top Funders"],

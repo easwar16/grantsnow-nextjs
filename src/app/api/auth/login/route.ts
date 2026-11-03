@@ -1,26 +1,48 @@
-import { capturedBrowserSession } from "@/server/session/browser-session";
+import {
+  capturedBrowserSession,
+  pastedBrowserSession,
+} from "@/server/identity/session/browser-session";
+import { AppError } from "@/lib/errors";
 import * as oidc from "openid-client";
 import {
   appOrigin,
   fixtureMode,
   browserSessionMode,
   oidcSettings,
-} from "@/server/configuration/environment";
-import { idcs } from "@/server/auth/oidc";
-import { storage } from "@/server/session/storage";
-import { oracle } from "@/server/api/transport";
-import { mapBootstrap } from "@/server/session/contracts";
-import { safeReturn, sameOrigin } from "@/lib/security";
-import { failure } from "@/server/api/http";
+} from "@/server/platform/configuration/environment";
+import { idcs } from "@/server/identity/auth/oidc";
+import { storage } from "@/server/identity/session/storage";
+import { oracle } from "@/server/oracle/connection";
+import { mapBootstrap } from "@/server/identity/session/contracts";
+import { failure } from "@/server/http/response";
+import { functions } from "@/lib/functions";
 export async function POST(request: Request) {
   try {
-    sameOrigin(request, appOrigin());
-    const returnTo = safeReturn((await request.formData()).get("returnTo"));
+    functions.security.sameOrigin(request, appOrigin());
+    const form = await request.formData(),
+      returnTo = functions.security.safeReturn(form.get("returnTo")),
+      pasted = form.get("token");
     let store = await storage();
     store.destroy();
     store = await storage();
     if (browserSessionMode()) {
-      const b = await capturedBrowserSession();
+      let b;
+      try {
+        b =
+          typeof pasted === "string" && pasted.trim() !== ""
+            ? await pastedBrowserSession(pasted)
+            : await capturedBrowserSession();
+      } catch (e) {
+        // A form post: send the user back to the token field, not a JSON error page.
+        const reason =
+          e instanceof AppError && e.code === "EXPIRED"
+            ? "EXPIRED"
+            : "TOKEN_REJECTED";
+        return Response.redirect(
+          new URL(`/login?reason=${reason}`, appOrigin()),
+          303,
+        );
+      }
       store.app = {
         token: b.token,
         expiresAt: b.expiresAt,
@@ -40,6 +62,7 @@ export async function POST(request: Request) {
         token: b.token,
         expiresAt: b.expiresAt,
         subject: "fixture-subject",
+        username: "fixture.researcher",
         identityExpiresAt: Date.now() + 8 * 3600000,
         fixture: true,
       };

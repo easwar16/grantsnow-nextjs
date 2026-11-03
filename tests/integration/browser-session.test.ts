@@ -5,15 +5,17 @@ const state = vi.hoisted(() => ({
   oracle: vi.fn(),
 }));
 vi.mock("node:fs/promises", () => ({ readFile: state.read, stat: state.stat }));
-vi.mock("@/server/api/transport", async (importOriginal) => ({
+vi.mock("@/server/oracle/connection", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   oracle: state.oracle,
 }));
 import {
   capturedBrowserSession,
-  DEV_SESSION_LEASE_MS,
-} from "@/server/session/browser-session";
+  parsePastedToken,
+  pastedBrowserSession,
+} from "@/server/identity/session/browser-session";
 import { fixtureUser } from "@/test-support/fixtures";
+import { serverConstants } from "@/server/constants";
 const base = "https://dev.example/ords/dev_base/";
 const apps = "https://dev.example/ords/dev/";
 beforeEach(() => {
@@ -57,7 +59,9 @@ it("validates the token before creating a minimal bounded local session", async 
   expect(state.oracle).toHaveBeenCalledWith("getSessionValidate", {
     token: "isolated-test-token",
   });
-  expect(b.expiresAt).toBeLessThanOrEqual(Date.now() + DEV_SESSION_LEASE_MS);
+  expect(b.expiresAt).toBeLessThanOrEqual(
+    Date.now() + serverConstants.session.devLeaseMs,
+  );
   expect(JSON.stringify(b.user)).not.toContain("private_secret");
   expect(JSON.stringify(b.user)).not.toContain("isolated-test-token");
 });
@@ -116,4 +120,66 @@ it("does not create a session from HTTP-200 login business errors", async () => 
     response_message: "Unknown user",
   });
   await expect(capturedBrowserSession()).rejects.toThrow();
+});
+it.each([
+  ["a raw token", "isolated-test-token", null],
+  [
+    "the VBCS cookie",
+    JSON.stringify({
+      token: "isolated-test-token",
+      expiry_datetime: "2099-01-01T00:00:00Z",
+    }),
+    "2099-01-01T00:00:00Z",
+  ],
+  [
+    "the URL-encoded VBCS cookie",
+    encodeURIComponent(
+      JSON.stringify({ token: "isolated-test-token", expiry_datetime: "" }),
+    ),
+    null,
+  ],
+])("reads %s pasted on the login page", (_, input, expiry) => {
+  expect(parsePastedToken(`  ${input}\n`)).toEqual({
+    token: "isolated-test-token",
+    expiry,
+  });
+});
+it.each(["", "   ", "{not json", '{"expiry_datetime":"x"}', "two words"])(
+  "rejects the unusable paste %j",
+  (input) => expect(parsePastedToken(input)).toBeNull(),
+);
+it("validates a pasted token without reading the capture file", async () => {
+  const b = await pastedBrowserSession("isolated-test-token");
+  expect(state.read).not.toHaveBeenCalled();
+  expect(state.oracle).toHaveBeenCalledWith("getSessionValidate", {
+    token: "isolated-test-token",
+  });
+  expect(b.expiresAt).toBeLessThanOrEqual(
+    Date.now() + serverConstants.session.devLeaseMs,
+  );
+});
+it("lets validate, not a stale cookie expiry, decide whether a pasted token lives", async () => {
+  const stale = JSON.stringify({
+    token: "isolated-test-token",
+    expiry_datetime: new Date(Date.now() - 60000).toISOString(),
+  });
+  const b = await pastedBrowserSession(stale);
+  expect(b.backendExpiresAt).toBeGreaterThan(Date.now());
+});
+it("refuses a pasted token that GrantsNow rejects or rotates", async () => {
+  state.oracle.mockResolvedValueOnce({ response_msg: "ERROR" });
+  await expect(pastedBrowserSession("isolated-test-token")).rejects.toThrow();
+  state.oracle.mockResolvedValueOnce({ ...fixtureUser, token: "other" });
+  await expect(
+    pastedBrowserSession("isolated-test-token"),
+  ).rejects.toMatchObject({ code: "EXPIRED" });
+});
+it("refuses a pasted token outside browser-session mode", async () => {
+  vi.stubEnv("DEV_BROWSER_SESSION", "false");
+  await expect(
+    pastedBrowserSession("isolated-test-token"),
+  ).rejects.toMatchObject({
+    code: "FORBIDDEN",
+  });
+  expect(state.oracle).not.toHaveBeenCalled();
 });

@@ -1,0 +1,167 @@
+/* The shared History and Delegation panels (legacy object-history / object-delegations fragments). */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 40px;
+}
+/* Title on the start edge, the actions on the end (oj-sm-justify-content-space-between, margin-3x-vertical). */
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 12px 0;
+}
+.head h2 {
+  margin: 0;
+  /* oj-typography-heading-xs, measured: 15px extra-bold. */
+  font-size: 15px;
+  font-weight: 800;
+}
+.end {
+  justify-content: flex-start;
+}
+.noData {
+  margin: 18px 16px;
+  font-size: 13px;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+}
+.tableWrap {
+  overflow-x: auto;
+}
+.tableWrap td {
+  overflow-wrap: anywhere;
+}
+.link {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  text-align: left;
+  cursor: pointer;
+}
+.link:hover {
+  background: none;
+  text-decoration: underline;
+}
+.clamp {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.comment {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* The Approvals section and the delegation page groups' headings (Collapsible owns the chevron). */
+.sectionHead {
+  padding: 12px 0;
+  font-size: 15px;
+  font-weight: 800;
+}
+.delegates,
+.pages {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.delegates > li {
+  border-bottom: 1px solid var(--gn-divider);
+}
+.person {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  cursor: pointer;
+}
+.name {
+  flex: 1;
+  min-width: 160px;
+  font-weight: 600;
+}
+.dates {
+  display: flex;
+  gap: 16px;
+  color: var(--gn-text-secondary);
+}
+.group {
+  padding-left: 16px;
+}
+.groupHead {
+  padding: 8px 0;
+  font-weight: 400;
+  color: var(--gn-text-secondary);
+}
+.page {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0 6px 32px;
+}
+.pageName {
+  flex: 0 1 33%;
+  min-width: 140px;
+}
+/* oj-switch with its label after it; the switch itself is the global input[role="switch"]. */
+.switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.rights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.rights legend {
+  margin-bottom: 6px;
+  padding: 0;
+  color: var(--gn-text-secondary);
+}
+/* Start and end dates share a row (D36). */
+.row {
+  display: flex;
+  gap: 8px;
+}
+.row > * {
+  flex: 1;
+  min-width: 0;
+}
+.catalogue {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.groupPick {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 8px;
+}
+.groupPages {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 20px;
+}

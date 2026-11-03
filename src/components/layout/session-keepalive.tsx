@@ -1,0 +1,78 @@
+"use client";
+import { useEffect, useState } from "react";
+import { renewDelay } from "@/shared/auth/session-schedule";
+import { session } from "@/lib/api";
+interface Failure {
+  message: string;
+  action?: string;
+}
+const GENERIC = "Your session could not be extended.";
+function signIn(reason?: string) {
+  const query = new URLSearchParams({
+    returnTo: window.location.pathname + window.location.search,
+  });
+  if (reason) query.set("reason", reason);
+  return `/login?${query}`;
+}
+/** D37: extends the GrantsNow token one minute before it expires, then again from the returned expiry. */
+export function SessionKeepAlive() {
+  const [failure, setFailure] = useState<Failure | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    async function request(method: "GET" | "POST") {
+      const result = await (method === "GET" ? session.expiry : session.renew)(
+        controller.signal,
+      );
+      // An aborted call (unmount) answers nothing, as the fetch it replaced rejected.
+      if (controller.signal.aborted) throw new Error("aborted");
+      if (result.ok) return result.data?.expiresAt;
+      if (session.signedOut(result.error)) {
+        window.location.assign(signIn("EXPIRED"));
+        return null;
+      }
+      setFailure(
+        session.offline(result.error)
+          ? { message: GENERIC }
+          : {
+              message: result.error.message || GENERIC,
+              action: result.error.action,
+            },
+      );
+      return null;
+    }
+    function schedule(expiresAt: unknown, previous?: number) {
+      const delay = renewDelay(expiresAt, Date.now(), previous);
+      if (delay === null) return;
+      timer = setTimeout(() => void renew(expiresAt as number), delay);
+    }
+    async function renew(previous: number) {
+      try {
+        const expiresAt = await request("POST");
+        if (expiresAt !== null) schedule(expiresAt, previous);
+      } catch {
+        if (!controller.signal.aborted) setFailure({ message: GENERIC });
+      }
+    }
+    request("GET").then(
+      (expiresAt) => schedule(expiresAt),
+      () => {
+        if (!controller.signal.aborted) setFailure({ message: GENERIC });
+      },
+    );
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, []);
+  if (!failure) return null;
+  return (
+    <div id="session-notice" className="notice" role="alert">
+      <strong>{failure.message}</strong>
+      {failure.action && <p>{failure.action}</p>}
+      <a id="session-sign-in" href={signIn()}>
+        Sign in again
+      </a>
+    </div>
+  );
+}

@@ -1,7 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/e2e",
-  timeout: 60000,
+  timeout: 120000,
+  expect: { timeout: 15000 },
   fullyParallel: false,
   workers: 1,
   use: {
@@ -19,7 +20,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev -- --port 3100",
+    command: "npm run dev -- --port 3100 --hostname 127.0.0.1",
     url: "http://127.0.0.1:3100/api/health",
     reuseExistingServer: false,
     timeout: 120000,

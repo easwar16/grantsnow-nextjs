@@ -1,0 +1,96 @@
+/* GN-Angular header .notifications / .badge and notifications-popup.css. */
+.host {
+  position: relative;
+  display: flex;
+}
+.bell {
+  gap: 6px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--gn-radius);
+  color: inherit;
+  font-weight: 400;
+}
+.bell:hover,
+.bell[aria-expanded="true"] {
+  background: rgba(255, 255, 255, 0.1);
+}
+.badge {
+  padding: 0 6px;
+  border-radius: 7.5px;
+  background: var(--gn-badge-warning);
+  color: var(--ink);
+  font-size: 10px;
+  line-height: 15px;
+}
+/* A connected overlay below the bell, end-aligned, 6px offset. */
+.popup {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  width: 33.333vw; /* legacy #popupNotifications oj-md-4 */
+  color: var(--gn-text);
+  background: var(--gn-surface);
+  border: 1px solid var(--gn-divider);
+  border-radius: var(--gn-radius-menu);
+  box-shadow: var(--gn-shadow-menu);
+}
+.head {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--gn-divider);
+}
+.link {
+  color: var(--gn-link);
+}
+.list {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  max-height: 150px;
+  overflow-y: auto;
+  padding: 8px 16px;
+}
+.day {
+  padding: 6px 0;
+  font-weight: 700;
+}
+.row {
+  display: flex;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--gn-gridline);
+}
+.content {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.content :global(p) {
+  margin: 0;
+}
+.time {
+  flex: none;
+  align-self: flex-end;
+  color: var(--gn-text-secondary);
+}
+.empty {
+  padding: 12px 0;
+}
+.empty p {
+  margin: 0 0 6px;
+}
+
+/* legacy oj-sm-12 below the JET md breakpoint */
+@media (max-width: 767px) {
+  .popup {
+    width: calc(100vw - 24px);
+  }
+}

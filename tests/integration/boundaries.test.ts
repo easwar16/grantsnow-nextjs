@@ -1,4 +1,4 @@
-import { loadSummary } from "@/server/proposals/record";
+import { loadSummary } from "@/server/modules/proposals/record";
 import { beforeEach, afterEach, it, expect, vi } from "vitest";
 const state = vi.hoisted(() => ({
   app: undefined as unknown,
@@ -7,8 +7,10 @@ const state = vi.hoisted(() => ({
   destroy: vi.fn(),
   calls: vi.fn(),
 }));
-vi.mock("@/server/session/storage", () => ({ storage: async () => state }));
-vi.mock("@/server/api/transport", async (importOriginal) => ({
+vi.mock("@/server/identity/session/storage", () => ({
+  storage: async () => state,
+}));
+vi.mock("@/server/oracle/connection", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   oracle: state.calls,
 }));
@@ -16,10 +18,11 @@ import {
   authenticate,
   renewSession,
   clearSession,
-} from "@/server/session/service";
+  forgetValidation,
+} from "@/server/identity/session/service";
 import { GET as proposalsGet } from "@/app/api/proposals/route";
 import { GET as callback } from "@/app/api/auth/callback/route";
-import { widgetResult, loadWidget } from "@/server/home/service";
+import { widgetResult, loadWidget } from "@/server/modules/home/service";
 import { fixtureUser } from "@/test-support/fixtures";
 const app = () => ({
   token: "isolated-test-token",
@@ -34,6 +37,7 @@ const valid = () => ({
   expiry_datetime: new Date(Date.now() + 600000).toISOString(),
 });
 beforeEach(() => {
+  forgetValidation("isolated-test-token");
   vi.stubEnv("APP_ORIGIN", "http://127.0.0.1:3000");
   vi.stubEnv("FIXTURE_MODE", "false");
   state.app = app();
@@ -74,12 +78,9 @@ it("direct API request with denied module returns 403", async () => {
     new Request("http://127.0.0.1:3000/api/proposals"),
   );
   expect(response.status).toBe(403);
-  expect(state.calls).not.toHaveBeenCalledWith(
-    "getPre_awardGetProposalsList",
-    expect.anything(),
-    expect.anything(),
-    expect.anything(),
-  );
+  expect(
+    state.calls.mock.calls.some((c) => c[0] === "getPre_awardGetProposalsList"),
+  ).toBe(false);
 });
 it("expired cookie cannot call Oracle", async () => {
   state.app = { ...app(), expiresAt: Date.now() - 1 };
@@ -183,7 +184,12 @@ it("verified org and statistics filter propagation never substitutes browser ide
     quarter: "4",
     offset: 0,
   });
-  expect(state.calls).toHaveBeenCalledWith(
+  // The client also passes its optional path argument; compare the leading ones.
+  expect(
+    state.calls.mock.calls
+      .filter((c) => c[0] === "getProposalGetProposalStatistics")
+      .map((c) => c.slice(0, 4)),
+  ).toContainEqual([
     "getProposalGetProposalStatistics",
     {
       token: "isolated-test-token",
@@ -195,18 +201,28 @@ it("verified org and statistics filter propagation never substitutes browser ide
     },
     expect.any(URLSearchParams),
     undefined,
-  );
+  ]);
 });
 
 it("summary denies missing object read access before fetching a record", async () => {
   await expect(
     loadSummary({ type: "PROPOSAL", id: "123" }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
-  expect(state.calls).toHaveBeenCalledWith("getSecurityUser_roles", {
-    token: "isolated-test-token",
-    p_obj_type: "PROPOSAL",
-    p_obj_id: "123",
-  });
+  // The client also passes its optional signal / query / path arguments; compare the leading ones.
+  expect(
+    state.calls.mock.calls
+      .filter((c) => c[0] === "getSecurityUser_roles")
+      .map((c) => c.slice(0, 2)),
+  ).toEqual([
+    [
+      "getSecurityUser_roles",
+      {
+        token: "isolated-test-token",
+        p_obj_type: "PROPOSAL",
+        p_obj_id: "123",
+      },
+    ],
+  ]);
   expect(
     state.calls.mock.calls.some((c) => c[0] === "getProposalProposal_id"),
   ).toBe(false);
@@ -217,4 +233,25 @@ it("summary direct boundary denies absent session before any Oracle request", as
     loadSummary({ type: "PROPOSAL", id: "123" }),
   ).rejects.toMatchObject({ code: "UNAUTHENTICATED" });
   expect(state.calls).not.toHaveBeenCalled();
+});
+it("shares one Oracle validate per token across a page's parallel requests (D24)", async () => {
+  await Promise.all(
+    [authenticate(), authenticate(), authenticate()].map(async (p) => p),
+  );
+  const validates = state.calls.mock.calls.filter(
+    ([op]) => op === "getSessionValidate",
+  );
+  expect(validates.length).toBeLessThanOrEqual(1);
+});
+it("a sign-out in one module instance drops the validation the other holds", async () => {
+  const validates = () =>
+    state.calls.mock.calls.filter(([op]) => op === "getSessionValidate").length;
+  await authenticate();
+  expect(validates()).toBe(1);
+  // Route handlers and pages load the session module separately.
+  vi.resetModules();
+  const other = await import("@/server/identity/session/service");
+  other.forgetValidation("isolated-test-token");
+  await authenticate();
+  expect(validates()).toBe(2);
 });

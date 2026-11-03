@@ -9,14 +9,14 @@ const mocks = vi.hoisted(() => ({
   grant: vi.fn(),
   oracle: vi.fn(),
 }));
-vi.mock("@/server/session/storage", () => ({
+vi.mock("@/server/identity/session/storage", () => ({
   storage: async () => mocks.store,
 }));
-vi.mock("@/server/auth/oidc", () => ({
+vi.mock("@/server/identity/auth/oidc", () => ({
   idcs: async () => ({ tenant: "isolated-fake-oidc" }),
 }));
 vi.mock("openid-client", () => ({ authorizationCodeGrant: mocks.grant }));
-vi.mock("@/server/api/transport", async (original) => ({
+vi.mock("@/server/oracle/connection", async (original) => ({
   ...(await original<object>()),
   oracle: mocks.oracle,
 }));
@@ -95,4 +95,16 @@ it("unknown backend user in HTTP 200 creates no session", async () => {
   );
   expect(response.headers.get("location")).toContain("LOGIN_FAILED");
   expect(mocks.store.app).toBeUndefined();
+});
+it("a callback with no sign-in in progress leaves the current session alone", async () => {
+  mocks.store.app = { token: "live-session" };
+  mocks.store.transaction = undefined;
+  const response = await GET(
+    new Request("http://127.0.0.1:3000/api/auth/callback?code=forged"),
+  );
+  expect(mocks.store.destroy).not.toHaveBeenCalled();
+  expect(mocks.store.app).toEqual({ token: "live-session" });
+  expect(response.headers.get("location")).toBe(
+    "http://127.0.0.1:3000/login?reason=LOGIN_FAILED",
+  );
 });

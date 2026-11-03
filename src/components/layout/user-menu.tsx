@@ -1,25 +1,24 @@
 "use client";
+import { clearTabState } from "@/lib/tab-state";
 import { useEffect, useRef, useState } from "react";
-import { SessionControls } from "./session-controls";
-type Panel = "profile" | "preferences" | "accessibility";
+import { ProfileDialog } from "@/features/modules/account/profile-dialog";
+import { Icon } from "@/components/ui/icon";
+import type { ConfigureMode } from "./configure-drawer";
+import { useShell } from "./shell-context";
+/** The header's user name and menu (GN-Angular header user menu); Preferences/Accessibility open the end drawer. */
 export function UserMenu({
   name,
-  organization,
+  onConfigure,
 }: {
   name: string;
-  organization: string;
+  onConfigure: (mode: ConfigureMode) => void;
 }) {
+  const { labels } = useShell();
   const menu = useRef<HTMLDetailsElement>(null),
     trigger = useRef<HTMLElement>(null),
     dialog = useRef<HTMLDialogElement>(null);
-  const [panel, setPanel] = useState<Panel>("profile"),
-    [theme, setTheme] = useState("default"),
-    [contrast, setContrast] = useState(false),
-    [textSize, setTextSize] = useState("default");
-  const organisationDark = useRef(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   useEffect(() => {
-    organisationDark.current =
-      document.querySelector(".app")?.classList.contains("dark") === true;
     const close = (event: PointerEvent) => {
       if (menu.current && !menu.current.contains(event.target as Node))
         menu.current.open = false;
@@ -27,24 +26,8 @@ export function UserMenu({
     document.addEventListener("pointerdown", close);
     return () => document.removeEventListener("pointerdown", close);
   }, []);
-  function open(next: Panel) {
-    setPanel(next);
+  function closeMenu() {
     if (menu.current) menu.current.open = false;
-    dialog.current?.showModal();
-  }
-  function save(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const root = document.querySelector(".app");
-    if (panel === "preferences") {
-      root?.classList.toggle(
-        "dark",
-        theme === "default" ? organisationDark.current : theme === "theme-dark",
-      );
-    } else {
-      root?.classList.toggle("accessibility-contrast", contrast);
-      root?.classList.toggle("accessibility-large", textSize === "large");
-    }
-    dialog.current?.close();
   }
   function menuKeys(event: React.KeyboardEvent<HTMLDivElement>) {
     const items = [
@@ -66,159 +49,95 @@ export function UserMenu({
     }
     if (event.key === "Escape") {
       event.preventDefault();
-      if (menu.current) menu.current.open = false;
+      closeMenu();
       trigger.current?.focus();
     }
   }
   return (
     <>
-      <details className="user-menu" ref={menu}>
+      <details id="user-menu" className="user-menu" ref={menu}>
         <summary
           ref={trigger}
+          id="user-menu-button"
           aria-haspopup="menu"
           onKeyDown={(event) => {
-            if (event.key === "ArrowDown") {
-              event.preventDefault();
-              if (menu.current) menu.current.open = true;
-              menu.current
-                ?.querySelector<HTMLButtonElement>('[role="menuitem"]')
-                ?.focus();
-            }
+            if (event.key !== "ArrowDown") return;
+            event.preventDefault();
+            if (menu.current) menu.current.open = true;
+            menu.current
+              ?.querySelector<HTMLButtonElement>('[role="menuitem"]')
+              ?.focus();
           }}
         >
           {name}
-          <span aria-hidden="true">▾</span>
+          <Icon name="caret-down" />
         </summary>
         <div
+          id="user-menu-list"
           className="user-menu-content"
           role="menu"
           aria-label={name}
           onKeyDown={menuKeys}
         >
-          <button role="menuitem" onClick={() => open("profile")}>
-            <span className="ux-icon" aria-hidden="true">
-              {"\uf8a8"}
-            </span>
-            Manage profile
+          <button
+            id="user-menu-profile"
+            role="menuitem"
+            onClick={() => {
+              closeMenu();
+              setProfileOpen(true);
+              dialog.current?.showModal();
+            }}
+          >
+            <Icon name="user-configuration" />
+            {labels.manageProfile}
           </button>
-          <button role="menuitem" onClick={() => open("preferences")}>
-            <span className="ux-icon" aria-hidden="true">
-              {"\uf34b"}
-            </span>
-            Preferences
+          <button
+            id="user-menu-preferences"
+            role="menuitem"
+            onClick={() => {
+              closeMenu();
+              onConfigure("preferences");
+            }}
+          >
+            <Icon name="settings" />
+            {labels.preferences}
           </button>
-          <button role="menuitem" onClick={() => open("accessibility")}>
-            <span className="ux-icon" aria-hidden="true">
-              {"\uf103"}
-            </span>
-            Accessibility
+          <button
+            id="user-menu-accessibility"
+            role="menuitem"
+            onClick={() => {
+              closeMenu();
+              onConfigure("accessibility");
+            }}
+          >
+            <Icon name="accessibility" />
+            {labels.accessibility}
           </button>
-          <form action="/api/auth/logout" method="post">
-            <button role="menuitem" type="submit">
-              <span className="ux-icon" aria-hidden="true">
-                {"\uf2d5"}
-              </span>
-              Sign Out
+          <form
+            id="user-menu-sign-out-form"
+            action="/api/auth/logout"
+            method="post"
+            onSubmit={clearTabState}
+          >
+            <button id="user-menu-sign-out" role="menuitem" type="submit">
+              <Icon name="logout" />
+              {labels.signOut}
             </button>
           </form>
         </div>
       </details>
       <dialog
         ref={dialog}
-        className={`account-dialog account-dialog-${panel}`}
-        aria-label={
-          panel === "profile"
-            ? "Manage profile"
-            : panel === "preferences"
-              ? "User Preferences"
-              : "Accessibility"
-        }
-        onClose={() => trigger.current?.focus()}
+        id="profile-dialog"
+        className="profile-dialog"
+        aria-labelledby="profile-title"
+        onClose={() => {
+          setProfileOpen(false);
+          trigger.current?.focus();
+        }}
       >
-        <header>
-          <h2>
-            {panel === "profile"
-              ? "Manage profile"
-              : panel === "preferences"
-                ? "User Preferences"
-                : "Accessibility"}
-          </h2>
-          <button
-            className="dialog-close"
-            aria-label="Close account settings"
-            onClick={() => dialog.current?.close()}
-          >
-            ×
-          </button>
-        </header>
-        {panel === "profile" ? (
-          <>
-            <dl>
-              <dt>Name</dt>
-              <dd>{name}</dd>
-              <dt>Organization</dt>
-              <dd>{organization}</dd>
-            </dl>
-            <p className="muted">
-              Identity is supplied by GrantsNow. Profile editing is not yet
-              connected.
-            </p>
-            <SessionControls />
-          </>
-        ) : (
-          <form onSubmit={save}>
-            {panel === "preferences" ? (
-              <fieldset>
-                <legend>Theme</legend>
-                {[
-                  ["default", "Organisation default"],
-                  ["theme-light", "Light"],
-                  ["theme-dark", "Dark"],
-                ].map(([value, label]) => (
-                  <label key={value}>
-                    <input
-                      type="radio"
-                      name="theme"
-                      value={value}
-                      checked={theme === value}
-                      onChange={() => setTheme(value)}
-                    />
-                    {label}
-                  </label>
-                ))}
-              </fieldset>
-            ) : (
-              <>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={contrast}
-                    onChange={(e) => setContrast(e.target.checked)}
-                  />
-                  High contrast
-                </label>
-                <label>
-                  Text size
-                  <select
-                    value={textSize}
-                    onChange={(e) => setTextSize(e.target.value)}
-                  >
-                    <option value="default">Default</option>
-                    <option value="large">Large</option>
-                  </select>
-                </label>
-              </>
-            )}
-            <p className="muted">
-              Applies to the current browser session. Server preference
-              persistence is not yet connected.
-            </p>
-            <footer>
-              <button type="submit" className="primary">
-                Save
-              </button>
-            </footer>
-          </form>
+        {profileOpen && (
+          <ProfileDialog onClose={() => dialog.current?.close()} />
         )}
       </dialog>
     </>

@@ -1,0 +1,1071 @@
+{
+  "getSessionLogin": {
+    "service": "base",
+    "path": "/session/login",
+    "headers": ["username"]
+  },
+  "getSessionExtend_token": {
+    "service": "base",
+    "path": "/session/extend_token",
+    "headers": ["token"]
+  },
+  "getSessionLogout": {
+    "service": "base",
+    "path": "/session/logout",
+    "headers": ["token"]
+  },
+  "getSessionValidate": {
+    "service": "base",
+    "path": "/session/validate",
+    "headers": ["token"]
+  },
+  "getPre_awardGetProposalsList": {
+    "service": "apps",
+    "path": "/pre_award/getProposalsList/",
+    "headers": ["token"]
+  },
+  "getProposalsListAdvanced": {
+    "service": "apps",
+    "path": "/pre_award/getProposalsListAdvanced/",
+    "headers": ["token"]
+  },
+  "getPre_awardGetDeletedProposalsList": {
+    "service": "apps",
+    "path": "/pre_award/getDeletedProposalsList/",
+    "headers": ["token"]
+  },
+  "getProposalCopyProposalObjList": {
+    "service": "apps",
+    "path": "/Proposal/copyProposalObjList/",
+    "headers": ["token", "P_OBJ_TYPE"]
+  },
+  "postProposalCopyProposal": {
+    "service": "apps",
+    "path": "/Proposal/copyProposal",
+    "headers": ["token", "legal_id", "org_id"],
+    "method": "POST",
+    "write": true
+  },
+  "deleteProposalProposalProposal_id": {
+    "service": "apps",
+    "path": "/Proposal/proposal/{proposal_id}",
+    "headers": ["token"],
+    "method": "DELETE",
+    "write": true
+  },
+  "getProposalRestoreProposalProposal_id": {
+    "service": "apps",
+    "path": "/Proposal/restoreProposal/{proposal_id}",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "getReportsShareReport": {
+    "service": "apps",
+    "path": "/reports/shareReport/",
+    "headers": ["token", "proposal_id", "username", "report_name"],
+    "method": "POST",
+    "write": true
+  },
+  "getSharedGetObjectDates": {
+    "service": "apps",
+    "path": "/shared/getObjectDates",
+    "headers": ["token", "p_obj_type"]
+  },
+  "getSecurityUser_roles": {
+    "service": "apps",
+    "path": "/security/user_roles",
+    "headers": ["token", "p_obj_type", "p_obj_id"]
+  },
+  "getProposalProp_appr_deadline": {
+    "service": "apps",
+    "path": "/Proposal/prop_appr_deadline/",
+    "headers": ["token", "p_org_id"]
+  },
+  "getProposalPendingApproval": {
+    "service": "apps",
+    "path": "/Proposal/pendingApproval",
+    "headers": ["token", "p_org_id"]
+  },
+  "getContractsContract_appr_deadline": {
+    "service": "apps",
+    "path": "/contracts/contract_appr_deadline",
+    "headers": ["token", "p_org_id"]
+  },
+  "getContractsContractPendingApproval": {
+    "service": "apps",
+    "path": "/contracts/ContractPendingApproval",
+    "headers": ["token", "p_org_id"]
+  },
+  "getSharedLabels": {
+    "service": "apps",
+    "path": "/shared/labels",
+    "headers": ["token", "module_name"]
+  },
+  "getProposalGetProposalStatistics": {
+    "service": "apps",
+    "path": "/Proposal/GetProposalStatistics",
+    "headers": ["token", "chart_type", "p_org_id", "month", "quarter", "year"]
+  },
+  "getPost_awardsAwardStatistics": {
+    "service": "apps",
+    "path": "/post_awards/AwardStatistics",
+    "headers": ["token", "chart_type", "p_org_id", "quarter", "month", "year"]
+  },
+  "getDynamicFormsApplicationStatistics": {
+    "service": "apps",
+    "path": "/dynamicForms/applicationStatistics",
+    "headers": ["chart_type", "token", "p_org_id", "quarter", "year", "month"]
+  },
+  "getDynamicFormsApplicationList": {
+    "service": "apps",
+    "path": "/dynamicForms/applicationList",
+    "headers": ["token", "access_type", "ref_module", "object_type"]
+  },
+  "getDynamicFormsApplicationSetup": {
+    "service": "apps",
+    "path": "/dynamicForms/applicationSetup",
+    "headers": ["token"]
+  },
+  "getDynamicFormsGetApplicationApprover": {
+    "service": "apps",
+    "path": "/dynamicForms/getApplicationApprover",
+    "headers": ["token", "p_emp_num"]
+  },
+  "getDynamicFormsGetDeletedApplicationList": {
+    "service": "apps",
+    "path": "/dynamicForms/getDeletedApplicationList",
+    "headers": ["token", "p_obj_type"]
+  },
+  "getDynamicFormsRestoreApplicationSetup_flow_id": {
+    "service": "apps",
+    "path": "/dynamicForms/restoreApplication/{setup_flow_id}",
+    "method": "POST",
+    "write": true,
+    "headers": ["token"]
+  },
+  "postDynamicFormsApplicationSetup": {
+    "service": "apps",
+    "path": "/dynamicForms/applicationSetup",
+    "method": "POST",
+    "write": true,
+    "headers": ["token"]
+  },
+  "getDynamicFormsApplApprDeadline2": {
+    "service": "apps",
+    "path": "/dynamicForms/applApprDeadline",
+    "headers": ["token", "p_org_id"]
+  },
+  "getDynamicFormsApplPendingApproval": {
+    "service": "apps",
+    "path": "/dynamicForms/applPendingApproval",
+    "headers": ["token", "p_org_id"]
+  },
+  "getSharedDashboardPreferences": {
+    "service": "apps",
+    "path": "/shared/dashboardPreferences",
+    "headers": ["token"]
+  },
+  "getPost_awardsAwardPendingApproval": {
+    "service": "apps",
+    "path": "/post_awards/awardPendingApproval",
+    "headers": ["token", "org_id"]
+  },
+  "getPost_awardsApprovedAwards": {
+    "service": "apps",
+    "path": "/post_awards/approvedAwards",
+    "headers": ["token", "org_id"]
+  },
+  "getEoiPendingApproval": {
+    "service": "apps",
+    "path": "/dynamicForms/eoiPendingApproval",
+    "headers": ["token", "p_org_id"]
+  },
+  "getPre_awardGetLkpOrgUnitType": {
+    "service": "apps",
+    "path": "/pre_award/getLkpOrgUnitType/",
+    "headers": ["token", "person_id", "p_obj_type"]
+  },
+  "GetSponsorList": {
+    "service": "apps",
+    "path": "/pre_award/getSponsorList/",
+    "headers": ["token"]
+  },
+  "getPre_awardGetLookupTypesCodes": {
+    "service": "apps",
+    "path": "/pre_award/getLookupTypesCodes",
+    "headers": ["token", "object_date"]
+  },
+  "getPre_awardGetPersonList": {
+    "service": "apps",
+    "path": "/pre_award/getPersonList/",
+    "headers": ["token", "p_org_id"]
+  },
+  "getProposalProposal_id": {
+    "service": "apps",
+    "path": "/Proposal/proposal/{proposal_id}",
+    "headers": ["token", "proposal_version_id"]
+  },
+  "getSharedGetKpiStatistics": {
+    "service": "apps",
+    "path": "/shared/getKpiStatistics",
+    "headers": ["token", "p_org_id", "report_name"]
+  },
+  "getSharedAnnouncements": {
+    "service": "apps",
+    "path": "/shared/announcements",
+    "headers": ["token", "module_name"]
+  },
+  "getPre_award_costingGetGlobalVar": {
+    "service": "apps",
+    "path": "/pre_awards_costing/getGlobalVar/",
+    "headers": ["token"]
+  },
+  "getSharedGetOpportunities": {
+    "service": "apps",
+    "path": "/shared/getOpportunities",
+    "headers": ["token", "p_order_by", "p_sort_order"]
+  },
+  "getDynamicFormsAllRequests": {
+    "service": "apps",
+    "path": "/dynamicForms/allRequests/",
+    "headers": ["token", "p_module_name"]
+  },
+  "getSharedGetOppStatistics": {
+    "service": "apps",
+    "path": "/shared/getOppStatistics",
+    "headers": ["token", "chart_type"]
+  },
+  "getPre_awardAttachmentsProposal_id": {
+    "service": "apps",
+    "path": "/pre_award/attachments/",
+    "headers": ["token"]
+  },
+  "getApproval_setupApproval_stages": {
+    "service": "apps",
+    "path": "/approval_setup/approval_stages",
+    "headers": ["token"]
+  },
+  "getApproval_setupGet_stage_users": {
+    "service": "apps",
+    "path": "/approval_setup/get_stage_users",
+    "headers": ["token", "p_approval_number", "stage_id", "doc_type"]
+  },
+  "getPre_awardGetApprovalHistory": {
+    "service": "apps",
+    "path": "/pre_award/getApprovalHistory",
+    "headers": ["token", "transaction_number", "approval_type"]
+  },
+  "getApproval_groupApproval_group_m": {
+    "service": "apps",
+    "path": "/approval_setup/getApprovers",
+    "headers": ["token", "approver_type"]
+  },
+  "getApproval_setupGenerate_stages": {
+    "service": "apps",
+    "path": "/approval_setup/generate_stages",
+    "headers": ["token"],
+    "write": true
+  },
+  "postApproval_setupPost_approval": {
+    "service": "apps",
+    "path": "/approval_setup/post_approval",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "postApproval_setupAdd_stage": {
+    "service": "apps",
+    "path": "/approval_setup/add_stage",
+    "headers": ["token", "legal_id", "org_id"],
+    "method": "POST",
+    "write": true
+  },
+  "deleteApproval_setupApproval_stages": {
+    "service": "apps",
+    "path": "/approval_setup/approval_stages",
+    "headers": ["token", "approval_number", "approval_stage_id"],
+    "method": "DELETE",
+    "write": true
+  },
+  "postApproval_setupApproval_stages_users": {
+    "service": "apps",
+    "path": "/approval_setup/approval_stages_users",
+    "headers": ["token", "p_new_appr", "p_stage_id"],
+    "method": "POST",
+    "write": true
+  },
+  "postApproval_setupReassign_stage": {
+    "service": "apps",
+    "path": "/approval_setup/reassign_stage",
+    "headers": ["token", "p_current_appr", "p_new_appr", "p_stage_id"],
+    "method": "POST",
+    "write": true
+  },
+  "deleteApproval_setupApproval_stages_users": {
+    "service": "apps",
+    "path": "/approval_setup/approval_stages_users",
+    "headers": ["token", "p_appr", "p_stage_id"],
+    "method": "DELETE",
+    "write": true
+  },
+  "getSharedObjectStatus": {
+    "service": "apps",
+    "path": "/shared/objectStatus",
+    "headers": ["token", "p_obj_type", "p_obj_id"]
+  },
+  "getProposalComments": {
+    "service": "apps",
+    "path": "/shared/comments/",
+    "headers": ["token"]
+  },
+  "postProposalComments": {
+    "service": "apps",
+    "path": "/shared/comments/",
+    "headers": ["token", "legal_id", "org_id", "user_id"],
+    "method": "POST",
+    "write": true
+  },
+  "deleteSharedComments": {
+    "service": "apps",
+    "path": "/shared/comments/",
+    "headers": ["token", "legal_id", "org_id", "user_id"],
+    "method": "DELETE",
+    "write": true
+  },
+  "getSharedGetObjectAudits2": {
+    "service": "apps",
+    "path": "/shared/getObjectAudits",
+    "headers": ["token", "p_obj_id", "p_obj_type", "p_page_name", "p_event"]
+  },
+  "getSharedGetObjectAttributes": {
+    "service": "apps",
+    "path": "/shared/getObjectAttributes",
+    "headers": ["token", "p_obj_type", "p_obj_id"]
+  },
+  "getProposalFxRates": {
+    "service": "apps",
+    "path": "/pre_awards_costing/proposalFxRates",
+    "headers": ["token", "proposal_id", "version_id"]
+  },
+  "postProposalFxRates": {
+    "service": "apps",
+    "path": "/pre_awards_costing/proposalFxRates",
+    "headers": ["token", "proposal_id", "version_id", "mode"],
+    "method": "POST",
+    "write": true
+  },
+  "getProposalEthical_dynFormsP_ref_module": {
+    "service": "apps",
+    "path": "/dynamicForms/dynForms",
+    "headers": [
+      "token",
+      "p_id",
+      "p_ref_module",
+      "p_obj_type",
+      "p_tag_type",
+      "p_tag_value",
+      "p_obj_id"
+    ]
+  },
+  "getProposalEthicaldynFormResponse": {
+    "service": "apps",
+    "path": "/dynamicForms/dynFormResponse",
+    "headers": ["P_TOKEN", "P_REF_OBJ_ID", "P_REF_MODULE", "P_PERSON_ID"]
+  },
+  "getDynamicFormsGetRequestDetails": {
+    "service": "apps",
+    "path": "/dynamicForms/getRequestDetails/",
+    "headers": ["token", "request_id"]
+  },
+  "getProposalDelegationsProposal_id": {
+    "service": "apps",
+    "path": "/shared/delegations/",
+    "headers": ["token", "object_id", "object_type"]
+  },
+  "postProposalDelegations": {
+    "service": "apps",
+    "path": "/shared/delegations/",
+    "headers": ["token", "legal_id", "org_id"],
+    "method": "POST",
+    "write": true
+  },
+  "postProposalDelegationsDelegation_id": {
+    "service": "apps",
+    "path": "/shared/delegations/{delegation_id}",
+    "headers": ["token", "legal_id", "org_id"],
+    "method": "POST",
+    "write": true
+  },
+  "deleteProposalDelegations": {
+    "service": "apps",
+    "path": "/shared/delegations/",
+    "headers": [
+      "token",
+      "object_id",
+      "object_type",
+      "person_id",
+      "delegation_id"
+    ],
+    "method": "DELETE",
+    "write": true
+  },
+  "getSharedGetNextObjectStatus": {
+    "service": "apps",
+    "path": "/shared/getNextObjectStatus",
+    "headers": ["token", "p_object_id", "p_object_type"]
+  },
+  "postSharedObjectStatus": {
+    "service": "apps",
+    "path": "/shared/objectStatus",
+    "headers": ["token", "legal_id", "org_id", "user_id"],
+    "method": "POST",
+    "write": true
+  },
+  "getNotificationsNotifications": {
+    "service": "apps",
+    "path": "/notifications/notifications/",
+    "headers": ["token"]
+  },
+  "getSharedGetDynamicCharts": {
+    "service": "apps",
+    "path": "/shared/getDynamicCharts",
+    "headers": ["token", "p_org_id", "report_name"]
+  },
+  "getSharedGetOppCategoryStat": {
+    "service": "apps",
+    "path": "/shared/getOppCategoryStat",
+    "headers": ["token", "p_org_id", "quarter", "year", "month"]
+  },
+  "getSharedGetOppFunnelStat": {
+    "service": "apps",
+    "path": "/shared/getOppFunnelStat",
+    "headers": ["token", "p_org_id", "year", "quarter", "month"]
+  },
+  "getPost_awardsAwardVsCostStatistics": {
+    "service": "apps",
+    "path": "/post_awards/AwardVsCostStatistics",
+    "headers": ["token", "p_org_id", "year", "quarter", "month"]
+  },
+  "getSharedGetWidgetParameters": {
+    "service": "apps",
+    "path": "/shared/getWidgetParameters",
+    "headers": ["p_token", "p_org_id", "quarter", "month", "year"]
+  },
+  "getSharedGetTopOppCategoryStat": {
+    "service": "apps",
+    "path": "/shared/getTopOppCategoryStat",
+    "headers": ["token", "p_org_id", "month", "quarter", "year"]
+  },
+  "getSharedGetOppFunders": {
+    "service": "apps",
+    "path": "/shared/getOppFunders",
+    "headers": ["token"]
+  },
+  "getSharedUserPreferenceLOV": {
+    "service": "apps",
+    "path": "/shared/UserPreferenceLOV",
+    "headers": ["token", "lov_type"]
+  },
+  "getSharedUserPreference": {
+    "service": "apps",
+    "path": "/shared/UserPreference",
+    "headers": ["token"]
+  },
+  "getSharedPersonStatus": {
+    "service": "apps",
+    "path": "/shared/PersonStatus",
+    "headers": ["token"]
+  },
+  "getSharedGetOpportunitiesNewFlags": {
+    "service": "apps",
+    "path": "/shared/getOpportunitiesNewFlags",
+    "headers": ["token"]
+  },
+  "getSharedGetCustomTheme": {
+    "service": "apps",
+    "path": "/shared/getCustomTheme",
+    "headers": ["token"]
+  },
+  "getDynamicFormsCheckApplApprAccess": {
+    "service": "apps",
+    "path": "/dynamicForms/checkApplApprAccess",
+    "headers": ["token"]
+  },
+  "getProposalContactDtls": {
+    "service": "apps",
+    "path": "/Proposal/contactDtls/",
+    "headers": ["p_token", "p_record_type", "p_person_id", "p_dept_id"]
+  },
+  "getSharedCustErpDetails2": {
+    "service": "apps",
+    "path": "/shared/custErpDetails",
+    "headers": ["token", "module_name"]
+  },
+  "postProposalCreditAllocation": {
+    "service": "apps",
+    "method": "POST",
+    "path": "/Proposal/creditAllocation",
+    "headers": ["token", "p_prop_period_version_id"],
+    "write": true
+  },
+  "getPre_awardGetPersonListAll": {
+    "service": "apps",
+    "path": "/pre_award/getPersonListAll",
+    "headers": ["token"]
+  },
+  "getPre_awardGetCollaboratorList": {
+    "service": "apps",
+    "path": "/pre_award/getCollaboratorList/",
+    "headers": ["token"]
+  },
+  "deletePre_awardDeleteCollaboratorProp_collab_rltn_id": {
+    "service": "apps",
+    "method": "DELETE",
+    "path": "/pre_award/deleteCollaborator/{prop_collab_rltn_id}",
+    "headers": ["token"],
+    "write": true
+  },
+  "getSharedDigitalPresence": {
+    "service": "apps",
+    "path": "/shared/digitalPresence",
+    "headers": ["token", "pid"]
+  },
+  "getNotificationsGetGroupsAndRoles": {
+    "service": "apps",
+    "path": "/notifications/getGroupsAndRoles",
+    "headers": ["token", "p_share_to"]
+  },
+  "getDynamicFormsInsertRequest": {
+    "service": "apps",
+    "path": "/dynamicForms/insertRequest/",
+    "headers": [
+      "token",
+      "P_REF_OBJECT_ID",
+      "P_REF_OBJECT_TYPE",
+      "P_REQUEST_TYPE"
+    ],
+    "method": "GET",
+    "write": true
+  },
+  "postNotificationsNotifications": {
+    "service": "apps",
+    "path": "/notifications/notifications/",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "postSharedDigitalPresence": {
+    "service": "apps",
+    "path": "/shared/digitalPresence",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "postSharedBookmarkOpp": {
+    "service": "apps",
+    "path": "/shared/bookmarkOpp",
+    "headers": ["token", "p_opp_id"],
+    "method": "POST",
+    "write": true
+  },
+  "deleteSharedBookmarkOpp": {
+    "service": "apps",
+    "path": "/shared/bookmarkOpp",
+    "headers": ["token", "p_opp_id"],
+    "method": "DELETE",
+    "write": true
+  },
+  "postSharedOppAddlDetails": {
+    "service": "apps",
+    "path": "/shared/oppAddlDetails",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "postNotificationsSendPersonNotifications": {
+    "service": "apps",
+    "path": "/notifications/sendPersonNotifications",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "postProposalProposal": {
+    "service": "apps",
+    "path": "/Proposal/proposal",
+    "headers": ["token", "legal_id", "org_id"],
+    "method": "POST",
+    "write": true
+  },
+  "postDynamicFormsDynFormResponse": {
+    "service": "apps",
+    "path": "/dynamicForms/dynFormResponse",
+    "headers": [
+      "token",
+      "P_TOKEN",
+      "P_FORM_ID",
+      "P_OBJECT_ID",
+      "P_OBJECT_TYPE"
+    ],
+    "method": "POST",
+    "write": true
+  },
+  "getSharedOpportunitiesFilter": {
+    "service": "apps",
+    "path": "/shared/OpportunitiesFilter",
+    "headers": ["token"]
+  },
+  "getSharedGetOppFunderTypes": {
+    "service": "apps",
+    "path": "/shared/getOppFunderTypes",
+    "headers": ["token"]
+  },
+  "getSharedGetOppCallCodes": {
+    "service": "apps",
+    "path": "/shared/getOppCallCodes",
+    "headers": ["token"]
+  },
+  "getSharedFinalizablePages": {
+    "service": "apps",
+    "path": "/shared/finalizablePages",
+    "headers": ["token", "p_obj_type", "p_obj_id"]
+  },
+  "getProposalGetLockedModules": {
+    "service": "apps",
+    "path": "/Proposal/getLockedModules/",
+    "headers": ["token", "module_name"]
+  },
+  "getProposalGetLockStatus": {
+    "service": "apps",
+    "path": "/Proposal/getLockStatus/",
+    "headers": ["token", "prop_id", "lock_level", "module_name"]
+  },
+  "postProposalInsertModuleLock": {
+    "service": "apps",
+    "path": "/Proposal/insertModuleLock/",
+    "headers": ["token", "legal_id", "org_id"],
+    "method": "POST",
+    "write": true
+  },
+  "postPre_awardAttachments": {
+    "service": "apps",
+    "path": "/pre_award/attachments/",
+    "headers": ["token", "org_id", "legal_id"],
+    "method": "POST",
+    "write": true
+  },
+  "deletePre_awardAttachments": {
+    "service": "apps",
+    "path": "/pre_award/attachments/",
+    "headers": ["token", "id", "org_id", "legal_id"],
+    "method": "DELETE",
+    "write": true
+  },
+  "getPre_awardLinks": {
+    "service": "apps",
+    "path": "/pre_award/links",
+    "headers": ["token"]
+  },
+  "postPre_awardLinks": {
+    "service": "apps",
+    "path": "/pre_award/links",
+    "headers": ["token", "org_id", "legal_id"],
+    "method": "POST",
+    "write": true
+  },
+  "deletePre_awardLinks": {
+    "service": "apps",
+    "path": "/pre_award/links",
+    "headers": ["token"],
+    "method": "DELETE",
+    "write": true
+  },
+  "postSharedUserPreference": {
+    "service": "apps",
+    "path": "/shared/UserPreference",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "postSharedDashboardPreferences": {
+    "service": "apps",
+    "path": "/shared/dashboardPreferences",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "postSharedSaveDynamicCharts": {
+    "service": "apps",
+    "path": "/shared/saveDynamicCharts",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "postSharedPersonStatus": {
+    "service": "apps",
+    "path": "/shared/PersonStatus",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "getPost_awardsAwardHeader": {
+    "service": "apps",
+    "path": "/post_awards/AwardHeader",
+    "headers": ["token", "proposal_id"]
+  },
+  "getPost_awardsAdvancedSearch": {
+    "service": "apps",
+    "path": "/post_awards/advanced-search",
+    "headers": ["token"]
+  },
+  "getPost_awardsAwardhierarchy": {
+    "service": "apps",
+    "path": "/post_awards/Awardhierarchy",
+    "headers": ["token", "proposal_id", "module"]
+  },
+  "postPost_awardsGenerateAward": {
+    "service": "apps",
+    "path": "/post_awards/GenerateAward",
+    "headers": ["token", "proposal_id"],
+    "write": true
+  },
+  "postPost_awardsAwardHeader": {
+    "service": "apps",
+    "path": "/post_awards/AwardHeader",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "getContractsGetRelationItem": {
+    "service": "apps",
+    "path": "/contracts/getRelationItem",
+    "headers": ["token", "object_type", "object_status", "org_unit_id"]
+  },
+  "getSharedObjectLinked2": {
+    "service": "apps",
+    "path": "/shared/objectLinked",
+    "headers": ["token", "object_id", "object_type"]
+  },
+  "getPost_awardsCopyAwardObjList": {
+    "service": "apps",
+    "path": "/post_awards/copyAwardObjList",
+    "headers": ["token", "p_obj_type"]
+  },
+  "postPost_awardsCopyAward": {
+    "service": "apps",
+    "path": "/post_awards/copyAward",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "postLinkProposal": {
+    "service": "apps",
+    "path": "/post_awards/link-proposal",
+    "headers": ["token", "award-id", "proposal-id"],
+    "method": "POST",
+    "write": true
+  },
+  "getPost_awardsAwardDetails": {
+    "service": "apps",
+    "path": "/post_awards/AwardDetails",
+    "headers": ["token", "award_id", "project_id"]
+  },
+  "getPost_awardsAwardPeriodDetails": {
+    "service": "apps",
+    "path": "/post_awards/AwardPeriodDetails",
+    "headers": ["token", "p_award_id"]
+  },
+  "postPost_awardsAwardPeriodDetails": {
+    "service": "apps",
+    "path": "/post_awards/AwardPeriodDetails",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "postPost_awardsAwardBudgetPeriods": {
+    "service": "apps",
+    "path": "/post_awards/AwardBudgetPeriods",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "getPost_awardsActualVsExpenditureGraph": {
+    "service": "apps",
+    "path": "/post_awards/actualVsExpenditureGraph",
+    "headers": ["token", "p_project_id"]
+  },
+  "getPost_awardsActualVsExpenditureYearly": {
+    "service": "apps",
+    "path": "/post_awards/actualVsExpenditureYearly",
+    "headers": ["token", "p_project_id"]
+  },
+  "getPost_awardsActualVsExpenditureMonthly": {
+    "service": "apps",
+    "path": "/post_awards/actualVsExpenditureMonthly",
+    "headers": ["token", "p_project_id"]
+  },
+  "getProposalGetApplicationList": {
+    "service": "apps",
+    "path": "/Proposal/getApplicationList",
+    "headers": ["p_obj_type", "p_obj_ref_id", "token"]
+  },
+  "getPost_awardsGetProjectrole": {
+    "service": "apps",
+    "path": "/post_awards/GetProjectrole",
+    "headers": ["token"]
+  },
+  "getPre_awards_costingGetFundingHdr": {
+    "service": "apps",
+    "path": "/pre_awards_costing/getFundingHdr/",
+    "headers": ["token", "cost_model"]
+  },
+  "getPre_awardGetProjectRoles": {
+    "service": "apps",
+    "path": "/pre_award/getProjectRoles/",
+    "headers": ["token", "cost_type"]
+  },
+  "getPre_awards_costingGetCostItem": {
+    "service": "apps",
+    "path": "/pre_awards_costing/getCostItem/",
+    "headers": ["token"]
+  },
+  "postInsertCostingBulk": {
+    "service": "apps",
+    "path": "/pre_awards_costing/insertCostingBulk/",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "postPre_awards_costingInsertCostingHeaderN": {
+    "service": "apps",
+    "path": "/pre_awards_costing/insertCostingHeaderN/",
+    "headers": ["token", "legal_id", "org_id", "auto_save", "p_del_old_lines"],
+    "method": "POST",
+    "write": true
+  },
+  "postPre_awards_costingSaveCostingDataN": {
+    "service": "apps",
+    "path": "/pre_awards_costing/saveCostingDataN/",
+    "headers": ["token", "legal_id", "org_id"],
+    "method": "POST",
+    "write": true
+  },
+  "getPre_awardGetCostCategoryItems": {
+    "service": "apps",
+    "path": "/pre_award/getCostCategoryItems/",
+    "headers": ["token", "cost_category_type_lkp_code"]
+  },
+  "getAwardProjectCostItems": {
+    "service": "apps",
+    "path": "/post_awards/AwardPrjCostItem",
+    "headers": ["token", "award_id", "project_id", "costing_group_id"]
+  },
+  "postPost_awardsAwardProjects": {
+    "service": "apps",
+    "path": "/post_awards/AwardProjects",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "postPost_awardsAwardPRJTeamMembers": {
+    "service": "apps",
+    "path": "/post_awards/AwardPRJTeamMembers",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "postPost_awardsAwardPrjCostItem": {
+    "service": "apps",
+    "path": "/post_awards/AwardPrjCostItem",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "postAwardPrjCostLine": {
+    "service": "apps",
+    "path": "/post_awards/AwardPrjCostLine",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "deletePost_awardsAwardPrjCostItem": {
+    "service": "apps",
+    "path": "/post_awards/AwardPrjCostItem",
+    "headers": ["p_cost_item_id", "token", "p_costing_group_id"],
+    "method": "DELETE",
+    "write": true
+  },
+  "postPost_awardsCopyAwardPrjCostItem": {
+    "service": "apps",
+    "path": "/post_awards/copyAwardPrjCostItem",
+    "headers": ["token", "p_award_cost_item_id"],
+    "method": "POST",
+    "write": true
+  },
+  "getApproval_setupApproval_stages_graph": {
+    "service": "apps",
+    "path": "/approval_setup/approval_stages_graph",
+    "headers": ["token"]
+  },
+  "getContractsContract_id": {
+    "service": "apps",
+    "path": "/contracts/contracts/{contract_id}",
+    "headers": ["token", "obj_version_id"]
+  },
+  "getContractsGetContractTemplateName": {
+    "service": "apps",
+    "path": "/contracts/GetContractTemplateName",
+    "headers": ["token", "contract_type", "contract_level", "template_id"]
+  },
+  "getContractsGetContractVersions": {
+    "service": "apps",
+    "path": "/contracts/getContractVersions/",
+    "headers": ["token", "contract_id"]
+  },
+  "getContractsGetRelationType": {
+    "service": "apps",
+    "path": "/contracts/getRelationType",
+    "headers": ["token"]
+  },
+  "getContractsSignerDetails": {
+    "service": "apps",
+    "path": "/contracts/SignerDetails",
+    "headers": ["token", "contract_id"]
+  },
+  "getGetAllContracts": {
+    "service": "apps",
+    "path": "/contracts/getAllContracts/",
+    "headers": ["token", "p_status", "p_level", "p_object_ref_id"]
+  },
+  "getGetPlaceholderTags": {
+    "service": "apps",
+    "path": "/contracts/getPlaceholderTags/",
+    "headers": []
+  },
+  "getPre_awardGetSponsorTypes": {
+    "service": "apps",
+    "path": "/pre_award/getSponsorTypes/",
+    "headers": ["token"]
+  },
+  "getOpportunitiesGetOpportunityCategory": {
+    "service": "apps",
+    "path": "/opportunities/getOpportunityCategory",
+    "headers": []
+  },
+  "getPre_awards_costingGetCostModel": {
+    "service": "apps",
+    "path": "/pre_awards_costing/getCostModel/",
+    "headers": ["token"]
+  },
+  "getPre_awards_costingBudget_version": {
+    "service": "apps",
+    "path": "/pre_awards_costing/budget_version",
+    "headers": ["token"]
+  },
+  "getPre_awards_costingGetCostSummary": {
+    "service": "apps",
+    "path": "/pre_awards_costing/getCostSummary/",
+    "headers": ["token"]
+  },
+  "getSharedGetCustomerReport2": {
+    "service": "apps",
+    "path": "/shared/getCustomerReport",
+    "headers": ["token", "p_report_code", "p_param1", "p_param2"]
+  },
+  "getPre_awards_costingGetCostHeaderDetails": {
+    "service": "apps",
+    "path": "/pre_awards_costing/getCostHeaderDetails/",
+    "headers": ["token"]
+  },
+  "getPre_awards_costingGetCostingLines": {
+    "service": "apps",
+    "path": "/pre_awards_costing/getCostingLines/",
+    "headers": ["token"]
+  },
+  "getPre_awards_costingGetPricingDetails": {
+    "service": "apps",
+    "path": "/pre_awards_costing/getPricingDetails/",
+    "headers": ["token"]
+  },
+  "getCreditAllocation": {
+    "service": "apps",
+    "path": "/Proposal/creditAllocation",
+    "headers": ["token", "p_prop_period_version_id"]
+  },
+  "getReportsGetObjectRef": {
+    "service": "apps",
+    "path": "/reports/getObjectRef",
+    "headers": ["token", "p_object_id", "p_object_type"]
+  },
+  "getSharedGetCurrencyRate": {
+    "service": "apps",
+    "path": "/shared/getCurrencyRate",
+    "headers": ["token", "currency_code", "mode", "proposal_id", "version_id"]
+  },
+  "generateReport": {
+    "service": "apps",
+    "path": "/reports/generate-report",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "getUnitFundsList": {
+    "service": "apps",
+    "path": "/claims/unit-funds-list",
+    "headers": ["token", "org-id", "org_id"]
+  },
+  "postUnitInquiry": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "getFundTypes": {
+    "service": "apps",
+    "path": "/claims/fund-types",
+    "headers": ["token"]
+  },
+  "getClaimsOrgUnits": {
+    "service": "apps",
+    "path": "/claims/get-org-units",
+    "headers": ["token", "org-id"]
+  },
+  "getGrantValues": {
+    "service": "apps",
+    "path": "/claims/grant-values",
+    "headers": ["token"]
+  },
+  "getCopyClaimObjList": {
+    "service": "apps",
+    "path": "/claims/copy-claim-obj-list",
+    "headers": ["token"]
+  },
+  "postCopyClaimApp": {
+    "service": "apps",
+    "path": "/claims/copy-claim-app",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "getFundInquiries": {
+    "service": "apps",
+    "path": "/claims/fund-inquiry",
+    "headers": ["token", "org-id"]
+  },
+  "getAccountSummaries": {
+    "service": "apps",
+    "path": "/claims/fund-inquiry/account-summaries",
+    "headers": ["token", "app-fund-id"]
+  },
+  "getActivitiesSummary": {
+    "service": "apps",
+    "path": "/claims/fund-inquiry/activities-summary",
+    "headers": ["token", "app-fund-id"]
+  },
+  "getClaimLinesSummary": {
+    "service": "apps",
+    "path": "/claims/fund-inquiry/claim-lines-summary",
+    "headers": ["token", "app-fund-id", "status-type"]
+  }
+}

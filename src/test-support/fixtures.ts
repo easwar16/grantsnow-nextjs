@@ -2,23 +2,27 @@ import "server-only";
 export const fixtureUser = {
   pid: 101,
   org_id: 202,
+  // Live sessions carry one; file storage paths need it (INSTANCE/legal_id/…).
+  legal_id: "1",
   full_name: "Alex Morgan",
   org_name: "Example Research University",
   landing_module: "HOME",
   module_access: [
     "PROPOSALS",
+    "opportunities-group",
     "opportunities-finder",
     "opportunities-eoi-list",
-    "opportunities-eoi",
     "opportunities-analytics",
     "CONTRACTS",
     "ETHICS",
+    "DUE-DILIGENCE",
     "AWARDS",
-    "opportunities-eoi-list",
-    "opportunities-eoi",
+    "claims-group",
+    "claims-unit-inquiry",
+    "claims-funds-inquiry",
   ].map((module_name) => ({ module_name, is_accessible: "Y" })),
 };
-export const proposals = Array.from({ length: 37 }, (_, i) => ({
+const proposalSeed = Array.from({ length: 37 }, (_, i) => ({
   proposal_id: 1000 + i,
   proposal_number: `${i % 6 === 0 ? "OP" : "P"}_${String(i + 1).padStart(4, "0")}`,
   proposal_title:
@@ -54,4 +58,38 @@ export const proposals = Array.from({ length: 37 }, (_, i) => ({
   proposal_end_date: "2028-12-31",
   total_cost: i === 4 ? "****" : String(25000 + i * 7123),
   currency_code: "GBP",
+}));
+// Next dev compiles route handlers and pages separately; both need the same fixture writes.
+const fixtureState = globalThis as typeof globalThis & {
+  __grantsnowProposals?: typeof proposalSeed;
+};
+export const proposals = (fixtureState.__grantsnowProposals ??= proposalSeed);
+export const contracts = Array.from({ length: 24 }, (_, i) => ({
+  contract_id: 1300 + i,
+  contract_number: `C_${1300 + i}`,
+  contract_title:
+    [
+      "Research collaboration agreement",
+      "Funding contract",
+      "Data sharing agreement",
+    ][i % 3] + ` ${i + 1}`,
+  status: ["Draft", "Awaiting Internal Approval", "Signed"][i % 3],
+  status_lkp_code: ["DRFT", "AIA", "SIGNED"][i % 3],
+  contract_type: "RESEARCH",
+  template_id: 1,
+  legal_id: 1,
+  uses_standard_templ: "Y",
+  contract_type_name: "Research Contract",
+  contract_level: i % 2 ? "AWARD" : "PROPOSAL",
+  contract_level_desc: i % 2 ? "Award" : "Proposal",
+  object_ref_id: i % 2 ? `A_${100 + i}` : `P_${100 + i}`,
+  object_number: i % 2 ? `A_${100 + i}` : `P_${100 + i}`,
+  contract_start_date: "2026-10-01T00:00:00Z",
+  contract_end_date: "2027-09-30T00:00:00Z",
+  creation_date: "2026-09-12T10:00:00Z",
+  last_update_date: "2026-10-10T10:00:00Z",
+  deadline_date: "2027-09-15T00:00:00Z",
+  org_unit_name: "Example Research University",
+  org_id: 202,
+  assigned_to_name: "Alex Morgan",
 }));

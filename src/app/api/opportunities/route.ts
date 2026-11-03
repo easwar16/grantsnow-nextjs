@@ -1,15 +1,7 @@
-import { listOpportunities } from "@/server/opportunities/service";
-import { parseOpportunityQuery } from "@/features/opportunities/schemas";
-import { failure, json } from "@/server/api/http";
-export async function GET(request: Request) {
-  try {
-    return json(
-      await listOpportunities(
-        parseOpportunityQuery(new URL(request.url).searchParams),
-        request.signal,
-      ),
-    );
-  } catch (error) {
-    return failure(error);
-  }
-}
+import { listOpportunities } from "@/server/modules/opportunities/service";
+import { parseOpportunityQuery } from "@/features/modules/opportunities/schemas";
+import { route, searchOf } from "@/server/http/route";
+/** One finder page: GET ?q (the tab, filters and offset as JSON); the server builds the SQL. */
+export const GET = route((request) =>
+  listOpportunities(parseOpportunityQuery(searchOf(request)), request.signal),
+);

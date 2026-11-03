@@ -1,0 +1,64 @@
+/* Quill's snow theme brought onto the app's tokens and 3px radius (GN-Angular rich-text.css). */
+.host {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.editor :global(.ql-toolbar.ql-snow) {
+  border-color: var(--gn-border-input);
+  border-radius: var(--gn-radius) var(--gn-radius) 0 0;
+  font-family: var(--gn-font);
+}
+.editor :global(.ql-container.ql-snow) {
+  border-color: var(--gn-border-input);
+  border-radius: 0 0 var(--gn-radius) var(--gn-radius);
+  font-family: var(--gn-font);
+  font-size: var(--gn-font-size);
+  color: var(--gn-text);
+  background: var(--gn-surface);
+}
+/* The editable area takes the height, so a click anywhere in the box lands in the text. */
+.editor :global(.ql-editor) {
+  min-height: 120px;
+}
+.editor :global(.ql-snow .ql-stroke) {
+  stroke: var(--gn-text-secondary);
+}
+.editor :global(.ql-snow .ql-fill) {
+  fill: var(--gn-text-secondary);
+}
+.editor :global(.ql-snow .ql-picker) {
+  color: var(--gn-text-secondary);
+}
+.invalid .editor :global(.ql-container.ql-snow),
+.invalid .editor :global(.ql-toolbar.ql-snow),
+.invalid .source {
+  border-color: var(--gn-danger);
+}
+.readOnly {
+  display: block;
+  min-height: 28px;
+  overflow-wrap: anywhere;
+}
+.readOnly > :first-child {
+  margin-top: 0;
+}
+.readOnly > :last-child {
+  margin-bottom: 0;
+}
+.sourceButton {
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.source {
+  height: auto;
+  font-family: monospace;
+}
+.sourceActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

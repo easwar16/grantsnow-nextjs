@@ -1,7 +1,6 @@
 node_modules/
 .next/
 .env*
-!.env.example
 *.tsbuildinfo
 playwright-report/
 test-results/
@@ -12,3 +11,7 @@ coverage/
 .next-e2e/
 .next-check/
 .validation/
+
+# scripts/oracle-catalogue.mjs preview
+.catalogue-preview/
+.claude

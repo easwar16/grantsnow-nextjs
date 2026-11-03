@@ -1,0 +1,28 @@
+/* GN-Angular session-dialog.css: 420px, 20×24 padding, 15px/700 title. */
+.dialog {
+  /* legacy #dialogSessionExpiry: Redwood's default 600px (measured live, 2026-10-27), owner height cap */
+  width: 34.384vw;
+  max-width: calc(100vw - 32px);
+  max-height: 70vh;
+  padding: 20px 24px;
+}
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.dialog h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+.dialog p {
+  margin: 0;
+}
+.foot {
+  display: flex;
+  justify-content: flex-end;
+}
+.foot button {
+  padding: 0 14px;
+}

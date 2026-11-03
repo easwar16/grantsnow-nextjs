@@ -1,0 +1,36 @@
+/* Legacy detailsForm in an oj-panel (measured on DEV, 2026-10-30): neutral-30, 1px border, 12px 6px 6px; three
+   label-top columns 17px apart; 13.8px semibold labels; selects oj-form-control-width-md (336px). */
+.filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px 17px;
+  margin-bottom: 12px;
+  padding: 12px 6px 6px;
+  background: var(--gn-table-row);
+  border: 1px solid var(--gn-divider);
+}
+.filters :global(.gn-label) {
+  font-size: 13.8px;
+  line-height: 18px;
+}
+.filters :global(.gn-field) > :not(label) {
+  max-width: 336px;
+}
+/* Each tab's table sits in an oj-panel: white, 1px border, 6px padding; columns of equal width (layout fixed). */
+.panel {
+  padding: 6px;
+  background: var(--gn-surface);
+  border: 1px solid var(--gn-divider);
+}
+.panel table {
+  table-layout: fixed;
+}
+/* Legacy's first column is plain text, not a bold row header. */
+.panel th[scope="row"] {
+  font-weight: 400;
+}
+@media (max-width: 768px) {
+  .filters {
+    grid-template-columns: 1fr;
+  }
+}

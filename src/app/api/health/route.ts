@@ -1,4 +1,2 @@
-import { json } from "@/server/api/http";
-export async function GET() {
-  return json({ status: "ok" });
-}
+import { route } from "@/server/http/route";
+export const GET = route(async () => ({ status: "ok" }));

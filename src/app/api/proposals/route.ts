@@ -1,22 +1,12 @@
-import { authenticate } from "@/server/session/service";
-import { requireModule } from "@/server/permissions/policy";
-import { resources, proposalColumns } from "@/server/configuration/resources";
-import { listProposals } from "@/server/proposals/service";
-import { parseQuery } from "@/features/proposals/schemas";
-import { failure, json } from "@/server/api/http";
-export async function GET(request: Request) {
-  try {
-    const { user } = await authenticate();
-    requireModule(user, "PROPOSALS");
-    const columns = proposalColumns(await resources());
-    return json(
-      await listProposals(
-        parseQuery(new URL(request.url).searchParams),
-        columns,
-        request.signal,
-      ),
-    );
-  } catch (e) {
-    return failure(e);
-  }
-}
+import { authenticate } from "@/server/identity/session/service";
+import { resources } from "@/server/platform/configuration/resources";
+import { listProposals } from "@/server/modules/proposals/service";
+import { parseQuery } from "@/features/modules/proposals/schemas";
+import { route, searchOf } from "@/server/http/route";
+import { serverFunctions } from "@/server/functions";
+export const GET = route(async (request) => {
+  const { user } = await authenticate();
+  serverFunctions.permissions.requireModule(user, "PROPOSALS");
+  const columns = serverFunctions.resources.proposalColumns(await resources());
+  return listProposals(parseQuery(searchOf(request)), columns, request.signal);
+});

@@ -1,0 +1,31 @@
+.git
+.github
+node_modules
+.next
+.next-e2e
+.next-check
+.validation
+*.tsbuildinfo
+playwright-report
+test-results
+coverage
+
+.dev-session
+.playwright-mcp
+.catalogue-preview
+
+# Only the selector and the five settings files reach the build;
+# secrets and .env.local never do (docs/docker-deployment.md).
+.env*
+!.env
+!.env.dev
+!.env.demo
+!.env.uat
+!.env.stage
+!.env.prod
+.env.local
+*.secrets
+
+AGENTS.md
+CLAUDE.md
+.claude

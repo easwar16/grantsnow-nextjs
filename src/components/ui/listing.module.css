@@ -1,0 +1,127 @@
+/* A listing page (EOI list, Awards): the drawer's filters, a scrolling list of record rows and the count line. The
+   drawer is FilterPanel; its status tabs are StatusList. Measured on live. */
+.drawer {
+  display: flex;
+  flex-direction: column;
+}
+
+/* oj-form-layout max-columns=1, label-edge=inside, compact: 39px boxes 9px from the drawer's sides, 12px apart. */
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 9px 3px 8px;
+}
+.sort {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.sort > :first-child {
+  flex: 1;
+}
+.direction {
+  display: flex;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+}
+/* GN-Angular's bare .sort-dir has no hover fill; cancels the base button:hover tint. */
+.direction:hover {
+  background: none;
+}
+.clear {
+  align-self: flex-start;
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+/* Positioned: the cards' .sr-only texts scroll with the list instead of stretching the page. */
+.list {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+/* oj-list-item-layout in an oj-panel: each row is a white card (1px 12% border, 6px padding) in a 9/12px gutter;
+   15px bold number and title, 12px fields. */
+.row {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 9px 12px;
+  padding: 6px;
+  background: var(--gn-surface);
+  border: 1px solid var(--gn-divider);
+}
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.overline {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.number {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 19px;
+}
+/* The StatusBadge's gap from the number before it. */
+.status {
+  margin-left: 6px;
+}
+.title {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+  color: var(--gn-text);
+  text-decoration: none;
+}
+.title:hover,
+.title:focus-visible {
+  color: var(--gn-link);
+  text-decoration: underline;
+}
+.view {
+  flex: none;
+  align-self: center;
+}
+.empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--gn-text-secondary);
+}
+.skeleton {
+  display: block;
+  padding: 12px 16px;
+}
+.total {
+  flex: none;
+  margin: 0;
+  padding: 5px 15px;
+  font-size: 14px;
+  text-decoration: underline;
+}
+.totalTitle {
+  font-weight: 600;
+}

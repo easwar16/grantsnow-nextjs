@@ -1,0 +1,111 @@
+/* D35: the panel and the results each scroll on their own; the page never does. */
+.layout {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+.panel {
+  display: flex;
+  flex-direction: column;
+  width: var(--filter-panel-width);
+  flex-shrink: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-right: 1px solid var(--border);
+  background: var(--bg);
+}
+.panel[data-open="false"] {
+  width: auto;
+}
+/* A page-owned toggle slides the panel shut: the width runs to 0 while the content keeps its own width. */
+.layout:not([data-dragging]) .panel {
+  transition:
+    width var(--dur) var(--ease),
+    border-color var(--dur) var(--ease);
+}
+.panel[data-collapsed] {
+  width: 0;
+  overflow: hidden;
+  border-right-width: 0;
+}
+.panel[data-collapsed] > .body {
+  width: var(--filter-panel-width);
+}
+.header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px;
+}
+.toggle {
+  border: 0;
+  color: var(--muted);
+}
+/* The body fills the panel, so a drawer can put an action at its foot (margin-top: auto). */
+.body {
+  flex: 1 0 auto;
+  padding: 0 6px 12px;
+}
+.body[hidden] {
+  display: none;
+}
+/* Without its own header (a page-owned toggle), the body takes GN-Angular's 6px top inset. */
+.body:first-child {
+  padding-top: 6px;
+}
+/* An 8px grab strip centred on the panel border. */
+.handle {
+  flex: 0 0 8px;
+  margin: 0 -4px;
+  position: relative;
+  z-index: 1;
+  cursor: col-resize;
+  touch-action: none;
+}
+.handle::after {
+  content: "";
+  position: absolute;
+  inset: 0 3px;
+  transition: background-color var(--dur-fast) var(--ease);
+}
+.handle:hover::after,
+.handle:active::after,
+/* The focus highlight is for keyboard users; after a drag the handle keeps focus but shows no ring. */
+:global(:where(:root:not([data-input="pointer"]))) .handle:focus-visible::after {
+  background: var(--accent);
+}
+.handle:focus-visible {
+  outline-offset: -2px;
+}
+/* A flex column, so a page's own scrolling list can take the remaining height (D35). */
+.results {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+/* Narrow screens keep the stacked, collapsible filter block above the results. */
+@media (max-width: 600px) {
+  .layout {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .panel[data-collapsed] {
+    display: none;
+  }
+  .panel,
+  .panel[data-open="false"] {
+    width: auto;
+    overflow: visible;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .handle {
+    display: none;
+  }
+  .results {
+    overflow: visible;
+  }
+}

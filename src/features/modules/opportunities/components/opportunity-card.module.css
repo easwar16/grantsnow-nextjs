@@ -1,0 +1,438 @@
+/* GN-Angular opportunity-card.css: the original .opp-card, its --app-* tokens resolved to the live app's values. */
+.card {
+  --opp-teal-dark: #2c4e4e;
+  --opp-teal-mid: #3a6b6b;
+  --opp-teal-light: #dceeed;
+  --opp-text: rgb(22, 21, 19);
+  --opp-text-secondary: rgba(22, 21, 19, 0.7);
+  --opp-text-hint: rgba(22, 21, 19, 0.4);
+  --opp-surface: #fff;
+  --opp-bg: #f0f4f4;
+  --opp-border: #dce8e8;
+  --opp-border-strong: rgba(22, 21, 19, 0.12);
+  --opp-open-bg: #e4f5f0;
+  --opp-open-text: #1e6b52;
+  --opp-open-dot: #28a87a;
+  --opp-active-bg: #fff6e6;
+  --opp-active-text: #7a4e00;
+  --opp-closed-bg: #fceaea;
+  --opp-closed-text: #7a2020;
+  --opp-link: rgb(0, 104, 140);
+  --opp-link-hover: #1e4e4e;
+  --opp-tag-bg: #e6f0f0;
+  --opp-tag-text: #2c5555;
+  --opp-tag-co-bg: #f0f0f0;
+  --opp-tag-co-text: rgba(22, 21, 19, 0.7);
+  --opp-stripe: var(--opp-teal-mid);
+  --opp-dot: var(--opp-open-dot);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+  color: var(--opp-text);
+  background: var(--opp-surface);
+  border: 1px solid var(--opp-border);
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(44, 78, 78, 0.06);
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
+}
+:global(.dark) .card {
+  --opp-surface: #1f2a2a;
+  --opp-bg: #162020;
+  --opp-border: #3a5050;
+  --opp-border-strong: #4a6060;
+  --opp-text: #e8eeee;
+  --opp-text-secondary: #a8bebe;
+  --opp-text-hint: #7a9090;
+  --opp-open-bg: #1a3a2e;
+  --opp-open-text: #8fe0b8;
+  --opp-active-bg: #3a2e14;
+  --opp-active-text: #f0c070;
+  --opp-closed-bg: #3a1c1c;
+  --opp-closed-text: #f0a8a8;
+  --opp-tag-bg: #2a4040;
+  --opp-tag-text: #b8d0d0;
+  --opp-tag-co-bg: #2a2e2e;
+  --opp-tag-co-text: #c0c8c8;
+  --opp-link: #5ba0a0;
+  --opp-link-hover: #8ec8c8;
+}
+.card:hover {
+  border-color: var(--opp-border-strong);
+  box-shadow: 0 3px 12px rgba(44, 78, 78, 0.11);
+}
+/* The status accent on the left edge. */
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--opp-stripe);
+}
+.card[data-status="open"] {
+  --opp-stripe: var(--opp-open-dot);
+}
+.card[data-status="active"] {
+  --opp-stripe: #e0a020;
+  --opp-dot: #e0a020;
+}
+.card[data-status="closed"] {
+  --opp-stripe: #c04040;
+  --opp-dot: #c04040;
+}
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 16px 7px 20px;
+}
+.logo,
+.logoTile {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 5px;
+}
+.logo {
+  object-fit: contain;
+  background: var(--opp-bg);
+  border: 1px solid var(--opp-border);
+}
+/* oj-avatar background="teal", shape square, size sm. */
+.logoTile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: #3e7a7d;
+}
+.titleRow {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.title {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--opp-link);
+}
+.title a {
+  color: inherit;
+}
+.title a:hover {
+  color: var(--opp-link-hover);
+  text-decoration: underline;
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: 20px;
+}
+.pillNew {
+  color: var(--opp-open-text);
+  background: var(--opp-open-bg);
+}
+.pillWarn {
+  color: var(--opp-active-text);
+  background: var(--opp-active-bg);
+}
+/* Bare buttons in Angular: the base button's border, min-height and weight are undone. */
+.card .info,
+.card .iconButton {
+  display: flex;
+  min-height: 0;
+  padding: 6px;
+  border: 0;
+  color: var(--opp-text-hint);
+  border-radius: var(--gn-radius);
+}
+.card .info {
+  padding: 2px;
+  color: var(--opp-text);
+}
+.iconButton:hover,
+.info:hover {
+  color: var(--opp-teal-dark);
+  background: var(--gn-hover-tint);
+}
+.iconButton.active {
+  color: var(--opp-teal-dark);
+}
+.iconButton.hasNotes {
+  color: orangered;
+}
+.headerActions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 1px;
+  margin-left: auto;
+  padding-top: 2px;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-right: 6px;
+  padding: 3px 10px 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  border-radius: 20px;
+}
+.card[data-status="open"] .badge {
+  color: var(--opp-open-text);
+  background: var(--opp-open-bg);
+}
+.card[data-status="active"] .badge {
+  color: var(--opp-active-text);
+  background: var(--opp-active-bg);
+}
+.card[data-status="closed"] .badge {
+  color: var(--opp-closed-text);
+  background: var(--opp-closed-bg);
+}
+.badgeDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--opp-dot);
+}
+.card .comments {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  min-height: 0;
+  margin: 0 4px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 400;
+  border: 1px solid var(--gn-border-input);
+}
+/* Angular's comments button has no hover fill; the base button's would add one. */
+.card .comments:hover {
+  background: none;
+}
+.commentsCount {
+  min-width: 18px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+  color: var(--opp-teal-dark);
+  background: var(--opp-teal-light);
+  border-radius: 9px;
+}
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0;
+  padding: 2px 16px 7px 20px;
+  list-style: none;
+}
+.tags li {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--opp-tag-text);
+  background: var(--opp-tag-bg);
+  border-radius: 4px;
+}
+/* Co-funders stay neutral (VBCS opp-tag--secondary). */
+.tags li.coFunder {
+  color: var(--opp-tag-co-text);
+  background: var(--opp-tag-co-bg);
+}
+.bottom {
+  display: flex;
+  align-items: stretch;
+  border-top: 1px solid var(--opp-border);
+}
+.details {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+.meta {
+  display: flex;
+  /* Up to 13 meta cells wrap onto rows, as the original's .meta. */
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  padding: 7px 12px 7px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--opp-surface);
+}
+.meta > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 100px;
+}
+.card small {
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--opp-text-hint);
+}
+.meta small {
+  margin-bottom: 2px;
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+}
+/* Money cells are the original's highlighted values. */
+.meta strong {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--opp-teal-dark);
+}
+.dates,
+.counts {
+  display: flex;
+  background: var(--opp-bg);
+  border-top: 1px solid var(--opp-border);
+}
+.dates {
+  align-items: center;
+  padding: 5px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--opp-text-secondary);
+}
+/* Fixed thirds: a card with fewer dates or counts keeps the same columns. */
+.dates > div,
+.counts > div {
+  flex: 0 0 calc(100% / 3);
+  min-width: 0;
+}
+.dates > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.dates small {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+.dates > .closing {
+  font-weight: 600;
+  color: var(--opp-active-text);
+}
+.counts > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 14px;
+  border-right: 1px solid var(--opp-border);
+}
+.counts > div:last-child {
+  border-right: 0;
+}
+.counts small {
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+}
+.counts strong {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--opp-teal-dark);
+  background: var(--opp-teal-light);
+  border-radius: 10px;
+}
+.actions {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 16px;
+  border-left: 1px solid var(--opp-border);
+}
+.action {
+  justify-content: flex-start;
+  gap: 6px;
+  width: 200px;
+  height: 28px;
+  padding: 5px 10px;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-overflow: ellipsis;
+  border: 1.5px solid transparent;
+  border-radius: 6px;
+}
+.apply {
+  color: var(--opp-teal-dark);
+  border-color: var(--opp-teal-mid);
+}
+.apply:hover:not(:disabled) {
+  background: var(--opp-teal-light);
+}
+/* eoi-btn--convert-internal (8730): a brand tint with a full-strength edge, so it never reads as disabled. */
+.convert {
+  color: color-mix(in srgb, var(--gn-brand) 80%, #000);
+  background: color-mix(in srgb, var(--gn-brand) 22%, #fff);
+  border-color: var(--gn-brand);
+}
+.convert:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--gn-brand) 34%, #fff);
+}
+.convertProposal {
+  color: #fff;
+  background: var(--gn-brand);
+  border-color: var(--gn-brand);
+}
+.convertProposal:hover:not(:disabled) {
+  color: #fff;
+  background: color-mix(in srgb, var(--gn-brand) 85%, #000);
+  border-color: color-mix(in srgb, var(--gn-brand) 85%, #000);
+}
+/* The original's small-screen layout: actions in a row under the details. */
+@media (max-width: 600px) {
+  .bottom {
+    flex-direction: column;
+  }
+  .actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-left: 0;
+    border-top: 1px solid var(--opp-border);
+  }
+  .action {
+    flex: 1;
+    width: auto;
+    justify-content: center;
+  }
+  .dates {
+    flex-wrap: wrap;
+  }
+  .header {
+    flex-wrap: wrap;
+  }
+}

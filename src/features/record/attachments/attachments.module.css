@@ -1,0 +1,285 @@
+/* object-attachments-fragment.html: the tree and the detail pane side by side, links, then the preview pane. */
+.panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 8px 40px 0;
+}
+
+.notice {
+  margin: 0;
+  color: var(--gn-warning);
+}
+
+.main {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 12px 0;
+}
+
+/* oj-tree-view: 300px tall at 1043px, its own scroll, as wide as its names (each capped at 200px, measured 218px); the detail
+   pane (oj-md-8, padded 12px) follows. */
+.treeBox {
+  position: relative;
+  flex: 0 0 auto;
+  max-width: 100%;
+  height: 28.763vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.detail {
+  display: flex;
+  flex: 2 1 420px;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 12px;
+}
+
+.tree,
+.children {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.children {
+  padding-inline-start: 20px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.toggle,
+.file {
+  display: inline-flex;
+  min-width: 0;
+  min-height: var(--gn-control-height);
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: var(--gn-radius);
+  background: none;
+  color: var(--gn-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.toggle:hover,
+.file:hover {
+  background: var(--gn-hover-tint);
+}
+
+.file[aria-pressed="true"] {
+  background: var(--gn-solid-tint);
+}
+
+/* The fragment's item text: one line, at most 200px, ellipsed. */
+.name {
+  display: inline-block;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* oj-form-layout readonly, one column. */
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.field dt {
+  color: var(--gn-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.field dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+}
+
+.linksHead {
+  display: flex;
+  align-items: center;
+  column-gap: 10px;
+}
+
+.linksHead h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.linkForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 10px;
+}
+
+.linkForm > :nth-child(1) {
+  flex: 1 1 220px;
+}
+
+.linkForm > :nth-child(2) {
+  flex: 2 1 320px;
+}
+
+.linkButtons {
+  display: flex;
+  flex-basis: 100%;
+  gap: 8px;
+}
+
+.linkList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.linkList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.linkList a {
+  color: var(--gn-link);
+  overflow-wrap: anywhere;
+}
+
+/* oj-panel: the preview <object> is full width and at least 31.25rem tall. */
+.previewPane {
+  padding: 12px;
+  border: 1px solid var(--gn-divider);
+  border-radius: var(--gn-radius);
+  background: var(--gn-surface);
+}
+
+.object {
+  display: block;
+  width: 100%;
+  min-height: 31.25rem;
+  border: none;
+}
+
+.previewHint {
+  margin: 0;
+  color: var(--gn-text-secondary);
+  font-size: 12px;
+  text-align: center;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.switch,
+.radios label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  color: var(--gn-text);
+}
+
+.radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.radios legend {
+  padding: 0;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* oj-file-picker: a dashed drop zone, primary and secondary text. */
+.drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 20px 16px;
+  border: 1px dashed var(--gn-border-input);
+  border-radius: var(--gn-radius);
+  color: var(--gn-text);
+  text-align: center;
+  cursor: pointer;
+}
+
+:global(:where(:root:not([data-input="pointer"]))) .drop:focus-within,
+.dragging {
+  border-color: var(--gn-brand);
+  background: var(--gn-solid-tint);
+}
+
+.dropTitle {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.dropHint {
+  color: var(--gn-text-secondary);
+  font-size: 12px;
+}
+
+.note p {
+  margin: 0;
+}
+
+.noteTitle {
+  font-weight: 600;
+}
+
+.error {
+  margin: 4px 0 0;
+  color: var(--gn-danger);
+}
+
+.foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+}

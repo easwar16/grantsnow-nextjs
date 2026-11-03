@@ -11,6 +11,8 @@ const config: NextConfig = {
   output: "standalone",
   outputFileTracingExcludes: { "*": ["./.dev-session/**/*"] },
   poweredByHeader: false,
+  // The dev badge covers a corner control (Clear Filters bottom-left, paging bottom-right); errors still surface.
+  devIndicators: false,
   serverExternalPackages: ["openid-client", "iron-session"],
   async headers() {
     return [
