@@ -11,7 +11,7 @@ import { useToast } from "@/components/feedback/toast";
 import { HelpButton } from "@/components/ui/help-button";
 import { Icon } from "@/components/ui/icon";
 import { Collapsible } from "@/components/ui/collapsible";
-import { useConfirm } from "@/components/dialog/action-dialog";
+import { ActionDialog, useConfirm } from "@/components/dialog/action-dialog";
 import { useActionFailure } from "@/components/dialog/action-failure";
 import { approvals, useApi } from "@/lib/api";
 import { useStoreApi } from "@/lib/store/app-store";
@@ -484,7 +484,9 @@ function ApprovalHistory({
   /** Legacy's Card View tab, RB-gated. */
   cards: boolean;
 }) {
-  const [historyView, setHistoryView] = useState<"table" | "card">("table");
+  const [historyView, setHistoryView] = useState<"table" | "card">("table"),
+    // The comment opened from the table (sanitised HTML), legacy commentPopUp.
+    [comment, setComment] = useState<string | null>(null);
   const { data: history, error, retry } = useApi(approvals.history, api);
   return (
     <Collapsible
@@ -590,9 +592,20 @@ function ApprovalHistory({
               {
                 id: "comments",
                 header: texts.historyComments,
-                // The ellipsis gets its full-text tooltip from the shell's TruncatedTitles.
-                className: styles.comment,
-                cell: (r) => r.comments,
+                // Legacy trimTextContent (35 characters) as a link to the whole comment (commentPopUp).
+                cell: (r) =>
+                  r.comments ? (
+                    <button
+                      type="button"
+                      id={`${id}-history-${functions.ids.idPart(r.id)}-comment`}
+                      className={styles.commentLink}
+                      onClick={() => setComment(r.commentsHtml ?? r.comments)}
+                    >
+                      {r.comments.length > 35
+                        ? `${r.comments.slice(0, 35)}…`
+                        : r.comments}
+                    </button>
+                  ) : null,
               },
               {
                 id: "updated",
@@ -605,6 +618,19 @@ function ApprovalHistory({
             rowClassName={() => "enter-rise"}
           />
         </div>
+      )}
+      {comment !== null && (
+        <ActionDialog
+          id={`${id}-comment-dialog`}
+          title={texts.commentTitle}
+          onClose={() => setComment(null)}
+        >
+          <div
+            id={`${id}-comment-dialog-body`}
+            className={styles.commentBody}
+            dangerouslySetInnerHTML={{ __html: comment }}
+          />
+        </ActionDialog>
       )}
     </Collapsible>
   );

@@ -173,20 +173,23 @@ export function RecordShell({
             onChange: setFinalized,
           }
         }
+        editing={editing}
         objectType={EOI_MODULE}
         objectId={model.requestId}
         page={pageOf(tab)}
         labels={model.labels}
         toolbarStart={
+          // A finalized (locked) application has no edit controls (owner: hidden, not disabled).
           record &&
           tab === "application" &&
+          !locked &&
           (editing ? (
             <>
               <button
                 type="button"
                 id="eoi-record-save-draft"
                 className="gn-btn gn-btn--outlined"
-                disabled={locked || saving}
+                disabled={saving}
                 onClick={() => application.current?.save()}
               >
                 <Icon name="draft" size={14} />
@@ -196,7 +199,7 @@ export function RecordShell({
                 type="button"
                 id="eoi-record-cancel"
                 className="gn-btn gn-btn--outlined"
-                disabled={locked || saving}
+                disabled={saving}
                 onClick={() => application.current?.cancel()}
               >
                 <Icon name="close" size={14} />
@@ -208,7 +211,6 @@ export function RecordShell({
               type="button"
               id="eoi-record-edit"
               className="gn-btn gn-btn--outlined"
-              disabled={locked}
               onClick={() => setEditing(true)}
             >
               <Icon name="pen" size={14} />

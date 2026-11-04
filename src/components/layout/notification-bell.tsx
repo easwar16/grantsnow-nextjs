@@ -12,8 +12,8 @@ import { groupByDay } from "./notification-days";
 import { useShell } from "./shell-context";
 import styles from "./notification-bell.module.css";
 import { functions } from "@/lib/functions";
-const time = (at: string) =>
-  new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+// Legacy formatDate(datetime, 'hh:mm a').
+const time = (at: string) => functions.format.clockDisplay(at, "hh:mm a");
 /** The header bell: unread badge, the latest five by local day, and mark-all-read when the popup closes. */
 export function NotificationBell() {
   const { labels, format } = useShell();

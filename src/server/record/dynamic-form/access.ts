@@ -10,6 +10,10 @@ import {
 import { dashboardRoles } from "@/server/platform/configuration/service";
 import { canCreate } from "@/features/modules/opportunities/display";
 import { AppError } from "@/lib/errors";
+import { unitRecordRead } from "@/server/modules/claims/units/record";
+import { assuranceRequirement } from "@/server/modules/claims/units/record/assurance";
+import { summaryEditable } from "@/server/modules/claims/units/record/sign-off";
+import { statusConfig } from "@/server/modules/claims/units/record/status";
 import { loadContract } from "@/server/modules/contracts/service";
 import { serverFunctions } from "@/server/functions";
 import { proposalPage } from "@/server/modules/proposals/record";
@@ -72,6 +76,9 @@ export function pageOf(t: Pick<FormTarget, "objectType" | "slot">) {
     /^AWARDS-(HEADER|MILESTONES|DYNAMIC-FORM-[1-5])$/.test(t.slot)
   )
     return t.slot.toLowerCase();
+  // The Claims Unit Summary's Assurance sign-off tab (legacy moduleName SUMMARY-ASSURANCE on the requirement).
+  if (t.objectType === "CLAIMS" && t.slot === "SUMMARY-ASSURANCE")
+    return "claims-unit-summary";
   return null;
 }
 const rolesSchema = z.object({
@@ -198,6 +205,7 @@ export async function authorizeForm(t: FormTarget, mode: "read" | "edit") {
     return { user, page, record: { id: contract.id, number: contract.number } };
   }
   if (t.objectType === "AWARD") return authorizeAwardForm(t, mode, user, page);
+  if (t.objectType === "CLAIMS") return authorizeAssuranceForm(t, mode, page);
   serverFunctions.permissions.requireModule(user, "opportunities-group");
   if (t.objectId === undefined) {
     if (mode === "edit" || t.objectType !== "OPPORTUNITIES")
@@ -295,4 +303,34 @@ async function authorizeAwardForm(
     number: a.award_number ?? t.objectId,
   };
   return { user, page, record };
+}
+
+/**
+ * The Assurance form: the unit application (`parentId`) with Summary read, its own ASSURANCE requirement as the
+ * record (`objectId`), and an editable summary for a change. Before the requirement exists the form only reads.
+ * Files are filed under the application (legacy objectNum = appId).
+ */
+async function authorizeAssuranceForm(
+  t: FormTarget,
+  mode: "read" | "edit",
+  page: string,
+) {
+  if (t.parentId === undefined)
+    throw new AppError("BAD_REQUEST", "Invalid form request.", 400);
+  const context = await unitRecordRead(t.parentId, "summary");
+  if (t.objectId === undefined) {
+    if (mode === "edit")
+      throw new AppError("BAD_REQUEST", "Save the application first.", 400);
+    return { user: context.user, page, record: null };
+  }
+  const [requirement, config] = await Promise.all([
+    assuranceRequirement(context),
+    mode === "edit" ? statusConfig() : Promise.resolve({}),
+  ]);
+  if (String(requirement?.app_requirement_id ?? "") !== t.objectId)
+    throw denied("This assurance is not on the application.");
+  if (mode === "edit" && !(await summaryEditable(context, config)))
+    throw denied("This assurance can no longer be changed.");
+  const record: FormRecord = { id: t.objectId, number: t.parentId };
+  return { user: context.user, page, record };
 }

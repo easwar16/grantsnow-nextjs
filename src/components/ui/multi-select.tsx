@@ -64,9 +64,7 @@ export function MultiSelect({
     panel = `${base}-panel`;
   const control = variant === "control",
     chips = variant === "chips";
-  const labelOf = (v: string) => options.find((o) => o.value === v)?.label ?? v,
-    summary = value.map(labelOf).join(", "),
-    needle = (query ?? "").trim().toLowerCase(),
+  const needle = (query ?? "").trim().toLowerCase(),
     matches = useMemo(
       () =>
         needle === ""
@@ -81,6 +79,12 @@ export function MultiSelect({
     // The cap note is the window's first line when shown.
     lead = matches.length > rows.length ? 1 : 0,
     optionId = (v: string) => `${base}-option-${functions.ids.idPart(v)}`;
+  // Values that are not among the options show nothing, as legacy's JET selects (and as Select).
+  // Chips and the summary drop a tree list's indent; the list keeps it.
+  const labelOf = (v: string) =>
+      options.find((o) => o.value === v)?.label?.trimStart(),
+    shown = value.filter((v) => labelOf(v) !== undefined),
+    summary = shown.map(labelOf).join(", ");
   // Downshift's own: it tells a click inside the list from one outside.
   const [, setList] = useState<HTMLUListElement | null>(null);
   const view = useOptionWindow(rows.length + lead, pop);
@@ -110,7 +114,7 @@ export function MultiSelect({
     getItemProps,
   } = useCombobox({
     items: rows,
-    itemToString: (o) => o?.label ?? "",
+    itemToString: (o) => (o?.label ?? "").trimStart(),
     itemToKey: (o) => o?.value,
     inputId: `${base}-field`,
     menuId: `${base}-list`,
@@ -161,7 +165,7 @@ export function MultiSelect({
         "aria-controls": panel,
         disabled,
         placeholder:
-          variant === "inside" && value.length === 0 ? label : undefined,
+          variant === "inside" && shown.length === 0 ? label : undefined,
         onFocus: () => control && input?.select(),
         onKeyDown: (e) => keepNativeKeys(e, open),
       }),
@@ -196,12 +200,12 @@ export function MultiSelect({
         data-open={open || undefined}
         aria-disabled={disabled || undefined}
       >
-        {variant === "inside" && value.length > 0 && (
+        {variant === "inside" && shown.length > 0 && (
           <span className={styles.label}>{label}</span>
         )}
         <span className={styles.line}>
           {!control &&
-            value.map((v) => (
+            shown.map((v) => (
               <span key={v} className={styles.chip}>
                 {labelOf(v)}
                 {/* Pointer shortcut only; keyboard users untick the option or press Backspace. */}
@@ -224,8 +228,8 @@ export function MultiSelect({
             title={summary || undefined}
             aria-activedescendant={field["aria-activedescendant"] || undefined}
           />
-          {control && value.length > 1 && query === null && (
-            <span className={styles.count}>{value.length}</span>
+          {control && shown.length > 1 && query === null && (
+            <span className={styles.count}>{shown.length}</span>
           )}
         </span>
         <Icon className={styles.caret} name="chevron-down" size={12} />

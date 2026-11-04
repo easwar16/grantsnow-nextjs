@@ -1,5 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { unitHref } from "../links";
 import { Icon } from "@/components/ui/icon";
 import { FilterPanel } from "@/components/ui/filter-panel";
 import { Select } from "@/components/ui/select";
@@ -253,12 +255,20 @@ export function UnitList({
                         {row.unitId}
                       </span>
                     </div>
-                    <span
+                    {/* Legacy divClick: the title opens the application (viewClaimInquiry), unless it has no funds. */}
+                    <Link
                       id={`claims-unit-${row.id}-title`}
                       className={listing.title}
+                      href={unitHref(row.id)}
+                      prefetch={false}
+                      onClick={(e) => {
+                        if (row.funds.length > 0) return;
+                        e.preventDefault();
+                        toast.show("warning", "No Funds Assigned!");
+                      }}
                     >
                       {`${row.unitName} | ${row.fiscalYear}`}
-                    </span>
+                    </Link>
                     {row.funds[0]?.fundTypeId && (
                       <div className={styles.sections}>
                         <Collapsible

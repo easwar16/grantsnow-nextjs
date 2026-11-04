@@ -1,5 +1,6 @@
 "use client";
 import type { FormatSettings } from "@/lib/format";
+import { functions } from "@/lib/functions";
 import { ListSkeleton } from "@/components/feedback/skeleton";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -413,6 +414,7 @@ export function Listing({
                 ...choices.statuses.filter((c) => c.value),
               ].map((c) => (
                 <button
+                  id={`proposals-status-${functions.ids.idPart(c.value)}`}
                   type="button"
                   role="tab"
                   key={c.value}
@@ -483,6 +485,7 @@ export function Listing({
                   ].map((c) => (
                     <label key={c.value}>
                       <input
+                        id={`proposals-type-${functions.ids.idPart(c.value)}`}
                         type="radio"
                         name="type"
                         value={c.value}
@@ -503,6 +506,7 @@ export function Listing({
                 <label className="inside-field">
                   <span className="floating-label">{filters.reference}</span>
                   <input
+                    id="proposals-filter-reference"
                     name="reference"
                     defaultValue={query.reference}
                     placeholder=" "
@@ -514,6 +518,7 @@ export function Listing({
                 <label className="inside-field">
                   <span className="floating-label">{filters.search}</span>
                   <input
+                    id="proposals-filter-search"
                     name="search"
                     type="search"
                     defaultValue={query.search}
@@ -588,6 +593,7 @@ export function Listing({
                 <label className="inside-field">
                   <span className="floating-label">{filters.tags}</span>
                   <input
+                    id="proposals-filter-tags"
                     name="tags"
                     defaultValue={query.tags}
                     maxLength={200}
@@ -641,13 +647,23 @@ export function Listing({
               {filters.from !== null && (
                 <label className="inside-field">
                   <span className="floating-label">{filters.from}</span>
-                  <input name="from" type="date" defaultValue={query.from} />
+                  <input
+                    id="proposals-filter-from"
+                    name="from"
+                    type="date"
+                    defaultValue={query.from}
+                  />
                 </label>
               )}
               {filters.to !== null && (
                 <label className="inside-field">
                   <span className="floating-label">{filters.to}</span>
-                  <input name="to" type="date" defaultValue={query.to} />
+                  <input
+                    id="proposals-filter-to"
+                    name="to"
+                    type="date"
+                    defaultValue={query.to}
+                  />
                 </label>
               )}
             </form>
@@ -658,6 +674,7 @@ export function Listing({
             )}
             <div className="filter-actions">
               <button
+                id="proposals-clear-filters"
                 type="button"
                 onClick={() => router.push(path, { scroll: false })}
               >
@@ -820,7 +837,11 @@ export function Listing({
                 {moreError && (
                   <div className="notice" role="alert">
                     {moreError}
-                    <button onClick={() => void loadMore()}>
+                    <button
+                      id="proposals-load-more-retry"
+                      type="button"
+                      onClick={() => void loadMore()}
+                    >
                       Retry load more
                     </button>
                   </div>
@@ -887,17 +908,19 @@ export function Listing({
                     <br />
                     {row.title}
                   </div>
-                  <button
-                    id={`proposals-restore-${row.id}`}
-                    type="button"
-                    className="gn-btn gn-btn--borderless gn-btn--icon"
-                    title="Restore"
-                    aria-label={`Restore ${row.reference}`}
-                    disabled={!row.canRestore || isActive(`restore-${row.id}`)}
-                    onClick={() => void restore(row)}
-                  >
-                    <Icon name="undo" />
-                  </button>
+                  {row.canRestore && (
+                    <button
+                      id={`proposals-restore-${row.id}`}
+                      type="button"
+                      className="gn-btn gn-btn--borderless gn-btn--icon"
+                      title="Restore"
+                      aria-label={`Restore ${row.reference}`}
+                      disabled={isActive(`restore-${row.id}`)}
+                      onClick={() => void restore(row)}
+                    >
+                      <Icon name="undo" />
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
@@ -919,6 +942,7 @@ export function Listing({
                 <legend>Include in copied proposal</legend>
                 <label>
                   <input
+                    id="proposals-clone-all"
                     type="checkbox"
                     checked={copySelection.length === copyOptions.length}
                     onChange={(event) =>
@@ -936,6 +960,7 @@ export function Listing({
                 {copyOptions.map((option) => (
                   <label key={option.value}>
                     <input
+                      id={`proposals-clone-option-${functions.ids.idPart(option.value)}`}
                       type="checkbox"
                       checked={copySelection.includes(option.value)}
                       disabled={option.required}
@@ -953,6 +978,7 @@ export function Listing({
               </fieldset>
               <div className={styles.dialogActions}>
                 <button
+                  id="proposals-clone-cancel"
                   type="button"
                   className="gn-btn gn-btn--outlined"
                   onClick={() => setCopyRow(null)}
@@ -960,6 +986,7 @@ export function Listing({
                   Cancel
                 </button>
                 <button
+                  id="proposals-clone-confirm"
                   type="button"
                   className="gn-btn gn-btn--primary"
                   disabled={isActive("clone")}
@@ -1026,6 +1053,7 @@ export function Listing({
               />
               <div className={styles.dialogActions}>
                 <button
+                  id="proposals-share-document-cancel"
                   type="button"
                   className="gn-btn gn-btn--outlined"
                   onClick={() => {
@@ -1036,6 +1064,7 @@ export function Listing({
                   Cancel
                 </button>
                 <button
+                  id="proposals-share-document-send"
                   type="button"
                   className="gn-btn gn-btn--primary"
                   disabled={

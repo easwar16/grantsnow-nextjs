@@ -368,21 +368,30 @@ describe("award record access and other writes", () => {
 });
 
 describe("award creator card", () => {
-  // The PI comes from the held person list, so each test starts without it.
+  // The creator comes from the held person list, so each test starts without it.
   beforeEach(() => forget(""));
+  // 9412: the card is the award's created_by, not its PI.
   const withPi = (over: Record<string, unknown>) => {
     const base = reads(over);
     return async (op: string) => {
       if (op === "getPost_awardsAwardDetails")
-        return { award_id: Number(current), award_status: "DRFT", pi_pid: 101 };
+        return {
+          award_id: Number(current),
+          award_status: "DRFT",
+          pi_pid: 202,
+          created_by: 101,
+        };
       return base(op);
     };
   };
-  it("reads the PI's card with their own org, as legacy getContactDetails", async () => {
+  it("reads the creator's card with their own org, as legacy getContactDetails", async () => {
     state.calls.mockImplementation(
       withPi({
         getPre_awardGetPersonListAll: {
-          items: [{ person_id: 101, org_unit_id: 5, full_name: "Alex" }],
+          items: [
+            { person_id: 101, org_unit_id: 5, full_name: "Alex" },
+            { person_id: 202, org_unit_id: 6, full_name: "PI" },
+          ],
         },
         getProposalContactDtls: {
           items: [{ full_name: "Dr Alex", email_address: "a@x.test" }],
@@ -408,7 +417,7 @@ describe("award creator card", () => {
       "",
     ]);
   });
-  it("opens empty without reading when the PI's org is unknown", async () => {
+  it("opens empty without reading when the creator's org is unknown", async () => {
     state.calls.mockImplementation(withPi({}));
     const card = await creatorCard(next());
     expect(card.fields.every((f) => f.value === "")).toBe(true);

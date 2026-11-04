@@ -33,6 +33,7 @@ export function ObjectAudit(props: ObjectPanelProps) {
     objectType: props.objectType,
     objectId: props.objectId,
     page: props.page,
+    sec: props.sec,
     event,
   });
   const select = (next: AuditEvent, focus?: HTMLElement | null) => {

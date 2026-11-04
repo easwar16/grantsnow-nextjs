@@ -176,11 +176,21 @@
   background: #f0f0ef;
 }
 
-.comment {
-  max-width: 320px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* Legacy's comment cell: the trimmed text as a link that opens the whole comment. */
+.commentLink {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gn-link, var(--link));
+  text-align: start;
+  cursor: pointer;
+}
+.commentLink:hover {
+  text-decoration: underline;
+}
+.commentBody {
+  overflow-wrap: anywhere;
 }
 
 .historyCards {

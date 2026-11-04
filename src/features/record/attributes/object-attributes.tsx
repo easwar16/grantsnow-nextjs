@@ -196,10 +196,11 @@ export function ObjectAttributes({
   const text = (f: AttributeField) => {
     const value = values[f.name] ?? null;
     if (isBlank(value)) return null;
+    // As legacy's select, a value that is not among the options shows blank (live 621, award 1188 Attribute 5).
     if (f.fieldType === "LOV")
       return (
         attributeOptions(f, values).find((o) => String(o.optionId) === value)
-          ?.optionValue ?? String(value)
+          ?.optionValue ?? null
       );
     return f.fieldType === "DATE"
       ? functions.format.dateDisplay(String(value))

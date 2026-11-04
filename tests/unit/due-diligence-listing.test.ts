@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { mockOracle } from "@/test-support/transport";
-import { defaultDueDiligenceFilters } from "@/features/modules/due-diligence/schema";
+import { defaultDueDiligenceFilters } from "@/features/modules/due-diligence/listing/schema";
 import {
   dueDiligenceWhereClause,
   type DueDiligenceListView,

@@ -323,8 +323,8 @@ export function ProjectCostsPanel({
                   size: 14,
                   label: (n) => `${view.texts.editCost} ${n.name}`,
                   title: view.texts.editCost,
-                  hidden: (n) => n.level === "LINE",
-                  disabled: (n) => !g.edit || !n.line.is_editable,
+                  hidden: (n) =>
+                    n.level === "LINE" || !g.edit || !n.line.is_editable,
                   onClick: (n) => setDraft(draftOf(n.level, n.line, n.amounts)),
                 },
               ]}
@@ -332,7 +332,13 @@ export function ProjectCostsPanel({
               actionsLabel={view.texts.editCost}
               // Legacy projectCostActionMenu: Edit, Delete, Clone, on the line rows.
               actionCell={(n) => {
-                if (n.level !== "LINE") return null;
+                // No menu on a line the user cannot change (owner: hidden, not disabled).
+                if (
+                  n.level !== "LINE" ||
+                  !n.line.is_editable ||
+                  (!g.edit && !g.remove)
+                )
+                  return null;
                 const busy =
                   isActive(`delete-${n.line.id}`) ||
                   isActive(`clone-${n.line.id}`);
@@ -343,28 +349,36 @@ export function ProjectCostsPanel({
                     icon="menu"
                     iconSize={16}
                     className="gn-btn gn-btn--borderless gn-btn--icon"
-                    disabled={
-                      !n.line.is_editable || busy || (!g.edit && !g.remove)
-                    }
+                    disabled={busy}
                     items={[
-                      {
-                        key: "edit",
-                        label: view.texts.editCost,
-                        disabled: !g.edit,
-                        run: () => setDraft(draftOf("LINE", n.line, n.amounts)),
-                      },
-                      {
-                        key: "delete",
-                        label: view.texts.deleteCost,
-                        disabled: !g.remove,
-                        run: () => act("delete", n.line),
-                      },
-                      {
-                        key: "clone",
-                        label: view.texts.clone,
-                        disabled: !g.edit,
-                        run: () => act("clone", n.line),
-                      },
+                      ...(g.edit
+                        ? [
+                            {
+                              key: "edit",
+                              label: view.texts.editCost,
+                              run: () =>
+                                setDraft(draftOf("LINE", n.line, n.amounts)),
+                            },
+                          ]
+                        : []),
+                      ...(g.remove
+                        ? [
+                            {
+                              key: "delete",
+                              label: view.texts.deleteCost,
+                              run: () => act("delete", n.line),
+                            },
+                          ]
+                        : []),
+                      ...(g.edit
+                        ? [
+                            {
+                              key: "clone",
+                              label: view.texts.clone,
+                              run: () => act("clone", n.line),
+                            },
+                          ]
+                        : []),
                     ]}
                   />
                 );
@@ -1252,7 +1266,8 @@ function CostPeriods({
             size: 14,
             label: (p) => `${view.texts.editCost} ${p.start}`,
             title: view.texts.editCost,
-            disabled: () => readOnly || row !== null,
+            hidden: () => readOnly,
+            disabled: () => row !== null,
             onClick: (p) =>
               setRow({
                 itemId: Number(p.id),

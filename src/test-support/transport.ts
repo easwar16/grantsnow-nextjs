@@ -131,6 +131,14 @@ const WRITE_REPLIES = new Set<Operation>([
   "postProposalCopyProposal",
   "deleteProposalProposalProposal_id",
   "getProposalRestoreProposalProposal_id",
+  "postFundAllocation",
+  "putFundAllocations",
+  "deleteFundAllocation",
+  "postGoals",
+  "putGoals",
+  "deleteGoals",
+  "deleteClaimsActivity",
+  "postActivitiesAmendVersions",
 ]);
 /** A simulated write in fixture mode (the connection's writes gate never opens there). */
 export async function mockOracleWrite(
@@ -266,7 +274,13 @@ export async function mockOracle(
     headers,
   );
   if (award !== undefined) return award;
-  const claim = (await import("./claims")).claimsFixture(op, headers, query);
+  const claim = (await import("./claims")).claimsFixture(
+    op,
+    headers,
+    query,
+    pathParams,
+    body,
+  );
   if (claim !== undefined) return claim;
   if (op === "getPre_awardGetLookupTypesCodes") {
     const types: Record<string, [string, string][]> = {
@@ -601,6 +615,9 @@ export async function mockOracle(
         { var_key: "INSTANCE", var_value: "dev" },
         { var_key: "DEFAULT_SIZE_FORMAT", var_value: "4" },
         { var_key: "ALLOWED_EXTENSIONS", var_value: "pdf,docx,txt,png,jpg" },
+        // The finder's deadline warning (8203): opportunity 3 closes inside it.
+        { var_key: "OPP_DEADLINE_WARNING_ENABLED", var_value: "Y" },
+        { var_key: "OPP_DEADLINE_WARNING_DAYS", var_value: "7" },
       ],
     };
   if (op === "getSharedAnnouncements")
@@ -1918,6 +1935,50 @@ export async function mockOracle(
         })),
       )
       .concat(
+        [
+          "ethics-detail-ethics-number",
+          "ethics-detail-ethics-status",
+          "ethics-detail-ethics-risk",
+          "ethics-detail-ethics-title",
+          "ethics-detail-ethics-type",
+          "ethics-detail-org-unit",
+          "ethics-detail-deadline-date",
+          "setup-project-title",
+          "application-type",
+          "form-type",
+          "org-unit",
+          "deadline-date",
+          "expiry-date",
+        ].map((label_name) => ({
+          module_name: "ETHICS",
+          label_type: "labels",
+          label_name,
+          label_value: null,
+          is_visible: "Y",
+        })),
+        [
+          "dd-detail-due-diligence-number",
+          "due-diligence-status",
+          "dd-detail-due-diligence-risk",
+          "dd-detail-due-diligence-title",
+          "dd-detail-due-diligence-type",
+          "dd-detail-org-unit",
+          "dd-detail-deadline-date",
+          "dd-project-title",
+          "application-type",
+          "form-type",
+          "org-unit",
+          "deadline-date",
+          "expiry-date",
+          "participants",
+          "supervisor",
+        ].map((label_name) => ({
+          module_name: "DUE_DILIGENCE",
+          label_type: "labels",
+          label_name,
+          label_value: null,
+          is_visible: "Y",
+        })),
         ["list-view-record", "list-link", "list-clone", "list-delete"].map(
           (label_name) => ({
             module_name: "DUE_DILIGENCE",
@@ -1927,6 +1988,16 @@ export async function mockOracle(
             is_visible: "Y",
           }),
         ),
+        // The Shared tab's Comments, seeded hidden ('N'); on here so its journey runs.
+        [
+          {
+            module_name: "OPPORTUNITIES-EOI",
+            label_type: "button-labels",
+            label_name: "share-comments",
+            label_value: null,
+            is_visible: "Y",
+          },
+        ],
       );
   if (op === "getPre_awardGetLkpOrgUnitType")
     return {
@@ -2136,7 +2207,11 @@ export async function mockOracle(
       currency_code: "GBP",
       publication_date: "2026-10-01",
       opening_date: "2026-10-05",
-      closing_date: "2026-12-01",
+      // Opportunity 3 closes in three days, inside the deadline warning; the others weeks later.
+      closing_date:
+        i === 2
+          ? new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10)
+          : "2026-12-01",
       aoi_app_count: 0,
       proposal_count: 0,
       outline_proposal_count: 0,
@@ -2152,7 +2227,14 @@ export async function mockOracle(
     const clause = query?.get("p_where_clause") || "";
     if (clause.includes('"is_bookmarked"'))
       rows = rows.filter((r) => r.is_bookmarked === "Y");
-    if (clause.includes('"shared_with_me"')) rows = [];
+    // Shared with me: two rows, the first with its share comment.
+    if (clause.includes('"shared_with_me"'))
+      rows = rows.slice(0, 2).map((r, i) => ({
+        ...r,
+        shared_by: "Fixture Colleague",
+        shared_datetime: "2026-10-20T09:30:00Z",
+        shared_comment: i === 0 ? "Worth a look for the lab." : null,
+      }));
     const byId = clause.match(/"opportunities_id"='(\d+)'/)?.[1];
     if (byId) rows = rows.filter((r) => String(r.opportunities_id) === byId);
     // Title words, funding types and funder types as the finder's where clause sends them.
@@ -2313,6 +2395,8 @@ export async function mockOracle(
   if (op === "getSharedGetOppStatistics")
     return {
       items: [
+        // DEV's first FUNDING_TYPE row has no label.
+        { value: 5 },
         { label: "Grant", value: 12, code: "GRANT" },
         { label: "Fellowship", value: 8, code: "FELLOW" },
       ],

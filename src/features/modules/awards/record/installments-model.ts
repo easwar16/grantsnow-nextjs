@@ -1,3 +1,4 @@
+import moment from "moment";
 /**
  * Legacy awards-installments-start-page.js, ported as is: installments live in the browser tab only (per-tab
  * sessionStorage, the legacy key), each one prorated over the award's cost lines by their funder share.
@@ -90,7 +91,7 @@ export const statusOf = (value?: string | null): Status =>
 /** Overdue once the due date has passed, unless Fulfilled; the stored status is kept. `today` is local yyyy-mm-dd. */
 export function effectiveStatus(
   installment: Installment,
-  today = new Date().toLocaleDateString("en-CA"),
+  today = moment().format("YYYY-MM-DD"),
 ): Status {
   const status = statusOf(installment.status);
   const pastDue =

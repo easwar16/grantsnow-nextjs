@@ -1,0 +1,217 @@
+/* Legacy claims-unit-summary: square oj-panels 1x apart, subheading-sm titles, read-only forms in two columns. */
+.tab {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 40px;
+}
+.panel {
+  min-width: 0;
+  padding: 12px;
+  background: var(--gn-surface);
+  border: 1px solid var(--gn-divider);
+}
+.heading {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.subheading {
+  margin: 12px 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+/* Program Preparer and CFO side by side (oj-md-6 each), stacked on small screens. */
+.pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+/* Legacy direction="column": Name and Title down the first column, Email and Phone down the second. */
+.down {
+  grid-auto-flow: column;
+  grid-template-rows: repeat(var(--rows), auto);
+}
+/* Legacy's first column is plain text, not a bold row header. */
+.panel th[scope="row"] {
+  font-weight: 400;
+}
+.note {
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+.note :global(p) {
+  margin: 0 0 6px;
+}
+.rule {
+  margin: 16px 0 0;
+  border: 0;
+  border-top: 1px solid var(--gn-divider);
+}
+@media (max-width: 768px) {
+  .pair,
+  .fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .down {
+    grid-auto-flow: row;
+    grid-template-rows: none;
+  }
+}
+/* Legacy's Edit / Save / Cancel toolbar sits at the tab's top right, above the panels. */
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+/* JET's inline required message under the field. */
+.error {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--gn-danger);
+}
+/* Legacy fundAllocationDialog: Add New, then the add form (two columns, inside labels), then the table, 5x apart. */
+.allocationsDialog {
+  height: 75vh; /* legacy fundAllocationDialog: 50vw × 75vh */
+}
+/* Legacy's first column is plain text, not a bold row header. */
+.allocations th[scope="row"] {
+  font-weight: 400;
+}
+.allocations {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.allocationForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.formActions {
+  display: flex;
+  gap: 8px;
+}
+/* Legacy claims-unit-goals: the fund select (oj-form-control-width-md) and Add Goal side by side, 15px above the table. */
+.goalsBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+.goalsBar > :first-child {
+  width: 19.25vw; /* oj-form-control-width-md: 336px at 1745px */
+}
+/* Legacy addGoalDialog: 70vw × 70vh; the form, Add / Update centred, then the linked activities. */
+.goalDialog {
+  height: 70vh;
+}
+.goalForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.goalActions {
+  display: flex;
+  justify-content: center;
+  padding-bottom: 12px;
+}
+/* Legacy sign-off lists: Add on the left, the stakeholder exports on the right, 3x above the table. */
+.signOffList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+}
+.signOffBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.signOffExports {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+}
+.signOffForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.wideField {
+  grid-column: 1 / -1;
+}
+.currentFile {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--gn-text-secondary);
+}
+.fileLink {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gn-link, var(--link));
+  text-align: start;
+}
+.fileLink:hover {
+  text-decoration: underline;
+}
+.cellActions {
+  display: inline-flex;
+  gap: 2px;
+}
+.pushEnd {
+  margin-left: auto;
+}
+/* Activities: the read-only fund summary form below the filters (legacy's second form in the panel). */
+.summaryFields {
+  margin-top: 12px;
+}
+/* Activity details: header beside goals, then the sub-tab forms (legacy 1/2/3-column oj-forms). */
+.activity {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+}
+.activityForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+}
+.fields3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+.triple {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.versionRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.versionRow > :first-child {
+  flex: 1;
+}
+@media (max-width: 768px) {
+  .fields3,
+  .triple {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

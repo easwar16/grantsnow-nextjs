@@ -37,8 +37,12 @@ import {
   presenceSchema,
   type AccountData,
   type DigitalPresence,
+  type ProfileField,
 } from "@/features/modules/account/contracts";
+import startCase from "lodash/startCase";
+import toLower from "lodash/toLower";
 import { serverConstants } from "@/server/constants";
+import { approvalActor } from "@/server/record/approvals/actor";
 import { functions } from "@/lib/functions";
 import { serverFunctions } from "@/server/functions";
 const visible = (rows: Resources, key: string) =>
@@ -65,46 +69,85 @@ export async function accountData(panel = "profile"): Promise<AccountData> {
   ]);
   const config = assertBusiness(raw),
     person = assertBusiness(identity);
-  const fields: { label: string; value: string }[] = [];
-  for (const [key, value, fallback] of [
-    ["full-name", user.name, "Full name"],
-    ["org-unit", user.organization, "Org Unit"],
-    ["position", person.position, "Position"],
-    ["gender", person.gender, "Gender"],
-    ["dob", person.date_of_birth, "Date of birth"],
-  ] as const)
-    if (typeof value === "string" && value && visible(rows, key))
-      fields.push({
-        label: serverFunctions.resources.label(
-          rows,
-          "dashboard",
-          "labels",
-          key,
-          fallback,
-        ),
-        value:
-          key === "dob" ? functions.format.dateDisplay(value, format) : value,
-      });
-  for (const [key, source, fallback] of [
-    ["institutional-roles", "institutional_roles", "Institutional roles"],
-    ["approver-roles", "approver_roles", "Approver roles"],
-    ["system-roles", "project_roles", "System roles"],
-  ] as const)
-    if (visible(rows, key) && Array.isArray(person[source]))
-      for (const role of person[source] as Record<string, unknown>[])
-        if (typeof role.role_name === "string")
-          fields.push({
-            label: serverFunctions.resources.label(
-              rows,
-              "dashboard",
-              "labels",
-              key,
-              fallback,
-            ),
-            value:
-              role.role_name +
-              (typeof role.org_name === "string" ? ` (${role.org_name})` : ""),
-          });
+  const field = (
+    key: string,
+    fallback: string,
+    values: string[],
+  ): ProfileField => ({
+    key,
+    label: serverFunctions.resources.label(
+      rows,
+      "dashboard",
+      "labels",
+      key,
+      fallback,
+    ),
+    values,
+    help: serverFunctions.resources.resourceDescription(
+      rows,
+      "dashboard",
+      "labels",
+      key,
+    ),
+  });
+  const shown = (
+    list: (readonly [string, unknown, string])[],
+  ): ProfileField[] =>
+    list.flatMap(([key, value, fallback]) =>
+      typeof value === "string" && value && visible(rows, key)
+        ? [
+            field(key, fallback, [
+              key === "dob"
+                ? functions.format.dateDisplay(value, format)
+                : // Legacy getPascalCase for gender.
+                  key === "gender"
+                  ? startCase(toLower(value))
+                  : value,
+            ]),
+          ]
+        : [],
+    );
+  // Legacy role lists: `role_name (org_name)` under one label, shown when the list has rows.
+  const roles = (
+    [
+      ["institutional-roles", "institutional_roles", "Institutional roles"],
+      ["approver-roles", "approver_roles", "Approver roles"],
+      ["system-roles", "project_roles", "System roles"],
+    ] as const
+  ).flatMap(([key, source, fallback]) => {
+    const list = Array.isArray(person[source])
+      ? (person[source] as Record<string, unknown>[]).flatMap((r) =>
+          typeof r.role_name === "string"
+            ? [
+                `${r.role_name} (${typeof r.org_name === "string" ? r.org_name : ""})`,
+              ]
+            : [],
+        )
+      : [];
+    return list.length && visible(rows, key)
+      ? [field(key, fallback, list)]
+      : [];
+  });
+  const fields: AccountData["fields"] = [
+    shown([
+      ["full-name", user.name, "Full name"],
+      // Legacy $application.user.username: the verified IDCS username (a work email).
+      [
+        "email",
+        panel === "profile" ? await approvalActor(session, user) : null,
+        "Email",
+      ],
+      ["dob", person.date_of_birth, "Date of birth"],
+      ["gender", person.gender, "Gender"],
+    ]),
+    [
+      ...shown([
+        ["org-unit", user.organization, "Org Unit"],
+        ["position", person.position, "Position"],
+      ]),
+      ...roles,
+    ],
+  ];
   const accessibility = Object.fromEntries(
     accessibilityKeys.map((key) => [
       key,

@@ -90,10 +90,11 @@
 }
 
 /* oj-form-layout readonly, one column. */
+/* Legacy read-only JET fields, measured on 621: a 45px pitch, the value line kept when empty. */
 .fields {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 13px;
   margin: 0;
 }
 
@@ -107,10 +108,13 @@
   color: var(--gn-text-secondary);
   font-size: 12px;
   font-weight: 600;
+  line-height: 15px;
 }
 
 .field dd {
+  min-height: 15px;
   margin: 0;
+  line-height: 15px;
   overflow-wrap: anywhere;
 }
 
@@ -232,36 +236,6 @@
   margin-bottom: 4px;
   font-size: 12px;
   font-weight: 600;
-}
-
-/* oj-file-picker: a dashed drop zone, primary and secondary text. */
-.drop {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 20px 16px;
-  border: 1px dashed var(--gn-border-input);
-  border-radius: var(--gn-radius);
-  color: var(--gn-text);
-  text-align: center;
-  cursor: pointer;
-}
-
-:global(:where(:root:not([data-input="pointer"]))) .drop:focus-within,
-.dragging {
-  border-color: var(--gn-brand);
-  background: var(--gn-solid-tint);
-}
-
-.dropTitle {
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
-.dropHint {
-  color: var(--gn-text-secondary);
-  font-size: 12px;
 }
 
 .note p {

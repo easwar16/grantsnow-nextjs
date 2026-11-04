@@ -5,6 +5,7 @@ import {
 } from "@/server/platform/configuration/environment";
 import { Icon } from "@/components/ui/icon";
 import { functions } from "@/lib/functions";
+import { AutoSignIn } from "@/features/modules/account/auto-sign-in";
 const messages: Record<string, string> = {
   EXPIRED: "Your session has expired. Sign in again to continue.",
   UNAUTHENTICATED: "Please sign in to continue.",
@@ -24,7 +25,43 @@ export default async function Login({
   const p = await searchParams,
     fixture = fixtureMode(),
     browserSession = browserSessionMode(),
-    reason = p.reason || (await storage()).logoutStatus;
+    reason = p.reason || (await storage()).logoutStatus,
+    // Straight to IDCS, as legacy does; stay here when there is something to read or a retry could loop.
+    straight =
+      !fixture &&
+      !browserSession &&
+      p.idcs !== "unavailable" &&
+      (!reason ||
+        reason === "UNAUTHENTICATED" ||
+        reason === "EXPIRED" ||
+        reason === "SIGNED_OUT");
+  // On the way to IDCS, only a short line shows, not the sign-in card.
+  if (straight)
+    return (
+      <main id="main" className="login-page">
+        <div id="login-brand" className="login-brand">
+          <span className="brand-mark">G</span>
+          <strong>GrantsNow</strong>
+        </div>
+        <form id="login-form" action="/api/auth/login" method="post">
+          <input
+            id="login-return-to"
+            type="hidden"
+            name="returnTo"
+            value={functions.security.safeReturn(p.returnTo)}
+          />
+          <p id="login-redirecting" role="status">
+            Signing in with Oracle IDCS…
+          </p>
+          <noscript>
+            <button id="login-submit" className="primary" type="submit">
+              Continue with Oracle IDCS <Icon name="arrow-right" />
+            </button>
+          </noscript>
+        </form>
+        <AutoSignIn formId="login-form" />
+      </main>
+    );
   return (
     <main id="main" className="login-page">
       <div id="login-brand" className="login-brand">

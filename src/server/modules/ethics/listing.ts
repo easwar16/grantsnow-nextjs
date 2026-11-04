@@ -11,7 +11,7 @@ import {
 import { serverFunctions } from "@/server/functions";
 import { containsClause } from "@/server/oracle/where";
 import { ethicsAccess } from "@/server/modules/home/ethics-access";
-import type { EthicsFilters } from "@/features/modules/ethics/schema";
+import type { EthicsFilters } from "@/features/modules/ethics/listing/schema";
 
 const ACCESS = ["EA_ACCESS", "RESPONDENT_ACCESS", "APPROVER_ACCESS"] as const;
 type Access = (typeof ACCESS)[number];

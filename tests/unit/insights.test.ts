@@ -229,7 +229,7 @@ it("stacks the gap chart, puts the combo amount on the second axis and keeps gap
     (combo.series as { yAxisIndex: number }[]).map((s) => s.yAxisIndex),
   ).toEqual([0, 1]);
 });
-it("marks only isolated line points and truncates the legend to its column", () => {
+it("marks only isolated line points and lists the legend entries", () => {
   const line = functions.charts.insightOptions(
     chart("line", [
       { id: "1", label: "2024", series: "Total", value: 1 },
@@ -240,13 +240,17 @@ it("marks only isolated line points and truncates the legend to its column", () 
   const [total, award] = line.series as { data: { symbol: string }[] }[];
   expect(total.data.map((d) => d.symbol)).toEqual(["none", "none", "none"]);
   expect(award.data.map((d) => d.symbol)).toEqual(["none", "none", "circle"]);
-  expect(functions.charts.legendTextWidth(line, 600)).toBe(156);
+  // The HTML legend lists each series in its palette colour; a scatter has none.
+  expect(functions.charts.legendItems(line).map((i) => i.name)).toEqual([
+    "Total",
+    "Award",
+  ]);
+  expect(functions.charts.legendItems(line)[0].color).toMatch(/^#/);
   expect(
-    functions.charts.legendTextWidth(
+    functions.charts.legendItems(
       functions.charts.insightOptions(chart("scatter", [])),
-      600,
     ),
-  ).toBeUndefined();
+  ).toEqual([]);
 });
 it("treats all-zero data and a missing gauge as empty, and clamps gauge bands", () => {
   expect(

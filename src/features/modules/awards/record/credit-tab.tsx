@@ -61,7 +61,7 @@ export function CreditTab({
             size: 14,
             label: (r) => `${t.edit} ${r.person}`,
             title: t.edit,
-            disabled: () => !view.canEdit,
+            hidden: () => !view.canEdit,
             onClick: setEditing,
           },
         ]}

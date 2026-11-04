@@ -8,6 +8,127 @@ One file for where the rebuild stands. It merges four earlier documents verbatim
 
 ## 1. Progress
 
+### IDCS sign-in, ORDS client credentials and the Azure image — 2026-11-04
+
+- **Live on Azure** (`gn-migration-ca`, image `gncontaineregistry.azurecr.io/grantsnow-dev:0.1.0`, rebuilt 14:45,
+  revision `--0000003`): sign-in and sign-out through IDCS work, with the "Signing in…" step (owner, confirmed by the
+  agent). It needed the issuer IDCS advertises (`https://identity.oraclecloud.com/`) and the redirect and
+  post-logout URLs registered.
+- **Built:**
+  - `ORDS_AUTH_MODE=oauth`: legacy's client credentials per ORDS schema, both DEV clients returning tokens;
+  - straight to IDCS, with only a "Signing in…" line on the way;
+  - the real failure reason in the server log;
+  - sign-out with `id_token_hint`. IDCS refused a token-free logout with 400 on Azure. The fix is in the working tree,
+    verified locally and on Azure.
+- **Docker:** one `.env.<env>` per environment (secrets included, baked into the image without them); the secrets
+  files are removed. `scripts/docker.sh` gained `help`, `push`, `remove`, `rmi`, `azure-secrets` and `release`. The
+  README matches the script.
+- **Local, verified in the browser:** sign-in and sign-out through IDCS work on `http://localhost:3000`. The
+  "rejected redirect" was a stale client id in the local file (`0dd0c443…`); the IDCS application is `f417d453…`,
+  as on Azure. One IDCS application for both, so a browser already signed in on Azure signs in locally without a
+  password. The local settings now live in `.env.local` (`APP_ORIGIN=http://localhost:3000`, the rest as `.env.dev`).
+- **Next:**
+  1. Delete the old, untagged 09:54 build (secrets baked in) by digest: `az acr repository delete --name
+     gncontaineregistry --image grantsnow-dev@sha256:8b2510cb…` and `…@sha256:8d44146a…` (owner). The new image
+     reused the tag `0.1.0`; later releases take a new version (`0.1.1`, …), which `release` points Azure at.
+     `azure-secrets` only reruns when a secret changes.
+  2. Paste the keys-only `.env.example` (the agent is denied the file).
+  3. Owner's choice: keep `.env.local` and drop `scripts/dev.mjs`, or move back to `.env.dev.local`.
+- **Checks:** typecheck clean; lint 0 errors (the existing warning); 102 files / 936 tests; isolated build passed.
+  Full e2e was last run before the IDCS work (42 passed, 2 skipped); auth is not covered by the fixture journeys.
+  Records: `docs/changes/2026-11-04-titiksh-idcs-login-ords-oauth.md`, `docs/changes/2026-11-02-titiksh-docker-image.md`.
+
+### Rebase onto origin/main `118d553`; Ethics, Due Diligence and Proposal list actions onto the framework — 2026-11-04
+
+- The rebase applied cleanly. The stash then conflicted in five files, resolved keeping both sides. Proposals' finalized
+  tick now goes through `RecordTabs`.
+- Easwar's new code was brought onto §4/§5: the Ethics and Due Diligence layout, `RecordFrame` record pages, RB
+  labels, `TabBar`, own CSS, `actions/[action]`; the Proposal API onto `actions/[action]`; ids, hide-not-disable,
+  `functions.format.currencySymbol`.
+- Codex instructions: guide §4, §5, §9 (new commands) and §11; `AGENTS.md` step 5. Record:
+  `docs/changes/2026-11-04-titiksh-rebase-ethics-dd-onto-framework.md`.
+- KB catch-up to `97e90299e`: 9554, 9555, 9319, 8483, `COMBINED_COLLAB_SPLIT`, the Claims redesign (checklist).
+- **Checks:** typecheck clean (source); lint 0 errors (the existing warning); 100 files / 933 tests; isolated
+  build passed; full e2e 42 passed, 2 skipped, 0 failed. No live DEV check.
+
+### Claims Unit Activities, slice 1 — 2026-11-03
+
+- The Activities tab: fund and period filter, the fund's summary and categories, Fund Summary with totals, the
+  Activities List with its status filter and a server-checked Delete (unapplied-balance warning). Fixture-tested;
+  live DEV check pending. Record: `docs/changes/2026-11-03-titiksh-claims-unit-activities.md`.
+
+### Rebase onto origin/main `d972979` — 2026-11-03
+
+- Fast-forward from `75b144c`: our two merged PRs (492, 493) and Ayush's "03-11-26 Docker files". No rule, guide or
+  `docs/changes/` file changed, so the rules read this session stand.
+- **Conflict:** main's `Dockerfile` / `.dockerignore` against the owner's uncommitted ones. Kept main's (deps stage,
+  selector removed at runtime, `.github` / `AGENTS.md` / `CLAUDE.md` excluded) and restored the build's
+  `FIXTURE_MODE=false DEV_BROWSER_SESSION=false` and the `HEALTHCHECK` (`docs/changes/2026-11-02-titiksh-docker-image.md`).
+- Uncommitted work re-applied from the stash without conflicts.
+- **Checks after the rebase:** typecheck clean; lint 0 errors (the existing warning); 95 files / 913 tests; isolated
+  build passed; full e2e 33 passed, 2 skipped, 0 failed.
+
+### Chart legend, record tab arrows, hide-not-disable, rest of the visual pass — 2026-11-03
+
+- Record: `docs/changes/2026-11-03-titiksh-legend-hide-disabled-visual-pass.md`.
+- **Checks:** typecheck clean; lint 0 errors (the existing warning); 94 files / 907 tests; full e2e 32 passed,
+  2 skipped, 1 failed (Contracts expected the read-only page's disabled Send; now asserts it is hidden). It and the
+  approvals, Opportunities and header journeys then passed (4/4). The chatbot / bell time change came after the full
+  run. Isolated build not re-run (the dev server holds `.next`).
+
+### Live pass against VBCS 621; one dialog frame and one record tab bar — 2026-11-03
+
+- Record: `docs/changes/2026-11-03-titiksh-live-pass-dialogs-tabs.md`.
+- **Checks:** typecheck clean; lint 0 errors (the existing warning); 94 files / 907 tests; full e2e 32 passed,
+  2 skipped, 1 failed (the expanded chart is now named by its title; test updated, that journey passes alone). The
+  isolated build was not re-run: the dev server holds `.next` for the live session.
+
+### Partly-done sweep — 2026-11-03
+
+- `functions.format.numberDisplay`; Opportunities Shared/Comments/deadline-warning/narrow-screen and header Help/bell
+  journeys; the drills and header controls were already built (docs corrected). Record:
+  `docs/changes/2026-11-03-titiksh-partly-done-sweep.md`.
+- **Checks:** typecheck clean; lint 0 errors (the existing warning); 93 files / 906 tests; isolated build passed;
+  full e2e 33 passed, 2 skipped, 0 failed (after moving the near-deadline fixture off opportunity 2, which an older
+  journey applies on).
+
+### Development checklist, 9412 and Claims Unit allocations — 2026-11-03
+
+- **Checklist:** `docs/checklist.md` now holds each module's state, the legacy watermark and Next up. Every session
+  checks it first (AGENTS.md step 1, CLAUDE.md, agent guide §1), and updates it whenever something is built or tested.
+- **KB catch-up (`2a12e5f95` dev, `3f7205c01` uat):** the tickets that matter here are listed in the checklist.
+  Only 9412 needed a change now: an award's Created by is its `created_by` person, not the PI.
+- **Built:** the Unit Summary's Fund Allocation dialog (add, row edit, delete), behind `unit-fund-allocations` edit
+  and the claims status config. Record: `docs/changes/2026-11-03-titiksh-claims-unit-allocations.md`.
+- **Live DEV:** not run this session (no dev session). The allocation reads and writes and the award creator wait for
+  a live check.
+- **Next:** in the checklist's Next up.
+
+### Claims Unit record, step 1: shell and Summary (read) — 2026-11-02
+
+- **Built:** `/claims/unit-inquiry/[id]/summary` on `RecordFrame`, with CLAIMS access (fail closed) and the Unit /
+  Fiscal Year / Program Type panel. The listing's card title opens it.
+  - The Summary tab shows Fund Summary with legacy's totals, Preparer and CFO, Signed Off with the sign-off lists
+    (each read when its tab opens), and Terms and Conditions.
+  - Record: `docs/changes/2026-11-02-titiksh-claims-unit-record.md`.
+- **Shared:** `resourceDescription` decodes entity-encoded RB text, as legacy `renderAsHTML` does; new `TabBar`.
+- **Live DEV (reads):** app 1130 matches VBCS 621.
+- **Step 2a (same day): Summary Edit / Save** is built and fixture-tested. A live DEV Save on app 1065 waits for the
+  owner: the browser automation's permission check blocked pressing Save on DEV.
+- **Next:** that live Save; then allocations, stakeholders, meetings and documents, the exports, Assurance and the
+  audit buttons; then Goals, Attachments, Activities, Claims and approvals.
+
+### Edit mode, award Save Header and LOV values — 2026-11-02
+
+- **Done (owner report):**
+  - On every record, edit mode hides Comments, Audit Trail and Finalize (`RecordFrame` `editing`; Proposals' own
+    Finalize too).
+  - The award header has legacy's centred **Save Header** below the dynamic form.
+  - Every `Select` / `MultiSelect` shows a value that is not among its options as blank, as VBCS 621 does (award
+    1188 Attribute 5).
+  - Record: `docs/changes/2026-11-02-titiksh-edit-mode-and-lov-values.md`.
+- **Decided (owner):** a dependent attribute with an empty parent lists no options (legacy lists all).
+
 ### Proposal Summary finalization parity, 2026-11-03
 
 The Proposal tabs now show the VBCS green success mark from locked module page IDs, with the tab spacing and FEC Summary placement adjusted toward the source navigation. A finalized Summary shows the server lock-status message and finalizing user when the lock belongs to another session. Finalize no longer rejects blank Summary display fields such as Keywords or Assigned To; VBCS validates the rendered read-only controls instead. The record refreshes after a successful write. Fixture tests cover the icon, attribution and write with blank display fields. Live DEV finalization has not been run. See `docs/changes/2026-11-03-easwar-proposal-finalized-tab-indicator.md`.

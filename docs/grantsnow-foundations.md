@@ -301,6 +301,11 @@ These rules belong in `src/server/api/*` and nowhere else.
   change is `ReadonlyField`, not a disabled or read-only control. A `readonly` input that stays (a computed total
   in a dialog) is drawn without a box by the global `.gn-control[readonly]` and `InsideField` rules. `disabled` is
   only for a control that is editable but busy (saving).
+- **Unavailable controls are hidden, not disabled** (owner, 2026-11-03). A button, action, row action or edit
+  control the user may not use, because of their access (role or page rights), RB visibility, or the record or row
+  not being editable (status, lock, finalized), is not rendered. `disabled` is only for a passing state the user
+  can change: a write in flight, nothing selected yet, a required parent value not chosen yet. Where legacy disables
+  a control for access or editability, this rule wins.
 - **Skeletons have the shape of what replaces them** (owner, 2026-10-29). A listing page (`(list)/loading.tsx`) uses
   `ListingSkeleton`. A record page above its layout (`(record)/loading.tsx`) uses `DetailSkeleton` (header, tabs,
   fields). A tab or section uses its content's shape: `FormSkeleton` (fields), `TableSkeleton`, `ChartSkeleton`,

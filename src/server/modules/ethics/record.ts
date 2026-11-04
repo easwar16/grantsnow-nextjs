@@ -106,6 +106,7 @@ export async function ethicsRecord(id: string, requestedAccess?: string) {
   );
   return {
     id: String(data.setup_flow_id),
+    access,
     number: data.application_number,
     title: data.setup_description ?? "",
     status: data.status ?? "",
@@ -127,3 +128,5 @@ export async function ethicsRecord(id: string, requestedAccess?: string) {
     })),
   };
 }
+
+export type EthicsRecord = Awaited<ReturnType<typeof ethicsRecord>>;

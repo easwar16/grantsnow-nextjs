@@ -229,7 +229,8 @@ test("Contracts listing filters, paging and guarded Summary", async ({
   await expect(page.getByRole("dialog", { name: "Comments" })).toContainText(
     "Please confirm the funder deadline.",
   );
-  await expect(page.getByRole("button", { name: "Send" })).toBeVisible();
+  // The fixture's page has no edit right, so there is no composer (owner: hidden, not disabled).
+  await expect(page.getByRole("button", { name: "Send" })).toHaveCount(0);
   await page.screenshot({ path: "test-results/contracts-comments.png" });
   await page.getByRole("button", { name: "Close drawer" }).click();
   await expect(page).toHaveURL(/\/contracts\/1300$/);
@@ -325,7 +326,8 @@ test("Proposal and Contract filters fit and align on a phone", async ({
   await expect(
     page.locator("#proposal-outline-proposal-1000-delete"),
   ).toBeVisible();
-  await expect(page.locator("#proposal-proposal-1001-delete")).toBeDisabled();
+  // Not a draft: Delete is hidden, not disabled (owner, 2026-11-03).
+  await expect(page.locator("#proposal-proposal-1001-delete")).toHaveCount(0);
   await expect(page.locator("#proposals-advanced-toggle")).toBeVisible();
   await expect(page.getByText("Advanced Query")).toHaveCount(1);
   await page.locator("#proposals-advanced-toggle").click();
@@ -740,11 +742,10 @@ test("Proposal listing opens recycle and clone options from VBCS actions", async
   await expect(page.getByRole("combobox", { name: "Report" })).toBeVisible();
   await page.locator("#proposals-share-document-dialog-close").click();
   const shared = await page.evaluate(async () => {
-    const response = await fetch("/api/proposals/list-actions", {
+    const response = await fetch("/api/proposals/actions/share-document", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        action: "share-document",
         type: "OUTLINE_PROPOSAL",
         id: "1000",
         report: "proposal-summary",
@@ -755,10 +756,10 @@ test("Proposal listing opens recycle and clone options from VBCS actions", async
   });
   expect(shared).toBe(200);
   const forbidden = await page.evaluate(async () => {
-    const response = await fetch("/api/proposals/list-actions", {
+    const response = await fetch("/api/proposals/actions/delete", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "delete", type: "PROPOSAL", id: "1001" }),
+      body: JSON.stringify({ type: "PROPOSAL", id: "1001" }),
     });
     return response.status;
   });
@@ -1346,7 +1347,13 @@ test("preview-style desktop drawer, user menu and Opportunities routes", async (
   await expect(
     page.getByRole("heading", { name: "Top Funders", exact: true }),
   ).toBeVisible();
-  await expect(page.locator(".funding-pie")).toBeVisible();
+  // Both legacy charts draw, the pie with DEV's unlabelled first row too.
+  await expect(
+    page.locator("#opportunity-analytics-funding-type-chart"),
+  ).toBeVisible();
+  await expect(
+    page.locator("#opportunity-analytics-top-funders-chart"),
+  ).toBeVisible();
 });
 
 test("record skeletons remain visible during delayed refresh and honor reduced motion", async ({
@@ -1505,8 +1512,9 @@ test("Insights follows source chart types, multi-select filters, expansion and i
       exact: true,
     })
     .click();
+  // The shared dialog frame names a dialog by its title.
   const expanded = page.getByRole("dialog", {
-    name: "Expanded Proposal Value By Cost Recovery %",
+    name: "Proposal Value By Cost Recovery %",
     exact: true,
   });
   await expect(expanded.locator(".insight-chart-host svg")).toBeVisible();
@@ -1581,7 +1589,7 @@ test("account dialogs, research save, preferences and accessible preview cancell
     .click();
   await expect(page.locator("html")).toHaveClass(/accFontSize-0/);
 });
-test("EOI create, finalize with the unsaved-changes refusal, and an attachment upload and delete", async ({
+test("EOI create, finalize hidden while editing, and an attachment upload and delete", async ({
   page,
 }) => {
   await login(page);
@@ -1620,18 +1628,15 @@ test("EOI create, finalize with the unsaved-changes refusal, and an attachment u
   const toggle = () => finalize.click();
   await expect(finalize).not.toBeChecked();
   await expect(workflow).toHaveCount(0);
-  // Unsaved answers refuse Finalize and leave the box unticked.
+  // Edit mode hides Finalize, Comments and Audit Trail (owner, 2026-11-02).
   await page
     .getByRole("button", { name: "Edit Application", exact: true })
     .click();
   await page
     .getByRole("textbox", { name: "Project title" })
     .fill("Fixture E2E application, edited");
-  await toggle();
-  await expect(
-    page.locator("#toast-stack").getByText("Can't Finalize"),
-  ).toBeVisible();
-  await expect(finalize).not.toBeChecked();
+  await expect(finalize).toHaveCount(0);
+  await expect(page.locator("#eoi-record-comments")).toHaveCount(0);
   await page.getByRole("button", { name: /^Save as draft$/i }).click();
   await expect(
     page.getByRole("button", { name: "Edit Application", exact: true }),
@@ -1927,6 +1932,147 @@ test("Claims Unit Inquiry: drawer link, status and filters, panels, the unit dia
   expect(one.suggestedFilename()).toBe("report.pdf");
 });
 
+test("Claims Unit record: open from the listing, panel, Fund Summary totals, sign-off lists and access", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/claims/unit-inquiry");
+  // Legacy divClick: the card title opens the application on Summary.
+  await page.locator("#claims-unit-6000-title").click();
+  await expect(page).toHaveURL(/\/claims\/unit-inquiry\/6000\/summary$/);
+  await expect(page.locator("#claims-unit-panel-unit")).toContainText(
+    "202 - Example Research University",
+  );
+  await expect(page.locator("#claims-unit-panel-fiscal-year")).toContainText(
+    "2027",
+  );
+  // Only implemented tabs show; the container has no comments.
+  await expect(page.locator("#claims-unit-tabs a")).toHaveCount(4);
+  await expect(page.locator("#claims-unit-comments")).toHaveCount(0);
+  const funds = page.locator("#claims-unit-fund-summary-table");
+  await expect(funds).toContainText("TITLE III (84.365A)");
+  await expect(funds.locator("tfoot")).toContainText("28,500.00");
+  await expect(page.locator("#claims-unit-preparer")).toContainText(
+    "Fixture Preparer",
+  );
+  // Each sign-off list is read when its tab opens.
+  await expect(page.locator("#claims-unit-stakeholders-table")).toContainText(
+    "Lovelace",
+  );
+  await page.locator("#claims-unit-sign-off-tab-documents").click();
+  await expect(page.locator("#claims-unit-documents-table")).toContainText(
+    "Organization Chart",
+  );
+  await page.keyboard.press("ArrowLeft");
+  await expect(page.locator("#claims-unit-meetings-table")).toContainText(
+    "Kick-off",
+  );
+  // Edit: every field is required; Save refuses an empty one and stays in edit mode, then saves and returns to view.
+  await page.locator("#claims-unit-summary-edit").click();
+  const board = page.locator("input#claims-unit-signed-off-board-member");
+  await expect(board).toHaveValue("");
+  await page.locator("#claims-unit-summary-save").click();
+  await expect(
+    page.locator("#claims-unit-signed-off-board-member-error"),
+  ).toHaveText("Enter a value.");
+  await expect(page.locator("#claims-unit-summary-save")).toBeVisible();
+  await page.locator("#claims-unit-summary-cancel").click();
+  await expect(page.locator("#claims-unit-summary-edit")).toBeVisible();
+  await expect(board).toHaveCount(0);
+  // Allocations: only a fund whose status allows a user edit (DRFT, not IA) has the button.
+  await expect(page.locator("#claims-unit-fund-7001-allocations")).toHaveCount(
+    0,
+  );
+  await page.locator("#claims-unit-fund-7000-allocations").click();
+  const allocations = page.locator("#claims-unit-allocations-table");
+  await expect(allocations.locator("tbody tr")).toHaveCount(1);
+  await expect(allocations).toContainText("Original");
+  await page.locator("#claims-unit-allocations-add-new").click();
+  await page.getByRole("combobox", { name: "Allocation Type" }).click();
+  await page.getByRole("option", { name: "20th Day Adjustment" }).click();
+  await page.locator("#claims-unit-allocations-amount").fill("250");
+  await page.locator("#claims-unit-allocations-add").click();
+  await expect(
+    page.getByText("Allocation created successfully!"),
+  ).toBeVisible();
+  await expect(page.locator("#claims-unit-allocations-form")).toHaveCount(0);
+  await expect(allocations.locator("tbody tr")).toHaveCount(2);
+  await expect(allocations).toContainText("250.00");
+  // Row edit in place, then delete; both read the list again.
+  await page.locator("#claims-unit-allocations-row-8001-edit").click();
+  await page.locator("#claims-unit-allocations-row-8001-amount").fill("300");
+  await page.locator("#claims-unit-allocations-row-8001-save").click();
+  await expect(
+    page.getByText("Allocation updated successfully!"),
+  ).toBeVisible();
+  await expect(allocations).toContainText("300.00");
+  await page.locator("#claims-unit-allocations-row-8001-delete").click();
+  await expect(allocations.locator("tbody tr")).toHaveCount(1);
+  await page.keyboard.press("Escape");
+  await expect(allocations).toHaveCount(0);
+  // Goals: the first fund's goals; a linked goal has no Delete; add one, then delete it.
+  await page.locator("#claims-unit-tab-goals").click();
+  await expect(page).toHaveURL(/\/claims\/unit-inquiry\/6000\/goals$/);
+  const goals = page.locator("#claims-unit-goals-table");
+  await expect(goals).toContainText("Raise attainment");
+  await expect(page.locator("#claims-unit-goals-row-9000-delete")).toHaveCount(
+    0,
+  );
+  await page.locator("#claims-unit-goals-add").click();
+  await page.locator("#claims-unit-goal-dialog-fund-goal-trigger").click();
+  await page.getByRole("option", { name: "3 - USER" }).click();
+  await page
+    .locator("#claims-unit-goal-dialog-description")
+    .fill("Fixture goal");
+  await page.locator("#claims-unit-goal-dialog-save").click();
+  await expect(goals).toContainText("Fixture goal");
+  await page.locator("#claims-unit-goals-row-9001-delete").click();
+  await expect(goals).not.toContainText("Fixture goal");
+  // Activities: the fund's summary, the Fund Summary totals, then the list; only a draft activity can be deleted.
+  await page.locator("#claims-unit-tab-activities").click();
+  await expect(page).toHaveURL(/\/claims\/unit-inquiry\/6000\/activities$/);
+  await expect(
+    page.locator("#claims-unit-activities-fund-status"),
+  ).toContainText("Original Pending");
+  await expect(
+    page.locator("#claims-unit-activities-fund-summary-table"),
+  ).toContainText("Instruction");
+  await page
+    .locator("#claims-unit-activities-tabs-tab-activities-list")
+    .click();
+  const activities = page.locator("#claims-unit-activities-list-table");
+  await expect(activities).toContainText("Reading teacher");
+  await expect(
+    page.locator("#claims-unit-activities-list-row-5101-delete"),
+  ).toHaveCount(0);
+  // View: the details tab with the goals, the position's benefit line and the claimable periods.
+  await page.locator("#claims-unit-activities-list-row-5100-view").click();
+  await expect(page.locator("#claims-unit-activity-goals")).toContainText(
+    "Raise attainment",
+  );
+  await page.locator("#claims-unit-activity-tabs-tab-position-details").click();
+  await expect(
+    page.locator("#claims-unit-activity-benefits-table"),
+  ).toContainText("FICA");
+  await page
+    .locator("#claims-unit-activity-tabs-tab-claimable-amount-details")
+    .click();
+  await expect(
+    page.locator("#claims-unit-activity-claimable-salary-table"),
+  ).toContainText("30,000");
+  await page
+    .locator("#claims-unit-activities-tabs-tab-activities-list")
+    .click();
+  await page.locator("#claims-unit-activities-list-row-5100-delete").click();
+  await expect(activities).not.toContainText("Reading teacher");
+  // Attachments: the shared panel on the application.
+  await page.locator("#claims-unit-tab-attachments").click();
+  await expect(page.locator("#claims-unit-attachments")).toBeVisible();
+  // Summary read N: legacy's refusal and back to the listing.
+  await page.goto("/claims/unit-inquiry/6001/summary");
+  await expect(page).toHaveURL(/\/claims\/unit-inquiry$/);
+});
+
 test("Claims Funds Inquiry: listing, Summary dialog, the record's tabs, filters in the URL, Export and access", async ({
   page,
 }) => {
@@ -1977,4 +2123,58 @@ test("Claims Funds Inquiry: listing, Summary dialog, the record's tabs, filters 
   // Summary read N: the fund is refused and the user goes back to the listing.
   await page.goto("/claims/funds-inquiry/7002/summary");
   await expect(page).toHaveURL(/\/claims\/funds-inquiry$/);
+});
+
+test("Opportunities: Shared tab comments, the deadline warning and a narrow screen", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/opportunities");
+  // OPP_DEADLINE_WARNING_DAYS 7: opportunity 3 closes in three days, so Apply asks first; Cancel stays put.
+  await page.locator("#opportunity-3-apply").click();
+  const warning = page.locator("#opportunity-3-deadline");
+  await expect(warning).toBeVisible();
+  await expect(warning).toContainText("Closing Date");
+  await page.locator("#opportunity-3-deadline-cancel").click();
+  await expect(warning).toHaveCount(0);
+  await expect(page).toHaveURL(/\/opportunities(\?.*)?$/);
+  // Shared with me: the comments button carries the count; the dialog shows the one share comment.
+  await page.getByRole("tab", { name: "Shared", exact: true }).click();
+  await expect(page.locator(".opportunity-card")).toHaveCount(2);
+  await expect(page.locator("#opportunity-1-comments")).toContainText("1");
+  await page.locator("#opportunity-1-comments").click();
+  const comments = page.getByRole("dialog");
+  await expect(comments).toContainText("Worth a look for the lab.");
+  await expect(comments).toContainText("Fixture Colleague");
+  await page.keyboard.press("Escape");
+  await expect(comments).toHaveCount(0);
+  await page.locator("#opportunity-2-comments").click();
+  await expect(page.locator("[id$='-empty']").last()).toBeVisible();
+  await page.keyboard.press("Escape");
+  // Narrow screen: the cards still fit the viewport (no sideways scroll).
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator(".opportunity-card").first()).toBeVisible();
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - window.innerWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("header: Help opens Tutorials, the bell lists notifications and closes on Escape", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/home");
+  // Legacy globalHeadersData: one Help item that navigates to Tutorials.
+  await expect(page.locator("#shell-help")).toHaveAttribute(
+    "href",
+    "/modules/tutorials",
+  );
+  await page.locator("#notifications-button").click();
+  const panel = page.locator("#notifications-panel");
+  await expect(panel).toBeVisible();
+  await expect(panel.locator("[id^='notification-']").first()).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(panel).toHaveCount(0);
+  await expect(page.locator("#notifications-button")).toBeFocused();
 });

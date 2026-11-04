@@ -5,7 +5,9 @@ import { account, useApi } from "@/lib/api";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
 import { Skeleton, ListSkeleton } from "@/components/feedback/skeleton";
 import { useToast } from "@/components/feedback/toast";
+import { HelpButton } from "@/components/ui/help-button";
 import { Icon } from "@/components/ui/icon";
+import { ActionDialog } from "@/components/dialog/action-dialog";
 import { DataTable } from "@/components/ui/data-table";
 import { Select } from "@/components/ui/select";
 import { useShell } from "@/components/layout/shell-context";
@@ -37,19 +39,14 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
   const { labels } = useShell();
   const remote = useApi(account.settings, "profile");
   return (
-    <>
-      <div className={styles.head}>
-        <h2 id="profile-title">{labels.manageProfileTitle}</h2>
-        <button
-          id="profile-close"
-          type="button"
-          className={styles.close}
-          aria-label={labels.close}
-          onClick={onClose}
-        >
-          <Icon name="close" />
-        </button>
-      </div>
+    <ActionDialog
+      id="profile-dialog"
+      title={labels.manageProfileTitle}
+      width="66.667vw" /* legacy #dialogManageProfile oj-md-8 */
+      className={styles.dialog}
+      closeLabel={labels.close}
+      onClose={onClose}
+    >
       {remote.error ? (
         <div id="profile-error" className={styles.body} role="alert">
           <p>{remote.error.message}</p>
@@ -65,7 +62,7 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
           <Skeleton kind="lines" count={4} label="Loading profile" />
         </div>
       )}
-    </>
+    </ActionDialog>
   );
 }
 function Profile({
@@ -192,16 +189,30 @@ function Profile({
           {tab === "profile" && (
             <div id="profile-details" className={styles.profile}>
               <div className={styles.avatar}>
-                <Icon name="employee" size={48} />
+                <Icon name="employee" size={54} />
               </div>
-              <dl className={styles.facts}>
-                {initial.fields.map((f, i) => (
-                  <div key={i}>
-                    <dt>{f.label}</dt>
-                    <dd>{f.value}</dd>
-                  </div>
-                ))}
-              </dl>
+              {initial.fields.map((column, c) => (
+                <dl
+                  key={c}
+                  id={`profile-details-column-${c + 1}`}
+                  className={styles.facts}
+                >
+                  {column.map((f) => (
+                    <div key={f.key} id={`profile-${f.key}`}>
+                      <dt>
+                        {f.label}
+                        <HelpButton
+                          id={`profile-${f.key}-help`}
+                          html={f.help}
+                        />
+                      </dt>
+                      {f.values.map((v, i) => (
+                        <dd key={i}>{v}</dd>
+                      ))}
+                    </div>
+                  ))}
+                </dl>
+              ))}
             </div>
           )}
           {tab === "pref" && (

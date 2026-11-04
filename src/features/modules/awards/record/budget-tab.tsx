@@ -112,7 +112,7 @@ export function BudgetTab({
             size: 14,
             label: (r) => `${view.texts.edit} ${r.key}`,
             title: view.texts.edit,
-            disabled: (r) => !view.canEdit || !r.editable,
+            hidden: (r) => !view.canEdit || !r.editable,
             onClick: setDraft,
           },
         ]}

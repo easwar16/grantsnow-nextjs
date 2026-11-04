@@ -67,6 +67,7 @@ export interface HeaderView {
     | "periodEditTitle"
     | "periodOutside"
     | "save"
+    | "saveHeader"
     | "cancel"
     | "edit"
     | "noPeriods",

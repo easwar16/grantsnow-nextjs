@@ -132,6 +132,7 @@ const KEYS: Record<WorkflowTextKey, [string, string, string]> = {
   historyStatus: ["table-headers", "approval-status", "Status"],
   historyStage: ["table-headers", "approval-stage", "Stage"],
   historyComments: ["table-headers", "approval-user-comments", "User Comments"],
+  commentTitle: ["dialog-titles", "comments", "Comments"],
   historyUpdated: [
     "table-headers",
     "approval-last-updated-date",
@@ -233,6 +234,10 @@ export async function approvalHistoryRows(
     comments:
       typeof r.user_comments === "string"
         ? serverFunctions.sanitize.plainText(r.user_comments)
+        : "",
+    commentsHtml:
+      typeof r.user_comments === "string"
+        ? serverFunctions.sanitize.sanitizeHtml(r.user_comments)
         : "",
     updated: r.last_update_date ?? "",
   }));

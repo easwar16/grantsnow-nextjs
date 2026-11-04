@@ -3,8 +3,8 @@ import { pageIdentity } from "@/server/identity/auth/page";
 import { proposalCreateChoices } from "@/server/modules/proposals/create";
 import { State } from "@/components/feedback/state";
 import { functions } from "@/lib/functions";
-import { ProposalCreateForm } from "./proposal-create-form";
-import styles from "./proposal-create.module.css";
+import { ProposalCreateForm } from "@/features/modules/proposals/listing/proposal-create-form";
+import styles from "@/features/modules/proposals/listing/proposal-create.module.css";
 
 export const metadata = { title: "Create Proposal" };
 

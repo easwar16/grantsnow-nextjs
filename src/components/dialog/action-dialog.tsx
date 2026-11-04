@@ -1,19 +1,23 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
+import { HelpButton } from "@/components/ui/help-button";
 import { pickerOpen } from "@/components/ui/date-input";
 import styles from "./dialog.module.css";
 /**
- * The card dialogs' frame (GN-Angular gn-dialog): modal from mount, closed by its X, Escape or the owner unmounting
- * it. While `busy` it cannot be dismissed, so a write in flight is never orphaned (D44).
+ * The app's one dialog frame (GN-Angular gn-dialog): modal from mount, closed by its X, Escape or the owner unmounting
+ * it. While `busy` it cannot be dismissed, so a write in flight is never orphaned (D44). `dismissible={false}` has no
+ * X and ignores Escape (a dialog only its own buttons close).
  */
 export function ActionDialog({
   id,
   title,
+  help,
   subtitle,
   width,
   className,
   busy = false,
+  dismissible = true,
   closeLabel = "Close",
   onClose,
   children,
@@ -21,11 +25,14 @@ export function ActionDialog({
   /** The dialog's page-unique id; its parts derive theirs from it. */
   id: string;
   title: string;
+  /** The title's RB More Info (legacy rb-help-btn). */
+  help?: string | null;
   subtitle?: string;
   /** A vw length from the legacy width class; omitted, Redwood's default 600px dialog, at most 70vh tall (owner, 2026-10-27). */
   width?: string;
   className?: string;
   busy?: boolean;
+  dismissible?: boolean;
   closeLabel?: string;
   onClose: () => void;
   children: React.ReactNode;
@@ -43,22 +50,28 @@ export function ActionDialog({
       style={{ width: `min(${width ?? "34.384vw"}, calc(100vw - 32px))` }}
       aria-labelledby={`${id}-title`}
       onCancel={(e) => {
-        if (busy || pickerOpen(ref.current)) e.preventDefault();
+        if (busy || !dismissible || pickerOpen(ref.current)) e.preventDefault();
       }}
-      onClose={onClose}
+      // A repeated Escape can still close a modal in some browsers; a non-dismissible one stays up.
+      onClose={() => (dismissible ? onClose() : ref.current?.showModal())}
     >
       <div className={styles.head}>
-        <h2 id={`${id}-title`}>{title}</h2>
-        <button
-          type="button"
-          id={`${id}-close`}
-          className={styles.close}
-          aria-label={closeLabel}
-          disabled={busy}
-          onClick={() => ref.current?.close()}
-        >
-          <Icon name="close" />
-        </button>
+        <h2 id={`${id}-title`}>
+          {title}
+          {help !== undefined && <HelpButton id={`${id}-help`} html={help} />}
+        </h2>
+        {dismissible && (
+          <button
+            type="button"
+            id={`${id}-close`}
+            className={styles.close}
+            aria-label={closeLabel}
+            disabled={busy}
+            onClick={() => ref.current?.close()}
+          >
+            <Icon name="close" />
+          </button>
+        )}
       </div>
       {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
       {children}

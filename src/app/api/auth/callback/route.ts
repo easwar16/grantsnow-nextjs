@@ -5,7 +5,7 @@ import {
   fixtureMode,
   oidcSettings,
 } from "@/server/platform/configuration/environment";
-import { storage } from "@/server/identity/session/storage";
+import { keepIdToken, storage } from "@/server/identity/session/storage";
 import { oracle } from "@/server/oracle/connection";
 import { mapBootstrap } from "@/server/identity/session/contracts";
 import { functions } from "@/lib/functions";
@@ -55,6 +55,11 @@ export async function GET(request: Request) {
       fixture: false,
     };
     await store.save();
+    if (tokens.id_token)
+      await keepIdToken(
+        tokens.id_token,
+        Math.max(Math.floor((store.app.expiresAt - Date.now()) / 1000), 60),
+      );
     const destination =
       transaction.returnTo === "/home" &&
       b.user.landing === "PROPOSALS" &&
@@ -62,7 +67,12 @@ export async function GET(request: Request) {
         ? "/proposals"
         : functions.security.safeReturn(transaction.returnTo);
     return Response.redirect(new URL(destination, appOrigin()), 303);
-  } catch {
+  } catch (error) {
+    // The browser only sees LOGIN_FAILED; the operator needs the reason in the server log.
+    console.error(
+      "[auth] callback failed:",
+      error instanceof Error ? error.message : error,
+    );
     store.destroy();
     if (backendToken)
       try {

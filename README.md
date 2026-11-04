@@ -16,7 +16,7 @@ Current dashboard work: all five configured tabs, source-type Insights charts/mu
 | [progress](docs/progress.md)                                                                                                                                           | where the rebuild stands, the approved plan and history                                  |
 | [authentication](docs/authentication.md), [DEV browser session](docs/dev-browser-session.md)                                                                           | IDCS sign-in and the local DEV token bridge                                              |
 | [API mapping](docs/api-mapping.md), [Home coverage](docs/home-coverage.md), [dashboard parity](docs/dashboard-parity.md), [account settings](docs/account-settings.md) | per-area contracts and parity notes                                                      |
-| [security review](docs/security-review.md), [Azure deployment](docs/azure-deployment.md)                                                                               | security and hosting                                                                     |
+| [security review](docs/security-review.md), [Azure deployment](docs/azure-deployment.md), [Docker deployment](docs/docker-deployment.md)                               | security and hosting                                                                     |
 
 Generated from the legacy repo (read-only): `node scripts/oracle-catalogue.mjs --write` produces the Oracle and OIC API catalogues, and `node scripts/resource-seed.mjs` produces the fallback translations (`--check` verifies it).
 
@@ -34,10 +34,12 @@ Open <http://localhost:3000> (the exact `APP_ORIGIN`: sign-in/out check it and t
 
 On another checkout:
 
-1. `cp .env.example .env.local`. The example already points at the GrantsNow DEV environment (ORDS, OIC, APEX tools, chatbot) and uses the paste-token login.
+1. `cp .env.example .env.local` and fill in the values (the team lead shares the DEV ones privately). For the paste-token login set `DEV_BROWSER_SESSION=true`.
 2. Set `SESSION_PASSWORD` to a random key of at least 32 characters: `node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"`.
 3. Optional, for EOI file upload/download: get `GN_OIC_USER` / `GN_OIC_PASSWORD` privately from the team lead. Without them file storage shows as not connected and everything else works.
 4. `npm ci && npm run dev`, open <http://localhost:3000>, and paste your GrantsNow `token` cookie (from the signed-in VBCS app) on the login page.
+
+**Local IDCS sign-in:** put the IDCS and ORDS client keys in `.env.dev.local` with `DEV_BROWSER_SESSION=false`. `npm run dev` (`scripts/dev.mjs`) loads it on top of `.env.local`; delete it to go back to the paste-token login. Docker and the production build never read it.
 
 `.env.local` stays git-ignored: it holds the session key and the OIC credentials, which must never reach source control. For offline work without DEV, set `FIXTURE_MODE=true` and `DEV_BROWSER_SESSION=false`.
 
@@ -72,6 +74,51 @@ DEV_BROWSER_SESSION=false FIXTURE_MODE=false npm run build
 ```
 
 Playwright starts a separate dev server on port 3100 with isolated synthetic settings. It does not require live credentials or reuse your port-3000 session. Unit tests mock the server-only boundary for Node tests; production imports retain the real guard.
+
+## Docker image
+
+One image per environment (dev, demo, uat, stage, prod), built from one file, `.env.<env>`, that holds the
+settings and the secrets. The build bakes the file into the image **without** its secrets, so the image in the
+registry carries none. Locally `deploy` passes the file to the container; on Azure the Container App holds the
+secrets. Details are in [Docker deployment](docs/docker-deployment.md). `scripts/docker.sh help` lists every command.
+
+| Command                          | What it does                                                                                   |
+| -------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `secrets [env]`                  | Add the secret keys to `.env.<env>`, a new `SESSION_PASSWORD` if missing; name the empty ones. |
+| `build [env]`                    | Build `grantsnow-<env>:<version>` (refuses a version it already built).                        |
+| `rmi [env] [version]`            | Delete the local image and its registry tag, so `build` can make that version again.           |
+| `tag [env]`                      | Print the image name.                                                                          |
+| `deploy [env] [version]`         | Run it locally as `grantsnow-<env>` on port 3000 with `.env.<env>`, and wait for health.       |
+| `status` / `logs` / `stop [env]` | The local container's state, its log (follow), stop and remove it.                             |
+| `push [env] [version]`           | Tag it for `gncontaineregistry.azurecr.io` and push it (`az acr login` first).                 |
+| `remove [env] [version]`         | Delete that version from the registry (az asks to confirm).                                    |
+| `azure-secrets [env]`            | Store the secrets from `.env.<env>` as Container App secrets and wire them to the container.   |
+| `release [env] [version]`        | Point the Container App (`gn-migration-ca`) at that pushed version.                            |
+
+`[env]` defaults to `GRANTSNOW_ENV` in `.env`; `[version]` to `package.json`'s. `REGISTRY`, `AZ_APP` and `AZ_GROUP`
+override the registry, Container App and resource group.
+
+Local run:
+
+```sh
+sudo systemctl start docker        # Docker for this session only (it stays off at the next boot)
+scripts/docker.sh secrets dev      # once per environment; fill in the keys it lists
+scripts/docker.sh build dev
+scripts/docker.sh deploy dev       # http://localhost:3000, waits for /api/health
+```
+
+Release to Azure (`az login` and `az acr login --name gncontaineregistry` first):
+
+```sh
+npm version patch --no-git-tag-version   # a new version, so Azure pulls a fresh image
+scripts/docker.sh build dev
+scripts/docker.sh push dev
+scripts/docker.sh azure-secrets dev      # once, and whenever a secret changes
+scripts/docker.sh release dev
+```
+
+The server starts only once the environment's IDCS and ORDS settings and secrets are filled in; the startup error
+names the missing one. When you are done, `sudo systemctl stop docker docker.socket`.
 
 ## Clearing local build and test output
 

@@ -26,6 +26,7 @@ import { fixtureMode } from "@/server/platform/configuration/environment";
 import { eoiAttachmentHost } from "@/server/modules/opportunities/record";
 import { awardAttachmentHost } from "@/server/modules/awards/record";
 import { fundAttachmentHost } from "@/server/modules/claims/funds/record";
+import { unitAttachmentHost } from "@/server/modules/claims/units/record";
 import { proposalAttachmentHost } from "@/server/modules/proposals/attachments";
 import { recordIdentity } from "@/features/modules/proposals/record";
 import { fileProblem } from "@/features/record/dynamic-form/engine";
@@ -76,6 +77,7 @@ const HOSTS: Record<
   eoi: eoiAttachmentHost,
   award: awardAttachmentHost,
   "claim-funds": fundAttachmentHost,
+  claims: unitAttachmentHost,
 };
 
 for (const type of recordIdentity.shape.type.options)
