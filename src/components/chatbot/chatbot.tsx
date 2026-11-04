@@ -1,4 +1,5 @@
 "use client";
+import { functions } from "@/lib/functions";
 import {
   useEffect,
   useId,
@@ -329,11 +330,7 @@ export function Chatbot({
               >
                 <p className={`${styles.bubble} ${styles.user}`}>{m.text}</p>
                 <small className={styles.meta}>
-                  {userName}{" "}
-                  {m.at.toLocaleTimeString("en-US", {
-                    hour: "numeric",
-                    minute: "2-digit",
-                  })}
+                  {userName} {functions.format.clockDisplay(m.at)}
                 </small>
               </div>
             ) : (
@@ -350,9 +347,10 @@ export function Chatbot({
                     id={`chatbot-message-${m.id}-options`}
                     className={styles.options}
                   >
-                    {m.options.map((o) => (
+                    {m.options.map((o, i) => (
                       <button
                         key={o}
+                        id={`chatbot-message-${m.id}-option-${i}`}
                         type="button"
                         disabled={busy}
                         aria-pressed={m.chosen === o}

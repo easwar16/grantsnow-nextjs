@@ -69,8 +69,7 @@ export function Select({
     autoId = useId(),
     base = id ?? autoId,
     panel = `${base}-panel`;
-  const chosen = options.find((o) => o.value === value)?.label ?? value,
-    needle = (query ?? "").trim().toLowerCase(),
+  const needle = (query ?? "").trim().toLowerCase(),
     matches = useMemo(
       () =>
         needle === ""
@@ -88,6 +87,11 @@ export function Select({
     ],
     optionId = (v: string) =>
       `${base}-option-${v === "" ? "none" : functions.ids.idPart(v)}`;
+  // A value that is not among the options shows blank, as legacy's JET selects (live 621, award 1188 Attribute 5).
+  // A tree list's indent (an org unit's depth in leading spaces) belongs to the list, not the field.
+  const chosen = (
+    options.find((o) => o.value === value)?.label ?? ""
+  ).trimStart();
   // Downshift's own: it tells a click inside the list from one outside.
   const [, setList] = useState<HTMLUListElement | null>(null);
   const view = useOptionWindow(rows.length, pop);
@@ -100,7 +104,7 @@ export function Select({
     getItemProps,
   } = useCombobox({
     items: rows,
-    itemToString: (o) => o?.label ?? "",
+    itemToString: (o) => (o?.label ?? "").trimStart(),
     itemToKey: (o) => o?.value,
     inputId: `${base}-trigger`,
     menuId: `${base}-list`,

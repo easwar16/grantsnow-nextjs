@@ -18,16 +18,17 @@ export function MilestonesTab({ view }: { view: MilestonesView }) {
   return (
     <div id="award-record-milestones" className={styles.tab}>
       <div className={styles.milestoneActions}>
-        <button
-          type="button"
-          id="award-milestones-add"
-          className="gn-btn gn-btn--outlined"
-          disabled={!view.canAdd}
-          onClick={() => setOpen(true)}
-        >
-          <Icon name="add-level" size={14} />
-          {t.add}
-        </button>
+        {view.canAdd && (
+          <button
+            type="button"
+            id="award-milestones-add"
+            className="gn-btn gn-btn--outlined"
+            onClick={() => setOpen(true)}
+          >
+            <Icon name="add-level" size={14} />
+            {t.add}
+          </button>
+        )}
       </div>
       {/* Legacy never fills it: the columns over the empty message. */}
       <DataTable

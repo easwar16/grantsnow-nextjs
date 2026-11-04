@@ -623,37 +623,6 @@
   font-size: 21px;
   margin: 8px 0;
 }
-.detailTabs {
-  display: flex;
-  border-bottom: 1px solid var(--border);
-  border-top: 2px solid #999;
-  justify-content: stretch;
-  gap: 0;
-  margin-bottom: 10px;
-  overflow-x: auto;
-  background: #f4f4f4;
-  min-height: 36px;
-}
-.detailTabs > span {
-  flex: 1 0 auto;
-  text-align: center;
-  padding: 6px 10px;
-  border-bottom: 3px solid var(--accent-fg);
-  font-weight: 600;
-}
-.detailTabs > a {
-  flex: 1 0 auto;
-  text-align: center;
-  padding: 6px 10px;
-  color: var(--text);
-  text-decoration: none;
-}
-.detailTabs > a:hover {
-  text-decoration: underline;
-}
-.detailTabs :global(.gn-icon) {
-  margin-right: 5px;
-}
 .summary {
   background: var(--surface);
   border: 1px solid var(--border);

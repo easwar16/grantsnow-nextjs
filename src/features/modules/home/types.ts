@@ -39,6 +39,12 @@ export interface ChartLayout {
   y2Title?: string;
   stack?: boolean;
   legend?: boolean;
+  /** Every category label, turned 90° (a plain oj-chart bar with many groups, e.g. Opportunities Analytics). */
+  rotateLabels?: boolean;
+  /** One-decimal percentages inside the slices (a plain oj-chart pie, e.g. Opportunities Analytics). */
+  insideLabels?: boolean;
+  /** A title above a pie's legend (oj-chart `legend.title`); unnamed slices then have no legend entry. */
+  legendTitle?: string;
 }
 export interface WidgetData {
   presentation?: ChartLayout & {

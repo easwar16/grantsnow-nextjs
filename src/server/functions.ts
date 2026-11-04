@@ -248,9 +248,9 @@ function resourceDescription(
       r.label_type === group &&
       r.label_name === key,
   )?.label_description;
-  return text === null || text === undefined || text.trim() === ""
-    ? null
-    : sanitizeHtml(text);
+  if (text === null || text === undefined || text.trim() === "") return null;
+  // Legacy renderAsHTML: entity-encoded text ("&lt;p&gt;") is decoded first; real markup is kept as it is.
+  return sanitizeHtml(/<[a-z][\s\S]*>/i.test(text) ? text : plainText(text));
 }
 
 /** The one resource-visibility rule: shown only on an explicit 'Y'; a missing bundle, key or flag hides it. */

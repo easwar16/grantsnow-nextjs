@@ -379,7 +379,7 @@ function ProjectsPanel({
             size: 14,
             label: (p) => `${view.texts.editProject} ${p.name}`,
             title: view.texts.editProject,
-            disabled: (p) => !view.gates.edit || !p.editable,
+            hidden: (p) => !view.gates.edit || !p.editable,
             onClick: (p) => setDraft(draftOf(p)),
           },
         ]}
@@ -635,7 +635,7 @@ function TeamPanel({
                   size: 14,
                   label: (m) => `${view.texts.editTeam} ${m.person}`,
                   title: view.texts.editTeam,
-                  disabled: (m) => !view.gates.edit || !m.editable,
+                  hidden: (m) => !view.gates.edit || !m.editable,
                   onClick: setDraft,
                 },
               ]}

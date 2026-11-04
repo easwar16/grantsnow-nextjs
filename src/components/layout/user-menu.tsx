@@ -15,8 +15,7 @@ export function UserMenu({
 }) {
   const { labels } = useShell();
   const menu = useRef<HTMLDetailsElement>(null),
-    trigger = useRef<HTMLElement>(null),
-    dialog = useRef<HTMLDialogElement>(null);
+    trigger = useRef<HTMLElement>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   useEffect(() => {
     const close = (event: PointerEvent) => {
@@ -85,7 +84,6 @@ export function UserMenu({
             onClick={() => {
               closeMenu();
               setProfileOpen(true);
-              dialog.current?.showModal();
             }}
           >
             <Icon name="user-configuration" />
@@ -126,20 +124,14 @@ export function UserMenu({
           </form>
         </div>
       </details>
-      <dialog
-        ref={dialog}
-        id="profile-dialog"
-        className="profile-dialog"
-        aria-labelledby="profile-title"
-        onClose={() => {
-          setProfileOpen(false);
-          trigger.current?.focus();
-        }}
-      >
-        {profileOpen && (
-          <ProfileDialog onClose={() => dialog.current?.close()} />
-        )}
-      </dialog>
+      {profileOpen && (
+        <ProfileDialog
+          onClose={() => {
+            setProfileOpen(false);
+            trigger.current?.focus();
+          }}
+        />
+      )}
     </>
   );
 }

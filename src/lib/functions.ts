@@ -104,7 +104,7 @@ function moneyDisplay(
   // Legacy formatCurrency: min = DECIMAL_PLACES_COUNT || 0, max = DECIMAL_PLACES_COUNT || 2.
   const maximumFractionDigits = settings?.decimals || 2;
   if (!currency || !/^[A-Z]{3}$/.test(currency))
-    return new Intl.NumberFormat("en-GB", { maximumFractionDigits }).format(n);
+    return numberDisplay(n, settings);
   try {
     return new Intl.NumberFormat("en-GB", {
       style: "currency",
@@ -119,6 +119,29 @@ function moneyDisplay(
   } catch {
     return `${value} ${currency}`;
   }
+}
+
+/** A currency code's symbol, as legacy shareDocButtonActionChain's `formatToParts()[0]`. */
+function currencySymbol(currency: string) {
+  return (
+    new Intl.NumberFormat("en", {
+      style: "currency",
+      currency,
+    }).formatToParts()[0]?.value ?? ""
+  );
+}
+
+/** A time of day in the viewer's zone: legacy getCurrentTime's `h:mm A`, or a legacy formatDate pattern. */
+function clockDisplay(at: Date | string, pattern = "h:mm A") {
+  const m = moment(at);
+  return m.isValid() ? m.format(pattern) : "";
+}
+
+/** A plain number with at most DECIMAL_PLACES_COUNT || 2 digits (legacy's number converter). */
+function numberDisplay(n: number, settings?: FormatSettings) {
+  return new Intl.NumberFormat("en-GB", {
+    maximumFractionDigits: settings?.decimals || 2,
+  }).format(n);
 }
 
 /**
@@ -357,6 +380,14 @@ const percent = new Intl.NumberFormat("en-US", {
 });
 
 const pieLabel = (share = 0) => `${percent.format(share)}%`;
+/** Black or white text for a `#rrggbb` fill, by WCAG relative luminance. */
+function contrastText(fill: string) {
+  const [r, g, b] = [1, 3, 5].map((i) => {
+    const c = parseInt(fill.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.179 ? "#000" : "#fff";
+}
 
 /** Nothing to draw: no gauge, or no value other than null or 0 (a chart of zeros has no marks). */
 function chartIsEmpty(
@@ -380,20 +411,14 @@ function pointRow(
 }
 
 /**
- * ECharts never truncates legend text, so a long name runs over the plot. A legend with a percentage width gets
- * its text cut to that column (less icon, gap and air); hovering an item shows the full name.
+ * The chart's legend entries for the HTML legend beside it (ECharts' own legend is hidden, kept for toggling): a pie or
+ * funnel's slices, else the series, each in its palette colour. Unnamed entries and charts without a legend have none.
  */
-function legendTextWidth(option: EChartsOption, hostWidth: number) {
-  const legend = option.legend as { width?: unknown; show?: boolean };
-  if (
-    legend?.show === false ||
-    typeof legend?.width !== "string" ||
-    !legend.width.endsWith("%")
-  )
-    return undefined;
-  return Math.max(
-    40,
-    Math.floor((hostWidth * parseFloat(legend.width)) / 100 - 24),
+function legendItems(option: EChartsOption): { name: string; color: string }[] {
+  const legend = option.legend as { data?: string[] } | undefined;
+  const palette = (option.color as string[] | undefined) ?? [];
+  return (legend?.data ?? []).flatMap((name, i) =>
+    name === "" ? [] : [{ name, color: palette[i % palette.length] ?? "" }],
   );
 }
 
@@ -440,18 +465,11 @@ function insightOptions(
           }).format(Number(v));
   const drills = data.statistics.some((r) => r.href);
   const cursor = drills ? "pointer" : "default";
-  const legend = {
-    show: p?.legend !== false,
-    type: "scroll" as const,
-    orient: "vertical" as const,
-    right: 0,
-    top: "middle",
-    icon: "rect",
-    itemWidth: 10,
-    itemHeight: 10,
-    pageIconSize: 10,
-    textStyle: { ...font, color: strong },
-  };
+  // Hidden: the HTML legend beside the chart draws it (and scrolls); kept so its clicks toggle series.
+  const legend = (names: string[]) => ({
+    show: false,
+    data: p?.legend === false ? [] : names,
+  });
   const base: EChartsOption = {
     color: [...constants.charts.palette],
     animation: !reducedMotion,
@@ -523,26 +541,38 @@ function insightOptions(
     };
   }
   if (type === "pie" || type === "funnel") {
-    const slices = data.statistics.map((r) => ({
+    const palette = constants.charts.palette;
+    const slices = data.statistics.map((r, i) => ({
       name: r.label,
       value: r.value,
+      // Inside labels take the slice's contrast colour, as JET's: black on light slices, white on dark ones.
+      ...(p?.insideLabels
+        ? { label: { color: contrastText(palette[i % palette.length]) } }
+        : {}),
     }));
     return {
       ...base,
-      legend: { ...legend, width: "35%" },
+      legend: legend(slices.map((s) => s.name)),
       series: [
         type === "pie"
           ? {
               type: "pie",
-              radius: "72%",
-              center: ["32%", "50%"],
+              // A plain oj-chart pie (Analytics, measured on 621) fills more of its plot.
+              radius: p?.insideLabels ? "74%" : "72%",
+              center: ["50%", "50%"],
               cursor,
               data: slices,
-              label: {
-                ...font,
-                color: strong,
-                formatter: (s) => pieLabel(s.percent),
-              },
+              label: p?.insideLabels
+                ? {
+                    ...font,
+                    position: "inside",
+                    formatter: (s) => `${(s.percent ?? 0).toFixed(1)}%`,
+                  }
+                : {
+                    ...font,
+                    color: strong,
+                    formatter: (s) => pieLabel(s.percent),
+                  },
               labelLine: { length: 8, length2: 8 },
               // Count and share, as the legacy short-desc (label: count) with the slice percentage.
               tooltip: {
@@ -553,7 +583,7 @@ function insightOptions(
           : {
               type: "funnel",
               left: "5%",
-              width: "55%",
+              width: "90%",
               gap: 4,
               sort: "none",
               cursor,
@@ -634,12 +664,14 @@ function insightOptions(
   });
   return {
     ...base,
-    legend: scatter ? { show: false } : { ...legend, width: "30%" },
+    legend: legend(
+      scatter ? [] : (series as { name?: string }[]).map((x) => x.name ?? ""),
+    ),
     grid: {
       left: p?.yTitle ? 56 : 44,
-      right: scatter || p?.legend === false ? (combo ? 56 : 16) : "32%",
+      right: combo ? 56 : 16,
       top: 10,
-      bottom: p?.xTitle || scatter ? 44 : 24,
+      bottom: p?.rotateLabels ? 150 : p?.xTitle || scatter ? 44 : 24,
       containLabel: false,
     },
     xAxis: {
@@ -651,8 +683,9 @@ function insightOptions(
       nameTextStyle: font,
       axisLabel: {
         ...font,
-        rotate: scatter ? 90 : 0,
-        width: scatter ? 30 : undefined,
+        rotate: scatter || p?.rotateLabels ? 90 : 0,
+        width: scatter ? 30 : p?.rotateLabels ? 140 : undefined,
+        interval: p?.rotateLabels ? 0 : undefined,
         overflow: "truncate",
       },
       axisLine: gridline,
@@ -677,6 +710,9 @@ export const functions = {
     dateTimeDisplay,
     stampDisplay,
     moneyDisplay,
+    currencySymbol,
+    numberDisplay,
+    clockDisplay,
     percentDisplay,
   },
   ids: { idPart },
@@ -688,7 +724,7 @@ export const functions = {
     pieLabel,
     chartIsEmpty,
     pointRow,
-    legendTextWidth,
+    legendItems,
     insightOptions,
   },
 };

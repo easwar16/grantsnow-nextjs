@@ -1,0 +1,56 @@
+.page {
+  min-height: 100%;
+  padding: 12px 14px 30px;
+  background: var(--bg);
+}
+.toolbar {
+  margin-bottom: 14px;
+}
+.toolbar a {
+  display: inline-block;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  padding: 6px 12px;
+  color: var(--text);
+  text-decoration: none;
+}
+.heading {
+  margin-bottom: 12px;
+}
+.heading > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.heading strong {
+  font-size: 18px;
+}
+.heading span {
+  background: #e9e9e9;
+  padding: 2px 9px;
+  border-radius: 15px;
+}
+.heading h1 {
+  font-size: 22px;
+  margin: 5px 0;
+}
+.section {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  padding: 14px;
+}
+.section h2 {
+  font-size: 17px;
+  margin: 0 0 12px;
+}
+.fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+@media (max-width: 750px) {
+  .fields {
+    grid-template-columns: 1fr;
+  }
+}

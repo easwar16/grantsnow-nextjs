@@ -95,6 +95,7 @@ const icons = {
   overflow: { ux: "overflow-h", material: "more_horiz" },
   trash: { ux: "trash", material: "delete" },
   lock: { ux: "lock", material: "lock" },
+  "manage-allocations": { ux: "manage-allocations", material: "tune" },
   check: { ux: "check", material: "check" },
   multiply: { ux: "multiply", material: "close" },
   reset: { ux: "reset", material: "restart_alt" },

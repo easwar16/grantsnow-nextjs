@@ -15,12 +15,13 @@ import { endpoint } from "../hooks";
 /** A record page's shared panels: the record and the page, never identity or scope (the server has the session). */
 export type PanelRecord = Pick<
   ObjectPanelProps,
-  "objectType" | "objectId" | "page"
+  "objectType" | "objectId" | "page" | "sec"
 >;
 const panel = (p: PanelRecord) => ({
   type: p.objectType,
   id: p.objectId,
   page: p.page,
+  ...(p.sec ? { sec: p.sec } : {}),
 });
 /** The page's comment thread. */
 export const comments = endpoint<PanelRecord, CommentsView>((p) => ({

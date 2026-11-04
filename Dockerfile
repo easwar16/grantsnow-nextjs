@@ -18,7 +18,8 @@ ENV GRANTSNOW_ENV=$GRANTSNOW_ENV
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN npm run build
+# Fixtures and the DEV browser sign-in never reach an image (docs/docker-deployment.md).
+RUN FIXTURE_MODE=false DEV_BROWSER_SESSION=false npm run build
 
 # Stage 3: Runtime
 FROM node:26-alpine AS runner
@@ -37,5 +38,7 @@ RUN rm -f .env
 USER node
 
 EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s CMD node -e "fetch('http://127.0.0.1:'+process.env.PORT+'/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
 
 CMD ["node", "server.js"]

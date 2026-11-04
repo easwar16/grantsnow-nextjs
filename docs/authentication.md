@@ -2,7 +2,16 @@
 
 The OIDC adapter uses maintained generic OIDC `openid-client` 6.8.8, with S256 PKCE, fresh state and nonce, required ID token and expected-state/nonce checks. Tenant-hosted discovery metadata is loaded from IDCS_DISCOVERY_URL with no redirects/no-store and a timeout; explicit expected IDCS_ISSUER and tenant-origin endpoint validation handle Oracle’s distinct advertised issuer. `enableNonRepudiationChecks` explicitly enables library JWKS signature validation. The library validates claims/issuer/audience/lifetime/callback exchange. No custom OAuth/JWT cryptography. Access/refresh/ID tokens are not persisted or sent to browser storage/URLs/logs.
 
-**Actual tenant compatibility remains blocked.** No issuer, metadata, client ID/secret or approved username mapping was provided. `IDCS_COMPATIBILITY_CONFIRMED` must remain false until the identity owner checks metadata, code+openid scopes, S256, signing algorithm/JWKS, client authentication method and callback/logout behavior. IDCS_CLIENT_AUTH_METHOD must match the registration (client_secret_basic or client_secret_post); private_key_jwt requires a separately approved key adapter. The real library Configuration is constructed only after approved issuer/endpoint/capability validation. Do not guess endpoints or weaken validation.
+**Tenant (2026-11-04):** the DEV IDCS tenant's discovery document was checked: `code`, S256, RS256, a public JWKS,
+`client_secret_basic`, `end_session_endpoint`. Its advertised issuer is `https://identity.oraclecloud.com/`, so
+`IDCS_ISSUER` is that value, not the tenant host. The username claim is `sub`, the only identity claim it advertises.
+The client is registered (owner), and `IDCS_COMPATIBILITY_CONFIRMED=true`.
+
+**Server to ORDS (2026-11-04):** `ORDS_AUTH_MODE=oauth` does what legacy's VB proxy does (`services/catalog.json`,
+`services/base/openapi3.json`). It uses OAuth2 client credentials, one client per schema (`ORDS_BASE_CLIENT_*`,
+`ORDS_APPS_CLIENT_*`), with the token from `<root>oauth/token`. The token is cached per schema, shared in flight,
+renewed a minute before expiry and dropped on a 401 (`src/server/oracle/service-token.ts`). `basic` and `bearer`
+remain.
 
 The callback consumes a ten-minute encrypted-cookie login transaction before attempting the library exchange. It maps only the configured claim on verified ID-token claims; subject and nonempty/control-character-free username are required. Claim transformation/case rules must be approved by the owner; currently mapping is exact with no heuristic email/sub fallback. Browser `username`, person/org values are never trusted.
 
@@ -14,7 +23,7 @@ The app uses iron-session encrypted/authenticated HttpOnly cookies, Secure under
 
 Multi-instance: same session key on all instances, no process-local authority/store, Oracle validate on each protected request for revocation/access changes. Cookie carries minimal state and enforces an eight-hour maximum cookie TTL, backend expiry and identity expiry. `iron-session` refuses oversized cookies; a token above adapter limit fails bootstrap. Sealed-cookie replay cannot be centrally revoked by this app alone; Oracle token invalidation + validate supplies revocation, and key rotation can invalidate all local sessions. Concurrent requests/tabs can present the same encrypted cookie. Renewal UI uses a single in-flight request, no timers/retry loop. Verify Oracle extend is idempotent/nonrotating (or allows a safe token overlap) under concurrent multi-instance calls. If exclusive token rotation is required, a shared session/lock store is a prerequisite; no store has been provisioned.
 
-Logout destroys local authority first, attempts Oracle logout independently, saves only a non-authorizing encrypted status notice, and attempts discovered OIDC end-session using client_id plus registered `APP_ORIGIN/login`. No id_token_hint appears in the URL. Tenant support for token-free logout must be confirmed. Missing endpoint/discovery failure surfaces that the IDCS session may still be active. Backend failure separately surfaces local sign-out success and cleanup failure. External logout cannot be guaranteed without tenant verification. Register the exact fixed logout return URI; status is carried in the protected cookie, not a dynamically registered URI.
+Logout destroys local authority first, attempts Oracle logout independently, saves only a non-authorizing encrypted status notice, and attempts discovered OIDC end-session using client_id plus registered `APP_ORIGIN/login`. `id_token_hint` is sent (IDCS refuses a token-free logout, verified 2026-11-04); the ID token is kept in a sealed cookie sent only to the logout route. Tenant support for token-free logout must be confirmed. Missing endpoint/discovery failure surfaces that the IDCS session may still be active. Backend failure separately surfaces local sign-out success and cleanup failure. External logout cannot be guaranteed without tenant verification. Register the exact fixed logout return URI; status is carried in the protected cookie, not a dynamically registered URI.
 
 ## Exact missing inputs/actions
 

@@ -37,6 +37,7 @@ const detailsSchema = z
     award_id: z.coerce.number().int().positive(),
     proposal_id: num,
     pi_pid: num,
+    created_by: num,
     org_id: num,
     sponsor_id: num,
     sponsor_party_name: text,
@@ -168,13 +169,10 @@ export const awardRecordContext = cache(async (id: string) => {
     award,
     raw: raw as Record<string, unknown>,
     periods: periods ?? [],
-    // Legacy labels the PI "Created by" (the award has no creator); kept, as there is nothing else to show.
-    pi:
-      staff?.find((p) => String(p.person_id) === String(award.pi_pid))
-        ?.full_name ?? null,
-    // Legacy getPersonData: the PI's own row, whose org the creator card is read with.
-    piPerson:
-      staff?.find((p) => String(p.person_id) === String(award.pi_pid)) ?? null,
+    // Legacy getPersonData(award_summary.created_by) since 9412 (before, the PI).
+    creator:
+      staff?.find((p) => String(p.person_id) === String(award.created_by)) ??
+      null,
     orgName: orgs?.find((o) => o.id === String(award.org_id))?.name ?? null,
     finalizable,
     finalized,

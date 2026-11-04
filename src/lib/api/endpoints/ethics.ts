@@ -4,7 +4,7 @@ import { post } from "../http";
 import {
   serializeEthicsFilters,
   type EthicsFilters,
-} from "@/features/modules/ethics/schema";
+} from "@/features/modules/ethics/listing/schema";
 import type { EthicsRow } from "@/server/modules/ethics/listing";
 import type { SelectOption } from "@/components/ui/select";
 
@@ -32,22 +32,23 @@ export type DeletedEthics = {
   canRestore: boolean;
 };
 export const deleted = endpoint<void, DeletedEthics[]>(() => ({
-  path: "/ethics/recycle",
+  path: "/ethics/actions/recycle",
 }));
 export const restore = (id: string) =>
-  post<{ restored: boolean }>("/ethics/recycle", { id });
+  post<{ restored: boolean }>("/ethics/actions/restore", { id });
 export type CreateSetup = {
   orgs: SelectOption[];
   types: SelectOption[];
   formTypes: SelectOption[];
+  labels: Record<string, string>;
 };
 export const createSetup = endpoint<void, CreateSetup>(() => ({
-  path: "/ethics/create",
+  path: "/ethics/actions/create",
 }));
 export const createForm = endpoint<
   string,
   { formId: number; sections: { id: string; enabled: boolean }[] }
->((formType) => ({ path: "/ethics/create/form", query: { formType } }));
+>((formType) => ({ path: "/ethics/actions/form", query: { formType } }));
 export type CreateEthics = {
   title: string;
   org: string;
@@ -57,4 +58,4 @@ export type CreateEthics = {
   expiry?: string;
 };
 export const create = (value: CreateEthics) =>
-  post<{ id: string }>("/ethics/create", value);
+  post<{ id: string }>("/ethics/actions/create", value);

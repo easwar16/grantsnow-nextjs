@@ -123,6 +123,7 @@ export async function dueDiligenceRecord(id: string, requestedAccess?: string) {
     .parse(supervisorRows).items;
   return {
     id: String(data.setup_flow_id),
+    access,
     number: data.application_number,
     title: data.setup_description ?? "",
     status: data.status ?? "",
@@ -151,3 +152,5 @@ export async function dueDiligenceRecord(id: string, requestedAccess?: string) {
         ?.full_name ?? "",
   };
 }
+
+export type DueDiligenceRecord = Awaited<ReturnType<typeof dueDiligenceRecord>>;

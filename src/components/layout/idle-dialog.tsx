@@ -1,6 +1,7 @@
 "use client";
 import { clearTabState } from "@/lib/tab-state";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ActionDialog } from "@/components/dialog/action-dialog";
 import { useShell } from "./shell-context";
 import styles from "./idle-dialog.module.css";
 import { constants } from "@/lib/constants";
@@ -12,8 +13,8 @@ const ACTIVITY = ["mousemove", "click", "scroll", "keypress"] as const;
  */
 export function IdleDialog() {
   const { labels } = useShell();
-  const dialog = useRef<HTMLDialogElement>(null),
-    expired = useRef(false);
+  const expired = useRef(false),
+    [open, setOpen] = useState(false);
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const restart = () => {
@@ -21,7 +22,7 @@ export function IdleDialog() {
       clearTimeout(timer);
       timer = setTimeout(() => {
         expired.current = true;
-        dialog.current?.showModal();
+        setOpen(true);
       }, constants.timing.idleMs);
     };
     // Capture, so scrolling inside <main> (the one scroll container) counts as activity too.
@@ -37,19 +38,15 @@ export function IdleDialog() {
         document.removeEventListener(name, restart, { capture: true });
     };
   }, []);
+  if (!open) return null;
   return (
-    <dialog
-      ref={dialog}
+    <ActionDialog
       id="idle-dialog"
+      title={labels.warning}
       className={styles.dialog}
-      aria-labelledby="idle-title"
-      onCancel={(e) => e.preventDefault()}
-      // Browsers may still close on a repeated Escape; an expired session keeps the dialog up.
-      onClose={() => {
-        if (expired.current) dialog.current?.showModal();
-      }}
+      dismissible={false}
+      onClose={() => undefined}
     >
-      <h2 id="idle-title">{labels.warning}</h2>
       <p>{labels.sessionExpired}</p>
       <form
         id="idle-dialog-form"
@@ -62,6 +59,6 @@ export function IdleDialog() {
           {labels.login}
         </button>
       </form>
-    </dialog>
+    </ActionDialog>
   );
 }

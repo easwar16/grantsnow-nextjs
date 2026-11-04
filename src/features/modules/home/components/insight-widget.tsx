@@ -1,10 +1,11 @@
 "use client";
-import { useRef } from "react";
+import { useState } from "react";
 import type { HomeFilters } from "../types";
 import { home, useApi } from "@/lib/api";
 import { ChartSkeleton } from "@/components/feedback/skeleton";
 import { State } from "@/components/feedback/state";
 import { HelpButton } from "@/components/ui/help-button";
+import { ActionDialog } from "@/components/dialog/action-dialog";
 import { InsightChart } from "./insight-chart";
 import { Icon } from "@/components/ui/icon";
 import { type FormatSettings } from "@/lib/format";
@@ -28,7 +29,7 @@ export function InsightWidget({
   format?: FormatSettings;
 }) {
   const { data, error, retry } = useApi(home.widget, { id, filters }),
-    dialog = useRef<HTMLDialogElement>(null);
+    [expanded, setExpanded] = useState(false);
   const empty = data && functions.charts.chartIsEmpty(data);
   return (
     <section
@@ -51,7 +52,7 @@ export function InsightWidget({
             className="chart-expand"
             disabled={!data || !!empty}
             aria-label={`Expand ${title}`}
-            onClick={() => dialog.current?.showModal()}
+            onClick={() => setExpanded(true)}
           >
             <Icon name="expand" />
           </button>
@@ -80,31 +81,16 @@ export function InsightWidget({
           />
         )}
       </div>
-      <dialog
-        ref={dialog}
-        id={`insight-${functions.ids.idPart(id)}-dialog`}
-        className="expanded-chart-dialog"
-        aria-label={`Expanded ${title}`}
-      >
-        <div className="expanded-chart-head">
-          <h2>
-            {title}{" "}
-            <HelpButton
-              id={`insight-${functions.ids.idPart(id)}-dialog-help`}
-              html={help}
-            />
-          </h2>
-          <button
-            id={`insight-${functions.ids.idPart(id)}-dialog-close`}
-            type="button"
-            className="expanded-chart-close"
-            aria-label="Close expanded chart"
-            onClick={() => dialog.current?.close()}
-          >
-            <Icon name="close" />
-          </button>
-        </div>
-        {data && !empty && (
+      {expanded && data && !empty && (
+        <ActionDialog
+          id={`insight-${functions.ids.idPart(id)}-dialog`}
+          title={title}
+          help={help ?? null}
+          width="70vw"
+          className="expanded-chart-dialog"
+          closeLabel="Close expanded chart"
+          onClose={() => setExpanded(false)}
+        >
           <InsightChart
             id={`insights-chart-${functions.ids.idPart(id)}-expanded`}
             title={title}
@@ -112,8 +98,8 @@ export function InsightWidget({
             format={format}
             expanded
           />
-        )}
-      </dialog>
+        </ActionDialog>
+      )}
     </section>
   );
 }

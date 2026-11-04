@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useSelectedLayoutSegment } from "next/navigation";
-import { Icon, type IconName } from "@/components/ui/icon";
-import styles from "./proposal-record.module.css";
+import type { IconName } from "@/components/ui/icon";
+import { RecordTabs } from "@/features/record/shell/record-tabs";
 
 type ProposalTab = {
   segment: string | null;
@@ -115,46 +114,20 @@ export function ProposalTabs({
   const rights = new Map(access);
   const finalized = new Set(finalizedPages);
   return (
-    <nav
+    <RecordTabs
       id={`proposal-${id}-tabs`}
-      className={styles.tabs}
-      aria-label="Proposal sections"
-    >
-      {tabs
+      label="Proposal sections"
+      current={segment ?? ""}
+      tabs={tabs
         .filter((tab) => rights.get(tab.page)?.read)
-        .map((tab) => {
-          const href = `/proposals/${type}/${id}${tab.segment ? `/${tab.segment}` : ""}`;
-          return segment === tab.segment ? (
-            <span id={`${tab.page}-tab`} aria-current="page" key={tab.page}>
-              <Icon name={tab.icon} />
-              {tab.label}
-              {finalized.has(tab.page) && (
-                <Icon
-                  name="success"
-                  className={styles.tabFinalized}
-                  label="Finalized"
-                />
-              )}
-            </span>
-          ) : (
-            <Link
-              id={`${tab.page}-tab`}
-              href={href}
-              prefetch={false}
-              key={tab.page}
-            >
-              <Icon name={tab.icon} />
-              {tab.label}
-              {finalized.has(tab.page) && (
-                <Icon
-                  name="success"
-                  className={styles.tabFinalized}
-                  label="Finalized"
-                />
-              )}
-            </Link>
-          );
-        })}
-    </nav>
+        .map((tab) => ({
+          key: tab.segment ?? "",
+          id: `${tab.page}-tab`,
+          name: tab.label,
+          icon: tab.icon,
+          finalized: finalized.has(tab.page),
+          href: `/proposals/${type}/${id}${tab.segment ? `/${tab.segment}` : ""}`,
+        }))}
+    />
   );
 }

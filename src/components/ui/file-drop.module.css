@@ -1,0 +1,26 @@
+/* oj-file-picker: a dashed drop zone, primary and secondary text. */
+.drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 20px 16px;
+  border: 1px dashed var(--gn-border-input);
+  border-radius: var(--gn-radius);
+  color: var(--gn-text);
+  text-align: center;
+  cursor: pointer;
+}
+:global(:where(:root:not([data-input="pointer"]))) .drop:focus-within,
+.dragging {
+  border-color: var(--gn-brand);
+  background: var(--gn-solid-tint);
+}
+.title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.hint {
+  color: var(--gn-text-secondary);
+  font-size: 12px;
+}

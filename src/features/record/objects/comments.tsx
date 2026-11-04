@@ -186,35 +186,38 @@ export function ObjectComments(props: ObjectPanelProps) {
           </ul>
         )}
       </div>
-      <div id={`${id}-footer`} className={styles.footer}>
-        <div className={styles.input}>
-          <Editor
-            id={`${id}-input`}
-            value={draft}
-            onChange={setDraft}
-            people={people ?? NO_PEOPLE}
-            label={labels.send}
-            disabled={!data.canComment || isActive("add")}
-          />
-          <span
-            id={`${id}-count`}
-            className={`${styles.count} ${(draft?.length ?? 0) > maxLength ? styles.over : ""}`}
+      {/* No composer without the comment right (owner: hidden, not disabled). */}
+      {data.canComment && (
+        <div id={`${id}-footer`} className={styles.footer}>
+          <div className={styles.input}>
+            <Editor
+              id={`${id}-input`}
+              value={draft}
+              onChange={setDraft}
+              people={people ?? NO_PEOPLE}
+              label={labels.send}
+              disabled={isActive("add")}
+            />
+            <span
+              id={`${id}-count`}
+              className={`${styles.count} ${(draft?.length ?? 0) > maxLength ? styles.over : ""}`}
+            >
+              {draft?.length ?? 0} / {maxLength}
+            </span>
+          </div>
+          <button
+            type="button"
+            id={`${id}-send`}
+            className="gn-btn gn-btn--borderless gn-btn--icon"
+            aria-label={labels.send}
+            title={labels.send}
+            disabled={isActive("add")}
+            onClick={add}
           >
-            {draft?.length ?? 0} / {maxLength}
-          </span>
+            <Icon name="send" size={24} />
+          </button>
         </div>
-        <button
-          type="button"
-          id={`${id}-send`}
-          className="gn-btn gn-btn--borderless gn-btn--icon"
-          aria-label={labels.send}
-          title={labels.send}
-          disabled={!data.canComment || isActive("add")}
-          onClick={add}
-        >
-          <Icon name="send" size={24} />
-        </button>
-      </div>
+      )}
       {editing && (
         <ActionDialog
           id={`${id}-edit-dialog`}

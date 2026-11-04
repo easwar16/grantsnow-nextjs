@@ -57,58 +57,41 @@ export type AdvancedSetup = {
   >;
 };
 export const advancedSetup = endpoint<void, AdvancedSetup>(() => ({
-  path: "/proposals/advanced",
+  path: "/proposals/actions/advanced",
 }));
 export const recycle = () =>
-  get<DeletedProposal[]>("/proposals/list-actions", { action: "recycle" });
+  get<DeletedProposal[]>("/proposals/actions/recycle", {});
 export const links = (type: string, id: string) =>
   get<import("@/features/record/linked/model").LinkedObjects>(
-    "/proposals/list-actions",
-    { action: "links", type, id },
+    "/proposals/actions/links",
+    { type, id },
   );
 export const copyOptions = (type: string, id: string) =>
-  get<CopyOption[]>("/proposals/list-actions", {
-    action: "copy-options",
-    type,
-    id,
-  });
+  get<CopyOption[]>("/proposals/actions/copy-options", { type, id });
 export const shareOptions = (type: string, id: string) =>
-  get<ShareOptions>("/proposals/list-actions", {
-    action: "share-options",
-    type,
-    id,
-  });
+  get<ShareOptions>("/proposals/actions/share-options", { type, id });
 export const shareDocument = (
   type: string,
   id: string,
   report: string,
   emails: string[],
 ) =>
-  post<{ shared: boolean }>("/proposals/list-actions", {
-    action: "share-document",
+  post<{ shared: boolean }>("/proposals/actions/share-document", {
     type,
     id,
     report,
     emails,
   });
 export const clone = (type: string, id: string, objects: string[]) =>
-  post<{ id: number; type: string }>("/proposals/list-actions", {
-    action: "copy",
+  post<{ id: number; type: string }>("/proposals/actions/copy", {
     type,
     id,
     objects,
   });
 export const removeFromList = (type: string, id: string) =>
-  post<{ deleted: boolean }>("/proposals/list-actions", {
-    action: "delete",
-    type,
-    id,
-  });
+  post<{ deleted: boolean }>("/proposals/actions/delete", { type, id });
 export const restoreFromRecycle = (id: number) =>
-  post<{ restored: boolean }>("/proposals/list-actions", {
-    action: "restore",
-    id,
-  });
+  post<{ restored: boolean }>("/proposals/actions/restore", { id });
 export const create = (input: {
   type: "PROPOSAL" | "OUTLINE_PROPOSAL";
   title: string;
@@ -123,7 +106,7 @@ export const create = (input: {
   costModel: number;
   confidential: "Y" | "N";
   sponsorId: number;
-}) => post<{ id: number; type: string }>("/proposals/create", input);
+}) => post<{ id: number; type: string }>("/proposals/actions/create", input);
 export const setSummaryFinalized = (
   type: string,
   id: string,

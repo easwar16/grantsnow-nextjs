@@ -11,7 +11,7 @@ import {
 import { serverFunctions } from "@/server/functions";
 import { containsClause } from "@/server/oracle/where";
 import { dueDiligenceAccess } from "@/server/modules/home/due-diligence-access";
-import type { DueDiligenceFilters } from "@/features/modules/due-diligence/schema";
+import type { DueDiligenceFilters } from "@/features/modules/due-diligence/listing/schema";
 
 const ACCESS = ["DDA_ACCESS", "RESPONDENT_ACCESS", "APPROVER_ACCESS"] as const;
 type Access = (typeof ACCESS)[number];

@@ -33,7 +33,12 @@ export type AuditRow = z.infer<typeof auditRows>["items"][number];
 type Target = { objectType: string; objectId: string };
 /** One page's audit trail (getObjectAudits); `event` empty for ALL, as the drawer's tab chain sends it. */
 export const audits = read<
-  Target & { page: string; event: string },
+  Target & {
+    page: string;
+    event: string;
+    /** A secondary object (legacy auditObject.secObjectType / secObjectId), e.g. one fund's allocations. */
+    secondary?: { type: string; id: string };
+  },
   AuditRow[]
 >({
   op: "getSharedGetObjectAudits2",
@@ -42,6 +47,9 @@ export const audits = read<
     p_obj_type: p.objectType,
     p_page_name: p.page,
     p_event: p.event,
+    ...(p.secondary
+      ? { p_sec_obj_type: p.secondary.type, p_sec_obj_id: p.secondary.id }
+      : {}),
   }),
   parse: (b) => auditRows.parse(b).items,
 });

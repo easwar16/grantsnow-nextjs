@@ -34,6 +34,8 @@ export function ProposalFinalize({
     } else setError(result.error.message);
     setPending(false);
   };
+  // Hidden in edit mode, as on every record (owner, 2026-11-02).
+  if (editing) return null;
   return (
     <div id={`proposal-${id}-finalize`} className={styles.finalize}>
       <label htmlFor={`proposal-${id}-finalize-toggle`}>Finalize</label>
@@ -41,10 +43,10 @@ export function ProposalFinalize({
         id={`proposal-${id}-finalize-toggle`}
         type="checkbox"
         checked={checked}
-        disabled={!editable || editing || pending}
+        disabled={!editable || pending}
         onChange={(event) => void update(event.target.checked)}
       />
-      {error && !editing && <span role="alert">{error}</span>}
+      {error && <span role="alert">{error}</span>}
     </div>
   );
 }

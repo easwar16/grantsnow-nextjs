@@ -488,8 +488,8 @@ export function UnitDialog({
                   id: "edit",
                   icon: "edit",
                   label: () => "Edit",
-                  hidden: ({ i }) => rowEditing(i),
-                  disabled: ({ f }) => saving || locked(f),
+                  hidden: ({ f, i }) => rowEditing(i) || locked(f),
+                  disabled: () => saving,
                   onClick: ({ f, i }) => {
                     setEdit({ index: i, fund: f });
                     // The row's Grant lists its own fund type's grants.
@@ -500,8 +500,8 @@ export function UnitDialog({
                   id: "delete",
                   icon: "trash",
                   label: () => "Delete",
-                  hidden: ({ i }) => rowEditing(i),
-                  disabled: ({ f }) => saving || locked(f),
+                  hidden: ({ f, i }) => rowEditing(i) || locked(f),
+                  disabled: () => saving,
                   onClick: ({ i }) =>
                     setFunds((all) => all.filter((_, j) => j !== i)),
                 },

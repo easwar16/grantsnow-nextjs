@@ -93,11 +93,11 @@ export function awardShell(
       value: a.award_status_desc,
       tone: AWARD_STATUS_TONE[status] ?? "neutral",
     });
-  if (context.pi && shown("created-by"))
+  if (context.creator?.full_name && shown("created-by"))
     panel.push({
       key: "created-by",
       label: t("labels", "created-by", "Created by"),
-      value: context.pi,
+      value: context.creator.full_name,
       creator: true,
     });
   if (context.orgName && shown("org-unit"))

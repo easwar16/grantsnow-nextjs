@@ -1,6 +1,6 @@
 import { expect, it, vi, beforeEach, afterEach } from "vitest";
 import { mockOracle } from "@/test-support/transport";
-import { defaultEthicsFilters } from "@/features/modules/ethics/schema";
+import { defaultEthicsFilters } from "@/features/modules/ethics/listing/schema";
 import {
   ethicsWhereClause,
   type EthicsListView,

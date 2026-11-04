@@ -34,6 +34,8 @@ import {
 import { RECORD_SAVE, useAwardRecord } from "./record-shell";
 import dialog from "@/components/dialog/dialog.module.css";
 import styles from "./tabs.module.css";
+import record from "@/features/record/shell/record-tab.module.css";
+import { Icon } from "@/components/ui/icon";
 import { functions } from "@/lib/functions";
 
 /**
@@ -51,7 +53,8 @@ export function HeaderTab({
   lock: PageLock;
   format?: FormatSettings & { currency?: string };
 }) {
-  const { editing, setEditing, run, setGuard, setHeader } = useAwardRecord(),
+  const { editing, setEditing, run, isActive, setGuard, setHeader } =
+      useAwardRecord(),
     toast = useToast(),
     fail = useActionFailure(),
     router = useRouter(),
@@ -78,37 +81,36 @@ export function HeaderTab({
     setGuard({ locked: lock.locked || !editing, dirty });
     return () => setGuard(null);
   });
+  // Legacy saveAwardHeader: run by the shell's Save and by the Save Header button below the form.
+  const save = () =>
+    void run(async () => {
+      setTouched(true);
+      const { values: v } = latest.current;
+      const invalid = HEADER_FIELDS.some(
+        ([k]) => f[k].show && f[k].required && v[k].trim() === "",
+      );
+      const attributesOk = attributes.current?.check() ?? true;
+      const formOk = form.current?.check() ?? true;
+      if (invalid || !attributesOk || !formOk) {
+        if (invalid) toast.show("error", view.texts.required);
+        return;
+      }
+      const result = await awards.saveHeader(view.awardId, {
+        values: Object.fromEntries(
+          HEADER_FIELDS.filter(([k]) => editable(k)).map(([k]) => [k, v[k]]),
+        ),
+        attributes: attributes.current?.values() ?? {},
+      });
+      if (!result.ok) return fail(result.error);
+      toast.show("success", view.texts.updated);
+      // Legacy submitTrigger: the header's dynamic form saves after the header.
+      if (form.current && !(await form.current.save())) return;
+      setEditing(false);
+      startTransition(() => router.refresh());
+    }, RECORD_SAVE);
   useEffect(() => {
     setHeader({
-      save: () =>
-        void run(async () => {
-          setTouched(true);
-          const { values: v } = latest.current;
-          const invalid = HEADER_FIELDS.some(
-            ([k]) => f[k].show && f[k].required && v[k].trim() === "",
-          );
-          const attributesOk = attributes.current?.check() ?? true;
-          const formOk = form.current?.check() ?? true;
-          if (invalid || !attributesOk || !formOk) {
-            if (invalid) toast.show("error", view.texts.required);
-            return;
-          }
-          const result = await awards.saveHeader(view.awardId, {
-            values: Object.fromEntries(
-              HEADER_FIELDS.filter(([k]) => editable(k)).map(([k]) => [
-                k,
-                v[k],
-              ]),
-            ),
-            attributes: attributes.current?.values() ?? {},
-          });
-          if (!result.ok) return fail(result.error);
-          toast.show("success", view.texts.updated);
-          // Legacy submitTrigger: the header's dynamic form saves after the header.
-          if (form.current && !(await form.current.save())) return;
-          setEditing(false);
-          startTransition(() => router.refresh());
-        }, RECORD_SAVE),
+      save,
       cancel: () => {
         setValues(latest.current.view.values);
         setTouched(false);
@@ -223,6 +225,20 @@ export function HeaderTab({
         editable={editing && !lock.locked}
         hideEmpty
       />
+      {editing && !lock.locked && (
+        <div className={record.formActions}>
+          <button
+            type="button"
+            id="award-header-save"
+            className="gn-btn gn-btn--primary"
+            disabled={isActive(RECORD_SAVE)}
+            onClick={save}
+          >
+            <Icon name="save" size={14} />
+            {view.texts.saveHeader}
+          </button>
+        </div>
+      )}
       <section id="award-header-periods" aria-label={view.texts.periodsTitle}>
         <DataTable
           id="award-header-periods-table"
@@ -260,7 +276,7 @@ export function HeaderTab({
               icon: "edit",
               size: 14,
               label: () => view.texts.edit,
-              disabled: (p) => !view.canEditPeriods || !p.editable,
+              hidden: (p) => !view.canEditPeriods || !p.editable,
               onClick: setPeriod,
             },
           ]}

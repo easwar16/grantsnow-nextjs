@@ -8,25 +8,53 @@
   --calendar-provider-5: #546e7a;
   --fc-page-bg-color: var(--surface);
   --fc-neutral-bg-color: var(--table-head-bg);
-  --fc-border-color: var(--border);
-  --fc-today-bg-color: var(--accent-light);
   --fc-event-text-color: var(--on-accent);
+  /* Legacy's fixed light palette (fp-proposals-calendar-styles.css), measured on VBCS 621. */
+  --fc-border-color: #d4dfe0;
+  --fc-today-bg-color: #e0f7fa;
+  --cal-button: #00838f;
+  --cal-button-hover: #006064;
+  --cal-button-active: #004d40;
+  --cal-today-off: #78909c;
+  --cal-title: #004d40;
+  --cal-head-bg: #e0f2f1;
+  --cal-head-text: #00695c;
+  --cal-day-number: #546e7a;
+  --cal-today-number: #00838f;
   display: flex;
   align-items: stretch;
   color: var(--text);
+}
+/* Legacy has no dark calendar: the theme's tokens there. */
+:global(.dark) .calendar {
+  --fc-border-color: var(--border);
+  --fc-today-bg-color: var(--accent-light);
+  --cal-button: var(--accent);
+  --cal-button-hover: var(--accent-hover);
+  --cal-button-active: var(--accent-edge);
+  --cal-today-off: var(--muted);
+  --cal-title: var(--text);
+  --cal-head-bg: var(--table-head-bg);
+  --cal-head-text: var(--muted);
+  --cal-day-number: var(--muted);
+  --cal-today-number: var(--link);
 }
 .mount {
   flex: 1;
   min-width: 0;
 }
 
-/* FullCalendar chrome */
+/* FullCalendar chrome. Legacy line heights scale with the text (1.25, buttons 1.5, title 1.22), measured on 621. */
+.calendar :global(.fc) {
+  line-height: 1.25;
+}
 .calendar :global(.fc .fc-toolbar) {
   flex-wrap: wrap;
   gap: 8px;
 }
+/* FullCalendar's own 1.5em, as legacy keeps it (18px). */
 .calendar :global(.fc .fc-toolbar.fc-header-toolbar) {
-  margin-bottom: 12px;
+  margin-bottom: 1.5em;
 }
 .calendar :global(.fc .fc-toggleCalendars-button) {
   margin-right: 12px;
@@ -37,10 +65,13 @@
   font-size: 0.82em;
   text-transform: capitalize;
   color: var(--on-accent);
-  background-color: var(--accent);
-  border-color: var(--accent-fg);
+  background-color: var(--cal-button);
+  border-color: var(--cal-button);
   border-radius: 4px;
   box-shadow: none;
+  /* The app's 28px control floor is not on legacy's calendar buttons (25px). */
+  min-height: 0;
+  line-height: 1.5;
 }
 .calendar :global(.fc .fc-button:last-child) {
   margin-right: 0;
@@ -53,8 +84,8 @@
   border-radius: 4px;
 }
 .calendar :global(.fc .fc-button:hover) {
-  background-color: var(--accent-hover);
-  border-color: var(--accent-hover);
+  background-color: var(--cal-button-hover);
+  border-color: var(--cal-button-hover);
 }
 .calendar :global(.fc .fc-button:focus) {
   box-shadow: none;
@@ -69,21 +100,22 @@
   outline-offset: 2px;
 }
 .calendar :global(.fc .fc-button-primary:not(:disabled).fc-button-active) {
-  background-color: var(--accent-edge);
-  border-color: var(--accent-edge);
+  background-color: var(--cal-button-active);
+  border-color: var(--cal-button-active);
 }
 .calendar :global(.fc .fc-today-button:disabled) {
-  background-color: var(--muted);
-  border-color: var(--muted);
+  background-color: var(--cal-today-off);
+  border-color: var(--cal-today-off);
   opacity: 0.7;
 }
 .calendar :global(.fc .fc-toolbar-title) {
   font-size: 1.15em;
   font-weight: 700;
-  color: var(--text);
+  line-height: 1.22;
+  color: var(--cal-title);
 }
 .calendar :global(.fc .fc-col-header) {
-  background-color: var(--table-head-bg);
+  background-color: var(--cal-head-bg);
 }
 .calendar :global(.fc .fc-col-header-cell-cushion) {
   display: block;
@@ -93,18 +125,18 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   text-decoration: none;
-  color: var(--muted);
+  color: var(--cal-head-text);
 }
 .calendar :global(.fc .fc-day-today .fc-daygrid-day-number) {
   font-weight: 700;
-  color: var(--link);
+  color: var(--cal-today-number);
 }
 .calendar :global(.fc .fc-daygrid-day-number) {
   display: block;
   padding: 4px 6px;
   font-size: 0.82em;
   text-decoration: none;
-  color: var(--muted);
+  color: var(--cal-day-number);
 }
 .calendar :global(.fc .fc-daygrid-day-frame) {
   min-height: 80px;

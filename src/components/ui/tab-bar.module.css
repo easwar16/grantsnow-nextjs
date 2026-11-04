@@ -1,0 +1,27 @@
+/* JET oj-tab-bar edge="top" as legacy centres it: semibold 12px names, a 3px brand underline on the selected one. */
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 24px;
+  padding: 12px 0;
+}
+.start {
+  justify-content: flex-start;
+}
+.bar > button {
+  height: 36px;
+  min-height: 0;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gn-text-secondary);
+  background: none;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+}
+.bar > button[aria-selected="true"] {
+  color: var(--gn-text);
+  border-bottom-color: var(--gn-brand);
+}

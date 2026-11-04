@@ -9,6 +9,7 @@ import {
 import { AppError } from "@/lib/errors";
 import { Agent, fetch as poolFetch, type Response } from "undici";
 import { serverConstants } from "@/server/constants";
+import { dropServiceToken, serviceToken } from "./service-token";
 export type Operation = keyof typeof operations;
 /**
  * One connection pool for Oracle. Node's default drops an idle connection after 4 s, so most clicks opened new ones,
@@ -209,16 +210,21 @@ async function send(
     );
   }
   const config = oracleSettings();
-  const url = new URL(
-    path.replace(/^\//, ""),
-    op.service === "base" ? config.base : config.apps,
-  );
+  const root = op.service === "base" ? config.base : config.apps,
+    client =
+      "oauth" in config
+        ? config.oauth?.[op.service === "base" ? "base" : "apps"]
+        : undefined;
+  const url = new URL(path.replace(/^\//, ""), root);
   if (query) url.search = query.toString();
   let response: Response;
   // DEV answers slowly (Awards org units ~52 s, KPI statistics up to 75 s); legacy sets no limit. Bounded at the
   // owner's maximum, 10 minutes (2026-10-29); each section streams, so a slow call never holds the page.
   const started = performance.now();
   try {
+    const authorization = client
+      ? `Bearer ${await serviceToken(root, client)}`
+      : config.authorization;
     // One deadline for both attempts.
     const read = !writes(operation),
       deadline = signal
@@ -236,9 +242,7 @@ async function send(
             ...(body === undefined
               ? {}
               : { "Content-Type": "application/json" }),
-            ...(config.authorization
-              ? { Authorization: config.authorization }
-              : {}),
+            ...(authorization ? { Authorization: authorization } : {}),
             Accept: file
               ? "application/pdf, application/octet-stream, application/json"
               : "application/json",
@@ -274,7 +278,10 @@ async function send(
   const took = Math.round(performance.now() - started);
   if (took > 1000) devTrace(operation, `${took} ms`);
   if (!response.ok) devTrace(operation, `HTTP ${response.status}`);
-  if (response.status === 401) throw expired();
+  if (response.status === 401) {
+    if (client) dropServiceToken(root, client);
+    throw expired();
+  }
   if (response.status === 403)
     throw new AppError("FORBIDDEN", "Oracle denied access to this data.", 403);
   if (
