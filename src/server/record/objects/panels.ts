@@ -3,6 +3,8 @@ import { z } from "zod";
 import { eoiRecordContext } from "@/server/modules/opportunities/record";
 import { EOI_MODULE, eoiTabs, pageOf } from "@/shared/opportunities/eoi-record";
 import { AppError } from "@/lib/errors";
+import { UNIT_MODULE } from "@/shared/claims/unit-record";
+import { unitPanelHost } from "@/server/modules/claims/units/record/audits";
 import { awardRecordContext } from "@/server/modules/awards/record";
 import {
   AWARD_MODULE,
@@ -30,6 +32,8 @@ export interface PanelHost {
   objectId: string;
   /** The page id: the comment thread key (`module`) and the audit's `p_page_name`. */
   page: string;
+  /** The audit's secondary object, when the host scopes the trail to a part of the record. */
+  secondary?: { type: string; id: string };
   /** The resource bundle the labels come from. */
   bundle: string;
   token: string;
@@ -82,8 +86,14 @@ const recordHost =
   };
 const HOSTS: Record<
   string,
-  (id: string, page: string, mode: PanelMode) => Promise<PanelHost>
+  (
+    id: string,
+    page: string,
+    mode: PanelMode,
+    sec?: string,
+  ) => Promise<PanelHost>
 > = {
+  [UNIT_MODULE]: unitPanelHost,
   [EOI_MODULE]: recordHost(
     EOI_MODULE,
     "opportunities-eoi",
@@ -159,6 +169,10 @@ const hostQuery = z.object({
   type: z.enum(Object.keys(HOSTS) as [string, ...string[]]),
   id: z.string().regex(/^[1-9]\d{0,14}$/),
   page: z.string().regex(/^[a-z0-9-]{1,80}$/),
+  sec: z
+    .string()
+    .regex(/^[1-9]\d{0,14}$/)
+    .optional(),
 });
 /** `?type&id&page` → the resolved host; anything malformed or unknown is a 400. */
 export function panelHost(q: URLSearchParams, mode: PanelMode) {
@@ -166,9 +180,10 @@ export function panelHost(q: URLSearchParams, mode: PanelMode) {
     type: q.get("type"),
     id: q.get("id"),
     page: q.get("page"),
+    sec: q.get("sec") ?? undefined,
   });
   if (!parsed.success)
     throw new AppError("BAD_REQUEST", "Invalid record panel request.", 400);
-  const { type, id, page } = parsed.data;
-  return HOSTS[type](id, page, mode);
+  const { type, id, page, sec } = parsed.data;
+  return HOSTS[type](id, page, mode, sec);
 }

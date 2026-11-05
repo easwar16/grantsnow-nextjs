@@ -126,17 +126,19 @@ export function ObjectDelegations({
   return (
     <section id={id} className={styles.panel}>
       <div className={`${styles.head} ${styles.end}`}>
-        <button
-          type="button"
-          id={`${id}-add`}
-          className="gn-btn gn-btn--primary"
-          disabled={!gates.edit || isActive("add")}
-          aria-busy={isActive("add") || undefined}
-          onClick={openAdd}
-        >
-          <Icon name="plus" />
-          {texts.add}
-        </button>
+        {gates.edit && (
+          <button
+            type="button"
+            id={`${id}-add`}
+            className="gn-btn gn-btn--primary"
+            disabled={isActive("add")}
+            aria-busy={isActive("add") || undefined}
+            onClick={openAdd}
+          >
+            <Icon name="plus" />
+            {texts.add}
+          </button>
+        )}
       </div>
       {view.delegates.length ? (
         <ul id={`${id}-list`} className={styles.delegates}>
@@ -161,12 +163,11 @@ export function ObjectDelegations({
                         </span>
                       )}
                     </span>
-                    {gates.editAccess && (
+                    {gates.editAccess && gates.edit && (
                       <button
                         type="button"
                         id={`${key}-edit-access`}
                         className="gn-btn gn-btn--borderless"
-                        disabled={!gates.edit}
                         onClick={(e) => {
                           e.preventDefault();
                           editAccess(d);
@@ -176,12 +177,12 @@ export function ObjectDelegations({
                         {texts.editAccess}
                       </button>
                     )}
-                    {gates.deleteDelegate && (
+                    {gates.deleteDelegate && gates.delete && (
                       <button
                         type="button"
                         id={`${key}-delete`}
                         className="gn-btn gn-btn--borderless"
-                        disabled={!gates.delete || isActive(key)}
+                        disabled={isActive(key)}
                         onClick={(e) => {
                           e.preventDefault();
                           void remove(key, () =>
@@ -212,41 +213,49 @@ export function ObjectDelegations({
                             type: keyof Access,
                             text: string,
                             locked = false,
-                          ) => (
-                            <label className={styles.switch}>
-                              <input
-                                id={`${rowKey}-${type}`}
-                                type="checkbox"
-                                role="switch"
-                                checked={access[type]}
-                                disabled={!gates.edit || locked || busy}
-                                onChange={(e) =>
-                                  void toggle(p, type, e.currentTarget.checked)
-                                }
-                              />
-                              {text}
-                            </label>
-                          );
+                          ) =>
+                            // No switch without the edit right or on a locked page (owner: hidden, not disabled).
+                            gates.edit && !locked ? (
+                              <label className={styles.switch}>
+                                <input
+                                  id={`${rowKey}-${type}`}
+                                  type="checkbox"
+                                  role="switch"
+                                  checked={access[type]}
+                                  disabled={busy}
+                                  onChange={(e) =>
+                                    void toggle(
+                                      p,
+                                      type,
+                                      e.currentTarget.checked,
+                                    )
+                                  }
+                                />
+                                {text}
+                              </label>
+                            ) : null;
                           return (
                             <li key={p.id} id={rowKey} className={styles.page}>
                               <span className={styles.pageName}>{p.label}</span>
                               {switchOf("read", texts.read, p.locked)}
                               {switchOf("edit", texts.edit)}
                               {switchOf("delete", texts.delete)}
-                              <button
-                                type="button"
-                                id={`${rowKey}-remove`}
-                                className="gn-btn gn-btn--borderless"
-                                disabled={!gates.delete || p.locked || busy}
-                                onClick={() =>
-                                  void remove(p.id, () =>
-                                    objects.removeDelegatedPage(host, p.id),
-                                  )
-                                }
-                              >
-                                <Icon name="close-circle" />
-                                {texts.remove}
-                              </button>
+                              {gates.delete && !p.locked && (
+                                <button
+                                  type="button"
+                                  id={`${rowKey}-remove`}
+                                  className="gn-btn gn-btn--borderless"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void remove(p.id, () =>
+                                      objects.removeDelegatedPage(host, p.id),
+                                    )
+                                  }
+                                >
+                                  <Icon name="close-circle" />
+                                  {texts.remove}
+                                </button>
+                              )}
                             </li>
                           );
                         })}

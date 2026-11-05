@@ -355,7 +355,15 @@
   "getSharedGetObjectAudits2": {
     "service": "apps",
     "path": "/shared/getObjectAudits",
-    "headers": ["token", "p_obj_id", "p_obj_type", "p_page_name", "p_event"]
+    "headers": [
+      "token",
+      "p_obj_id",
+      "p_obj_type",
+      "p_page_name",
+      "p_event",
+      "p_sec_obj_id",
+      "p_sec_obj_type"
+    ]
   },
   "getSharedGetObjectAttributes": {
     "service": "apps",
@@ -1113,5 +1121,245 @@
     "service": "apps",
     "path": "/claims/fund-inquiry/claim-lines-summary",
     "headers": ["token", "app-fund-id", "status-type"]
+  },
+  "getAppSummary": {
+    "service": "apps",
+    "path": "/claims/app-summary/{app_id}",
+    "headers": ["token", "org-id"]
+  },
+  "getFundSummary": {
+    "service": "apps",
+    "path": "/claims/app-summary/{app_id}/fund-summary",
+    "headers": ["token", "org-id"]
+  },
+  "getStakeholders": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_id}/stakeholders",
+    "headers": ["token", "org-id"]
+  },
+  "getMeetings": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_id}/meetings",
+    "headers": ["token", "org-id"]
+  },
+  "getDocuments": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_id}/documents",
+    "headers": ["token", "org-id"]
+  },
+  "putAppSummary": {
+    "service": "apps",
+    "path": "/claims/app-summary/{app_id}",
+    "headers": ["token"],
+    "method": "PUT",
+    "write": true
+  },
+  "getClaimsStatusConfigs": {
+    "service": "apps",
+    "path": "/claims/status-configs",
+    "headers": ["token"]
+  },
+  "getFundAllocations": {
+    "service": "apps",
+    "path": "/claims/funds/{app_fund_id}/allocations",
+    "headers": ["token", "org-id"]
+  },
+  "postFundAllocation": {
+    "service": "apps",
+    "path": "/claims/funds/{app_fund_id}/allocations",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "putFundAllocations": {
+    "service": "apps",
+    "path": "/claims/allocations/{alloc_id}",
+    "headers": ["token"],
+    "method": "PUT",
+    "write": true
+  },
+  "deleteFundAllocation": {
+    "service": "apps",
+    "path": "/claims/allocations/{alloc_id}",
+    "headers": ["token"],
+    "method": "DELETE",
+    "write": true
+  },
+  "getAppFunds": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_id}/funds",
+    "headers": ["token", "org-id"]
+  },
+  "getGoals": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_fund_id}/goals",
+    "headers": ["token", "org-id"]
+  },
+  "getGoalDetails": {
+    "service": "apps",
+    "path": "/claims/goals/{app_goal_id}",
+    "headers": ["token"]
+  },
+  "getFundGoals": {
+    "service": "apps",
+    "path": "/claims/fund-goals",
+    "headers": ["token", "app-id"]
+  },
+  "postGoals": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_fund_id}/goals",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "putGoals": {
+    "service": "apps",
+    "path": "/claims/goals/{app_goal_id}",
+    "headers": ["token"],
+    "method": "PUT",
+    "write": true
+  },
+  "deleteGoals": {
+    "service": "apps",
+    "path": "/claims/goals/{app_goal_id}",
+    "headers": ["token"],
+    "method": "DELETE",
+    "write": true
+  },
+  "postStakeholders": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_id}/stakeholders",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "putStakeholders": {
+    "service": "apps",
+    "path": "/claims/stakeholders/{stakeholder_id}",
+    "headers": ["token"],
+    "method": "PUT",
+    "write": true
+  },
+  "deleteStakeholder": {
+    "service": "apps",
+    "path": "/claims/stakeholders/{stakeholder_id}",
+    "headers": ["token"],
+    "method": "DELETE",
+    "write": true
+  },
+  "postMeetings": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_id}/meetings",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "putMeetings": {
+    "service": "apps",
+    "path": "/claims/meetings/{meeting_id}",
+    "headers": ["token"],
+    "method": "PUT",
+    "write": true
+  },
+  "deleteMeetings": {
+    "service": "apps",
+    "path": "/claims/meetings/{meeting_id}",
+    "headers": ["token"],
+    "method": "DELETE",
+    "write": true
+  },
+  "postDocuments": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_id}/documents",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "putDocuments": {
+    "service": "apps",
+    "path": "/claims/documents/{doc_id}",
+    "headers": ["token"],
+    "method": "PUT",
+    "write": true
+  },
+  "deleteDocuments": {
+    "service": "apps",
+    "path": "/claims/documents/{doc_id}",
+    "headers": ["token"],
+    "method": "DELETE",
+    "write": true
+  },
+  "getRequirements": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_id}/requirements",
+    "headers": ["token", "org-id"]
+  },
+  "postRequirement": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_id}/requirements",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "putRequirement": {
+    "service": "apps",
+    "path": "/claims/requirements/{app_requirement_id}",
+    "headers": ["token"],
+    "method": "PUT",
+    "write": true
+  },
+  "getFundsCategories": {
+    "service": "apps",
+    "path": "/claims/funds/{app_fund_id}",
+    "headers": ["token", "org-id"]
+  },
+  "getActivitySummary": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_fund_id}/activity-summary",
+    "headers": ["token"]
+  },
+  "getActivities": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_fund_id}/activities",
+    "headers": ["token", "org-id"]
+  },
+  "deleteClaimsActivity": {
+    "service": "apps",
+    "path": "/claims/activities/{activity_id}/vrsn/{amend_version_id}",
+    "headers": ["token"],
+    "method": "DELETE",
+    "write": true
+  },
+  "getClaimsActivity": {
+    "service": "apps",
+    "path": "/claims/activities/{activity_id}/vrsn/{amend_version_id}",
+    "headers": ["token"]
+  },
+  "getActivityVersions": {
+    "service": "apps",
+    "path": "/claims/activities/{act_id}/amend-versions",
+    "headers": ["token"]
+  },
+  "postActivitiesAmendVersions": {
+    "service": "apps",
+    "path": "/claims/activities/{act_id}/amend-versions",
+    "headers": ["token", "amend-vrsn-id"],
+    "method": "POST",
+    "write": true
+  },
+  "getClaimableAmounts": {
+    "service": "apps",
+    "path": "/claims/activities/suggested-claimable-amounts",
+    "headers": ["token", "act-id", "amend-vrsn-id"]
+  },
+  "getClaimsAmendmentHistory": {
+    "service": "apps",
+    "path": "/claims/activities/{activity_id}/amendment-history",
+    "headers": ["token"]
+  },
+  "getClaimDetails": {
+    "service": "apps",
+    "path": "/claims/activities/{act_id}/claim-details",
+    "headers": ["token"]
   }
 }

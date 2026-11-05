@@ -175,13 +175,13 @@ export function AwardRecordShell({
           params: { awardId: model.awardId },
         }}
         finalize={
-          // Legacy: read-only outside view mode.
           finalize && {
             on: pendingFinalize ?? finalize.on,
-            busy: isActive(FINALIZE) || editing,
+            busy: isActive(FINALIZE),
             onChange: setFinalized,
           }
         }
+        editing={editing}
         objectType={AWARD_MODULE}
         objectId={model.awardId}
         page={pageOf(tab)}
@@ -201,15 +201,17 @@ export function AwardRecordShell({
                 {model.labels.sendToErp}
               </button>
             )}
+            {/* A finalized (locked) award has no header edit controls (owner: hidden, not disabled). */}
             {tab === "header" &&
               model.canEditHeader &&
+              !locked &&
               (editing ? (
                 <>
                   <button
                     type="button"
                     id="award-record-save"
                     className="gn-btn gn-btn--primary"
-                    disabled={locked || saving}
+                    disabled={saving}
                     onClick={() => header.current?.save()}
                   >
                     <Icon name="save" size={14} />
@@ -231,7 +233,6 @@ export function AwardRecordShell({
                   type="button"
                   id="award-record-edit"
                   className="gn-btn gn-btn--outlined"
-                  disabled={locked}
                   onClick={() => setEditing(true)}
                 >
                   <Icon name="edit" size={14} />

@@ -128,19 +128,20 @@ export function ApplicationTab({
         editable={editable}
         onReadyChange={setFormReady}
       />
-      {canSaveApplication(requestId, record.editing, statusCode) && (
-        <div className={styles.formActions}>
-          <button
-            type="button"
-            id="eoi-record-application-save"
-            className="gn-btn gn-btn--primary"
-            disabled={!formReady || lock.locked || record.isActive(RECORD_SAVE)}
-            onClick={save}
-          >
-            {isNew ? texts.create : texts.save}
-          </button>
-        </div>
-      )}
+      {canSaveApplication(requestId, record.editing, statusCode) &&
+        !lock.locked && (
+          <div className={styles.formActions}>
+            <button
+              type="button"
+              id="eoi-record-application-save"
+              className="gn-btn gn-btn--primary"
+              disabled={!formReady || record.isActive(RECORD_SAVE)}
+              onClick={save}
+            >
+              {isNew ? texts.create : texts.save}
+            </button>
+          </div>
+        )}
     </div>
   );
 }

@@ -17,7 +17,6 @@ import {
 import { formGlobals } from "@/server/record/dynamic-form/globals";
 import { fileProblem } from "@/features/record/dynamic-form/engine";
 import { AppError } from "@/lib/errors";
-import { serverFunctions } from "@/server/functions";
 
 /**
  * Files of a record's form (port of GN-Angular FilesService, D43): attachment records in ORDS, bytes in Object Storage
@@ -147,9 +146,20 @@ export async function uploadFile(
   t: FormTarget,
   file: { name: string; type: string; bytes: Uint8Array },
 ) {
-  const settings = serverFunctions.async.early(formGlobals());
   const { user, scope } = await scoped(t, "edit");
-  const globals = await settings;
+  return storeFile(scope, user.legalId, file);
+}
+/**
+ * WRITES: stores a file under an already authorised scope (a form slot, a Claims meeting or org document), then its
+ * attachment record; the new attachment id. Limits, name and duplicates are checked here.
+ */
+export async function storeFile(
+  scope: FileScope,
+  legalId: string | undefined,
+  file: { name: string; type: string; bytes: Uint8Array },
+) {
+  requireStorage();
+  const globals = await formGlobals();
   const problem =
     fileNameProblem(file.name) ??
     fileProblem(
@@ -158,12 +168,7 @@ export async function uploadFile(
       globals.accept,
     );
   if (problem) throw new AppError("BAD_REQUEST", problem, 400);
-  const location = storageLocation(
-    globals.instance,
-    user.legalId,
-    scope,
-    file.name,
-  );
+  const location = storageLocation(globals.instance, legalId, scope, file.name);
   return exclusiveLocation(location, async () => {
     // Read under the hold, so an upload that just finished is seen.
     // One object per name per record: storing a taken name would overwrite another attachment's bytes.
@@ -201,6 +206,21 @@ export async function uploadFile(
       );
     return { attachmentId: reply.data.attachment_id };
   });
+}
+/** The stored bytes of one attachment in an already authorised scope. */
+export async function scopedDownload(scope: FileScope, id: number) {
+  requireStorage();
+  const a = await owned(scope, id);
+  const { bytes } = await oicDownload(a.location);
+  return { bytes, fileName: a.fileName };
+}
+/** WRITES: removes one attachment (bytes, then record) in an already authorised scope. */
+export async function scopedDelete(scope: FileScope, id: number) {
+  requireStorage();
+  const a = await owned(scope, id);
+  await oicDelete(a.location);
+  await removeAttachment(a.id);
+  return { deleted: true };
 }
 async function owned(scope: FileScope, id: number) {
   const hit = (await listAttachments(scope)).find((a) => a.id === id);

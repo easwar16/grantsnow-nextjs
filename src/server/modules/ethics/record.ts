@@ -182,3 +182,5 @@ export async function ethicsHistoryHost(id: string): Promise<HistoryHost> {
     },
   };
 }
+
+export type EthicsRecord = Awaited<ReturnType<typeof ethicsRecord>>;

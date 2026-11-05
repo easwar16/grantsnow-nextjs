@@ -1,4 +1,5 @@
 import "server-only";
+import { functions } from "@/lib/functions";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { authenticate } from "@/server/identity/session/service";
@@ -247,10 +248,7 @@ export async function proposalShareDocument(
         curr_code: bind("VARCHAR2", currency),
         curr_symbol: bind(
           "VARCHAR2",
-          new Intl.NumberFormat("en", {
-            style: "currency",
-            currency,
-          }).formatToParts()[0]?.value ?? "",
+          functions.format.currencySymbol(currency),
         ),
         costing_header_id: bind("NUMBER", null),
         org_id: bind("NUMBER", orgId),
@@ -260,3 +258,37 @@ export async function proposalShareDocument(
   });
   return { shared: true };
 }
+
+const target = z.object({ type: z.string(), id: z.string() });
+/** The listing's writes by action, each body validated here (the route only dispatches). */
+export const proposalListWrites: Record<
+  string,
+  (raw: unknown) => Promise<unknown>
+> = {
+  copy: (raw) => {
+    const input = target.extend({ objects: z.array(z.string()) }).parse(raw);
+    return proposalCopy(input.type, input.id, input.objects);
+  },
+  delete: (raw) => {
+    const input = target.parse(raw);
+    return proposalDelete(input.type, input.id);
+  },
+  restore: (raw) =>
+    proposalRestore(
+      z.object({ id: z.number().int().positive() }).parse(raw).id,
+    ),
+  "share-document": (raw) => {
+    const input = target
+      .extend({
+        report: z.string(),
+        emails: z.array(z.string().email()).min(1),
+      })
+      .parse(raw);
+    return proposalShareDocument(
+      input.type,
+      input.id,
+      input.report,
+      input.emails,
+    );
+  },
+};

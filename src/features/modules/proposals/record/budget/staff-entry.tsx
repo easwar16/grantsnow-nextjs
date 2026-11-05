@@ -7,6 +7,7 @@ import { Icon } from "@/components/ui/icon";
 import { DateInput } from "@/components/ui/date-input";
 import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/data-table";
+import { ActionDialog } from "@/components/dialog/action-dialog";
 import { proposals } from "@/lib/api";
 import type { staffEntryOptions } from "@/server/modules/proposals/staff-entry";
 import styles from "../proposal-record.module.css";
@@ -86,7 +87,6 @@ export function StaffEntry({
   options: Options;
 }) {
   const router = useRouter();
-  const availabilityDialogRef = useRef<HTMLDialogElement>(null);
   const requestEpoch = useRef(0);
   const kind = options.kind;
   const budget = `/proposals/${type}/${id}/budget`;
@@ -146,8 +146,6 @@ export function StaffEntry({
     setBaselineEdited([]);
     setAvailability(null);
     setAvailabilityBusy(false);
-    if (availabilityDialogRef.current?.open)
-      availabilityDialogRef.current.close();
     setPerson(detail);
     setName(detail.name);
     setOrgUnitId(detail.orgUnitId);
@@ -210,8 +208,6 @@ export function StaffEntry({
     setBaselineEdited([]);
     setAvailability(null);
     setAvailabilityBusy(false);
-    if (availabilityDialogRef.current?.open)
-      availabilityDialogRef.current.close();
     router.refresh();
   };
   const openAvailability = async () => {
@@ -235,7 +231,6 @@ export function StaffEntry({
       return;
     }
     setAvailability(result.data);
-    availabilityDialogRef.current?.showModal();
   };
   const getLines = async () => {
     if (busy || cost) return;
@@ -314,7 +309,9 @@ export function StaffEntry({
         endDate: line.endDate.slice(0, 10),
         unitType: line.unitType,
         units: Number(line.units),
-        baseline: baselineEdited.includes(line.id) ? Number(line.baseline) : null,
+        baseline: baselineEdited.includes(line.id)
+          ? Number(line.baseline)
+          : null,
       })),
     });
     setBusy(false);
@@ -328,20 +325,30 @@ export function StaffEntry({
     if (!cost || !editLine) return;
     const startDate = editLine.startDate.slice(0, 10);
     const endDate = editLine.endDate.slice(0, 10);
-    if (!startDate || !endDate || startDate > endDate ||
+    if (
+      !startDate ||
+      !endDate ||
+      startDate > endDate ||
       startDate < options.proposalStartDate.slice(0, 10) ||
-      endDate > options.proposalEndDate.slice(0, 10)) {
+      endDate > options.proposalEndDate.slice(0, 10)
+    ) {
       setError("Cost line dates must be within the Proposal period.");
       return;
     }
-    if (editLine.units === "" || !Number.isFinite(Number(editLine.units)) ||
-      Number(editLine.units) < 0 || Number(editLine.units) > 1000) {
+    if (
+      editLine.units === "" ||
+      !Number.isFinite(Number(editLine.units)) ||
+      Number(editLine.units) < 0 ||
+      Number(editLine.units) > 1000
+    ) {
       setError("Enter valid units between 0 and 1000.");
       return;
     }
     setCost({
       ...cost,
-      lines: cost.lines.map((line) => line.id === editLine.id ? editLine : line),
+      lines: cost.lines.map((line) =>
+        line.id === editLine.id ? editLine : line,
+      ),
     });
     setEditLine(null);
     setError("");
@@ -645,38 +652,41 @@ export function StaffEntry({
           <div className={styles.staffAdditional}>
             <div>Proposal Staff Cost Additional Info</div>
             {options.additionalFields.map((field) => (
-              <label key={field.fieldId}>
-                {field.label}
-                {field.required ? " *" : ""}
+              <div key={field.fieldId}>
                 {field.type === "LOV" ? (
-                  <select
+                  <Select
+                    id={`proposal-${id}-staff-additional-${field.fieldId}`}
+                    label={`${field.label}${field.required ? " *" : ""}`}
                     value={answers[String(field.fieldId)] ?? field.defaultValue}
-                    onChange={(event) =>
+                    options={field.options}
+                    onChange={(value) =>
                       setAnswers((current) => ({
                         ...current,
-                        [field.fieldId]: event.target.value,
-                      }))
-                    }
-                  >
-                    <option value="" />
-                    {field.options.map((entry) => (
-                      <option key={entry.value} value={entry.value}>
-                        {entry.label}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    value={answers[String(field.fieldId)] ?? field.defaultValue}
-                    onChange={(event) =>
-                      setAnswers((current) => ({
-                        ...current,
-                        [field.fieldId]: event.target.value,
+                        [field.fieldId]: value,
                       }))
                     }
                   />
+                ) : (
+                  <label
+                    htmlFor={`proposal-${id}-staff-additional-${field.fieldId}`}
+                  >
+                    {field.label}
+                    {field.required ? " *" : ""}
+                    <input
+                      id={`proposal-${id}-staff-additional-${field.fieldId}`}
+                      value={
+                        answers[String(field.fieldId)] ?? field.defaultValue
+                      }
+                      onChange={(event) =>
+                        setAnswers((current) => ({
+                          ...current,
+                          [field.fieldId]: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
                 )}
-              </label>
+              </div>
             ))}
           </div>
         )}
@@ -708,55 +718,156 @@ export function StaffEntry({
               rows={cost.lines}
               rowKey={(line) => String(line.id)}
               columns={[
-                { id: "start", header: "Start date", cell: (line) => line.startDate },
+                {
+                  id: "start",
+                  header: "Start date",
+                  cell: (line) => line.startDate,
+                },
                 { id: "end", header: "End date", cell: (line) => line.endDate },
                 { id: "unit", header: "Unit", cell: (line) => line.unitType },
                 { id: "units", header: "Units", cell: (line) => line.units },
-                { id: "baseline", header: "Base Cost", cell: (line) => line.baseline },
-                { id: "unindexed", header: "Unindexed Cost", cell: (line) => line.unindexed },
-                { id: "total", header: "Total Cost", cell: (line) => line.total },
-                { id: "edit", header: "", cell: (line) => <button id={`proposal-${id}-staff-line-${line.id}-edit`} type="button" onClick={() => setEditLine(line)} disabled={busy}>Edit</button> },
+                {
+                  id: "baseline",
+                  header: "Base Cost",
+                  cell: (line) => line.baseline,
+                },
+                {
+                  id: "unindexed",
+                  header: "Unindexed Cost",
+                  cell: (line) => line.unindexed,
+                },
+                {
+                  id: "total",
+                  header: "Total Cost",
+                  cell: (line) => line.total,
+                },
+                {
+                  id: "edit",
+                  header: "",
+                  cell: (line) => (
+                    <button
+                      id={`proposal-${id}-staff-line-${line.id}-edit`}
+                      type="button"
+                      onClick={() => setEditLine(line)}
+                      disabled={busy}
+                    >
+                      Edit
+                    </button>
+                  ),
+                },
               ]}
             />
-            {editLine && <div className={styles.staffEntryFields} id={`proposal-${id}-staff-line-editor`}>
-              <DateInput id={`proposal-${id}-staff-line-start`} label="Start date" value={editLine.startDate.slice(0, 10)} onChange={(startDate) => setEditLine({ ...editLine, startDate })} disabled={busy} />
-              <DateInput id={`proposal-${id}-staff-line-end`} label="End date" value={editLine.endDate.slice(0, 10)} onChange={(endDate) => setEditLine({ ...editLine, endDate })} disabled={busy} />
-              <Select id={`proposal-${id}-staff-line-unit`} label="Unit" value={editLine.unitType} options={options.unitTypes} onChange={(unitType) => setEditLine({ ...editLine, unitType })} disabled={busy} />
-              <label htmlFor={`proposal-${id}-staff-line-units`}>Units</label>
-              <input id={`proposal-${id}-staff-line-units`} type="number" min="0" max="1000" step="any" value={editLine.units} onChange={(event) => setEditLine({ ...editLine, units: event.target.value })} disabled={busy} />
-              {options.canEditBaseline && salaryModel === "F" && <>
-                <label htmlFor={`proposal-${id}-staff-line-baseline`}>Base Cost</label>
-                <input id={`proposal-${id}-staff-line-baseline`} type="number" min="0" step="any" value={editLine.baseline} onChange={(event) => {
-                  setEditLine({ ...editLine, baseline: event.target.value });
-                  setBaselineEdited((ids) => ids.includes(editLine.id) ? ids : [...ids, editLine.id]);
-                }} disabled={busy} />
-              </>}
-              <button id={`proposal-${id}-staff-line-apply`} type="button" onClick={updateLine} disabled={busy}>Apply</button>
-              <button id={`proposal-${id}-staff-line-cancel`} type="button" onClick={() => setEditLine(null)} disabled={busy}>Cancel</button>
-            </div>}
-            <button id={`proposal-${id}-staff-lines-save`} type="button" onClick={() => void saveLines()} disabled={busy || !!editLine}>
+            {editLine && (
+              <div
+                className={styles.staffEntryFields}
+                id={`proposal-${id}-staff-line-editor`}
+              >
+                <DateInput
+                  id={`proposal-${id}-staff-line-start`}
+                  label="Start date"
+                  value={editLine.startDate.slice(0, 10)}
+                  onChange={(startDate) =>
+                    setEditLine({ ...editLine, startDate })
+                  }
+                  disabled={busy}
+                />
+                <DateInput
+                  id={`proposal-${id}-staff-line-end`}
+                  label="End date"
+                  value={editLine.endDate.slice(0, 10)}
+                  onChange={(endDate) => setEditLine({ ...editLine, endDate })}
+                  disabled={busy}
+                />
+                <Select
+                  id={`proposal-${id}-staff-line-unit`}
+                  label="Unit"
+                  value={editLine.unitType}
+                  options={options.unitTypes}
+                  onChange={(unitType) =>
+                    setEditLine({ ...editLine, unitType })
+                  }
+                  disabled={busy}
+                />
+                <label htmlFor={`proposal-${id}-staff-line-units`}>Units</label>
+                <input
+                  id={`proposal-${id}-staff-line-units`}
+                  type="number"
+                  min="0"
+                  max="1000"
+                  step="any"
+                  value={editLine.units}
+                  onChange={(event) =>
+                    setEditLine({ ...editLine, units: event.target.value })
+                  }
+                  disabled={busy}
+                />
+                {options.canEditBaseline && salaryModel === "F" && (
+                  <>
+                    <label htmlFor={`proposal-${id}-staff-line-baseline`}>
+                      Base Cost
+                    </label>
+                    <input
+                      id={`proposal-${id}-staff-line-baseline`}
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={editLine.baseline}
+                      onChange={(event) => {
+                        setEditLine({
+                          ...editLine,
+                          baseline: event.target.value,
+                        });
+                        setBaselineEdited((ids) =>
+                          ids.includes(editLine.id)
+                            ? ids
+                            : [...ids, editLine.id],
+                        );
+                      }}
+                      disabled={busy}
+                    />
+                  </>
+                )}
+                <button
+                  id={`proposal-${id}-staff-line-apply`}
+                  type="button"
+                  onClick={updateLine}
+                  disabled={busy}
+                >
+                  Apply
+                </button>
+                <button
+                  id={`proposal-${id}-staff-line-cancel`}
+                  type="button"
+                  onClick={() => setEditLine(null)}
+                  disabled={busy}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+            <button
+              id={`proposal-${id}-staff-lines-save`}
+              type="button"
+              onClick={() => void saveLines()}
+              disabled={busy || !!editLine}
+            >
               <Icon name="save" /> {busy ? "Saving…" : "Save Cost Lines"}
             </button>
           </div>
         )}
       </div>
-      <dialog
-        ref={availabilityDialogRef}
-        className={styles.staffAvailabilityDialog}
-        aria-label="Staff Availability"
-      >
-        <div className={styles.staffAvailabilityTitle}>
-          <h2>Staff Availability</h2>
-          <button
-            type="button"
-            aria-label="Close Staff Availability"
-            onClick={() => availabilityDialogRef.current?.close()}
-          >
-            ×
-          </button>
-        </div>
-        {availability && <StaffAvailabilityTimeline data={availability} />}
-      </dialog>
+      {availability && (
+        <ActionDialog
+          id={`proposal-${id}-staff-availability`}
+          title="Staff Availability"
+          closeLabel="Close Staff Availability"
+          onClose={() => setAvailability(null)}
+          width="50vw"
+          className={styles.staffAvailabilityDialog}
+        >
+          <StaffAvailabilityTimeline data={availability} />
+        </ActionDialog>
+      )}
     </section>
   );
 }

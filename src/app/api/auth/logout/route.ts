@@ -1,5 +1,5 @@
 import * as oidc from "openid-client";
-import { storage } from "@/server/identity/session/storage";
+import { storage, takeIdToken } from "@/server/identity/session/storage";
 import { clearSession } from "@/server/identity/session/service";
 import { idcs } from "@/server/identity/auth/oidc";
 import {
@@ -13,6 +13,7 @@ import { functions } from "@/lib/functions";
 export async function POST(request: Request) {
   try {
     functions.security.sameOrigin(request, appOrigin());
+    const idToken = await takeIdToken();
     const backendOk = await clearSession();
     const store = await storage();
     store.logoutStatus = backendOk ? "SIGNED_OUT" : "BACKEND_LOGOUT_FAILED";
@@ -24,10 +25,11 @@ export async function POST(request: Request) {
     if (!fixtureMode() && !browserSessionMode()) {
       try {
         const config = await idcs();
-        if (config.serverMetadata().end_session_endpoint) {
-          // No tokens in URL. IDCS must support client_id + registered return URI.
+        // IDCS answers "Invalid logout request" without id_token_hint (verified 2026-11-04), so it is sent.
+        if (config.serverMetadata().end_session_endpoint && idToken) {
           const url = oidc.buildEndSessionUrl(config, {
             client_id: oidcSettings().clientId,
+            id_token_hint: idToken,
             post_logout_redirect_uri: `${appOrigin()}/login`,
           });
           return Response.redirect(url, 303);

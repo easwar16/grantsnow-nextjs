@@ -26,6 +26,7 @@ import { fixtureMode } from "@/server/platform/configuration/environment";
 import { eoiAttachmentHost } from "@/server/modules/opportunities/record";
 import { awardAttachmentHost } from "@/server/modules/awards/record";
 import { fundAttachmentHost } from "@/server/modules/claims/funds/record";
+import { unitAttachmentHost } from "@/server/modules/claims/units/record";
 import { proposalAttachmentHost } from "@/server/modules/proposals/attachments";
 import { recordIdentity } from "@/features/modules/proposals/record";
 import { ethicsRecord } from "@/server/modules/ethics/record";
@@ -79,14 +80,31 @@ const HOSTS: Record<
   award: awardAttachmentHost,
   "claim-funds": fundAttachmentHost,
   ethics: async (id, mode) => {
-    const [record, { session, user }] = await Promise.all([ethicsRecord(id), authenticate()]);
+    const [record, { session, user }] = await Promise.all([
+      ethicsRecord(id),
+      authenticate(),
+    ]);
     if (!record.tabs.includes("ethics-attachments"))
-      throw new AppError("FORBIDDEN", "Ethics Attachments access has not been granted.", 403);
+      throw new AppError(
+        "FORBIDDEN",
+        "Ethics Attachments access has not been granted.",
+        403,
+      );
     const person = record.respondents[0];
-    if (!person) throw new AppError("CONTRACT", "Ethics stakeholder record is unavailable.");
-    const canEdit = record.rights["ethics-attachments"]?.edit === true && person.statusCode === "DRFT";
+    if (!person)
+      throw new AppError(
+        "CONTRACT",
+        "Ethics stakeholder record is unavailable.",
+      );
+    const canEdit =
+      record.rights["ethics-attachments"]?.edit === true &&
+      person.statusCode === "DRFT";
     if (mode === "edit" && !canEdit)
-      throw new AppError("FORBIDDEN", "Ethics Attachments cannot be changed.", 403);
+      throw new AppError(
+        "FORBIDDEN",
+        "Ethics Attachments cannot be changed.",
+        403,
+      );
     return {
       objectType: "ETHICS",
       objectId: person.id,
@@ -98,6 +116,7 @@ const HOSTS: Record<
       canEdit,
     };
   },
+  claims: unitAttachmentHost,
 };
 
 for (const type of recordIdentity.shape.type.options)
@@ -285,12 +304,14 @@ function gates(rows: Resources, bundle: string) {
       "header-labels",
       "attachment-links-header",
     ),
-    allowConfidential: bundle !== "ethics" && serverFunctions.resources.resourceVisible(
-      rows,
-      bundle,
-      "labels",
-      "confidential-attachment",
-    ),
+    allowConfidential:
+      bundle !== "ethics" &&
+      serverFunctions.resources.resourceVisible(
+        rows,
+        bundle,
+        "labels",
+        "confidential-attachment",
+      ),
   };
 }
 

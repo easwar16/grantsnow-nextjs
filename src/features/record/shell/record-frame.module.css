@@ -55,41 +55,6 @@
 }
 
 /* oj-navigation-list edge=top: icon + name, a brand underline on the current tab; the tabs share the full width. */
-.tabs {
-  display: flex;
-  flex: none;
-  overflow-x: auto;
-  border-bottom: 1px solid var(--gn-divider);
-}
-
-.tabs a {
-  display: flex;
-  flex: 1 0 auto;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 40px;
-  padding: 0 12px;
-  white-space: nowrap;
-  color: var(--gn-text-secondary);
-  text-decoration: none;
-  border-bottom: 3px solid transparent;
-}
-
-.tabs a:hover {
-  color: var(--gn-text);
-}
-
-.tabs a.selected {
-  font-weight: 600;
-  color: var(--gn-text);
-  border-bottom-color: var(--gn-brand);
-}
-
-.finalized {
-  color: var(--gn-success);
-}
-
 /* The record panel (legacy readonly oj-form-layout, direction column; measured on the award and EOI panels
    2026-10-26): columns filled downwards, 1.15rem semibold labels in the text colour, a 50px row pitch, in a bordered
    neutral panel padded 12px 6px 6px. The column count is the host's (award 3, EOI 2). */
@@ -180,10 +145,6 @@
     top: 0;
     right: 0;
     bottom: 0;
-  }
-
-  .tabName {
-    display: none;
   }
 }
 

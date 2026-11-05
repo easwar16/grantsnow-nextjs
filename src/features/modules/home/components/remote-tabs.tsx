@@ -1,5 +1,6 @@
 "use client";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import { ActionDialog } from "@/components/dialog/action-dialog";
 import { InsightChart } from "./insight-chart";
 import { State } from "@/components/feedback/state";
 import { ListSkeleton, ChartSkeleton } from "@/components/feedback/skeleton";
@@ -250,7 +251,7 @@ function RemoteChart({
     id: descriptor.id,
     organization,
   });
-  const dialog = useRef<HTMLDialogElement>(null),
+  const [dimensionOpen, setDimensionOpen] = useState(false),
     base = `dynamic-chart-${functions.ids.idPart(descriptor.id)}`;
   const [dimensions, setDimensions] = useState<{
       columns: number;
@@ -284,12 +285,12 @@ function RemoteChart({
         return;
       }
       setDimensions(r.data);
-      dialog.current?.close();
+      setDimensionOpen(false);
     }, "dimensions");
   };
   const openDimension = () => {
     setDraft({ cols: String(columns), rows: String(rows) });
-    dialog.current?.showModal();
+    setDimensionOpen(true);
   };
   return (
     <section
@@ -333,87 +334,72 @@ function RemoteChart({
           data.map((c) => <ChartGraphic key={c.id} chart={c} rows={rows} />)
         )}
       </article>
-      <dialog
-        ref={dialog}
-        id={`${base}-dimension`}
-        className="chart-dimension-dialog"
-        aria-labelledby={`${base}-dimension-title`}
-        onCancel={(event) => {
-          if (saving) event.preventDefault();
-        }}
-      >
-        <div className="chart-dimension-head">
-          <h2 id={`${base}-dimension-title`}>
-            {chart?.texts.title ?? "Dimension"}
-          </h2>
-          <button
-            id={`${base}-dimension-close`}
-            type="button"
-            className="chart-dimension-close"
-            aria-label="Close"
-            disabled={saving}
-            onClick={() => dialog.current?.close()}
-          >
-            <Icon name="close" />
-          </button>
-        </div>
-        <form id={`${base}-dimension-form`} onSubmit={save}>
-          <div className="dimension-fields">
-            <label>
-              <span>Cols (1–12) *</span>
-              <input
-                id={`${base}-cols`}
-                name="cols"
-                type="number"
-                min="1"
-                max="12"
-                step="1"
-                required
-                value={draft.cols}
+      {dimensionOpen && (
+        <ActionDialog
+          id={`${base}-dimension`}
+          title={chart?.texts.title ?? "Dimension"}
+          className="chart-dimension-dialog"
+          busy={saving}
+          onClose={() => setDimensionOpen(false)}
+        >
+          <form id={`${base}-dimension-form`} onSubmit={save}>
+            <div className="dimension-fields">
+              <label>
+                <span>Cols *</span>
+                <input
+                  id={`${base}-cols`}
+                  name="cols"
+                  type="number"
+                  min="1"
+                  max="12"
+                  step="1"
+                  required
+                  value={draft.cols}
+                  disabled={saving}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, cols: e.target.value }))
+                  }
+                />
+              </label>
+              <label>
+                <span>Rows *</span>
+                <input
+                  id={`${base}-rows`}
+                  name="rows"
+                  type="number"
+                  min="1"
+                  max="3"
+                  step="1"
+                  required
+                  value={draft.rows}
+                  disabled={saving}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, rows: e.target.value }))
+                  }
+                />
+              </label>
+            </div>
+            <div className="dialog-actions">
+              <button
+                id={`${base}-dimension-clear`}
+                type="button"
                 disabled={saving}
-                onChange={(e) =>
-                  setDraft((d) => ({ ...d, cols: e.target.value }))
-                }
-              />
-            </label>
-            <label>
-              <span>Rows (1–3) *</span>
-              <input
-                id={`${base}-rows`}
-                name="rows"
-                type="number"
-                min="1"
-                max="3"
-                step="1"
-                required
-                value={draft.rows}
-                disabled={saving}
-                onChange={(e) =>
-                  setDraft((d) => ({ ...d, rows: e.target.value }))
-                }
-              />
-            </label>
-          </div>
-          <div className="dialog-actions">
-            <button
-              id={`${base}-dimension-clear`}
-              type="button"
-              disabled={saving}
-              onClick={() => setDraft({ cols: "", rows: "" })}
-            >
-              Clear
-            </button>
-            <button
-              id={`${base}-dimension-save`}
-              className="primary"
-              disabled={saving || !validSize(draft.cols, draft.rows)}
-              type="submit"
-            >
-              {chart?.texts.save ?? "Save"}
-            </button>
-          </div>
-        </form>
-      </dialog>
+                onClick={() => setDraft({ cols: "", rows: "" })}
+              >
+                Clear
+              </button>
+              <button
+                id={`${base}-dimension-save`}
+                className="primary"
+                disabled={saving || !validSize(draft.cols, draft.rows)}
+                type="submit"
+              >
+                {chart?.texts.save ?? "Save"}
+              </button>
+            </div>
+          </form>
+        </ActionDialog>
+      )}
     </section>
   );
 }

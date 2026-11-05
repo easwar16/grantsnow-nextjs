@@ -20,6 +20,8 @@ Read these, in this order, every session:
 3. `docs/grantsnow-foundations.md` (the rules)
 4. `docs/api-layer.md`
 5. the top three sections of `docs/progress.md`
+6. `docs/checklist.md`: check its legacy watermark, take its **Next up**, and update its rows whenever you build or
+   test something
 
 Then confirm three things before you edit anything:
 
@@ -65,7 +67,7 @@ Then confirm three things before you edit anything:
 | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
 | Any dropdown                                                                           | `Select` / `MultiSelect` (`components/ui`), `FormSelect` inside a plain form                                                                               | native `<select>`                                         |
 | Date field                                                                             | `DateInput`                                                                                                                                                | `<input type="date">`                                     |
-| Dialog                                                                                 | `ActionDialog`, `useConfirm` (`components/dialog`)                                                                                                         | `<dialog>` by hand, a fixed backdrop `div`                |
+| Dialog (every modal, incl. a non-dismissible one, title More Info)                     | `ActionDialog` (`help`, `dismissible`, `busy`), `useConfirm` (`components/dialog`)                                                                         | `<dialog>` by hand, a fixed backdrop `div`                |
 | Table (flat or tree), row actions                                                      | `DataTable` (`components/ui`): `columns`, `rows`, `rowKey`, `actions`, `childrenOf`                                                                        | a hand-written `<table>`, unpinned action cells           |
 | Read-only value                                                                        | `ReadonlyField` (label and value)                                                                                                                          | a disabled or read-only control                           |
 | Loading / error / empty                                                                | the skeleton of the content's shape (`ListingSkeleton`, `DetailSkeleton`, `FormSkeleton`, `TableSkeleton`, `ListSkeleton`), `State`, toasts via `useToast` | "Loading…" text, ad-hoc error markup                      |
@@ -75,6 +77,7 @@ Then confirm three things before you edit anything:
 | Collapsible section                                                                    | `Collapsible` (owns the chevron, its rotation and the heading row; `headClassName` for size, `actions` for heading buttons)                                | a hand-written `<details>`, its own chevron or marker CSS |
 | Listing filters                                                                        | `FilterPanel`, `FilterSection`, `StatusList`, `statusChoices` (server)                                                                                     | hard-coded status lists                                   |
 | Record page shell                                                                      | `RecordFrame`, record panels (comments, audit)                                                                                                             | a module's own header and panel wiring                    |
+| Record page tab bar                                                                    | `RecordTabs` (`features/record/shell`; `RecordFrame` renders it)                                                                                           | a module's own tabs `nav` or tab CSS                      |
 | Approvals                                                                              | an `ApprovalHost` + `workflowView` / `workflowRead` + `ApprovalWorkflow`                                                                                   | a module's own route, graph or approvers reads            |
 | History, delegations, attachments, dynamic forms, linked objects, attributes, FX rates | the hosts in `src/server/record/*` and components in `src/features/record/*`                                                                               | a module copy                                             |
 | Record rights                                                                          | `objectAccessOf`, `recordRoleRows`, `finalizedOf`, `pageAccess`                                                                                            | hand-written `page_name` filters                          |
@@ -132,6 +135,25 @@ docs/changes/YYYY-MM-DD-<author>-<slug>.md          one record per change
   above. A tab's service lives in `record/<tab>.ts`, not beside the listing.
 - **Names:** kebab-case files; a component file is named after its component (`unit-list.tsx` → `UnitList`); a tab
   is `<tab>-tab.tsx` in the browser and `record/<tab>.ts` on the server.
+- **Every module follows this layout from its first increment** (owner, 2026-11-04). A first slice, a single
+  overview page or a draft-only create form is not an exception: Ethics and Due Diligence arrived flat and had to
+  be moved. Concretely:
+  - routes: `(list)/page.tsx` and `(list)/loading.tsx`; a create page is `(list)/new/page.tsx`;
+    `(record)/[id]/…` with its own `loading.tsx`; `error.tsx` at the module root;
+  - API: `route.ts`, `choices/`, one `actions/[action]/route.ts` for every listing setup (GET) and write (POST),
+    and `[id]/…`. No `create/`, `recycle/`, `list-actions/` or `advanced/` folders beside them;
+  - server: the listing's create, recycle, restore, clone, copy, delete and share go in `actions.ts`. The record
+    context goes in `record.ts`, its display model in `record/shell.ts`, and each tab in `record/<tab>.ts`;
+  - browser: the list, its create page, dialogs, `schema.ts` and CSS go in `listing/`; `record-shell.tsx` and the
+    tabs go in `record/`.
+- **The record page renders the module's `record/record-shell.tsx` (`RecordFrame`).** It does this from
+  `(record)/[id]/layout.tsx`. When the record context depends on the query, the shell renders from `page.tsx`
+  instead, because layouts get no `searchParams` (Ethics and Due Diligence take the listing's `?access=` view).
+  Never a bare `<main>`.
+- **A module imports only its own files and the shared ones.** It never imports another module's components or CSS
+  (Due Diligence importing Ethics' CSS was wrong). If two modules need the same UI, it becomes a shared piece.
+- **An API route only dispatches.** It reads the action and the body (`readText` with a size cap) and calls one
+  server function. Input validation (zod) happens in that server function, never in the route.
 
 ### The one request path (the framework)
 
@@ -172,6 +194,17 @@ A module never builds its own:
   - Never hard-code a list the backend configures.
 - **Every write payload is an explicit pick.** Identity, scope and the actor come from the server session. A write
   control stays disabled until its request settles.
+- **Unavailable controls are hidden, not disabled** (owner, 2026-11-03): no access, RB-hidden or not editable means
+  the control is not rendered. `disabled` is only for a passing state (busy, nothing selected yet).
+- **Every page's labels come from the RB**, including create pages, record panels and tab names, not only the
+  listing. Take the keys from the legacy page's HTML (`translations.<bundle>.labels['…']`, `page-name.<page>`) and
+  give each a literal fallback. A field shown from the RB is gated on `is_visible === 'Y'`, and the fixture rows in
+  `src/test-support/transport.ts` grant it.
+- **Listing tabs (access views, statuses) are `TabBar`**, not a hand-built `role="tablist"`. Loading is a skeleton,
+  never "Loading…" text.
+- **Fix what the self-check finds in your own code.** A §9 finding in code you wrote, in this change or an earlier
+  one, is fixed before you finish. Record a finding as open only when it is in someone else's code and outside
+  your task.
 - **Every element gets a stable kebab-case `id`** (`<area>-<element>`, plus the record key for repeats): every
   section, table, dialog, button, link and control, in new code too. Never rename an id a test or another page uses.
 - **Tables are `DataTable` from the first commit.** A hand-written `<table>` is never left as a later migration;
@@ -278,21 +311,38 @@ Still open in Contracts (Easwar's area), to be built on the shared pieces:
 
 ## 9. Before you finish: the self-check
 
-Run these on the files you changed and fix what they find, or write in your change record why one stays:
+Run these on the files you changed and fix what they find in your own code (§5). Only a finding in someone else's
+code, outside your task, goes into your change record as open:
 
 - `grep -rn "<table\|<select\|<dialog\|<details\|type=\"date\"" src/app src/features` (only shared components
   may hold these);
 - `grep -rln "Intl\.\|toLocale" src/app src/features src/server/modules` (formatting goes through `functions.format`);
 - route folders hold only pages and layouts:
   `find src/app -name "*.tsx" | grep -vE "/(page|layout|loading|error|not-found)\.tsx$"` prints nothing;
-- every `<button`, `<a`, `<input`, `<DataTable` and `<ActionDialog` you added has an `id`;
-- the module follows §4: `find src/features/modules -type d -name components` prints only `home/components`; the module's server
-  folder has `listing.ts`, `actions.ts`, `record.ts` and `record/` (no tab service beside them); its browser folder
-  has `listing/` and `record/`;
+- every `<button`, `<a`, `<input` you added has an `id`, including ones split over several lines:
+  `perl -0ne 'while(/<(button|a|input|DataTable|ActionDialog)\b((?:[^<>]|=>|\{[^{}]*\})*?)\/?>/gs){next if $2=~/\bid=/||$2=~/type="hidden"/;print "$ARGV:".(substr($_,0,$-[0])=~tr/\n//)+1 ." <$1\n"}' <your .tsx files>`
+  prints nothing;
+- the module follows §4. For the module `<m>` you touched, each of these prints nothing:
+  - `find src/features/modules -type d -name components | grep -v home/components` (known §10 debt aside);
+  - `find src/features/modules/<m> -maxdepth 1 -type f \( -name "*.tsx" -o -name "*.css" \)` (no UI at the module
+    root);
+  - `find src/server/modules/<m> -maxdepth 1 -type f | grep -vE "/(listing|actions|record)\.ts$"` (no flat
+    server file);
+  - `find src/app/api/<m> -mindepth 1 -maxdepth 1 -type d | grep -vE "/(choices|actions|\[id\])$"` (no API
+    folder outside the map);
+  - `find "src/app/(authenticated)/<m>" -name page.tsx -not -path "*(list)*" -not -path "*(record)*"` (every page
+    in a route group);
+  - `[ -e "src/app/(authenticated)/<m>/error.tsx" ] || echo missing`;
+  - `grep -rn "@/features/modules/" src/features/modules/<m> | grep -v "modules/<m>/"` (no other module's files);
+  - a module with sub-applications (Claims) runs these per sub-application folder;
 - every record page renders through `RecordFrame` and the shared hosts. Both commands print nothing:
-  `for f in $(find "src/app/(authenticated)" -path "*(record)*" -name layout.tsx); do grep -q record-shell "$f" || echo "$f"; done`
+  `find "src/app/(authenticated)" -path "*(record)*" -type d -name "\[id\]" | while read d; do cat "$d/layout.tsx" "$d/page.tsx" 2>/dev/null | grep -q record-shell || echo "$d"; done`
   and `grep -L RecordFrame $(find src/features/modules -name record-shell.tsx)`; no module has its own tabs bar,
   comments or audit drawer, approvals graph or attachments panel;
+- `grep -n 'role="tablist"' <your .tsx files>` prints nothing (`TabBar` / `RecordTabs`), and every
+  `disabled={…}` you added is a passing state (busy, nothing chosen), not a missing right;
+- `grep -nE 'label="[A-Z]|>[A-Z][a-z]+( [A-Za-z]+)*</(h[1-6]|label|legend|button)>' <your .tsx files>` lists
+  literal labels: each must come from the RB with a fallback (§5);
 - each new feature goes page → `@/lib/api` endpoint → API route (`route` / `fileRoute`) → `src/server/modules` →
   `src/server/oracle/api`, with no layer skipped or duplicated;
 - `grep -nE '"(get|post|put|delete)[A-Z][A-Za-z_]+"' src/server/oracle/connection.ts src/server/oracle/client.ts`
@@ -333,3 +383,43 @@ Still to bring onto §4 (owner, 2026-10-30; whoever next works in the module doe
 
 Kept, because they were right: the change records, the logged guided-tour fix with its reproduced defect, the named
 API functions, `functions` / `serverFunctions`, session-held lookups, `generateReport` as a write.
+
+## 11. What was corrected on 2026-11-04 (Ethics, Due Diligence and Proposal list actions, `118d553`), and why
+
+The owner brought these onto the framework. Do not reintroduce them. Each one now has a rule (§4, §5) and a
+self-check command (§9), so the next change catches it itself.
+
+- **Ethics and Due Diligence built flat:** `features/modules/<m>/{listing,new,schema}`, routes without
+  `(list)` / `(record)` groups, `loading.tsx` or `error.tsx`, server `create.ts` / `recycle.ts`, and API `create/…`
+  and `recycle/` folders.
+  - Moved to `listing/` (`<m>-list.tsx`, `new-<m>.tsx`, `schema.ts`, their CSS) and `record/`. The routes moved
+    to `(list)`, `(list)/new` and `(record)/[id]`. Server code went into `actions.ts`, with one
+    `actions/[action]` route. Why: §4 applies from a module's first increment.
+- **Record pages as bare `<main>`s with literal labels and raw ISO dates.** Replaced by `record/record-shell.tsx`
+  on `RecordFrame` (panel from the legacy `*-detail-*` keys, General Overview tab from `page-name`) and
+  `overview-tab.tsx` (legacy general-overview keys, dates through `functions.format.dateDisplay`). Why: the record
+  framework, RB labels, formatting rule.
+- **New pages with literal labels and "Loading form…" text.** The labels now come from the RB through the create
+  setup, and loading shows a `ListSkeleton`.
+- **Due Diligence importing Ethics' CSS modules.** Each module now has its own. Why: modules import only their own
+  files and shared ones.
+- **Hand-built `role="tablist"` access tabs.** Replaced by `TabBar` (ids `<m>-tab-<view>` kept).
+- **Proposal API `create/`, `advanced/`, `list-actions/` (with zod in the route).** Moved to
+  `api/proposals/actions/[action]`; the bodies are validated in `list-actions.ts` (`proposalListWrites`). Why: one
+  dispatcher per module; routes only dispatch.
+- **Proposal create form inside a route folder; share's `Intl` currency symbol; disabled Clone / Delete / Restore
+  for missing rights; about 20 controls without ids.** These were moved into `listing/`, routed through
+  `functions.format.currencySymbol`, hidden instead of disabled, and given ids. Why: §4, §5, the hide rule and the
+  ids rule.
+- **Self-check findings recorded as "separate tasks"** (`2026-11-03-easwar-azure-main-sync.md`), although the
+  agent's own earlier commits had introduced them. Now ruled out by §5: fix your own findings.
+
+Kept, because they were right:
+
+- the change records;
+- legacy sources cited for every behaviour;
+- the fail-closed RB gates on the listings;
+- named API functions and the allowlist;
+- explicit write picks;
+- the fixtures inside `test-support`;
+- the full check runs.

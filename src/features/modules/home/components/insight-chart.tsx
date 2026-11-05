@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { DataTable } from "@/components/ui/data-table";
 import { useRouter } from "next/navigation";
@@ -35,9 +35,19 @@ export function InsightChart({
   format?: FormatSettings;
 }) {
   const host = useRef<HTMLDivElement>(null),
+    chart = useRef<import("echarts/core").ECharts | undefined>(undefined),
     router = useRouter(),
     [ready, setReady] = useState(false),
-    [failed, setFailed] = useState(false);
+    [failed, setFailed] = useState(false),
+    // Legend entries the user switched off (legacy hideAndShowBehavior).
+    [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
+  const legendItems = useMemo(
+    () =>
+      functions.charts.legendItems(
+        functions.charts.insightOptions(data, true, false, format),
+      ),
+    [data, format],
+  );
   useEffect(() => {
     const element = host.current;
     if (!element) return;
@@ -54,24 +64,10 @@ export function InsightChart({
       enabled: true,
       label: { description: `${title}: values listed below` },
     };
-    const fitLegend = () => {
-      const width = functions.charts.legendTextWidth(
-        options,
-        element.clientWidth,
-      );
-      if (width)
-        instance?.setOption({
-          legend: {
-            textStyle: { width, overflow: "truncate" },
-            tooltip: { show: true },
-          },
-        });
-    };
     async function render() {
       if (disposed || loading || !element!.clientWidth) return;
       if (instance) {
         instance.resize();
-        fitLegend();
         return;
       }
       loading = true;
@@ -79,7 +75,8 @@ export function InsightChart({
         const { renderChart } = await import("./chart-engine");
         if (disposed) return;
         instance = renderChart(element!, options);
-        fitLegend();
+        chart.current = instance;
+        setHidden(new Set());
         instance.on("click", (point) => {
           const href = internal(
             functions.charts.pointRow(
@@ -109,15 +106,14 @@ export function InsightChart({
       disposed = true;
       resize.disconnect();
       instance?.dispose();
+      chart.current = undefined;
     };
   }, [data, expanded, title, format, router]);
   const currency = data.presentation?.currency;
   const value = (v: number, money = !!currency) =>
     money
       ? functions.format.moneyDisplay(String(v), currency, format)
-      : new Intl.NumberFormat("en-GB", {
-          maximumFractionDigits: format?.decimals || 2,
-        }).format(v);
+      : functions.format.numberDisplay(v, format);
   const g = data.gauge;
   return (
     <div id={id} className={`insight-chart${expanded ? " expanded" : ""}`}>
@@ -132,14 +128,56 @@ export function InsightChart({
           below.
         </p>
       )}
-      <div
-        ref={host}
-        id={`${id}-canvas`}
-        className="insight-chart-host"
-        style={height ? { height } : undefined}
-        role="img"
-        aria-label={`${title}: ${g ? "gauge" : `${data.statistics.length} data points`}; accessible values below`}
-      />
+      <div className="insight-chart-body">
+        <div
+          ref={host}
+          id={`${id}-canvas`}
+          className="insight-chart-host"
+          style={height ? { height } : undefined}
+          role="img"
+          aria-label={`${title}: ${g ? "gauge" : `${data.statistics.length} data points`}; accessible values below`}
+        />
+        {legendItems.length > 0 && (
+          // One width on every chart; a long list scrolls instead of paging.
+          <div id={`${id}-legend`} className="chart-legend">
+            {data.presentation?.legendTitle && (
+              <p className="chart-legend-title">
+                {data.presentation.legendTitle}
+              </p>
+            )}
+            <ul aria-label={`${title} legend`}>
+              {legendItems.map((item, i) => (
+                <li key={item.name}>
+                  <button
+                    type="button"
+                    id={`${id}-legend-${i}`}
+                    aria-pressed={!hidden.has(item.name)}
+                    title={item.name}
+                    onClick={() => {
+                      chart.current?.dispatchAction({
+                        type: "legendToggleSelect",
+                        name: item.name,
+                      });
+                      setHidden((h) => {
+                        const next = new Set(h);
+                        if (!next.delete(item.name)) next.add(item.name);
+                        return next;
+                      });
+                    }}
+                  >
+                    <span
+                      className="chart-legend-swatch"
+                      style={{ background: item.color }}
+                      aria-hidden="true"
+                    />
+                    <span className="chart-legend-name">{item.name}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
       {(expanded || showData || failed) && (
         <details id={`${id}-data`} className="insight-data" open={expanded}>
           <summary>View chart data</summary>

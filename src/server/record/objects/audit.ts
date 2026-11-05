@@ -34,6 +34,7 @@ export async function auditView(q: URLSearchParams): Promise<AuditView> {
     objectId: host.objectId,
     page: host.page,
     event: event.data === "ALL" ? "" : event.data,
+    secondary: host.secondary,
   });
   const seen = new Map<string, number>();
   const items = audits.map((a): AuditEntry => {

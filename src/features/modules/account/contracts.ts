@@ -104,8 +104,16 @@ export function nextAccessibility(key: string, value: number) {
       : 200)
   );
 }
+/** One profile field (legacy profile-tab-panel): a role list shows every role under one label. */
+export type ProfileField = {
+  key: string;
+  label: string;
+  values: string[];
+  help: string | null;
+};
 export type AccountData = {
-  fields: { label: string; value: string }[];
+  /** Legacy's two columns: person (oj-md-4), then organisation and roles (oj-md-5). */
+  fields: [ProfileField[], ProfileField[]];
   manageAllowed: boolean;
   status: {
     status_code: "ACTIVE" | "OOO";

@@ -135,6 +135,23 @@ export function oracleSettings() {
     return { base, apps, authorization: undefined };
   }
   const mode = required("ORDS_AUTH_MODE");
+  // Legacy's VB proxy: OAuth2 client credentials, one client per ORDS schema, token at `<root>oauth/token`.
+  if (mode === "oauth")
+    return {
+      base,
+      apps,
+      authorization: undefined,
+      oauth: {
+        base: {
+          id: required("ORDS_BASE_CLIENT_ID"),
+          secret: required("ORDS_BASE_CLIENT_SECRET"),
+        },
+        apps: {
+          id: required("ORDS_APPS_CLIENT_ID"),
+          secret: required("ORDS_APPS_CLIENT_SECRET"),
+        },
+      },
+    };
   let authorization: string;
   if (mode === "basic")
     authorization = `Basic ${Buffer.from(`${required("ORDS_SERVICE_USERNAME")}:${required("ORDS_SERVICE_PASSWORD")}`).toString("base64")}`;

@@ -7,8 +7,8 @@
     "node": ">=24 <27"
   },
   "scripts": {
-    "dev": "next dev --hostname 127.0.0.1",
-    "dev:inspect": "node --experimental-network-inspection node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --inspect",
+    "dev": "node scripts/dev.mjs",
+    "dev:inspect": "node --experimental-network-inspection scripts/dev.mjs --inspect",
     "build": "next build && node scripts/prepare-standalone.mjs",
     "start": "node .next/standalone/server.js",
     "typecheck": "next typegen && tsc --noEmit",

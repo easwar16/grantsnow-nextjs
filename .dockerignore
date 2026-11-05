@@ -14,8 +14,8 @@ coverage
 .playwright-mcp
 .catalogue-preview
 
-# Only the selector and the five settings files reach the build;
-# secrets and .env.local never do (docs/docker-deployment.md).
+# Only the selector and the five environment files reach the build. They hold the secrets too; the build bakes
+# .env.<env> into the image without them (scripts/prepare-standalone.mjs). .env.local never reaches it.
 .env*
 !.env
 !.env.dev
@@ -24,8 +24,8 @@ coverage
 !.env.stage
 !.env.prod
 .env.local
-*.secrets
 
 AGENTS.md
 CLAUDE.md
 .claude
+.codex

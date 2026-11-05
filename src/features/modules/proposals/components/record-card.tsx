@@ -111,10 +111,12 @@ export function RecordCard({
         {(["link", "share", "clone", "delete"] as const).map((action) => {
           const label = actions[action];
           if (!label) return null;
-          const disabled =
-            (action === "clone" && !!row.parentId) ||
-            (action === "delete" &&
-              (row.statusCode !== "DRFT" || !!row.parentId));
+          // Legacy: no clone of a child, delete only a parentless draft; unavailable controls are hidden.
+          if (
+            (action === "clone" && row.parentId) ||
+            (action === "delete" && (row.statusCode !== "DRFT" || row.parentId))
+          )
+            return null;
           return (
             <button
               key={action}
@@ -123,7 +125,6 @@ export function RecordCard({
               className="gn-btn gn-btn--borderless gn-btn--icon"
               aria-label={`${label} ${row.reference}`}
               title={label}
-              disabled={disabled}
               onClick={() => onAction(action, row)}
             >
               <Icon

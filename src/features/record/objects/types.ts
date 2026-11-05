@@ -17,6 +17,8 @@ export interface ApprovalRow {
   status: string;
   stage: string;
   comments: string;
+  /** The comment as sanitised HTML, for the full-comment dialog (approval history only). */
+  commentsHtml?: string;
   updated: string;
   transaction?: string;
 }

@@ -4,6 +4,7 @@ import { attachments, useApi } from "@/lib/api";
 import { useStoreApi } from "@/lib/store/app-store";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
 import { Icon } from "@/components/ui/icon";
+import { FileDrop } from "@/components/ui/file-drop";
 import { InsideField } from "@/components/ui/inside-field";
 import { Skeleton } from "@/components/feedback/skeleton";
 import { State } from "@/components/feedback/state";
@@ -25,8 +26,8 @@ import { functions } from "@/lib/functions";
 type Labels = AttachmentsView["labels"];
 
 /**
- * The shared attachments panel (legacy `object-attachments`, 8788): folder tree, detail pane with preview, download
- * and delete, the add-document dialog and (behind its RB row) external links. A host passes the server-built view.
+ * The shared attachments panel (legacy `object-attachments`, 8788): folder tree, detail pane with Preview and Delete
+ * (a double-click downloads, as legacy), the add-document dialog and (behind its RB row) external links. A host passes the server-built view.
  */
 export function AttachmentsPanel({ view }: { view: AttachmentsView }) {
   const { id, labels, canEdit, storage } = view;
@@ -130,18 +131,6 @@ export function AttachmentsPanel({ view }: { view: AttachmentsView }) {
         >
           <Icon name="view" size={14} />
           {labels.preview}
-        </button>
-        <button
-          type="button"
-          id={`${id}-download`}
-          className="gn-btn gn-btn--solid"
-          disabled={
-            !selected || !storage || isActive(`download-${selected.id}`)
-          }
-          onClick={() => selected && void download(selected)}
-        >
-          <Icon name="download" size={14} />
-          {labels.download}
         </button>
         {canEdit && (
           <button
@@ -366,7 +355,6 @@ function AddDocumentDialog({
   const [newFolder, setNewFolder] = useState("");
   const [description, setDescription] = useState("");
   const [confidential, setConfidential] = useState<"Y" | "N">("N");
-  const [dragging, setDragging] = useState(false);
   const pick = (picked: File | undefined) => {
     if (!picked) return;
     const issue = fileProblem(
@@ -460,42 +448,13 @@ function AddDocumentDialog({
             )}
           </div>
         </div>
-        <label
-          id={`${id}-drop`}
-          htmlFor={`${id}-file`}
-          className={`${styles.drop} ${dragging ? styles.dragging : ""}`}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragging(true);
-          }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragging(false);
-            pick(e.dataTransfer.files?.[0]);
-          }}
-        >
-          <Icon name="attachment" size={18} />
-          <span className={styles.dropTitle}>
-            {file ? file.name : "Drag and Drop"}
-          </span>
-          <span className={styles.dropHint}>
-            {file
-              ? `${(file.size / 1024).toFixed(1)}KB`
-              : "Select or drop files here."}
-          </span>
-          <input
-            id={`${id}-file`}
-            type="file"
-            className="sr-only"
-            accept={view.accept || undefined}
-            aria-describedby={`${id}-note`}
-            onChange={(e) => {
-              pick(e.target.files?.[0]);
-              e.target.value = "";
-            }}
-          />
-        </label>
+        <FileDrop
+          id={id}
+          file={file}
+          accept={view.accept}
+          describedBy={`${id}-note`}
+          onPick={pick}
+        />
         {problem && (
           <p id={`${id}-file-error`} className={styles.error} role="alert">
             {problem}

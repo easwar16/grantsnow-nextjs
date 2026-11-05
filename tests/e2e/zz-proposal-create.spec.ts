@@ -134,7 +134,7 @@ test("Outline entry opens the VBCS options and the fresh outline form", async ({
     .getByRole("textbox", { name: "Project title", exact: true })
     .fill("Fixture outline project");
   await page.locator("#proposals-summary-field-3").fill("1200");
-  const createPath = "**/api/proposals/create";
+  const createPath = "**/api/proposals/actions/create";
   const rejectCreate = async (route: import("@playwright/test").Route) => {
     await route.fulfill({
       status: 502,

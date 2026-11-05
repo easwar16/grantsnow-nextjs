@@ -218,6 +218,7 @@ export async function headerView(id: string): Promise<HeaderView> {
         "Award dates extend outside the Proposal date range.",
       ),
       save: t("button-labels", "save", "Save"),
+      saveHeader: t("labels", "save-header", "Save Header"),
       cancel: t("button-labels", "cancel", "Cancel"),
       edit: t("button-labels", "edit", "Edit"),
       noPeriods: t("helper-texts", "no-data", "No data to display."),

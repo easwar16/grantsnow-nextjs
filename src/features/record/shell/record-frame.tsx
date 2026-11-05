@@ -1,6 +1,6 @@
 "use client";
 import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
-import { useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { useSearchParams } from "next/navigation";
@@ -13,7 +13,18 @@ import { columnPlace } from "./panel-layout";
 import { CreatorLink } from "./creator-link";
 import type { CreatorCard } from "./creator-types";
 import type { Endpoint } from "@/lib/api";
+import { RecordTabs } from "./record-tabs";
 import styles from "./record-frame.module.css";
+
+/** An audit trail a tab opens in the frame's drawer: another page of the record, or one part of it (`sec`). */
+export interface AuditTarget {
+  page: string;
+  sec?: string;
+  title?: string;
+}
+const AuditContext = createContext<(target: AuditTarget) => void>(() => {});
+/** Opens the record's audit drawer on a page or part of the record (legacy application:updateAuditObject). */
+export const useRecordAudit = () => useContext(AuditContext);
 
 export interface FrameTab {
   key: string;
@@ -49,7 +60,8 @@ export interface FrameLabels {
  * A record page (legacy *-detail-page, GN-Angular eoi-record): List, the host's toolbar around Comments and Audit
  * Trail, the tab bar, the record panel with its Finalize checkbox, the routed tab, and the comments / audit end drawer
  * for the current page. `prefix` names every part (`<prefix>-tabs`, `<prefix>-panel`…), so each record keeps its ids.
- * `record` false (a new record) hides the panel and the drawers.
+ * `record` false (a new record) hides the panel and the drawers. While `editing`, Comments, Audit Trail and Finalize
+ * are hidden (owner, 2026-11-02).
  */
 export function RecordFrame<P>({
   prefix,
@@ -61,7 +73,8 @@ export function RecordFrame<P>({
   tabs,
   current,
   panel,
-  finalize,
+  finalize: finalizeSwitch,
+  editing = false,
   objectType,
   objectId,
   page,
@@ -86,6 +99,8 @@ export function RecordFrame<P>({
     busy: boolean;
     onChange: (on: boolean) => void;
   } | null;
+  /** The record is in edit mode. */
+  editing?: boolean;
   objectType: string;
   objectId?: string;
   /** The current tab's page name: the drawer's comments and audit are per page. */
@@ -97,13 +112,31 @@ export function RecordFrame<P>({
   const commentLink = useSearchParams().has("comment-id"),
     [drawer, setDrawer] = useState<"comments" | "audit" | null>(
       commentLink ? "comments" : null,
-    );
+    ),
+    [wasEditing, setWasEditing] = useState(editing),
+    // A tab's own audit trail (legacy openAudits); null for the current page's.
+    [auditTarget, setAuditTarget] = useState<AuditTarget | null>(null);
+  const openAudit = useMemo(
+    () => (target: AuditTarget) => {
+      setAuditTarget(target);
+      setDrawer("audit");
+    },
+    [],
+  );
+  // Entering edit mode closes an open drawer.
+  if (editing !== wasEditing) {
+    setWasEditing(editing);
+    if (editing) setDrawer(null);
+  }
+  const finalize = editing ? null : finalizeSwitch;
   const tabName = tabs.find((t) => t.key === current)?.name ?? "";
   const place = (i: number) =>
     columnPlace(i, panel.length + (finalize ? 1 : 0), panelColumns);
   const withDrawers = record && objectId !== undefined;
-  const toggle = (which: "comments" | "audit") =>
+  const toggle = (which: "comments" | "audit") => {
+    setAuditTarget(null);
     setDrawer((d) => (d === which ? null : which));
+  };
   return (
     <div id={prefix} className={`page-fill ${styles.record}`}>
       <div id={`${prefix}-page`} className={styles.page}>
@@ -121,18 +154,21 @@ export function RecordFrame<P>({
             </Link>
             <div id={`${prefix}-toolbar`} className={styles.toolbar}>
               {toolbarStart}
-              {withDrawers && (
+              {withDrawers && !editing && (
                 <>
-                  <button
-                    type="button"
-                    id={`${prefix}-comments`}
-                    className={`gn-btn gn-btn--outlined${drawer === "comments" ? ` ${styles.active}` : ""}`}
-                    aria-expanded={drawer === "comments"}
-                    onClick={() => toggle("comments")}
-                  >
-                    <Icon name="chat" size={14} />
-                    {labels.comments}
-                  </button>
+                  {/* An empty label: the record has no comments (Claims Unit Inquiry). */}
+                  {labels.comments && (
+                    <button
+                      type="button"
+                      id={`${prefix}-comments`}
+                      className={`gn-btn gn-btn--outlined${drawer === "comments" ? ` ${styles.active}` : ""}`}
+                      aria-expanded={drawer === "comments"}
+                      onClick={() => toggle("comments")}
+                    >
+                      <Icon name="chat" size={14} />
+                      {labels.comments}
+                    </button>
+                  )}
                   {labels.audit && (
                     <button
                       type="button"
@@ -150,36 +186,13 @@ export function RecordFrame<P>({
               {toolbarEnd}
             </div>
           </div>
-          {tabs.length > 0 && (
-            <nav
-              id={`${prefix}-tabs`}
-              className={styles.tabs}
-              aria-label={labels.tabs}
-            >
-              {tabs.map((t) => (
-                <Link
-                  key={t.key}
-                  id={`${prefix}-tab-${t.key}`}
-                  href={t.href}
-                  prefetch={false}
-                  className={t.key === current ? styles.selected : undefined}
-                  aria-current={t.key === current ? "page" : undefined}
-                  title={t.name}
-                >
-                  <Icon name={t.icon} size={16} />
-                  <span className={styles.tabName}>{t.name}</span>
-                  {t.finalized && (
-                    <Icon
-                      className={styles.finalized}
-                      name="success"
-                      size={14}
-                      label={labels.finalized}
-                    />
-                  )}
-                </Link>
-              ))}
-            </nav>
-          )}
+          <RecordTabs
+            id={`${prefix}-tabs`}
+            label={labels.tabs}
+            tabs={tabs}
+            current={current}
+            finalizedLabel={labels.finalized}
+          />
         </div>
         <div id={`${prefix}-body`} className={styles.body}>
           {record && (
@@ -246,7 +259,9 @@ export function RecordFrame<P>({
             id={`${prefix}-content`}
             className={`${styles.content} enter-fade`}
           >
-            {children}
+            <AuditContext.Provider value={openAudit}>
+              {children}
+            </AuditContext.Provider>
           </div>
         </div>
       </div>
@@ -256,16 +271,27 @@ export function RecordFrame<P>({
             {...slide}
             id={`${prefix}-drawer`}
             className={styles.drawer}
-            aria-label={drawer === "audit" ? labels.auditTitle : tabName}
+            aria-label={
+              drawer === "audit"
+                ? (auditTarget?.title ?? labels.auditTitle)
+                : tabName
+            }
           >
             <div id={`${prefix}-drawer-head`} className={styles.drawerHead}>
-              <h2>{drawer === "audit" ? labels.auditTitle : tabName}</h2>
+              <h2>
+                {drawer === "audit"
+                  ? (auditTarget?.title ?? labels.auditTitle)
+                  : tabName}
+              </h2>
               <button
                 type="button"
                 id={`${prefix}-drawer-close`}
                 className="gn-btn gn-btn--borderless gn-btn--icon"
                 aria-label={labels.close}
-                onClick={() => setDrawer(null)}
+                onClick={() => {
+                  setDrawer(null);
+                  setAuditTarget(null);
+                }}
               >
                 <Icon name="close" size={14} />
               </button>
@@ -279,10 +305,12 @@ export function RecordFrame<P>({
               />
             ) : (
               <ObjectAudit
+                key={`${auditTarget?.page ?? page}:${auditTarget?.sec ?? ""}`}
                 id={`${prefix}-audit-panel`}
                 objectType={objectType}
                 objectId={objectId}
-                page={page}
+                page={auditTarget?.page ?? page}
+                sec={auditTarget?.sec}
               />
             )}
           </motion.aside>

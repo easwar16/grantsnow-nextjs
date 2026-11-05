@@ -4,7 +4,7 @@ import { del, post } from "../http";
 import {
   serializeDueDiligenceFilters,
   type DueDiligenceFilters,
-} from "@/features/modules/due-diligence/schema";
+} from "@/features/modules/due-diligence/listing/schema";
 import type { DueDiligenceRow } from "@/server/modules/due-diligence/listing";
 import type { SelectOption } from "@/components/ui/select";
 import type { LinkedObjects } from "@/features/record/linked/model";
@@ -36,7 +36,7 @@ export type DeletedDueDiligence = {
   canRestore: boolean;
 };
 export const deleted = endpoint<void, DeletedDueDiligence[]>(() => ({
-  path: "/due-diligence/recycle",
+  path: "/due-diligence/actions/recycle",
 }));
 export const links = endpoint<{ id: string; access: string }, LinkedObjects>(
   ({ id, access }) => ({
@@ -45,25 +45,26 @@ export const links = endpoint<{ id: string; access: string }, LinkedObjects>(
   }),
 );
 export const restore = (id: string) =>
-  post<{ restored: boolean }>("/due-diligence/recycle", { id });
+  post<{ restored: boolean }>("/due-diligence/actions/restore", { id });
 export type CreateSetup = {
   orgs: SelectOption[];
   types: SelectOption[];
   formTypes: SelectOption[];
+  labels: Record<string, string>;
 };
 export const createSetup = endpoint<void, CreateSetup>(() => ({
-  path: "/due-diligence/create",
+  path: "/due-diligence/actions/create",
 }));
 export const createForm = endpoint<
   string,
   { formId: number; sections: { id: string; enabled: boolean }[] }
->((formType) => ({ path: "/due-diligence/create/form", query: { formType } }));
+>((formType) => ({ path: "/due-diligence/actions/form", query: { formType } }));
 export const createPeople = endpoint<
   string,
   { value: string; label: string; detail: string }[]
->((org) => ({ path: "/due-diligence/create/people", query: { org } }));
+>((org) => ({ path: "/due-diligence/actions/people", query: { org } }));
 export const createSupervisors = endpoint<void, SelectOption[]>(() => ({
-  path: "/due-diligence/create/supervisors",
+  path: "/due-diligence/actions/supervisors",
 }));
 export type CreateDueDiligence = {
   title: string;
@@ -76,17 +77,22 @@ export type CreateDueDiligence = {
   supervisor?: string;
 };
 export const create = (value: CreateDueDiligence) =>
-  post<{ id: string }>("/due-diligence/create", value);
-
-
+  post<{ id: string }>("/due-diligence/actions/create", value);
 export const cloneOptions = endpoint<
   { id: string; access: string },
   { value: string; label: string; selected: boolean }[]
 >(({ id, access }) => ({
-  path: "/due-diligence/actions",
+  path: "/due-diligence/actions/clone-options",
   query: { id, access },
 }));
 export const clone = (id: string, access: string, objects: string[]) =>
-  post<{ cloned: true }>("/due-diligence/actions", { id, access, objects });
+  post<{ cloned: true }>("/due-diligence/actions/clone", {
+    id,
+    access,
+    objects,
+  });
 export const remove = (id: string, access: string) =>
-  del<{ deleted: true }>("/due-diligence/actions", undefined, { id, access });
+  del<{ deleted: true }>("/due-diligence/actions/delete", undefined, {
+    id,
+    access,
+  });

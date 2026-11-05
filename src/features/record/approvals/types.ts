@@ -103,6 +103,7 @@ export type WorkflowTextKey =
   | "historyStatus"
   | "historyStage"
   | "historyComments"
+  | "commentTitle"
   | "historyUpdated"
   | "submitTitle"
   | "withdrawTitle"

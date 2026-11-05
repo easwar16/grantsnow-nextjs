@@ -1365,91 +1365,21 @@ a.sr-only:focus {
   font-size: 21px;
   margin: 0 0 24px;
 }
+/* Legacy oj-sp-dashboard-grid, measured at 1745×799: two 818×619 panels, 37px apart, no frame. */
 .opportunity-analytics-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-}
-.opportunity-analytics-grid > * {
-  flex: 0 0 calc(50% - 12px);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2.12vw;
 }
 .analytics-panel {
-  padding: 18px;
-  background: var(--surface);
-  border: 1px solid var(--border);
   min-width: 0;
 }
 .analytics-panel h2 {
   font-size: 14px;
-  margin: 0 0 28px;
-}
-.funding-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 14px;
-  min-height: 300px;
-  overflow-x: auto;
-  border-bottom: 1px solid var(--border);
-}
-.funding-bar-column {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  min-width: 65px;
-  flex: 1;
-  text-align: center;
-  height: 300px;
-}
-.funding-bar-column strong {
-  font-size: 10px;
-  margin-bottom: 5px;
-}
-.funding-bar {
-  min-height: 1px;
-  width: 65%;
-}
-.funding-bar-column span {
-  height: 55px;
-  overflow: hidden;
-  margin-top: 8px;
-  font-size: 10px;
-}
-.funding-pie-layout {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: 24px;
-}
-.funding-pie {
-  width: 240px;
-  height: 240px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.funding-pie-layout dl {
-  min-width: 180px;
   margin: 0;
 }
-.funding-pie-layout dl > div {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  margin-bottom: 12px;
-}
-.funding-pie-layout dt {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.funding-pie-layout dd {
-  margin-left: auto;
-}
-.chart-legend-swatch {
-  width: 12px;
-  height: 12px;
-  display: inline-block;
+.analytics-panel .insight-chart-host {
+  height: 77.47vh;
 }
 @media (max-width: 600px) {
   .eoi-workspace,
@@ -2213,29 +2143,6 @@ input[type="checkbox"][role="switch"]:disabled {
   background: var(--gn-hover-tint);
   outline: none;
 }
-.chart-dimension-dialog {
-  width: min(
-    34.384vw,
-    calc(100vw - 32px)
-  ); /* legacy #dialogChangeDimension: Redwood's default 600px */
-  padding: 18px 20px 20px;
-}
-.chart-dimension-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.chart-dimension-head h2 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 700;
-}
-.chart-dimension-close {
-  display: flex;
-  min-height: 0;
-  padding: 4px;
-  border: 0;
-}
 .dimension-fields {
   display: flex;
   flex-wrap: wrap;
@@ -2325,9 +2232,68 @@ input[type="checkbox"][role="switch"]:disabled {
 .insight-chart {
   position: relative;
 }
+.insight-chart-body {
+  display: flex;
+  gap: 8px;
+}
 .insight-chart-host {
+  flex: 1;
+  min-width: 0;
   height: 156px;
+}
+/* The chart legend: one width on every chart; a long list scrolls (owner, 2026-11-03). */
+.chart-legend {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  justify-content: safe center;
+  width: 9.5vw;
+  min-width: 120px;
+  overflow-y: auto;
+  /* Adds no height of its own: it takes the plot's height and scrolls within it. */
+  contain: size;
+  /* Hidden scrollbar (owner, 2026-11-03); the wheel and keyboard still scroll the list. */
+  scrollbar-width: none;
+}
+.chart-legend::-webkit-scrollbar {
+  display: none;
+}
+.chart-legend ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.chart-legend-title {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.chart-legend button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
   width: 100%;
+  min-height: 0;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  font-size: 12px;
+  text-align: start;
+  color: var(--gn-text);
+}
+.chart-legend button[aria-pressed="false"] {
+  opacity: 0.4;
+}
+.chart-legend-swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+}
+.chart-legend-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .insight-chart.expanded .insight-chart-host {
   height: 47.94vh; /* legacy #chartDialog chart 500px at 1043px */
@@ -2396,11 +2362,6 @@ input[type="checkbox"][role="switch"]:disabled {
 }
 
 /* Manage profile (GN-Angular header openProfile): min(960px, 100vw - 32px); the content styles itself. */
-.profile-dialog {
-  width: 66.667vw; /* legacy #dialogManageProfile oj-md-8 */
-  max-width: none;
-  padding: 0;
-}
 /* ── Accessibility: GN-Angular styles.css, classes set on <html> as the original ── */
 html.accFontSize-25 {
   zoom: 1.1;
@@ -2898,28 +2859,9 @@ html.accContrastTheme-100 {
   margin: 6px 0;
   height: 15px;
 }
+/* Legacy #chartDialog: 70vw (ActionDialog width), at least 60vh tall. */
 .expanded-chart-dialog {
-  width: 70vw;
-  max-width: calc(100vw - 32px);
   min-height: 60vh;
-  max-height: 90dvh;
-  padding: 16px 20px 20px;
-}
-.expanded-chart-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 12px;
-}
-.expanded-chart-head h2 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 700;
-}
-.expanded-chart-close {
-  min-height: 0;
-  padding: 4px;
-  border: 0;
 }
 @media (max-width: 767px) {
   .kpi-strip > article {

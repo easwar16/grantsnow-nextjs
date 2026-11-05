@@ -91,6 +91,9 @@ export async function POST(request: Request) {
     });
     return Response.redirect(url, 303);
   } catch (e) {
+    // The browser gets a generic error; the operator needs the reason (IDCS discovery, issuer, timeout).
+    if (!(e instanceof AppError))
+      console.error("[auth] login failed:", e instanceof Error ? e.message : e);
     return failure(e);
   }
 }

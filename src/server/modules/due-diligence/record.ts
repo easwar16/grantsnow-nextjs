@@ -21,7 +21,11 @@ const listEnvelope = z.object({
 });
 const roleEnvelope = z.object({
   items: z.array(
-    z.object({ page_name: z.string(), read_access: z.string().nullable(), edit_access: z.string().nullish() }),
+    z.object({
+      page_name: z.string(),
+      read_access: z.string().nullable(),
+      edit_access: z.string().nullish(),
+    }),
   ),
 });
 const setup = z.object({
@@ -186,7 +190,9 @@ export async function dueDiligenceRecord(id: string, requestedAccess?: string) {
 }
 
 /** The VBCS History fragment uses the first stakeholder for status rows. */
-export async function dueDiligenceHistoryHost(id: string): Promise<HistoryHost> {
+export async function dueDiligenceHistoryHost(
+  id: string,
+): Promise<HistoryHost> {
   const [record, { session, user }] = await Promise.all([
     dueDiligenceRecord(id),
     authenticate(),
@@ -215,7 +221,8 @@ export async function dueDiligenceHistoryHost(id: string): Promise<HistoryHost> 
     statusCode: record.statusCode,
     rights: {
       addStatus: record.rights["due-diligence-add-status"]?.edit === true,
-      abandon: record.rights["due-diligence-history-abandon-button"]?.edit === true,
+      abandon:
+        record.rights["due-diligence-history-abandon-button"]?.edit === true,
     },
     keys: {
       title: ["header-labels", "due-diligence-status-history"],
@@ -230,7 +237,6 @@ export async function dueDiligenceHistoryHost(id: string): Promise<HistoryHost> 
   };
 }
 
-
 /** Listing Linked action: scope the DD record before reading shared object links. */
 export async function dueDiligenceLinks(id: string, access?: string) {
   const record = await dueDiligenceRecord(id, access);
@@ -243,3 +249,4 @@ export async function dueDiligenceLinks(id: string, access?: string) {
     },
   );
 }
+export type DueDiligenceRecord = Awaited<ReturnType<typeof dueDiligenceRecord>>;

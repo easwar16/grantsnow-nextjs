@@ -142,16 +142,18 @@ export function InstallmentsTab({
       </div>
       <div className={own.actions}>
         {/* No balance left: an installment must be reduced first to release funds. */}
-        <button
-          type="button"
-          id="award-installments-new"
-          className="gn-btn gn-btn--primary"
-          disabled={!view.canEdit || left <= 0}
-          onClick={() => setDraft(NEW)}
-        >
-          <Icon name="plus" size={14} />
-          {t.newInstallment}
-        </button>
+        {view.canEdit && (
+          <button
+            type="button"
+            id="award-installments-new"
+            className="gn-btn gn-btn--primary"
+            disabled={left <= 0}
+            onClick={() => setDraft(NEW)}
+          >
+            <Icon name="plus" size={14} />
+            {t.newInstallment}
+          </button>
+        )}
         {list.length > 0 && left <= 0 && (
           <span id="award-installments-no-balance" className={own.hint}>
             {t.noBalance}

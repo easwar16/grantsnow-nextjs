@@ -1,0 +1,64 @@
+/* The record tab bar (RecordTabs), shared by every module's record page. */
+.frame {
+  display: flex;
+  flex: none;
+  align-items: stretch;
+  min-width: 0;
+  border-bottom: 1px solid var(--gn-divider);
+}
+.tabs {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  /* Hidden scrollbar (owner, 2026-11-03); the wheel and keyboard still scroll it. */
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+.tabs a {
+  display: flex;
+  flex: 1 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 12px;
+  white-space: nowrap;
+  color: var(--gn-text-secondary);
+  text-decoration: none;
+  border-bottom: 3px solid transparent;
+}
+.tabs a:hover {
+  color: var(--gn-text);
+}
+.tabs a.selected {
+  font-weight: 600;
+  color: var(--gn-text);
+  border-bottom-color: var(--gn-brand);
+}
+.finalized {
+  color: var(--gn-success);
+}
+@media (max-width: 768px) {
+  .name {
+    display: none;
+  }
+}
+.arrow {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--gn-text-secondary);
+}
+.arrow:hover {
+  color: var(--gn-text);
+}

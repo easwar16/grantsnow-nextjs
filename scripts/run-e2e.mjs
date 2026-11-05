@@ -6,6 +6,7 @@ import { spawnSync } from "node:child_process";
 const source = process.cwd();
 const workspace = resolve(source, ".validation", `e2e-${Date.now()}`);
 mkdirSync(workspace, { recursive: true });
+mkdirSync(join(workspace, "scripts"), { recursive: true });
 for (const entry of [
   "src",
   "public",
@@ -15,6 +16,7 @@ for (const entry of [
   "tsconfig.json",
   "next.config.ts",
   "playwright.config.ts",
+  "scripts/dev.mjs",
 ])
   cpSync(join(source, entry), join(workspace, entry), { recursive: true });
 symlinkSync(
