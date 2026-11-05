@@ -8,7 +8,7 @@ import type {
   ChoiceGroup,
   ChoiceGroupResult,
 } from "@/features/modules/proposals/lookups";
-import { download, get, post } from "../http";
+import { download, get, post, put } from "../http";
 import { endpoint } from "../hooks";
 import { constants } from "@/lib/constants";
 
@@ -122,8 +122,62 @@ export const create = (input: {
   endDate: string;
   costModel: number;
   confidential: "Y" | "N";
-  sponsorId: number;
+  sponsors: {
+    relationId: null;
+    partyId: number;
+    roleCode: string;
+    priority: number;
+  }[];
+  deadlines: {
+    id: null;
+    type: string;
+    date: string | null;
+    description: string;
+  }[];
+  tags: string;
+  assignedTo: number | null;
+  opportunityTitle: string;
+  opportunityUrl: string;
+  collaboratorFlag?: "Y" | "N";
+  collaborators?: {
+    relationId: number | null;
+    collaboratorId: number;
+    roleCode: string;
+    description: string;
+    costingEnabled: boolean;
+  }[];
+  subprojectFlag?: "Y" | "N";
+  subprojects?: {
+    relationId: number | null;
+    personId: number;
+    employeeNumber: string;
+    orgUnitId: number;
+    typeCode: string;
+    excludePricing: boolean;
+  }[];
+  attributes?: Record<string, string | number | string[] | null>;
+  sourceRequestId?: number;
 }) => post<{ id: number; type: string }>("/proposals/create", input);
+export type ApprovedAoi = {
+  id: string;
+  number: string;
+  status: string;
+  title: string;
+  logo: string;
+  funders: string;
+  creator: string;
+  department: string;
+  created: string;
+};
+export type ApprovedAoiPage = {
+  rows: ApprovedAoi[];
+  total: number | null;
+  hasMore: boolean;
+};
+export const approvedAois = (offset = 0, signal?: AbortSignal) =>
+  get<ApprovedAoiPage>("/proposals/approved-aoi", { offset }, signal);
+export const approvedAoiSource = (id: string) =>
+  get<{ opportunityId: string }>("/proposals/approved-aoi", { id });
 export const setSummaryFinalized = (
   type: string,
   id: string,
@@ -234,6 +288,97 @@ export const saveQuickCost = (
   },
 ) =>
   post<{ saved: boolean }>(`/proposals/${type}/${id}/budget/quick-cost`, input);
+
+export const staffEntryPerson = (type: string, id: string, personId: number) =>
+  get<{
+    personId: number;
+    name: string;
+    employeeNumber: string;
+    orgUnitId: number;
+    orgUnitName: string;
+    faculty: string;
+    probationEndDate: string;
+    firstIncrement: string;
+    projectRole: string;
+    fundingSection: string;
+    salaryModel: string;
+    hrFte: string;
+  }>(`/proposals/${type}/${id}/budget/staff-entry`, {
+    personId: String(personId),
+  });
+
+export const staffEntryAvailability = (
+  type: string,
+  id: string,
+  personId: number,
+) =>
+  get<{
+    startDate: string;
+    endDate: string;
+    items: {
+      proposalNumber: string;
+      startDate: string;
+      endDate: string;
+      fte: number;
+    }[];
+  }>(`/proposals/${type}/${id}/budget/staff-entry`, {
+    action: "availability",
+    personId: String(personId),
+  });
+
+export const createStaffCostHeader = (
+  type: string,
+  id: string,
+  input: {
+    kind: "staff" | "student" | "pool-tech";
+    versionId: number;
+    personId: number | null;
+    name: string;
+    employeeNumber: string;
+    orgUnitId: number | null;
+    projectRole: string;
+    fundingSection: string;
+    salaryModel: string;
+    probationEndDate: string;
+    firstIncrement: string;
+    hrFte: number | null;
+    studentNumber: string;
+    overrideInflation: boolean;
+    inflationRate: number | null;
+    additionalAnswers: Record<string, string>;
+  },
+) =>
+  post<{
+    costHeaderId: number;
+    lines: {
+      id: number;
+      startDate: string;
+      endDate: string;
+      unitType: string;
+      units: string;
+      baseline: string;
+      unindexed: string;
+      total: string;
+    }[];
+  }>(`/proposals/${type}/${id}/budget/staff-entry`, input);
+
+export const saveStaffCostLines = (
+  type: string,
+  id: string,
+  input: {
+    kind: "staff" | "student" | "pool-tech";
+    versionId: number;
+    costHeaderId: number;
+    lines: {
+      id: number;
+      startDate: string;
+      endDate: string;
+      unitType: string;
+      units: number;
+      baseline: number | null;
+    }[];
+  },
+) => put<{ saved: boolean }>(`/proposals/${type}/${id}/budget/staff-entry`, input);
 
 /** WRITES (generate-report): a Print report file, as the server names it. */
 export const printReport = (

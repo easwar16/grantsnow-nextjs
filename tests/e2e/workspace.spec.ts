@@ -1101,6 +1101,22 @@ test("Proposal Budget keeps funding and category rows aligned as an expandable t
     path: "test-results/proposal-budget-tree.png",
     fullPage: true,
   });
+  await page
+    .getByRole("dialog", { name: "Viability Checks" })
+    .getByRole("button", { name: "Close" })
+    .click();
+  await page.locator("#proposal-1001-budget-cost-57993-button").click();
+  await expect(
+    page.locator("#proposal-1001-budget-cost-57993-list"),
+  ).toBeVisible();
+  await expect(
+    page.locator("#proposal-1001-budget-cost-57993-delete"),
+  ).toBeDisabled();
+  await page.locator("#proposal-1001-budget-cost-57993-edit").click();
+  await expect(page).toHaveURL(/\/budget\/staff\/57993/);
+  await expect(
+    page.getByRole("heading", { name: "Staff costing" }),
+  ).toBeVisible();
 });
 
 test("Proposal Budget opens the VBCS staff and nonstaff costing flows", async ({
@@ -1110,34 +1126,87 @@ test("Proposal Budget opens the VBCS staff and nonstaff costing flows", async ({
   await page.goto("/proposals/OUTLINE_PROPOSAL/1000/budget");
   const actions = page.locator("#proposal-1000-budget-add-actions");
   await expect(
-    actions.getByRole("button", { name: "Add Staff Cost" }),
+    actions.getByRole("link", { name: "Add Staff Cost" }),
   ).toBeVisible();
   await expect(
-    actions.getByRole("button", { name: "Add Non Staff Cost" }),
+    actions.getByRole("link", { name: "Add Non Staff Cost" }),
   ).toBeVisible();
   await expect(
-    actions.getByRole("button", { name: "Add Research Partner Costs" }),
+    actions.getByRole("link", { name: "Add Research Partner Costs" }),
   ).toBeVisible();
-  await actions.getByRole("button", { name: "Add Staff Cost" }).click();
   await expect(
-    page.getByRole("dialog", { name: "Add Staff Cost" }),
-  ).toContainText("Project role");
-  const staff = page.getByRole("dialog", { name: "Add Staff Cost" });
-  await staff.getByRole("combobox", { name: "Funding section" }).click();
-  await page.getByRole("option", { name: "Directly Allocated" }).click();
-  await staff.getByRole("combobox", { name: "Project role" }).click();
-  await page.getByRole("option", { name: "Principal investigator" }).click();
-  await staff.getByRole("combobox", { name: "Person" }).click();
-  await page.getByRole("option", { name: "Alex Morgan" }).click();
-  await staff.getByRole("textbox", { name: "Start date" }).fill("01-Jan-2027");
-  await staff.getByRole("textbox", { name: "End date" }).fill("31-Dec-2027");
-  await staff.getByRole("button", { name: "Save" }).click();
-  await expect(staff).toHaveCount(0);
-  await actions.getByRole("button", { name: "Add Non Staff Cost" }).click();
+    actions.getByRole("link", { name: "Add Student Cost" }),
+  ).toBeVisible();
   await expect(
-    page.getByRole("dialog", { name: "Add Non Staff Cost" }),
-  ).toContainText("Cost category");
-  const nonstaff = page.getByRole("dialog", { name: "Add Non Staff Cost" });
+    actions.getByRole("link", { name: "Add Pool Tech Cost" }),
+  ).toBeVisible();
+  await actions.getByRole("link", { name: "Add Staff Cost" }).click();
+  await expect(page).toHaveURL(/\/budget\/new\/staff$/);
+  const staff = page.locator("#proposal-1000-budget-staff-entry");
+  await expect(
+    staff.getByRole("heading", { name: /Staff costing/ }),
+  ).toBeVisible();
+  await expect(staff.getByRole("searchbox", { name: "Search" })).toBeVisible();
+  await expect(staff.getByText("Cost Justification")).toBeVisible();
+  await expect(
+    staff.getByRole("button", { name: "Get Cost Lines" }),
+  ).toHaveCount(0);
+  await staff.getByRole("searchbox", { name: "Search" }).click();
+  await expect(
+    staff.getByRole("button", { name: /Alex Morgan/ }),
+  ).toBeVisible();
+  await staff.getByRole("button", { name: /To Be Decided/ }).click();
+  await expect(staff.getByRole("searchbox", { name: "Search" })).toBeVisible();
+  await expect(
+    staff.getByRole("button", { name: "Change staff person" }),
+  ).toHaveCount(0);
+  await staff.getByRole("button", { name: "Staff Availability" }).click();
+  const availability = page.getByRole("dialog", { name: "Staff Availability" });
+  await expect(availability.getByText("P_100")).toBeVisible();
+  await expect(availability.getByText("FTE: 0.5")).toBeVisible();
+  await availability
+    .getByRole("button", { name: "Close Staff Availability" })
+    .click();
+  await expect(
+    staff.getByRole("combobox", { name: "First Increment" }),
+  ).toHaveValue("JAN-2025");
+  await expect(
+    staff.getByRole("button", { name: "Choose Probation end date" }),
+  ).toBeVisible();
+  await expect(staff.getByRole("textbox", { name: "HR FTE" })).toHaveAttribute(
+    "readonly",
+  );
+  await staff.getByRole("searchbox", { name: "Search" }).fill("Alex");
+  await staff.getByRole("button", { name: /Alex Morgan/ }).click();
+  await expect(staff.getByRole("textbox", { name: "Full Name" })).toHaveValue(
+    "Alex Morgan",
+  );
+  await expect(
+    staff.getByRole("textbox", { name: "First Increment" }),
+  ).toHaveValue("JAN");
+  await staff.getByRole("link", { name: "Add New Staff Cost" }).click();
+  await expect(page).toHaveURL(/\/budget\/new\/staff$/);
+  await expect(staff.getByRole("textbox", { name: "Full Name" })).toHaveCount(
+    0,
+  );
+  await staff.getByRole("searchbox", { name: "Search" }).click();
+  await staff.getByRole("button", { name: /Alex Morgan/ }).click();
+  await expect(
+    staff.getByRole("combobox", { name: "Project role" }),
+  ).toBeVisible();
+  await staff.getByRole("combobox", { name: "Costing HDR section" }).click();
+  await page
+    .getByRole("listbox", { name: "Costing HDR section" })
+    .getByRole("option", { name: "Directly Allocated" })
+    .click();
+  await staff.getByRole("button", { name: "Get Cost Lines" }).click();
+  await expect(staff.getByText("Cost Summary")).toBeVisible();
+  await staff.getByRole("button", { name: "Done" }).click();
+  await expect(page).toHaveURL(/\/budget$/);
+  await actions.getByRole("link", { name: "Add Non Staff Cost" }).click();
+  await expect(page).toHaveURL(/\/budget\/new\/non-staff$/);
+  const nonstaff = page.locator("#proposal-1000-budget-non-staff-entry");
+  await expect(nonstaff).toContainText("Cost category");
   await nonstaff.getByRole("combobox", { name: "Funding section" }).click();
   await page.getByRole("option", { name: "Directly Allocated" }).click();
   await nonstaff.getByRole("combobox", { name: "Cost category" }).click();
@@ -1157,7 +1226,18 @@ test("Proposal Budget opens the VBCS staff and nonstaff costing flows", async ({
   await nonstaff.getByRole("textbox", { name: "End date" }).fill("31-Dec-2027");
   await nonstaff.getByLabel("Unit cost").fill("10");
   await nonstaff.getByRole("button", { name: "Save" }).click();
-  await expect(nonstaff).toHaveCount(0);
+  await expect(page).toHaveURL(/\/budget$/);
+  await actions.getByRole("link", { name: "Add Student Cost" }).click();
+  const student = page.locator("#proposal-1000-budget-student-entry");
+  await expect(
+    student.getByRole("heading", { name: /Student Cost/ }),
+  ).toBeVisible();
+  await student.getByRole("combobox", { name: "Org Unit" }).click();
+  await expect(
+    page
+      .getByRole("listbox", { name: "Org Unit" })
+      .getByRole("option", { name: "Example Research University" }),
+  ).toBeVisible();
 });
 
 test("Proposal scroll loading preserves records, retries failures and resets on a new filter", async ({
@@ -1386,6 +1466,11 @@ test("record skeletons remain visible during delayed refresh and honor reduced m
   await page
     .getByRole("button", { name: "Application Navigation Drawer" })
     .click();
+  await expect(page.locator(".navigation-drawer")).toBeVisible();
+  await expect(page.locator(".navigation-drawer")).toHaveCSS(
+    "transform",
+    "matrix(1, 0, 0, 1, 0, 0)",
+  );
   await expect(page.locator(".navigation-drawer")).toHaveCSS(
     "background-color",
     "rgb(49, 83, 87)",

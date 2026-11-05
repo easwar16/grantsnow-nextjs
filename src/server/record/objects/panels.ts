@@ -17,6 +17,8 @@ import {
 } from "@/server/modules/contracts/service";
 import { proposalPage } from "@/server/modules/proposals/record";
 import { recordIdentity } from "@/features/modules/proposals/record";
+import { ethicsRecord } from "@/server/modules/ethics/record";
+import { authenticate } from "@/server/identity/session/service";
 
 /**
  * One host of the shared comments and audit panels (legacy `object-comments` and each detail page's audit drawer).
@@ -100,6 +102,17 @@ const HOSTS: Record<
     CONTRACT_PAGES,
     contractRecordContext,
   ),
+  ETHICS: async (id, page, mode) => {
+    const pages = ["ethics-general-overview", "ethics-responses", "ethics-attachments", "ethics-approvals", "ethics-history"];
+    if (!pages.includes(page)) throw new AppError("BAD_REQUEST", "Invalid Ethics page.", 400);
+    const [record, { session, user }] = await Promise.all([ethicsRecord(id), authenticate()]);
+    const right = record.rights[page];
+    if (!record.tabs.includes(page as (typeof record.tabs)[number]) || !right?.read || (mode === "write" && !right.edit))
+      throw new AppError("FORBIDDEN", "Ethics panel access has not been granted.", 403);
+    const objectId = page === "ethics-general-overview" ? id : record.respondents[0]?.id;
+    if (!objectId) throw new AppError("CONTRACT", "Ethics stakeholder record is unavailable.");
+    return { objectType: "ETHICS", objectId, page, bundle: "ethics", token: session.token, user, canComment: right.edit };
+  },
 };
 const proposalPages = new Set([
   "proposals-summary",

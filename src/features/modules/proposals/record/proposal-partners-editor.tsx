@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { DataTable, type TableAction } from "@/components/ui/data-table";
+import { ProposalFieldValidation } from "./proposal-edit-form";
 import styles from "./proposal-record.module.css";
 
 type Collaborator = {
@@ -169,6 +170,9 @@ export function ProposalCollaboratorsEditor({
                 )
                 .map((item) => ({ value: String(item.id), label: item.name }))}
             />
+            {id === "new" && (
+              <ProposalFieldValidation id="proposal-new-add-collaborator-trigger" />
+            )}
           </div>
           <DataTable
             id={`proposal-${id}-collaborators-table`}
@@ -394,6 +398,9 @@ export function ProposalSubprojectsEditor({
                   label: `${item.name} — ${item.orgUnitName}`,
                 }))}
             />
+            {id === "new" && (
+              <ProposalFieldValidation id="proposal-new-add-subproject-trigger" />
+            )}
           </div>
         )}
       </div>

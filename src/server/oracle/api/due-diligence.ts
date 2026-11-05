@@ -52,3 +52,36 @@ export const save = write<{ body: Record<string, unknown> }>({
   body: (p) => p.body,
   invalidates: ["getDynamicFormsApplicationList"],
 });
+
+/** Listing clone options and the selected-object copy payload from origin/development. */
+export const copyOptions = read<void>({
+  op: "getProposalCopyApplicationObjList",
+  headers: () => ({ obj_type: "DUE_DILIGENCE" }),
+});
+export const copy = write<{
+  id: string;
+  access: string;
+  objects: { object_name: string; object_val: true }[];
+}>({
+  op: "postDynamicFormsCopyApplication",
+  headers: (p) => ({
+    p_setup_flow_id: p.id,
+    object_type: "DUE_DILIGENCE",
+    access_type: p.access,
+  }),
+  body: (p) => ({
+    setup_flow_id: Number(p.id),
+    object_type: "DUE_DILIGENCE",
+    access_type: p.access,
+    objects: p.objects,
+  }),
+  invalidates: ["getDynamicFormsApplicationList"],
+});
+export const remove = write<{ id: string }>({
+  op: "deleteDynamicFormsApplicationSetup",
+  query: (p) => ({ setup_flow_id: p.id }),
+  invalidates: [
+    "getDynamicFormsApplicationList",
+    "getDynamicFormsGetDeletedApplicationList",
+  ],
+});

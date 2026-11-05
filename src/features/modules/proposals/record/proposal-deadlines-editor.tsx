@@ -19,11 +19,13 @@ export function ProposalDeadlinesEditor({
   initial,
   types,
   noData,
+  formId,
 }: {
   id: string;
   initial: Deadline[];
   types: SelectOption[];
   noData: string;
+  formId?: string;
 }) {
   const [rows, setRows] = useState(initial);
   const [editing, setEditing] = useState<number | null>(null);
@@ -67,7 +69,7 @@ export function ProposalDeadlinesEditor({
       <input
         type="hidden"
         name="deadlines"
-        form={`proposal-${id}-edit-form`}
+        form={formId ?? `proposal-${id}-edit-form`}
         value={JSON.stringify(rows)}
         readOnly
       />

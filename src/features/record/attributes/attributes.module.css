@@ -35,6 +35,24 @@
   gap: 12px 16px;
   min-width: 0;
 }
+.outsideField {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  min-width: 0;
+}
+.outsideField label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.outsideField input,
+.outsideField textarea {
+  min-height: 31px;
+}
+.required {
+  color: #00759a;
+}
 /* Readonly (live award header, 2026-10-26): one field under another, 11px apart; a blank value adds no line. */
 .readonly {
   display: flex;

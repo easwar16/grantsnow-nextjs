@@ -1,9 +1,9 @@
+import Link from "next/link";
 import { serverFunctions } from "@/server/functions";
 import type { Resources } from "@/server/platform/configuration/resources";
 import type { displayFormat } from "@/server/platform/configuration/formatting";
 import type { proposalBudget } from "@/server/modules/proposals/budget";
 import { BudgetView } from "./budget-view";
-import { CostingEditor } from "./costing-editor";
 import styles from "../proposal-record.module.css";
 
 const budgetColumns = [
@@ -144,38 +144,42 @@ export function ProposalBudget({
         className={styles.budgetAddActions}
       >
         {actions
-          .filter(
-            (action) =>
-              action.read &&
-              (action.kind === "research-partner" ||
-                serverFunctions.resources.resourceVisible(
-                  rb,
-                  budget.bundle,
-                  "button-labels",
-                  action.key,
-                )),
-          )
-          .map((action) => (
-            <CostingEditor
-              key={action.kind}
-              id={id}
-              type={type}
-              kind={action.kind}
-              label={serverFunctions.resources.label(
-                rb,
-                budget.bundle,
-                "button-labels",
-                action.key,
-                action.fallback,
-              )}
-              disabled={
-                budget.versionId === null ||
-                !budget.actions.editable ||
-                !action.edit ||
-                (version !== undefined && Number(version) !== budget.versionId)
-              }
-            />
-          ))}
+          .filter((action) => action.read)
+          .map((action) => {
+            const label = serverFunctions.resources.label(
+              rb,
+              budget.bundle,
+              "button-labels",
+              action.key,
+              action.fallback,
+            );
+            const disabled =
+              budget.versionId === null ||
+              !budget.actions.editable ||
+              !action.edit ||
+              (version !== undefined && Number(version) !== budget.versionId);
+            return disabled ? (
+              <button
+                key={action.kind}
+                id={`proposal-${id}-budget-${action.kind}-add`}
+                type="button"
+                className={styles.actionButton}
+                disabled
+              >
+                {label}
+              </button>
+            ) : (
+              <Link
+                key={action.kind}
+                id={`proposal-${id}-budget-${action.kind}-add`}
+                className={styles.actionButton}
+                href={`/proposals/${type}/${id}/budget/new/${action.kind}`}
+                prefetch={false}
+              >
+                {label}
+              </Link>
+            );
+          })}
       </div>
       {budget.projects.length === 0 ? (
         <p>No data to display.</p>

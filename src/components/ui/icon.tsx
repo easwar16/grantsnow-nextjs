@@ -111,6 +111,7 @@ const icons = {
   "reset-filters": { ux: "reset-filters", material: "filter_alt_off" },
   filter: { ux: "filter", material: "filter_alt" },
   "data-document": { ux: "data-document", material: "article" },
+  "invoice-create": { ux: "invoice-create", material: "note_add" },
   view: { ux: "view", material: "visibility" },
   list: { ux: "list", material: "view_list" },
   copy: { ux: "copy", material: "content_copy" },

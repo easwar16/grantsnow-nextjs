@@ -60,7 +60,7 @@ const options = (items: Record<string, unknown>[], key: string, name: string) =>
     return value ? [{ value, label: rawText(item[name]) || value }] : [];
   });
 
-async function scope(
+export async function costingScope(
   type: string,
   id: string,
   action: z.infer<typeof kind>,
@@ -99,11 +99,18 @@ async function references(
   action: z.infer<typeof kind>,
   versionId?: number,
 ) {
-  const { data } = await scope(type, id, action, versionId);
+  const { data } = await costingScope(type, id, action, versionId);
   const [sectionsRaw, rolesRaw, itemsRaw, categoriesRaw, peopleRaw] =
     await Promise.all([
       proposals.fundingSections({ costModel: String(data.cost_model) }),
-      proposals.projectRoles({ costType: "STAFF" }),
+      proposals.projectRoles({
+        costType:
+          action === "student"
+            ? "STUD"
+            : action === "pool-tech"
+              ? "POOL_TECH"
+              : "STAFF",
+      }),
       proposals.costItems(),
       lookups.codes({ types: "COST_CATEGORY_TYPES" }),
       people.inOrg({}),
@@ -112,12 +119,25 @@ async function references(
   const projectRoles = list.parse(rolesRaw).items;
   const costItems = list.parse(itemsRaw).items;
   const categories = list.parse(categoriesRaw).items;
-  const allPeople = list.parse(peopleRaw).items;
+  const allPeople = list
+    .parse(peopleRaw)
+    .items.map((person) =>
+      Object.fromEntries(
+        Object.entries(person).map(([key, value]) => [
+          key.toLowerCase(),
+          value,
+        ]),
+      ),
+    );
   const flag =
     type === "OUTLINE_PROPOSAL"
       ? "costing_allowed_op_flag"
       : "costing_allowed_prop_flag";
-  const flagged = allPeople.some((person) => rawText(person[flag]) !== "");
+  const flagged = allPeople.some(
+    (person) =>
+      person.costing_allowed_op_flag !== undefined ||
+      person.costing_allowed_prop_flag !== undefined,
+  );
   const eligible = allPeople.filter(
     (person) => person[flagged ? flag : "costing_allowed_flag"] === "Y",
   );
@@ -142,6 +162,7 @@ async function references(
       label: rawText(person.full_name),
       employeeNumber: rawText(person.employee_number),
       orgUnitId: Number(person.org_unit_id) || null,
+      orgUnitName: rawText(person.org_unit_name),
     })),
   };
 }
@@ -156,7 +177,7 @@ export async function quickCostOptions(
 
 export async function saveQuickCost(type: string, id: string, input: unknown) {
   const parsed = quickCostInput.parse(input);
-  const { data } = await scope(type, id, parsed.kind, parsed.versionId);
+  const { data } = await costingScope(type, id, parsed.kind, parsed.versionId);
   const choices = await references(type, id, parsed.kind, parsed.versionId);
   if (
     (parsed.kind === "non-staff" || parsed.kind === "research-partner") &&

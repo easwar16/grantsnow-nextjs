@@ -1,12 +1,13 @@
 "use client";
 import { endpoint, pagedEndpoint } from "../hooks";
-import { post } from "../http";
+import { del, post } from "../http";
 import {
   serializeDueDiligenceFilters,
   type DueDiligenceFilters,
 } from "@/features/modules/due-diligence/schema";
 import type { DueDiligenceRow } from "@/server/modules/due-diligence/listing";
 import type { SelectOption } from "@/components/ui/select";
+import type { LinkedObjects } from "@/features/record/linked/model";
 
 type Page = { rows: DueDiligenceRow[]; hasMore: boolean };
 export const list = pagedEndpoint<DueDiligenceFilters, DueDiligenceRow, Page>(
@@ -37,6 +38,12 @@ export type DeletedDueDiligence = {
 export const deleted = endpoint<void, DeletedDueDiligence[]>(() => ({
   path: "/due-diligence/recycle",
 }));
+export const links = endpoint<{ id: string; access: string }, LinkedObjects>(
+  ({ id, access }) => ({
+    path: `/due-diligence/${id}/links`,
+    query: { access },
+  }),
+);
 export const restore = (id: string) =>
   post<{ restored: boolean }>("/due-diligence/recycle", { id });
 export type CreateSetup = {
@@ -70,3 +77,16 @@ export type CreateDueDiligence = {
 };
 export const create = (value: CreateDueDiligence) =>
   post<{ id: string }>("/due-diligence/create", value);
+
+
+export const cloneOptions = endpoint<
+  { id: string; access: string },
+  { value: string; label: string; selected: boolean }[]
+>(({ id, access }) => ({
+  path: "/due-diligence/actions",
+  query: { id, access },
+}));
+export const clone = (id: string, access: string, objects: string[]) =>
+  post<{ cloned: true }>("/due-diligence/actions", { id, access, objects });
+export const remove = (id: string, access: string) =>
+  del<{ deleted: true }>("/due-diligence/actions", undefined, { id, access });

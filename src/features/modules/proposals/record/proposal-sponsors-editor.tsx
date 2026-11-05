@@ -4,6 +4,7 @@ import { Select, type SelectOption } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/data-table";
 import { useConfirm } from "@/components/dialog/action-dialog";
 import styles from "./proposal-record.module.css";
+import { ProposalFieldValidation } from "./proposal-edit-form";
 
 type Sponsor = {
   relationId: number | null;
@@ -22,6 +23,7 @@ export function ProposalSponsorsEditor({
   roles,
   labels,
   canDelete,
+  formId: givenFormId,
 }: {
   id: string;
   initial: Sponsor[];
@@ -29,6 +31,7 @@ export function ProposalSponsorsEditor({
   types: SelectOption[];
   roles: SelectOption[];
   canDelete: boolean;
+  formId?: string;
   labels: {
     funder: string;
     funderType: string;
@@ -90,10 +93,13 @@ export function ProposalSponsorsEditor({
           })),
       );
   };
-  const formId = `proposal-${id}-edit-form`;
+  const formId = givenFormId ?? `proposal-${id}-edit-form`;
   return (
     <div id={`proposal-${id}-sponsor-editor`}>
       <div className={styles.sponsorAdd}>
+        <label htmlFor={`proposal-${id}-sponsor-type-trigger`}>
+          FunderType
+        </label>
         <Select
           id={`proposal-${id}-sponsor-type`}
           label="Funder Type"
@@ -101,6 +107,7 @@ export function ProposalSponsorsEditor({
           value={funderType}
           onChange={setFunderType}
         />
+        <label htmlFor={`proposal-${id}-add-sponsor-trigger`}>Add Funder</label>
         <Select
           id={`proposal-${id}-add-sponsor`}
           label="Add Funder"
@@ -113,6 +120,9 @@ export function ProposalSponsorsEditor({
           value=""
           onChange={add}
         />
+        {id === "new" && (
+          <ProposalFieldValidation id="proposal-new-add-sponsor-trigger" />
+        )}
       </div>
       <input
         type="hidden"

@@ -40,8 +40,8 @@ import { functions } from "@/lib/functions";
  * engine: hosts render <DynamicForm ref=…> and drive it through the handle instead of trigger flags.
  */
 export interface DynamicFormHandle {
-  /** Validates (marks and focuses the first invalid field, toasts) and returns whether the form is valid. */
-  check(): boolean;
+  /** Validates, marks and focuses the first invalid field. The create host can omit the toast. */
+  check(focusOnly?: boolean): boolean;
   /**
    * Saves: pending file deletes → uploads → answers, stopping at the first failure. `objectId` / `objectNumber`
    * override the props for a record created just before the save (EOI Create). Resolves true on success.
@@ -61,7 +61,7 @@ export interface DynamicFormProps {
    * The parent id the forms belong to (the opportunity id for an EOI application): authorises a new application's
    * form and is checked against a saved one. dynForms `p_id` itself is the record id, as the original sends it.
    */
-  parentId: string;
+  parentId?: string;
   /** The saved object's id (EOI request id); absent for a new application. */
   objectId?: string;
   /** The saved object's number (e.g. AOI_513), used for the file folder (the server reads it again; never trusted). */
@@ -212,31 +212,37 @@ export function DynamicForm({
     },
     [toast],
   );
-  const check = useCallback(() => {
-    // Not loaded (or failed) is not valid: a host must not create a record whose answers cannot be saved.
-    if (!model) {
-      if (loaded.status === "failed")
+  const check = useCallback(
+    (focusOnly = false) => {
+      // Not loaded (or failed) is not valid: a host must not create a record whose answers cannot be saved.
+      if (!model) {
+        if (loaded.status === "failed")
+          toast.show(
+            "error",
+            "The form could not be loaded, so it can't be saved.",
+          );
+        return false;
+      }
+      if (model.validate()) return true;
+      // The required message when something is missing; otherwise the fields are filled but a rule failed.
+      if (!focusOnly)
         toast.show(
           "error",
-          "The form could not be loaded, so it can't be saved.",
+          model.hasMissing()
+            ? (texts?.requiredFields ?? "Please fill all the required fields")
+            : "Please correct the fields marked in red",
+          undefined,
+          false,
         );
+      requestAnimationFrame(() => {
+        const field = host.current?.querySelector<HTMLElement>(INVALID);
+        field?.scrollIntoView({ block: "center", behavior: "smooth" });
+        field?.focus();
+      });
       return false;
-    }
-    if (model.validate()) return true;
-    // The required message when something is missing; otherwise the fields are filled but a rule failed.
-    toast.show(
-      "error",
-      model.hasMissing()
-        ? (texts?.requiredFields ?? "Please fill all the required fields")
-        : "Please correct the fields marked in red",
-      undefined,
-      false,
-    );
-    requestAnimationFrame(() =>
-      host.current?.querySelector<HTMLElement>(INVALID)?.focus(),
-    );
-    return false;
-  }, [loaded.status, model, texts, toast]);
+    },
+    [loaded.status, model, texts, toast],
+  );
   const save = useCallback(
     async (overrideId?: string): Promise<boolean> => {
       if (loaded.status === "failed") {

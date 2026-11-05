@@ -104,6 +104,7 @@ export function ProposalEditPeriodField({
         type="number"
         min="0.01"
         step="0.01"
+        disabled={!period.start}
         value={period.months}
         onChange={(event) => period.setMonths(event.target.value)}
       />

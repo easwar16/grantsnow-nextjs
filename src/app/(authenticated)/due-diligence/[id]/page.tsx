@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { pageIdentity } from "@/server/identity/auth/page";
-import { dueDiligenceRecord } from "@/server/modules/due-diligence/record";
+import { dueDiligenceHistoryHost, dueDiligenceRecord } from "@/server/modules/due-diligence/record";
+import { historyView } from "@/server/record/objects/history";
+import { ObjectHistory } from "@/features/record/objects/object-history";
 import { ReadonlyField } from "@/components/ui/readonly-field";
 import { State } from "@/components/feedback/state";
 import styles from "@/features/modules/ethics/record.module.css";
@@ -12,10 +14,10 @@ export default async function DueDiligenceRecord({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ access?: string }>;
+  searchParams: Promise<{ access?: string; tab?: string }>;
 }) {
   await pageIdentity("/due-diligence");
-  const [{ id }, { access }] = await Promise.all([params, searchParams]);
+  const [{ id }, { access, tab }] = await Promise.all([params, searchParams]);
   const record = await dueDiligenceRecord(id, access).catch(() => null);
   if (!record)
     return (
@@ -25,6 +27,26 @@ export default async function DueDiligenceRecord({
         code="FORBIDDEN"
       />
     );
+  const current = tab ?? record.tabs[0];
+  if (!record.tabs.includes(current as (typeof record.tabs)[number]))
+    return (
+      <State
+        title="Due Diligence section unavailable"
+        message="You do not have access to this section."
+        code="FORBIDDEN"
+      />
+    );
+  const history =
+    current === "duediligence-history"
+      ? await historyView(await dueDiligenceHistoryHost(id)).catch(() => null)
+      : null;
+  const names: Record<string, string> = {
+    "duediligence-general-overview": "Setup",
+    "duediligence-responses": "Responses",
+    "duediligence-attachments": "Attachments",
+    "duediligence-approvals": "Approvals",
+    "duediligence-history": "History",
+  };
   return (
     <main id="due-diligence-record" className={styles.page}>
       <div className={styles.toolbar}>
@@ -40,6 +62,26 @@ export default async function DueDiligenceRecord({
         </div>
         <h1>{record.title || record.number}</h1>
       </div>
+      <nav id="due-diligence-record-tabs" className={styles.tabs} aria-label="Due Diligence sections">
+        {record.tabs.map((page) => (
+          <Link
+            key={page}
+            id={`due-diligence-tab-${page}`}
+            aria-current={current === page ? "page" : undefined}
+            href={`/due-diligence/${record.id}?access=${record.access}&tab=${page}`}
+          >
+            {names[page]}
+          </Link>
+        ))}
+      </nav>
+      {current === "duediligence-history" ? (
+        history ? (
+          <ObjectHistory id="due-diligence-history" host={{ host: "due-diligence", record: record.id }} view={history} />
+        ) : (
+          <State title="History unavailable" message="The history could not be loaded." code="ERROR" />
+        )
+      ) : current === "duediligence-general-overview" ? (
+      <>
       <section
         id="due-diligence-overview"
         className={styles.section}
@@ -118,6 +160,10 @@ export default async function DueDiligenceRecord({
           <p id="due-diligence-no-participants">No participants added.</p>
         )}
       </section>
+      </>
+      ) : (
+        <State title={`${names[current]} unavailable`} message="This section could not be loaded." code="ERROR" />
+      )}
     </main>
   );
 }

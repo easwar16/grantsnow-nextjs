@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ActionMenu } from "@/components/ui/action-menu";
 import { DataTable, type TableColumn } from "@/components/ui/data-table";
 import { functions } from "@/lib/functions";
 import type { proposalBudget } from "@/server/modules/proposals/budget";
@@ -67,6 +68,7 @@ export function BudgetTree({
     indexed: string | number;
   }[];
 }) {
+  const router = useRouter();
   const amount = (value: string | number) =>
     value === ""
       ? ""
@@ -189,13 +191,34 @@ export function BudgetTree({
               node.kind === "line" &&
               node.category === "STAFF" &&
               /^\d+$/.test(node.row.id) && (
-                <Link
-                  id={`proposal-${id}-budget-staff-${node.row.id}`}
-                  href={`/proposals/${type}/${id}/budget/staff/${node.row.id}${versionId ? `?version=${versionId}` : ""}`}
-                  prefetch={false}
-                >
-                  View cost
-                </Link>
+                <ActionMenu
+                  id={`proposal-${id}-budget-cost-${node.row.id}`}
+                  label={`Actions for ${node.row.name}`}
+                  icon="menu"
+                  className={styles.budgetRowMenu}
+                  items={[
+                    {
+                      key: "edit",
+                      label: "Edit",
+                      run: () =>
+                        router.push(
+                          `/proposals/${type}/${id}/budget/staff/${node.row.id}${versionId ? `?version=${versionId}` : ""}`,
+                        ),
+                    },
+                    {
+                      key: "delete",
+                      label: "Delete",
+                      disabled: true,
+                      run: () => {},
+                    },
+                    {
+                      key: "clone",
+                      label: "Clone",
+                      disabled: true,
+                      run: () => {},
+                    },
+                  ]}
+                />
               )
           : undefined
       }

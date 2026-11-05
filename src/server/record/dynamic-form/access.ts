@@ -14,6 +14,7 @@ import { loadContract } from "@/server/modules/contracts/service";
 import { serverFunctions } from "@/server/functions";
 import { proposalPage } from "@/server/modules/proposals/record";
 import { proposalEditContext } from "@/server/modules/proposals/edit";
+import { proposalCreateAccess } from "@/server/modules/proposals/create";
 import { recordIdentity } from "@/features/modules/proposals/record";
 /**
  * Who may read or change a dynamic form (and its files), decided on the server and failing closed.
@@ -174,7 +175,18 @@ export async function authorizeForm(t: FormTarget, mode: "read" | "edit") {
     throw denied("Forms are not available for this record type.");
   const proposalType = recordIdentity.shape.type.safeParse(t.objectType);
   if (proposalType.success) {
-    if (t.objectId === undefined || (t.parentId && t.parentId !== t.objectId))
+    if (t.objectId === undefined) {
+      if (
+        mode === "edit" ||
+        page !== "proposals-summary" ||
+        t.parentId ||
+        (t.objectType !== "PROPOSAL" && t.objectType !== "OUTLINE_PROPOSAL")
+      )
+        throw new AppError("BAD_REQUEST", "Invalid Proposal form request.", 400);
+      const user = await proposalCreateAccess(t.objectType);
+      return { user, page, record: null };
+    }
+    if (t.parentId && t.parentId !== t.objectId)
       throw new AppError("BAD_REQUEST", "Invalid Proposal form request.", 400);
     const context =
       mode === "edit"

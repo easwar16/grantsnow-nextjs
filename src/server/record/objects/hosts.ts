@@ -16,11 +16,15 @@ import {
 } from "@/server/modules/awards/record/objects";
 import type { HistoryHost } from "./history";
 import type { DelegationHost } from "./delegations";
+import { ethicsHistoryHost } from "@/server/modules/ethics/record";
+import { dueDiligenceHistoryHost } from "@/server/modules/due-diligence/record";
 /** The modules hosting the shared History and Delegation panels; a request names only its host and record. */
 const HISTORY: Record<string, (id: string) => Promise<HistoryHost>> = {
   eoi: eoiHistoryHost,
   award: awardHistoryHost,
   contract: contractHistoryHost,
+  ethics: ethicsHistoryHost,
+  "due-diligence": dueDiligenceHistoryHost,
 };
 const DELEGATIONS: Record<string, (id: string) => Promise<DelegationHost>> = {
   eoi: eoiDelegationHost,

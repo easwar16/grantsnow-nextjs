@@ -48,6 +48,7 @@ export function ObjectAttributes({
   displayOnly = false,
   initial = {},
   plain,
+  outsideLabels = false,
   ref,
 }: {
   /** The panel's page-unique id; fields take `${id}-attribute-n`. */
@@ -62,6 +63,8 @@ export function ObjectAttributes({
   initial?: AttributeValues;
   /** Inside the host's own panel (the award header): no border of its own. */
   plain?: boolean;
+  /** Proposal creation uses the VBCS Summary form's labels above its controls. */
+  outsideLabels?: boolean;
   ref?: React.Ref<AttributesHandle>;
 }) {
   const { data, error, retry } = useApi(attributes.fields, {
@@ -111,7 +114,14 @@ export function ObjectAttributes({
         "aria-describedby": shownError ? `${fieldId}-error` : undefined,
         "aria-required": required || undefined,
       } as const;
-    const inside = (child: React.ReactNode) => (
+    const inside = (child: React.ReactNode) => outsideLabels ? (
+      <div className={styles.outsideField}>
+        <label htmlFor={f.fieldType === "LOV" ? `${fieldId}-trigger` : fieldId}>
+          {f.description}{required && <span className={styles.required}> *</span>}
+        </label>
+        {child}
+      </div>
+    ) : (
       <InsideField
         htmlFor={f.fieldType === "LOV" ? `${fieldId}-trigger` : fieldId}
         label={f.description}

@@ -12,6 +12,7 @@ import { Icon } from "@/components/ui/icon";
 import { State } from "@/components/feedback/state";
 import { ActionDialog, useConfirm } from "@/components/dialog/action-dialog";
 import { ListSkeleton } from "@/components/feedback/skeleton";
+import { LinkedObjectsDialog } from "@/features/record/linked/linked-dialog";
 import {
   parseDueDiligenceFilters,
   serializeDueDiligenceFilters,
@@ -50,7 +51,14 @@ export function Listing({
   const [recycleOpen, setRecycleOpen] = useState(false);
   const [restoring, setRestoring] = useState<string | null>(null);
   const [restoreError, setRestoreError] = useState("");
-  const confirm = useConfirm("due-diligence-restore-confirm");
+  const [linkedId, setLinkedId] = useState<string | null>(null);
+  const [cloneId, setCloneId] = useState<string | null>(null);
+  const [cloneSelected, setCloneSelected] = useState<string[] | null>(null);
+  const [cloneBusy, setCloneBusy] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState<string | null>(null);
+  const [actionError, setActionError] = useState("");
+  const restoreConfirm = useConfirm("due-diligence-restore-confirm");
+  const deleteConfirm = useConfirm("due-diligence-delete-confirm");
   const key = search.toString();
   let filters = initialFilters;
   try {
@@ -86,9 +94,41 @@ export function Listing({
   };
   const list = usePagedApi(dueDiligence.list, active);
   const deleted = useApi(dueDiligence.deleted, recycleOpen ? undefined : null);
+  const linked = useApi(dueDiligence.links, linkedId ? { id: linkedId, access } : null);
+  const cloneOptions = useApi(
+    dueDiligence.cloneOptions,
+    cloneId ? { id: cloneId, access } : null,
+  );
+  const selectedObjects = cloneSelected ??
+    cloneOptions.data?.filter((option) => option.selected).map((option) => option.value) ?? [];
+  async function clone() {
+    if (!cloneId || cloneBusy) return;
+    setCloneBusy(true);
+    setActionError("");
+    const result = await dueDiligence.clone(cloneId, access, selectedObjects);
+    setCloneBusy(false);
+    if (!result.ok) return setActionError(result.error.message);
+    setCloneId(null);
+    setCloneSelected(null);
+    list.reload();
+  }
+  async function remove(id: string, number: string) {
+    if (deleteBusy || !(await deleteConfirm.ask({
+      title: "Delete Due Diligence application",
+      message: `Delete Draft ${number}?`,
+      confirm: "Delete",
+      cancel: "Cancel",
+    }))) return;
+    setDeleteBusy(id);
+    setActionError("");
+    const result = await dueDiligence.remove(id, access);
+    setDeleteBusy(null);
+    if (!result.ok) return setActionError(result.error.message);
+    list.reload();
+  }
   async function restore(id: string, number: string) {
     if (
-      !(await confirm.ask({
+      !(await restoreConfirm.ask({
         title: "Restore Due Diligence application",
         message: `Restore ${number}?`,
         confirm: "Restore",
@@ -330,6 +370,14 @@ export function Listing({
               row={row}
               view={view}
               access={access}
+              onLinks={() => setLinkedId(row.id)}
+              onClone={() => {
+                setActionError("");
+                setCloneSelected(null);
+                setCloneId(row.id);
+              }}
+              onDelete={() => remove(row.id, row.number)}
+              busy={deleteBusy !== null}
             />
           ))}
         </div>
@@ -349,6 +397,75 @@ export function Listing({
           </div>
         )}
       </div>
+      {actionError && !cloneId && (
+        <p id="due-diligence-action-error" role="alert">{actionError}</p>
+      )}
+      {cloneId && (
+        <ActionDialog
+          id="due-diligence-clone-dialog"
+          title="Clone Due Diligence application"
+          busy={cloneBusy}
+          onClose={() => {
+            setCloneId(null);
+            setCloneSelected(null);
+          }}
+        >
+          {cloneOptions.loading && <ListSkeleton />}
+          {cloneOptions.error && (
+            <State title="Clone options unavailable" message={cloneOptions.error.message} code={cloneOptions.error.code} retry={cloneOptions.retry} />
+          )}
+          {cloneOptions.data?.map((option) => (
+            <label key={option.value} htmlFor={`due-diligence-clone-${option.value}`}>
+              <input
+                id={`due-diligence-clone-${option.value}`}
+                type="checkbox"
+                checked={selectedObjects.includes(option.value)}
+                disabled={cloneBusy}
+                onChange={(event) => setCloneSelected(
+                  event.target.checked
+                    ? [...selectedObjects, option.value]
+                    : selectedObjects.filter((value) => value !== option.value),
+                )}
+              />
+              {option.label}
+            </label>
+          ))}
+          {actionError && <p id="due-diligence-clone-error" role="alert">{actionError}</p>}
+          {cloneOptions.data && (
+            <button
+              id="due-diligence-clone-submit"
+              type="button"
+              disabled={cloneBusy}
+              onClick={clone}
+            >
+              Clone
+            </button>
+          )}
+        </ActionDialog>
+      )}
+      {linkedId && (
+        linked.data ? (
+          <LinkedObjectsDialog
+            id="due-diligence-linked-dialog"
+            linked={linked.data}
+            onClose={() => setLinkedId(null)}
+          >
+            {!linked.data.groups.length && <p>{linked.data.texts.none}</p>}
+          </LinkedObjectsDialog>
+        ) : (
+          <ActionDialog
+            id="due-diligence-linked-dialog"
+            title="Linked Objects"
+            onClose={() => setLinkedId(null)}
+          >
+            {linked.error ? (
+              <State title="Linked records unavailable" message={linked.error.message} code={linked.error.code} retry={linked.retry} />
+            ) : (
+              <ListSkeleton />
+            )}
+          </ActionDialog>
+        )
+      )}
       {recycleOpen && (
         <ActionDialog
           id="due-diligence-recycle-dialog"
@@ -401,7 +518,8 @@ export function Listing({
           </ul>
         </ActionDialog>
       )}
-      {confirm.element}
+      {restoreConfirm.element}
+      {deleteConfirm.element}
     </FilterPanel>
   );
 }
@@ -410,10 +528,18 @@ function DueDiligenceCard({
   row,
   view,
   access,
+  onLinks,
+  onClone,
+  onDelete,
+  busy,
 }: {
   row: DueDiligenceRow;
   view: DueDiligenceListView;
   access: string;
+  onLinks: () => void;
+  onClone: () => void;
+  onDelete: () => void;
+  busy: boolean;
 }) {
   return (
     <article id={`due-diligence-application-${row.id}`} className={styles.card}>
@@ -424,6 +550,38 @@ function DueDiligenceCard({
         >
           <Icon name="composite-form" size={16} /> {row.number}
         </Link>
+        {view.actions.link && (
+          <button
+            id={`due-diligence-links-${row.id}`}
+            type="button"
+            aria-label={`Linked records for ${row.number}`}
+            onClick={onLinks}
+          >
+            <Icon name="link" size={16} />
+          </button>
+        )}
+        {view.actions.clone && ["DDA_ACCESS", "RESPONDENT_ACCESS"].includes(access) && (
+          <button
+            id={`due-diligence-clone-${row.id}`}
+            type="button"
+            aria-label={`Clone ${row.number}`}
+            onClick={onClone}
+          >
+            <Icon name="copy" size={16} />
+          </button>
+        )}
+        {view.actions.clone && view.actions.delete && row.statusCode === "DRFT" &&
+          ["DDA_ACCESS", "RESPONDENT_ACCESS"].includes(access) && (
+          <button
+            id={`due-diligence-delete-${row.id}`}
+            type="button"
+            aria-label={`Delete ${row.number}`}
+            disabled={busy}
+            onClick={onDelete}
+          >
+            <Icon name="trash" size={16} />
+          </button>
+        )}
         {row.status && <span className={styles.badge}>{row.status}</span>}
         {row.risk && <span className={styles.risk}>{row.risk}</span>}
         {access === "DDA_ACCESS" && row.responseStatus && (

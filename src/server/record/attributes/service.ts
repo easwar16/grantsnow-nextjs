@@ -4,6 +4,7 @@ import { attributes } from "@/server/oracle/api";
 import { resources } from "@/server/platform/configuration/resources";
 import { authorizeForm } from "@/server/record/dynamic-form/access";
 import { proposalPage } from "@/server/modules/proposals/record";
+import { proposalCreateAccess } from "@/server/modules/proposals/create";
 import { formGlobals } from "@/server/record/dynamic-form/globals";
 import { AppError } from "@/lib/errors";
 import {
@@ -37,9 +38,9 @@ const HOSTS: Record<AttributeHost, Host> = {
     objectType: "PROPOSAL",
     bundle: "proposal",
     authorize: async (q) => {
-      if (!q.objectId)
-        throw new AppError("BAD_REQUEST", "Proposal identity required.", 400);
-      await proposalPage("PROPOSAL", q.objectId, "proposals-summary");
+      if (q.objectId)
+        await proposalPage("PROPOSAL", q.objectId, "proposals-summary");
+      else await proposalCreateAccess("PROPOSAL");
     },
   },
   "opportunities-eoi-application": {

@@ -3,9 +3,6 @@
   background: var(--bg);
 }
 .actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   min-height: 46px;
   padding: 6px 14px;
   background: var(--surface);
@@ -25,6 +22,14 @@
   align-items: center;
   gap: 8px;
 }
+.actions > .actionGroup {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  margin-top: 4px;
+}
+.actions > .actionGroup > div:has(> button[id$="-comments"]) {
+  display: contents;
+}
 .actionButton {
   min-height: 32px;
   padding: 4px 10px;
@@ -35,6 +40,7 @@
   font: inherit;
   font-size: 13px;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
 }
 .actionButton:disabled {
@@ -375,6 +381,13 @@
 .summaryFieldList > div > div {
   min-height: 17px;
 }
+.fieldValidation {
+  display: block;
+  color: #b73520;
+  font-size: 12px;
+  line-height: 1.4;
+  margin-top: 4px;
+}
 .summaryPi .summaryFieldList {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -578,6 +591,99 @@
 .sponsorAdd > div {
   width: 100%;
 }
+.sponsorAdd {
+  grid-template-columns: minmax(0, 1fr);
+}
+.sponsorAdd label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.createToolbar {
+  min-height: 60px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.createToolbar h1 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+.createToolbar button {
+  margin-left: auto;
+}
+.createFooter {
+  display: flex;
+  justify-content: center;
+  padding: 24px 14px 34px;
+}
+.createFooterButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 3px;
+  background: var(--accent-fg);
+  color: white;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.createFooterButton:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.createSummaryPage {
+  padding-bottom: 24px;
+}
+.createSummaryPage .summary {
+  margin-top: 7px;
+  margin-bottom: 0;
+  padding: 10px 8px;
+}
+.createSummaryPage .summary h2 {
+  margin-bottom: 8px;
+  font-size: 16px;
+}
+.createSummaryPage .summaryFieldList {
+  gap: 8px;
+}
+.createSummaryPage .summaryFieldList strong {
+  display: block;
+  margin-bottom: 5px;
+}
+.createSummaryPage .summaryColumns > .summary:first-child .summaryFieldList {
+  margin-bottom: 14px;
+}
+.createSummaryPage .summaryFieldList input,
+.createSummaryPage .summaryFieldList textarea {
+  width: 100%;
+  min-height: 31px;
+  box-sizing: border-box;
+}
+.createSummaryPage .summaryFieldList textarea {
+  min-height: 32px;
+  height: 32px;
+  resize: vertical;
+}
+.createSummaryPage .piEditor {
+  display: block;
+}
+.createSummaryPage .piAction {
+  margin-top: 14px;
+}
+.createSummaryPage .summaryEmpty {
+  height: 100px;
+}
+.createSummaryPage .summary th {
+  padding-block: 9px;
+}
+.requiredMark {
+  color: #00759a;
+}
 .summaryRowActions input[type="number"] {
   width: 64px;
 }
@@ -628,10 +734,458 @@
   gap: 12px;
   padding: 24px 6px 16px;
 }
-.budgetAddActions > button {
+.budgetAddActions > button,
+.budgetAddActions > a {
   flex: 1 1 160px;
   background: #e8e8e8;
   border-color: transparent;
+  text-align: center;
+  text-decoration: none;
+}
+.budgetAddActions > a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.budgetRowMenu {
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.costEntry {
+  padding: 16px 14px;
+}
+.costEntry .costEditor {
+  min-width: 0;
+  max-height: none;
+  overflow: visible;
+}
+.staffEntry {
+  padding: 0 14px 40px;
+  color: var(--text);
+}
+.staffEntryToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 8px;
+  padding: 15px 0 20px;
+  border-bottom: 1px solid var(--border);
+}
+.staffEntryToolbar h2 {
+  margin: 0;
+  font-size: 17px;
+  white-space: nowrap;
+}
+.staffEntryToolbar h2 span {
+  font-weight: 400;
+}
+.staffEntryToolbar nav {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 5px;
+}
+.staffEntryToolbar nav a,
+.staffChangePerson,
+.staffEntryControls button,
+.staffCostGenerated button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 5px 12px;
+  border: 1px solid #a6a6a6;
+  border-radius: 3px;
+  background: #e9e9e9;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.staffEntryToolbar nav a {
+  padding-inline: 8px;
+  font-size: 12px;
+}
+.staffEntryToolbar nav a:last-child {
+  background: var(--surface);
+}
+.staffEntryBody {
+  padding-top: 16px;
+}
+.staffEntryModel {
+  display: grid;
+  gap: 5px;
+  font-size: 13px;
+}
+.staffEntryBody h3 {
+  margin: 18px 0 12px;
+  font-size: 13px;
+}
+.staffSearch {
+  position: relative;
+  display: flex;
+  gap: 8px;
+}
+.staffSearch > input {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 6px 10px 6px 36px;
+  border: 1px solid #a6a6a6;
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m16 16 5 5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 9px center;
+  background-size: 17px;
+}
+.staffSearch > .staffAvailabilityButton {
+  flex: none;
+  padding-inline: 3px;
+  min-width: 22px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 23px;
+  line-height: 1;
+  cursor: pointer;
+}
+.staffAvailabilityButton:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.staffAvailabilityDialog {
+  width: min(500px, calc(100vw - 36px));
+  max-height: min(650px, calc(100vh - 36px));
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  padding: 0;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 12px 35px #0004;
+}
+.staffAvailabilityDialog::backdrop {
+  background: #0006;
+}
+.staffAvailabilityTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 10px;
+}
+.staffAvailabilityTitle h2 {
+  margin: 0;
+  font-size: 17px;
+}
+.staffAvailabilityTitle button {
+  width: 30px;
+  height: 30px;
+  border: 1px solid #333;
+  border-radius: 3px;
+  background: white;
+  color: inherit;
+  font-size: 21px;
+  cursor: pointer;
+}
+.staffAvailabilityDates {
+  display: flex;
+  gap: 0;
+  padding: 0 20px 12px;
+}
+.staffAvailabilityDates label {
+  display: grid;
+  gap: 1px;
+  width: 50%;
+  font-size: 12px;
+  font-weight: 600;
+}
+.staffAvailabilityDates input {
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px dotted #777;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+}
+.staffAvailabilityScroll {
+  overflow: auto;
+  height: min(330px, 42vh);
+  margin: 0 20px;
+  border: 1px solid #ddd;
+}
+.staffAvailabilityTimeline {
+  position: relative;
+  min-height: 100%;
+  background-image: radial-gradient(#bbb 0.7px, transparent 0.8px);
+  background-size: 6px 6px;
+}
+.staffAvailabilityRow {
+  position: relative;
+  height: 58px;
+}
+.staffAvailabilityBar {
+  position: absolute;
+  top: 5px;
+  height: 47px;
+  display: grid;
+  align-content: center;
+  gap: 1px;
+  overflow: hidden;
+  padding: 3px 6px 3px 18px;
+  border: 1px solid #bdaab0;
+  border-radius: 4px;
+  background: #f9e9eb;
+  color: #222;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.staffAvailabilityBar::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 5px;
+  bottom: 5px;
+  width: 5px;
+  border-radius: 3px;
+  background: #8a3d1e;
+}
+.staffAvailabilityBar strong {
+  font-size: 12px;
+}
+.staffAvailabilityOverview {
+  height: 118px;
+  margin: 0 20px 16px;
+  border: 1px solid #777;
+}
+.staffAvailabilityYears {
+  position: relative;
+  height: 25px;
+  border-bottom: 1px solid #aaa;
+  font-size: 12px;
+  font-weight: 600;
+}
+.staffAvailabilityYears:last-child {
+  border-top: 1px solid #aaa;
+  border-bottom: 0;
+}
+.staffAvailabilityYears span {
+  position: absolute;
+  top: 3px;
+  white-space: nowrap;
+}
+.staffAvailabilityOverviewBars {
+  position: relative;
+  height: 66px;
+  overflow: hidden;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0,
+    transparent 61px,
+    #e5e5e5 61px,
+    #e5e5e5 62px
+  );
+}
+.staffAvailabilityOverviewBars div {
+  position: absolute;
+  height: 3px;
+  border-radius: 2px;
+  background: #88401d;
+}
+.staffSearch ul {
+  position: absolute;
+  z-index: 10;
+  top: 34px;
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #a6a6a6;
+  background: var(--surface);
+  list-style: none;
+  box-shadow: 0 6px 14px #0002;
+}
+.staffSearch li button {
+  display: grid;
+  width: 100%;
+  gap: 2px;
+  border: 0;
+  padding: 8px 10px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.staffSearch li button:hover {
+  background: #e8f0f2;
+}
+.staffSearch li small {
+  color: #666;
+}
+.staffSearchEmpty {
+  padding: 10px;
+  color: #666;
+  font-size: 13px;
+}
+.staffEntryFields {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px 16px;
+  margin: 12px 0 16px;
+}
+.staffEntryFields > label,
+.staffEntryFields > div {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.staffEntryFields > label > span {
+  display: block;
+}
+.staffEntryFields > div > label {
+  display: block;
+}
+.staffEntryFields input,
+.staffAdditional input,
+.staffAdditional select {
+  width: 100%;
+  min-height: 32px;
+  padding: 5px 8px;
+  border: 1px solid #a6a6a6;
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 400;
+}
+.staffEntryFields input:read-only {
+  background: #f6f6f6;
+}
+.staffEntryFields b {
+  color: #00759a;
+}
+.staffEntryFields fieldset {
+  display: flex;
+  gap: 12px;
+  grid-column: 1 / -1;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  font-weight: 400;
+}
+.staffEntryFields fieldset legend {
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.staffEntryFields fieldset label {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.staffEntryFields fieldset input {
+  width: auto;
+  min-height: 0;
+}
+.staffAdditional {
+  display: grid;
+  gap: 7px;
+  margin: 12px 3px;
+  padding: 12px 8px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+}
+.staffAdditional label {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+}
+.staffEntryControls {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin: 16px 0;
+}
+.staffEntryControls button:last-child {
+  background: var(--accent-fg);
+  color: white;
+  border-color: var(--accent-fg);
+}
+.staffEntryError {
+  color: #b73520;
+  font-size: 13px;
+}
+.staffCostGenerated {
+  margin-top: 20px;
+}
+.staffCostGenerated table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.staffCostGenerated th {
+  background: #36565a;
+  color: white;
+  text-align: left;
+}
+.staffCostGenerated th,
+.staffCostGenerated td {
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.staffCostGenerated button {
+  float: right;
+  margin-top: 12px;
+}
+.record:has([id$="-staff-entry"]) .actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.record:has([id$="-staff-entry"]) .actions > .actionGroup {
+  margin-top: 0;
+}
+.record:has(.staffEntry) .actions > a,
+.record:has(.staffEntry) .actionButton {
+  min-height: 28px;
+  padding-block: 3px;
+}
+.record:has(.staffEntry) .tabs > a,
+.record:has(.staffEntry) .tabs > span {
+  min-height: 35px;
+  padding-block: 7px 6px;
+}
+.record:has(.staffEntry) .heading {
+  min-height: 272px;
+}
+.record:has([id$="-staff-entry"]) button[id$="-budget-quick-add"],
+.record:has(.staffEntry) button[id$="-budget-fx-rates"],
+.record:has([id$="-staff-entry"]) button[id$="-audit"],
+.record:has(.staffEntry) [id$="-finalize"] {
+  display: none;
+}
+@media (max-width: 760px) {
+  .staffEntryToolbar,
+  .staffEntryToolbar nav {
+    flex-wrap: wrap;
+  }
+  .staffEntryFields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 500px) {
+  .staffEntryFields {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .costEditor {
   display: grid;

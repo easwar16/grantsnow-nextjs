@@ -65,3 +65,17 @@ test("New Ethics draft uses its form metadata before saving", async ({
     "Fixture ethics draft",
   );
 });
+
+test("Ethics History loads on a direct URL refresh", async ({ page }) => {
+  await page.goto("/ethics/939?access=EA_ACCESS&tab=ethics-history");
+  await expect(page.locator("#ethics-history")).toContainText("Ethics Status History");
+  await expect(page.locator("#ethics-history")).toContainText("Alex Morgan");
+  await page.reload();
+  await expect(page.locator("#ethics-history")).toContainText("Ethics Status History");
+});
+
+test("Ethics Documents use the stakeholder-scoped attachment host", async ({ page }) => {
+  await page.goto("/ethics/939?access=EA_ACCESS&tab=ethics-attachments");
+  await expect(page.locator("#ethics-attachments")).toBeVisible();
+  await expect(page.locator("#ethics-attachments")).not.toContainText("Attachments unavailable");
+});

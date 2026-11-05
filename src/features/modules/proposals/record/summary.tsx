@@ -19,6 +19,7 @@ import {
   ProposalEditRadio,
   ProposalEditAttributes,
   ProposalSummaryDynamicForm,
+  ProposalFieldValidation,
 } from "./proposal-edit-form";
 import { ProposalSponsorsEditor } from "./proposal-sponsors-editor";
 import { ProposalPiEditor } from "./proposal-pi-editor";
@@ -48,6 +49,7 @@ export function Summary({
   sponsorChoices,
   editChoices,
   format,
+  creation,
 }: {
   type: RecordIdentity["type"];
   recordId: string;
@@ -56,6 +58,11 @@ export function Summary({
   sponsorChoices: Awaited<ReturnType<typeof proposalSponsorChoices>> | null;
   editChoices: Awaited<ReturnType<typeof proposalEditChoices>> | null;
   format?: FormatSettings;
+  creation?: {
+    piPersonId: number;
+    sourceRequestId?: number;
+    successMessage: string;
+  };
 }): ReactNode {
   const id = `proposal-${summary.id}`;
   const formId = `${id}-edit-form`;
@@ -136,7 +143,27 @@ export function Summary({
               : undefined
           }
         >
-          <strong>{field.label}</strong>
+          <strong>
+            {field.label}
+            {creation &&
+              [
+                "full-project-title",
+                "activity-type",
+                "proposal-stage",
+                "proposal-type",
+                "proposal-category",
+                "start-date",
+                "duration-months",
+                "end-date",
+                "cost-model",
+                "confidential",
+                "assigned-to",
+                "opportunity-title",
+                "opportunity-url",
+              ].includes(field.key) && (
+                <span className={styles.requiredMark}> *</span>
+              )}
+          </strong>
           <div>
             {editValues && field.key === "confidential" ? (
               <ProposalEditRadio
@@ -193,7 +220,7 @@ export function Summary({
                         ? 1000
                         : 500
                   }
-                  required={field.key === "full-project-title"}
+                  required={!creation && field.key === "full-project-title"}
                 />
               )
             ) : field.kind === "date" ? (
@@ -202,12 +229,20 @@ export function Summary({
               field.value
             )}
           </div>
+          {creation && (
+            <ProposalFieldValidation
+              id={`proposal-new-edit-${field.key}${choiceFields[field.key] ? "-trigger" : ""}`}
+            />
+          )}
         </div>
       ))}
     </div>
   );
   return (
-    <section id={`${id}-summary`} className={styles.summaryPage}>
+    <section
+      id={`${id}-summary`}
+      className={`${styles.summaryPage}${creation ? ` ${styles.createSummaryPage}` : ""}`}
+    >
       {editValues && (
         <ProposalEditForm
           type={type}
@@ -220,6 +255,7 @@ export function Summary({
               editValues.sponsors.find((sponsor) => sponsor.roleCode === "PRM")
                 ?.partyId ?? null,
           }}
+          creation={creation}
         />
       )}
       {summary.labels.piDetails && (
@@ -261,6 +297,7 @@ export function Summary({
                 <ProposalEditAttributes
                   id={summary.id}
                   initial={summary.attributes}
+                  creating={Boolean(creation)}
                 />
               ) : (
                 <ObjectAttributes
@@ -394,6 +431,7 @@ export function Summary({
           id={summary.id}
           number={summary.reference}
           editable={Boolean(editValues)}
+          creating={Boolean(creation)}
         />
       </div>
     </section>

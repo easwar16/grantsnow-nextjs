@@ -144,6 +144,25 @@
     "write": true,
     "headers": ["token"]
   },
+  "getProposalCopyApplicationObjList": {
+    "service": "apps",
+    "path": "/Proposal/copyApplicationObjList",
+    "headers": ["token", "obj_type"]
+  },
+  "postDynamicFormsCopyApplication": {
+    "service": "apps",
+    "path": "/dynamicForms/copyApplication",
+    "headers": ["token", "p_setup_flow_id", "object_type", "access_type"],
+    "method": "POST",
+    "write": true
+  },
+  "deleteDynamicFormsApplicationSetup": {
+    "service": "apps",
+    "path": "/dynamicForms/applicationSetup",
+    "headers": ["token"],
+    "method": "DELETE",
+    "write": true
+  },
   "postDynamicFormsApplicationSetup": {
     "service": "apps",
     "path": "/dynamicForms/applicationSetup",
@@ -819,6 +838,21 @@
     "path": "/pre_awards_costing/getFundingHdr/",
     "headers": ["token", "cost_model"]
   },
+  "getPre_awards_costingGetPersonMasterViewDetails": {
+    "service": "apps",
+    "path": "/pre_awards_costing/getPersonMasterViewDetails/",
+    "headers": ["token", "prop_id", "org_unit_id"]
+  },
+  "getPre_awards_costingGetSalModelList": {
+    "service": "apps",
+    "path": "/pre_awards_costing/getSalModelList/",
+    "headers": ["token", "cost_model_id", "cost_type"]
+  },
+  "getPre_awards_costingGetProjectRoleFundHdr": {
+    "service": "apps",
+    "path": "/pre_awards_costing/getProjectRoleFundHdr/",
+    "headers": ["token", "project_role_code", "costmodel_id"]
+  },
   "getPre_awardGetProjectRoles": {
     "service": "apps",
     "path": "/pre_award/getProjectRoles/",
@@ -846,6 +880,13 @@
   "postPre_awards_costingSaveCostingDataN": {
     "service": "apps",
     "path": "/pre_awards_costing/saveCostingDataN/",
+    "headers": ["token", "legal_id", "org_id"],
+    "method": "POST",
+    "write": true
+  },
+  "postPre_awards_costingGetTotFecCostLineN": {
+    "service": "apps",
+    "path": "/pre_awards_costing/getTotFecCostLineN/",
     "headers": ["token", "legal_id", "org_id"],
     "method": "POST",
     "write": true
@@ -996,6 +1037,11 @@
     "service": "apps",
     "path": "/reports/getObjectRef",
     "headers": ["token", "p_object_id", "p_object_type"]
+  },
+  "getReportsGetStaffTimeReport": {
+    "service": "apps",
+    "path": "/reports/getStaffTimeReport/",
+    "headers": ["token", "emp_no", "in_start_date", "in_end_date"]
   },
   "getSharedGetCurrencyRate": {
     "service": "apps",

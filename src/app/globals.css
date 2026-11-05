@@ -1847,6 +1847,9 @@ dialog[open]::backdrop {
   transform: translateX(-100%);
   transition-duration: var(--dur);
 }
+.navigation-drawer[open] {
+  transform: translateX(0);
+}
 @starting-style {
   .navigation-drawer[open] {
     transform: translateX(-100%);

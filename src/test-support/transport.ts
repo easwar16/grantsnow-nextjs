@@ -417,6 +417,14 @@ export async function mockOracle(
           costing_allowed_flag: "Y",
           email_address: "sam.taylor@example.org",
         },
+        {
+          person_id: 103,
+          employee_number: "0",
+          full_name: "To Be Decided",
+          org_unit_id: 202,
+          org_unit_name: "Example Research University",
+          costing_allowed_flag: "Y",
+        },
       ],
     };
   if (op === "getDynamicFormsGetApplicationApprover")
@@ -756,6 +764,8 @@ export async function mockOracle(
             "eoi-add-stage",
             "eoi-add-approver",
             "opportunities-eoi-change-approver",
+            "eoi-convert-outline-proposal",
+            "eoi-convert-full-proposal",
           ].map((key, i) => ({
             page_id: 30 + i,
             page_name: key,
@@ -959,16 +969,22 @@ export async function mockOracle(
     };
   if (op === "getDynamicFormsGetRequestDetails") {
     const id = Number(headers.request_id);
+    const requestStatus = [
+      ["DRFT", "Draft"],
+      ["AIA", "Awaiting Internal Approval"],
+      ["IA", "Internally Approved"],
+      ["REJ", "Rejected"],
+      ["AWARD", "Awarded"],
+    ][(((id - 1000) % 5) + 5) % 5];
     return {
       items: [
         {
           request_id: id,
           request_number: `EOI_${id - 999}`,
           request_type: "OPPORTUNITIES-EOI",
-          // EOI_2 is in approval (as the list shows it), so its Workflow tab can approve and withdraw.
-          ...(id === 1001
-            ? { status: "Awaiting Internal Approval", status_code: "AIA" }
-            : { status: "Draft", status_code: "DRFT" }),
+          // Keep record status aligned with the listing's five-state fixture cycle.
+          status: requestStatus[1],
+          status_code: requestStatus[0],
           creation_date: "2026-10-01",
           ref_object_id: 1,
           ref_object_type: "OPPORTUNITIES",
@@ -997,6 +1013,22 @@ export async function mockOracle(
           created_by: 101,
           created_by_name: "Alex Morgan",
           creation_date: "2026-10-01T09:30:00",
+        },
+      ],
+    };
+  if (op === "getSharedObjectStatus" && headers.p_obj_type === "ETHICS")
+    return {
+      items: [
+        {
+          object_id: 1940,
+          object_status_lkp_code: "DRFT",
+          object_status: "Draft",
+          status_process_mode_lkp_code: "AUTO",
+          status_process_mode: "Auto",
+          comments: "Ethics application created",
+          created_by: 101,
+          created_by_name: "Alex Morgan",
+          creation_date: "2026-10-20T09:30:00",
         },
       ],
     };
@@ -1084,6 +1116,31 @@ export async function mockOracle(
   // Dynamic forms (shapes as GN-Angular's specs and GrantsNow-Dynamic-Forms.md): conditions, dependent fields and
   // LOVs, every field type, an optional section, a GRID and a FILE field.
   if (op === "getProposalEthical_dynFormsP_ref_module") {
+    if (headers.p_ref_module === "PROPOSALS-BUDGET-STAFF")
+      return [
+        {
+          formId: 1450,
+          formName: "Staff Cost Additional Info",
+          sections: [
+            {
+              sectionId: 1451,
+              sectionName: "Proposal Staff Cost Additional Info",
+              sectionType: "FORM",
+              isVisible: "Y",
+              isMandatory: "N",
+              fields: [
+                {
+                  fieldId: 1452,
+                  description: "Cost Justification",
+                  fieldType: "TEXTBOX",
+                  isVisible: "Y",
+                  isRequired: "N",
+                },
+              ],
+            },
+          ],
+        },
+      ];
     if (headers.p_obj_type === "DUE_DILIGENCE")
       return [
         {
@@ -1417,7 +1474,6 @@ export async function mockOracle(
   // A proposal's roles: the summary, plus FX rates editable from its Budget and Pricing tabs.
   if (
     op === "getSecurityUser_roles" &&
-    headers.p_obj_id &&
     headers.p_obj_type?.endsWith("PROPOSAL")
   )
     return {
@@ -1521,6 +1577,38 @@ export async function mockOracle(
         },
       ],
     };
+  if (op === "getPre_awards_costingGetSalModelList")
+    return {
+      items: [
+        { lookup_code: "PB", lookup_code_descr: "Payband" },
+        { lookup_code: "F", lookup_code_descr: "Fixed" },
+        { lookup_code: "STI", lookup_code_descr: "Stipend" },
+        { lookup_code: "POOL_TECH", lookup_code_descr: "Pooled Technician" },
+      ],
+    };
+  if (op === "getPre_awards_costingGetProjectRoleFundHdr")
+    return { items: [{ fund_hdr_code: "DA" }] };
+  if (op === "getPre_awards_costingGetPersonMasterViewDetails")
+    return {
+      Employee_Details: [
+        {
+          PERSON_ID: Number(query?.get("person_id")) || 101,
+          FULL_NAME:
+            query?.get("person_id") === "103" ? "To Be Decided" : "Alex Morgan",
+          EMPLOYEE_NUMBER: query?.get("person_id") === "103" ? "0" : "EMP101",
+          ORG_UNIT_ID: 202,
+          ORG_UNIT_NAME: "Example Research University",
+          FACULTY_NAME: "Research",
+          PROJECT_ROLE_LKP_CODE: "PI",
+          FUNDING_SECTION_HEADER_LKP_CODE: "DA",
+          SALARY_MODEL_LKP_CODE: "PB",
+          HR_FTE: 1,
+          PROBATION_END_DATE: "",
+          INCREMENT_MONTH:
+            query?.get("person_id") === "103" ? "JAN-2025" : "JAN",
+        },
+      ],
+    };
   if (op === "getPre_awards_costingGetCostItem")
     return {
       items: [
@@ -1533,6 +1621,23 @@ export async function mockOracle(
           cost_category_type_lkp_code: "TRAVEL",
           cost_item_lkp_code: "TRAVEL",
           cost_item_desc: "Travel",
+        },
+      ],
+    };
+  if (op === "getReportsGetStaffTimeReport")
+    return {
+      items: [
+        {
+          proposal_number: "P_100",
+          cost_start_date: "2026-11-02T00:00:00Z",
+          cost_end_date: "2027-06-30T00:00:00Z",
+          fte: 1,
+        },
+        {
+          proposal_number: "P_200",
+          cost_start_date: "2027-01-01T00:00:00Z",
+          cost_end_date: "2028-11-01T00:00:00Z",
+          fte: 0.5,
         },
       ],
     };
@@ -1664,6 +1769,8 @@ export async function mockOracle(
           read_access: "Y",
           edit_access: "Y",
         },
+        { page_name: "ethics-history", read_access: "Y", edit_access: "N" },
+        { page_name: "ethics-attachments", read_access: "Y", edit_access: "Y" },
       ],
     };
   if (op === "getSecurityUser_roles" && headers.p_obj_type === "DUE_DILIGENCE")
@@ -1673,6 +1780,11 @@ export async function mockOracle(
           page_name: "duediligence-general-overview",
           read_access: "Y",
           edit_access: "Y",
+        },
+        {
+          page_name: "duediligence-history",
+          read_access: "Y",
+          edit_access: "N",
         },
       ],
     };
@@ -1992,7 +2104,9 @@ export async function mockOracle(
       },
     ];
     const isDueDiligence = headers.object_type === "DUE_DILIGENCE";
-    const source = isDueDiligence
+    const source = isDueDiligence && headers.access_type !== "DDA_ACCESS"
+      ? []
+      : isDueDiligence
       ? where?.includes('"setup_flow_id"=951')
         ? [...dueDiligenceRows, createdDueDiligence]
         : dueDiligenceRows
@@ -2021,7 +2135,15 @@ export async function mockOracle(
         setup_description: "Supplier due diligence application",
         created_by: 101,
         sections: [],
-        stakeholders: [],
+        stakeholders: [
+          {
+            id: 1950,
+            p_id: 101,
+            org_unit_name: "Faculty of Science",
+            resp_status: "Draft",
+            answered: "N",
+          },
+        ],
         reference_objects: [],
       };
     if (query?.get("setup_flow_id") === "941")
@@ -2050,7 +2172,7 @@ export async function mockOracle(
       deadline_date: "2026-12-20T00:00:00Z",
       expiry_date: "2027-10-20T00:00:00Z",
       sections: [],
-      stakeholders: [],
+      stakeholders: [{ id: 1940, resp_status: "Draft", resp_status_code: "DRFT", answered: "N" }],
       reference_objects: [],
     };
   }
@@ -2286,6 +2408,21 @@ export async function mockOracle(
         },
       ],
     };
+  if (op === "getProposalCopyApplicationObjList" && headers.obj_type === "DUE_DILIGENCE")
+    return {
+      items: [
+        { r: "SETUP", d: "Setup", default_value: true },
+        { r: "RESPONSES", d: "Responses", default_value: false },
+      ],
+    };
+  if (op === "postDynamicFormsCopyApplication") {
+    const payload = body as { object_type?: string; objects?: { object_name: string; object_val: boolean }[] };
+    if (payload?.object_type !== "DUE_DILIGENCE" || !Array.isArray(payload.objects))
+      throw new Error("Invalid Due Diligence clone fixture payload.");
+    return { response_msg: "Due Diligence Cloned Successfully!" };
+  }
+  if (op === "deleteDynamicFormsApplicationSetup")
+    return { response: "Due Diligence Deleted Successfully!" };
   if (op === "getSharedObjectLinked2")
     return {
       ObjectLinks:

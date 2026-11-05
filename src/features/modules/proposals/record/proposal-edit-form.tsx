@@ -15,6 +15,7 @@ import { Select, type SelectOption } from "@/components/ui/select";
 import styles from "./proposal-record.module.css";
 import { Icon } from "@/components/ui/icon";
 import { useConfirm } from "@/components/dialog/action-dialog";
+import { useToast } from "@/components/feedback/toast";
 import {
   ObjectAttributes,
   type AttributesHandle,
@@ -34,6 +35,8 @@ const EditContext = createContext<{
   formRef: React.RefObject<DynamicFormHandle | null>;
   formReady: boolean;
   setFormReady: (value: boolean) => void;
+  validation: { id: string; message: string } | null;
+  setValidation: (value: { id: string; message: string } | null) => void;
 } | null>(null);
 
 export function ProposalEditProvider({ children }: { children: ReactNode }) {
@@ -42,6 +45,10 @@ export function ProposalEditProvider({ children }: { children: ReactNode }) {
   const attributesRef = useRef<AttributesHandle | null>(null);
   const formRef = useRef<DynamicFormHandle | null>(null);
   const [formReady, setFormReady] = useState(false);
+  const [validation, setValidation] = useState<{
+    id: string;
+    message: string;
+  } | null>(null);
   return (
     <EditContext.Provider
       value={{
@@ -53,6 +60,8 @@ export function ProposalEditProvider({ children }: { children: ReactNode }) {
         formRef,
         formReady,
         setFormReady,
+        validation,
+        setValidation,
       }}
     >
       {children}
@@ -60,10 +69,67 @@ export function ProposalEditProvider({ children }: { children: ReactNode }) {
   );
 }
 
+export function ProposalFieldValidation({ id }: { id: string }) {
+  const { validation } = useEdit();
+  return validation?.id === id ? (
+    <span className={styles.fieldValidation} role="alert">
+      {validation.message}
+    </span>
+  ) : null;
+}
+
 function useEdit() {
   const context = useContext(EditContext);
   if (!context) throw new Error("Proposal edit provider is unavailable.");
   return context;
+}
+
+export function ProposalCreateToolbar({
+  type,
+}: {
+  type: "PROPOSAL" | "OUTLINE_PROPOSAL";
+}) {
+  const { pending, error, formReady } = useEdit();
+  const title =
+    type === "PROPOSAL" ? "Create New Proposal" : "Create New Outline Proposal";
+  return (
+    <div
+      id="proposal-new-toolbar"
+      className={`${styles.actionGroup} ${styles.createToolbar}`}
+    >
+      <Link href="/proposals" prefetch={false} className={styles.actionButton}>
+        <Icon name="arrow-left" /> Back
+      </Link>
+      <h1>{title}</h1>
+      <button
+        id="proposal-new-create"
+        type="submit"
+        form="proposal-new-edit-form"
+        disabled={pending || !formReady}
+        className={styles.actionButton}
+      >
+        <Icon name="plus" /> {pending ? "Creating…" : title}
+      </button>
+      {error && <span role="alert">{error}</span>}
+    </div>
+  );
+}
+
+export function ProposalCreateFooter({ label }: { label: string }) {
+  const { pending, formReady } = useEdit();
+  return (
+    <div className={styles.createFooter}>
+      <button
+        id="proposal-new-create-bottom"
+        type="submit"
+        form="proposal-new-edit-form"
+        disabled={pending || !formReady}
+        className={styles.createFooterButton}
+      >
+        <Icon name="plus" /> {pending ? "Creating…" : label}
+      </button>
+    </div>
+  );
 }
 
 export function ProposalEditToolbar({
@@ -124,11 +190,13 @@ export function ProposalSummaryDynamicForm({
   id,
   number,
   editable,
+  creating = false,
 }: {
   type: string;
   id: string;
   number: string;
   editable: boolean;
+  creating?: boolean;
 }) {
   const { formRef, setFormReady } = useEdit();
   return (
@@ -136,8 +204,8 @@ export function ProposalSummaryDynamicForm({
       ref={formRef}
       objectType={type}
       slot="PROPOSALS-SUMMARY"
-      parentId={id}
-      objectId={id}
+      parentId={creating ? undefined : id}
+      objectId={creating ? undefined : id}
       objectNumber={number}
       editable={editable}
       onReadyChange={setFormReady}
@@ -150,6 +218,7 @@ export function ProposalEditForm({
   type,
   id,
   initial,
+  creation,
 }: {
   type: string;
   id: string;
@@ -159,11 +228,25 @@ export function ProposalEditForm({
     costModel: string;
     primarySponsorId: number | null;
   };
+  creation?: {
+    piPersonId: number;
+    sourceRequestId?: number;
+    successMessage: string;
+  };
 }) {
   const router = useRouter();
-  const { pending, setPending, setError, attributesRef, formRef, formReady } =
-    useEdit();
+  const toast = useToast();
+  const {
+    pending,
+    setPending,
+    setError,
+    attributesRef,
+    formRef,
+    formReady,
+    setValidation,
+  } = useEdit();
   const [versionRequest, setVersionRequest] = useState<EditBody | null>(null);
+  const [createdId, setCreatedId] = useState<string | null>(null);
   const [newVersion, setNewVersion] = useState(false);
   const [description, setDescription] = useState("");
   const [retainCosting, setRetainCosting] = useState<"RETAIN" | "NO_RETAIN">(
@@ -196,11 +279,14 @@ export function ProposalEditForm({
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pending) return;
-    if (!formReady || !formRef.current || !formRef.current.check()) {
+    if (
+      !creation &&
+      (!formReady || !formRef.current || !formRef.current.check())
+    ) {
       setError("Complete the dynamic form before saving.");
       return;
     }
-    if (attributesRef.current && !attributesRef.current.check()) {
+    if (!creation && attributesRef.current && !attributesRef.current.check()) {
       setError("Complete the required attributes before saving.");
       return;
     }
@@ -266,6 +352,197 @@ export function ProposalEditForm({
       subprojectFlag: data.get("subprojectFlag") === "Y" ? "Y" : "N",
       attributes: attributesRef.current?.values() ?? undefined,
     };
+    if (creation) {
+      setValidation(null);
+      const invalid = (id: string, message: string) => {
+        setValidation({ id, message });
+        requestAnimationFrame(() => {
+          const field = document.getElementById(id);
+          field?.scrollIntoView({ block: "center", behavior: "smooth" });
+          field?.focus();
+        });
+      };
+      const sponsorRows = body.sponsors ?? [];
+      const primaryCount = sponsorRows.filter(
+        (row) => row.roleCode === "PRM",
+      ).length;
+      if (type === "PROPOSAL" && primaryCount !== 1) {
+        invalid(
+          "proposal-new-add-sponsor-trigger",
+          primaryCount === 0
+            ? "Primary sponsor must be selected"
+            : "Proposal can have only one primary sponsor",
+        );
+        return;
+      }
+      if (
+        sponsorRows.filter((row) => row.roleCode.startsWith("BIL")).length > 1
+      ) {
+        invalid(
+          "proposal-new-add-sponsor-trigger",
+          "Proposal can have only one billing party sponsor",
+        );
+        return;
+      }
+      if (body.collaboratorFlag === "Y" && !body.collaborators?.length) {
+        invalid(
+          "proposal-new-add-collaborator-trigger",
+          "You need to add at least one collaborator or opt 'No'",
+        );
+        return;
+      }
+      if (body.subprojectFlag === "Y" && !body.subprojects?.length) {
+        invalid(
+          "proposal-new-add-subproject-trigger",
+          "You need to add at least one sub-project or opt 'No'",
+        );
+        return;
+      }
+      const required: [boolean, string, string][] = [
+        [
+          !body.title.trim(),
+          "proposal-new-edit-full-project-title",
+          "Full Project Title is required",
+        ],
+        [
+          !body.activityType,
+          "proposal-new-edit-activity-type-trigger",
+          "Activity type is required",
+        ],
+        [
+          !body.proposalStage,
+          "proposal-new-edit-proposal-stage-trigger",
+          "Proposal Stages is required",
+        ],
+        [
+          !body.proposalType,
+          "proposal-new-edit-proposal-type-trigger",
+          "Proposal type is required",
+        ],
+        [
+          !body.category,
+          "proposal-new-edit-proposal-category-trigger",
+          "Proposal Category is required",
+        ],
+        [
+          !body.startDate,
+          "proposal-new-edit-start-date",
+          "Start date is required",
+        ],
+        [!body.endDate, "proposal-new-edit-end-date", "End date is required"],
+        [
+          body.startDate > body.endDate,
+          "proposal-new-edit-end-date",
+          "End date must follow Start date",
+        ],
+        [
+          !body.costModel,
+          "proposal-new-edit-cost-model-trigger",
+          "Cost model is required",
+        ],
+        [
+          body.assignedTo === null,
+          "proposal-new-edit-assigned-to-trigger",
+          "Assigned To is required",
+        ],
+        [
+          !body.opportunityTitle.trim(),
+          "proposal-new-edit-opportunity-title",
+          "Opportunity Title is required",
+        ],
+        [
+          !body.opportunityUrl.trim(),
+          "proposal-new-edit-opportunity-url",
+          "Opportunity URL is required",
+        ],
+      ];
+      const first = required.find(([fails]) => fails);
+      if (first) {
+        invalid(first[1], first[2]);
+        return;
+      }
+      if (!formReady || !formRef.current || !formRef.current.check(true)) {
+        return;
+      }
+      if (attributesRef.current && !attributesRef.current.check()) {
+        requestAnimationFrame(() => {
+          const field = document.querySelector<HTMLElement>(
+            "#proposal-new-attributes [aria-invalid='true']",
+          );
+          field?.scrollIntoView({ block: "center", behavior: "smooth" });
+          field?.focus();
+        });
+        return;
+      }
+      setPending(true);
+      setError("");
+      if (createdId) {
+        if (
+          formRef.current &&
+          (!formRef.current.hasChanges() ||
+            (await formRef.current.save(createdId)))
+        ) {
+          toast.show("success", "Success", creation.successMessage, false);
+          router.replace(`/proposals/${type}/${createdId}`);
+          router.refresh();
+        } else
+          setError(
+            "Dynamic form answers could not be saved. Try again from this page.",
+          );
+        setPending(false);
+        return;
+      }
+      const result = await proposals.create({
+        type: type as "PROPOSAL" | "OUTLINE_PROPOSAL",
+        title: body.title,
+        description: body.description,
+        piPersonId: body.piPersonId ?? creation.piPersonId,
+        activityType: body.activityType,
+        proposalStage: body.proposalStage,
+        proposalType: body.proposalType,
+        category: body.category,
+        startDate: body.startDate,
+        endDate: body.endDate,
+        costModel: body.costModel,
+        confidential: body.confidential === "Y" ? "Y" : "N",
+        sponsors: (body.sponsors ?? []).map((row) => ({
+          ...row,
+          relationId: null,
+        })),
+        deadlines: (body.deadlines ?? []).map((row) => ({ ...row, id: null })),
+        tags: body.tags,
+        assignedTo: body.assignedTo,
+        opportunityTitle: body.opportunityTitle,
+        opportunityUrl: body.opportunityUrl,
+        collaboratorFlag: body.collaboratorFlag,
+        collaborators: body.collaborators,
+        subprojectFlag: body.subprojectFlag,
+        subprojects: body.subprojects,
+        attributes: body.attributes,
+        sourceRequestId: creation.sourceRequestId,
+      });
+      if (result.ok) {
+        const createdId = String(result.data.id);
+        setCreatedId(createdId);
+        if (
+          !formRef.current ||
+          (formRef.current.hasChanges() &&
+            !(await formRef.current.save(createdId)))
+        ) {
+          setError(
+            "Proposal created. Dynamic form answers need to be saved again.",
+          );
+        } else {
+          toast.show("success", "Success", creation.successMessage, false);
+          router.replace(`/proposals/${type}/${createdId}`);
+          router.refresh();
+        }
+      } else {
+        toast.error(result.error);
+      }
+      setPending(false);
+      return;
+    }
     const primary = sponsors?.find((row) => row.roleCode === "PRM");
     if (
       primary &&
@@ -399,18 +676,22 @@ export function ProposalEditForm({
 export function ProposalEditAttributes({
   id,
   initial,
+  creating = false,
 }: {
   id: string;
   initial: AttributeValues;
+  creating?: boolean;
 }) {
   const { attributesRef } = useEdit();
   return (
     <ObjectAttributes
       id={`proposal-${id}-attributes`}
       host="proposals-summary"
-      objectId={id}
+      objectId={creating ? undefined : id}
       editable
       initial={initial}
+      plain={creating}
+      outsideLabels={creating}
       ref={attributesRef}
     />
   );

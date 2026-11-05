@@ -78,16 +78,51 @@ export const projectRoles = read<{ costType: string }>({
   op: "getPre_awardGetProjectRoles",
   headers: (p) => ({ cost_type: p.costType }),
 });
+export const salaryModels = read<{ costModel: string; costType: string }>({
+  op: "getPre_awards_costingGetSalModelList",
+  headers: (p) => ({ cost_model_id: p.costModel, cost_type: p.costType }),
+});
+export const roleFundingSection = read<{ costModel: string; role: string }>({
+  op: "getPre_awards_costingGetProjectRoleFundHdr",
+  headers: (p) => ({ costmodel_id: p.costModel, project_role_code: p.role }),
+});
+export const costingPersonDetails = read<{
+  proposalId: string;
+  personId: number;
+  orgUnitId: number;
+}>({
+  op: "getPre_awards_costingGetPersonMasterViewDetails",
+  query: (p) => ({ person_id: p.personId }),
+  headers: (p) => ({ prop_id: p.proposalId, org_unit_id: p.orgUnitId }),
+});
+export const staffTimeReport = read<{
+  employeeNumber: string;
+  startDate: string;
+  endDate: string;
+}>({
+  op: "getReportsGetStaffTimeReport",
+  headers: (p) => ({
+    emp_no: p.employeeNumber,
+    in_start_date: p.startDate,
+    in_end_date: p.endDate,
+  }),
+});
 export const costItems = read<void>({ op: "getPre_awards_costingGetCostItem" });
 export const insertCostingBulk = write<{ rows: unknown[] }>({
   op: "postInsertCostingBulk",
   body: (p) => p.rows,
   invalidates: ["getPre_awards_costingGetCostSummary"],
 });
-export const insertCostingHeader = write<{ body: unknown }>({
+export const insertCostingHeader = write<{
+  body: unknown;
+  deleteOldLines?: boolean;
+}>({
   op: "postPre_awards_costingInsertCostingHeaderN",
   identity: ["legal_id", "org_id"],
-  headers: () => ({ auto_save: true, p_del_old_lines: "N" }),
+  headers: (p) => ({
+    auto_save: true,
+    p_del_old_lines: p.deleteOldLines ? "Y" : "N",
+  }),
   body: (p) => p.body,
   invalidates: ["getPre_awards_costingGetCostSummary"],
 });
@@ -99,6 +134,12 @@ export const saveCostingLines = write<{ rows: unknown[] }>({
     "getPre_awards_costingGetCostSummary",
     "getPre_awards_costingGetCostingLines",
   ],
+});
+export const calculateStaffLine = write<{ row: Record<string, unknown> }>({
+  op: "postPre_awards_costingGetTotFecCostLineN",
+  identity: ["legal_id", "org_id"],
+  body: (p) => ({ costing_line_json: [p.row] }),
+  invalidates: ["getPre_awards_costingGetCostingLines", "getPre_awards_costingGetCostSummary"],
 });
 export const costHeaderDetails = read<{ costHeaderId: string }>({
   op: "getPre_awards_costingGetCostHeaderDetails",

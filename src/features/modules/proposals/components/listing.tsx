@@ -21,6 +21,10 @@ import { InsideField } from "@/components/ui/inside-field";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Icon } from "@/components/ui/icon";
+import Image from "next/image";
+import { ReadonlyField } from "@/components/ui/readonly-field";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { functions } from "@/lib/functions";
 import { ActionDialog, useConfirm } from "@/components/dialog/action-dialog";
 import { LinkedObjectsDialog } from "@/features/record/linked/linked-dialog";
 import type { LinkedObjects } from "@/features/record/linked/model";
@@ -29,6 +33,7 @@ import type {
   CopyOption,
   DeletedProposal,
   ShareOptions,
+  ApprovedAoiPage,
 } from "@/lib/api/endpoints/proposals";
 import { useToast } from "@/components/feedback/toast";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
@@ -139,7 +144,12 @@ export function Listing({
     [formError, setFormError] = useState(""),
     [filtersOpen, setFiltersOpen] = useState(true),
     [advancedOpen, setAdvancedOpen] = useState(false),
-    [outlineOpen, setOutlineOpen] = useState(false);
+    [outlineOpen, setOutlineOpen] = useState(false),
+    [aoiOpen, setAoiOpen] = useState(false),
+    [aoiPage, setAoiPage] = useState<ApprovedAoiPage | null>(null),
+    [aoiLoading, setAoiLoading] = useState(false),
+    [aoiError, setAoiError] = useState(""),
+    [aoiSelecting, setAoiSelecting] = useState("");
   const [recycleOpen, setRecycleOpen] = useState(false),
     [deleted, setDeleted] = useState<DeletedProposal[] | null>(null),
     [linked, setLinked] = useState<LinkedObjects | null>(null),
@@ -156,6 +166,7 @@ export function Listing({
     { run, isActive } = useInFlight();
   const leftInitialQuery = useRef(false),
     latest = useRef(new LatestRequest()),
+    aoiLatest = useRef(new LatestRequest()),
     initialKey = useRef(queryKey);
   let query = initialQuery;
   let invalid = false;
@@ -217,6 +228,33 @@ export function Listing({
     const url = `${path}?${serializeQuery(next)}`;
     if (push) router.push(url, { scroll: false });
     else router.replace(url, { scroll: false });
+  }
+  async function loadApprovedAois(offset = 0) {
+    const request = aoiLatest.current.begin();
+    setAoiLoading(true);
+    setAoiError("");
+    const result = await proposals.approvedAois(offset, request.signal);
+    if (!request.current()) return;
+    if (result.ok) {
+      setAoiPage((current) =>
+        offset === 0 || !current
+          ? result.data
+          : { ...result.data, rows: [...current.rows, ...result.data.rows] },
+      );
+    } else setAoiError(result.error.message);
+    setAoiLoading(false);
+  }
+  async function chooseApprovedAoi(id: string) {
+    setAoiSelecting(id);
+    setAoiError("");
+    const result = await proposals.approvedAoiSource(id);
+    if (result.ok) {
+      setAoiOpen(false);
+      router.push(
+        `/proposals/new/OUTLINE_PROPOSAL?sourceRequestId=${encodeURIComponent(id)}`,
+      );
+    } else setAoiError(result.error.message);
+    setAoiSelecting("");
   }
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -842,22 +880,167 @@ export function Listing({
         <ActionDialog
           id="proposals-outline-options"
           title="Create outline proposal"
+          width="66.667vw"
           onClose={() => setOutlineOpen(false)}
         >
           <p id="proposals-outline-options-message">
-            Create a new outline proposal.
+            Do you want to create a new Outline or from AOI?
           </p>
           <div className={styles.dialogActions}>
             <Link
               id="proposals-outline-new"
               href="/proposals/new/OUTLINE_PROPOSAL"
               prefetch={false}
-              className="gn-btn gn-btn--primary"
+              className="gn-btn gn-btn--outlined"
               onClick={() => setOutlineOpen(false)}
             >
-              Create new outline
+              Create New Outline
             </Link>
+            <button
+              type="button"
+              id="proposals-outline-from-aoi"
+              className="gn-btn gn-btn--primary"
+              onClick={() => {
+                setOutlineOpen(false);
+                setAoiPage(null);
+                setAoiOpen(true);
+                void loadApprovedAois();
+              }}
+            >
+              Create Outline from AOI
+            </button>
           </div>
+        </ActionDialog>
+      )}
+      {aoiOpen && (
+        <ActionDialog
+          id="proposals-approved-aoi"
+          title="Create Outline From AOI"
+          width="66.667vw"
+          onClose={() => {
+            aoiLatest.current.cancel();
+            setAoiLoading(false);
+            setAoiOpen(false);
+          }}
+        >
+          {aoiError && (
+            <div id="proposals-approved-aoi-error" role="alert">
+              {aoiError}
+              {!aoiPage && (
+                <button type="button" onClick={() => void loadApprovedAois()}>
+                  Retry
+                </button>
+              )}
+            </div>
+          )}
+          {!aoiPage && aoiLoading ? (
+            <ListSkeleton label="Loading approved AOIs" rows={3} />
+          ) : aoiPage?.rows.length === 0 ? (
+            <p id="proposals-approved-aoi-empty">No data to display.</p>
+          ) : (
+            <div
+              id="proposals-approved-aoi-list"
+              className={styles.approvedAoiList}
+            >
+              {aoiPage?.rows.map((row) => (
+                <article
+                  key={row.id}
+                  id={`proposals-approved-aoi-${row.id}`}
+                  className={styles.approvedAoiCard}
+                >
+                  <div
+                    id={`proposals-approved-aoi-logo-${row.id}`}
+                    className={styles.approvedAoiLogo}
+                  >
+                    {functions.security.safeImageUrl(row.logo) && (
+                      <Image
+                        src={functions.security.safeImageUrl(row.logo)!}
+                        alt=""
+                        width={100}
+                        height={100}
+                        unoptimized
+                      />
+                    )}
+                  </div>
+                  <div className={styles.approvedAoiBody}>
+                    <div className={styles.approvedAoiOverline}>
+                      <Icon name="data-document" label="AOI" />
+                      <strong>{row.number}</strong>
+                      <StatusBadge
+                        id={`proposals-approved-aoi-status-${row.id}`}
+                        tone="info"
+                      >
+                        {row.status}
+                      </StatusBadge>
+                    </div>
+                    <h3>{row.title}</h3>
+                    {row.funders && (
+                      <div
+                        id={`proposals-approved-aoi-funders-${row.id}`}
+                        className={styles.approvedAoiFunders}
+                      >
+                        {row.funders
+                          .split(",")
+                          .map((funder) => funder.trim())
+                          .filter(Boolean)
+                          .map((funder, index) => (
+                            <StatusBadge
+                              key={`${funder}-${index}`}
+                              id={`proposals-approved-aoi-funder-${row.id}-${index}`}
+                              tone="info"
+                            >
+                              {funder}
+                            </StatusBadge>
+                          ))}
+                      </div>
+                    )}
+                    <div className={styles.approvedAoiMeta}>
+                      <ReadonlyField
+                        id={`proposals-approved-aoi-creator-${row.id}`}
+                        label="Created by"
+                        value={row.creator}
+                      />
+                      <ReadonlyField
+                        id={`proposals-approved-aoi-department-${row.id}`}
+                        label="Department"
+                        value={row.department}
+                      />
+                      <ReadonlyField
+                        id={`proposals-approved-aoi-created-${row.id}`}
+                        label="Created on"
+                        value={functions.format.dateDisplay(
+                          row.created,
+                          format,
+                        )}
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    id={`proposals-approved-aoi-create-${row.id}`}
+                    className={styles.approvedAoiCreate}
+                    aria-label={`Create outline from ${row.number}`}
+                    title={`Create outline from ${row.number}`}
+                    disabled={Boolean(aoiSelecting)}
+                    onClick={() => void chooseApprovedAoi(row.id)}
+                  >
+                    <Icon name="invoice-create" />
+                  </button>
+                </article>
+              ))}
+              {aoiPage?.hasMore && (
+                <button
+                  type="button"
+                  id="proposals-approved-aoi-more"
+                  className="gn-btn gn-btn--outlined"
+                  disabled={aoiLoading || Boolean(aoiSelecting)}
+                  onClick={() => void loadApprovedAois(aoiPage.rows.length)}
+                >
+                  Load more
+                </button>
+              )}
+            </div>
+          )}
         </ActionDialog>
       )}
       {linked && (

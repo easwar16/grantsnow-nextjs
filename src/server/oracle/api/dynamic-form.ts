@@ -20,6 +20,16 @@ export const forms = read<Slot>({
     p_ref_module: p.slot,
   }),
 });
+/** Staff costing uses the new cost header id as p_id, while p_obj_id remains the proposal. */
+export const costForms = read<{ proposalId: string; proposalType: string; headerId?: string }>({
+  op: "getProposalEthical_dynFormsP_ref_module",
+  headers: (p) => ({
+    p_id: p.headerId ?? "",
+    p_obj_id: p.proposalId,
+    p_obj_type: p.proposalType,
+    p_ref_module: "PROPOSALS-BUDGET-STAFF",
+  }),
+});
 /** The saved answers; this operation takes the session token only as `P_TOKEN`. */
 export const answers = read<{ objectId: string; slot: string }>({
   op: "getProposalEthicaldynFormResponse",

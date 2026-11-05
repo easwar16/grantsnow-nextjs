@@ -25,17 +25,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   min-height: 48px;
   margin: -12px -12px 0;
-  padding: 12px 10px 6px;
+  padding: 12px 6px 6px;
 }
 .toolbarGroup {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 .cardActions {
   position: absolute;
@@ -91,7 +89,88 @@
   gap: 8px;
   padding: 12px;
 }
+.approvedAoiList {
+  display: grid;
+  gap: 18px;
+  max-height: min(76vh, 820px);
+  overflow-y: auto;
+  padding: 12px 4px;
+}
+.approvedAoiCard {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border);
+  padding: 12px;
+}
+.approvedAoiLogo {
+  width: 100px;
+  height: 100px;
+  border: 1px solid var(--border);
+}
+.approvedAoiLogo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.approvedAoiBody {
+  min-width: 0;
+}
+.approvedAoiOverline,
+.approvedAoiFunders {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.approvedAoiCard h3 {
+  margin: 8px 0 2px;
+  font-size: 16px;
+  line-height: 20px;
+}
+.approvedAoiMeta {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 3px;
+}
+.approvedAoiMeta > * {
+  min-width: 100px;
+  padding: 0 8px;
+  border-right: 1px solid var(--border);
+}
+.approvedAoiMeta > :first-child {
+  padding-left: 0;
+}
+.approvedAoiMeta > :last-child {
+  border-right: 0;
+}
+.approvedAoiCreate {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.approvedAoiCreate:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 @media (max-width: 600px) {
+  .approvedAoiCard {
+    grid-template-columns: 64px minmax(0, 1fr) 32px;
+  }
+  .approvedAoiLogo {
+    width: 64px;
+    height: 64px;
+  }
+  .toolbar,
+  .toolbarGroup {
+    flex-wrap: wrap;
+  }
   :global(.proposal-card) {
     padding-right: 6px;
   }

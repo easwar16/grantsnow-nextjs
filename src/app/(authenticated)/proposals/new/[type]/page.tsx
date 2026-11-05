@@ -1,23 +1,35 @@
-import Link from "next/link";
 import { pageIdentity } from "@/server/identity/auth/page";
-import { proposalCreateChoices } from "@/server/modules/proposals/create";
+import {
+  approvedAoiPrefill,
+  proposalCreateChoices,
+} from "@/server/modules/proposals/create";
 import { State } from "@/components/feedback/state";
 import { functions } from "@/lib/functions";
-import { ProposalCreateForm } from "./proposal-create-form";
-import styles from "./proposal-create.module.css";
+import { matchSponsor } from "@/server/modules/opportunities/payloads";
+import { CreateProposalSummary } from "@/features/modules/proposals/record/create-summary";
 
 export const metadata = { title: "Create Proposal" };
 
 export default async function NewProposal({
   params,
+  searchParams,
 }: {
   params: Promise<{ type: string }>;
+  searchParams: Promise<{ sourceRequestId?: string }>;
 }) {
   const { type } = await params;
+  const { sourceRequestId } = await searchParams;
   await pageIdentity(`/proposals/new/${type}`);
   let choices: Awaited<ReturnType<typeof proposalCreateChoices>>;
+  let aoi: Awaited<ReturnType<typeof approvedAoiPrefill>> | null = null;
   try {
     choices = await proposalCreateChoices(type);
+    if (sourceRequestId !== undefined) {
+      const id = Number(sourceRequestId);
+      if (type !== "OUTLINE_PROPOSAL" || !Number.isSafeInteger(id) || id <= 0)
+        throw new Error("Invalid AOI source.");
+      aoi = await approvedAoiPrefill(id);
+    }
   } catch (error) {
     const info = functions.errors.publicError(error);
     return (
@@ -34,20 +46,26 @@ export default async function NewProposal({
     );
   }
   return (
-    <main id="proposal-new-page" className={styles.page}>
-      <div id="proposal-new-toolbar" className={styles.toolbar}>
-        <Link id="proposal-new-list" href="/proposals" prefetch={false}>
-          ← List
-        </Link>
-        <h1>
-          {type === "PROPOSAL"
-            ? "Create new Grant App"
-            : "Create new outline proposal"}
-        </h1>
-      </div>
-      <ProposalCreateForm
+    <main id="proposal-new-page">
+      <CreateProposalSummary
         type={type as "PROPOSAL" | "OUTLINE_PROPOSAL"}
         choices={choices}
+        sourceRequestId={aoi ? Number(sourceRequestId) : undefined}
+        aoi={
+          aoi
+            ? {
+                ...aoi,
+                sponsorId:
+                  matchSponsor(
+                    choices.sponsors.map((row) => ({
+                      id: Number(row.value),
+                      name: row.label,
+                    })),
+                    aoi.firstFunder,
+                  )?.id ?? null,
+              }
+            : null
+        }
       />
     </main>
   );

@@ -1,5 +1,8 @@
 import "server-only";
 import { z } from "zod";
+import { authenticate } from "@/server/identity/session/service";
+import type { HistoryHost } from "@/server/record/objects/history";
+import { linkedObjects } from "@/server/record/linked/linked";
 import { AppError } from "@/lib/errors";
 import { dueDiligence, people, roles } from "@/server/oracle/api";
 import { dueDiligenceListView } from "./listing";
@@ -18,7 +21,7 @@ const listEnvelope = z.object({
 });
 const roleEnvelope = z.object({
   items: z.array(
-    z.object({ page_name: z.string(), read_access: z.string().nullable() }),
+    z.object({ page_name: z.string(), read_access: z.string().nullable(), edit_access: z.string().nullish() }),
   ),
 });
 const setup = z.object({
@@ -58,26 +61,39 @@ const setup = z.object({
 export async function dueDiligenceRecord(id: string, requestedAccess?: string) {
   const recordId = z.coerce.number().int().positive().parse(id);
   const view = await dueDiligenceListView();
-  const access = accessType.safeParse(requestedAccess).success
-    ? (requestedAccess as z.infer<typeof accessType>)
-    : view.tabs[0]?.value;
-  if (!access || !view.tabs.some((tab) => tab.value === access))
+  const requested = requestedAccess
+    ? accessType.safeParse(requestedAccess)
+    : null;
+  if (requested && !requested.success)
+    throw new AppError("FORBIDDEN", "Invalid Due Diligence access view.", 403);
+  const available = requested
+    ? view.tabs.filter((tab) => tab.value === requested.data)
+    : view.tabs;
+  if (!available.length)
     throw new AppError(
       "FORBIDDEN",
       "Due Diligence record access has not been granted.",
       403,
     );
-  const scoped = listEnvelope.parse(
-    await dueDiligence.applications({
-      accessType: access,
-      query: {
-        p_where_clause: `("setup_flow_id"=${recordId})`,
-        p_offset: "0",
-        p_limit: "1",
-      },
+  const scoped = await Promise.all(
+    available.map(async (tab) => {
+      const body = listEnvelope.parse(
+        await dueDiligence.applications({
+          accessType: tab.value,
+          query: {
+            p_where_clause: `("setup_flow_id"=${recordId})`,
+            p_offset: "0",
+            p_limit: "1",
+          },
+        }),
+      );
+      return body.items.some((item) => item.setup_flow_id === recordId)
+        ? tab.value
+        : null;
     }),
   );
-  if (!scoped.items.some((item) => item.setup_flow_id === recordId))
+  const access = scoped.find((item) => item !== null);
+  if (!access)
     throw new AppError(
       "FORBIDDEN",
       "Due Diligence application not found or access denied.",
@@ -91,15 +107,24 @@ export async function dueDiligenceRecord(id: string, requestedAccess?: string) {
   ]);
   const data = setup.parse(rawSetup);
   const rights = roleEnvelope.parse(rawRoles).items;
-  if (
-    !serverFunctions.permissions.pageAccess(
-      rights,
-      "duediligence-general-overview",
-    ).read
-  )
+  const pages = [
+    "duediligence-general-overview",
+    "duediligence-responses",
+    "duediligence-attachments",
+    "duediligence-approvals",
+    "duediligence-history",
+  ] as const;
+  const tabs = pages.filter(
+    (page) =>
+      serverFunctions.permissions.pageAccess(rights, page).read &&
+      (page !== "duediligence-general-overview" ||
+        data.status_lkp_code === "DRFT" ||
+        access === "DDA_ACCESS"),
+  );
+  if (!tabs.length)
     throw new AppError(
       "FORBIDDEN",
-      "Due Diligence overview access has not been granted.",
+      "Due Diligence record access has not been granted.",
       403,
     );
   if (data.setup_flow_id !== recordId)
@@ -123,6 +148,7 @@ export async function dueDiligenceRecord(id: string, requestedAccess?: string) {
     .parse(supervisorRows).items;
   return {
     id: String(data.setup_flow_id),
+    access,
     number: data.application_number,
     title: data.setup_description ?? "",
     status: data.status ?? "",
@@ -149,5 +175,71 @@ export async function dueDiligenceRecord(id: string, requestedAccess?: string) {
     supervisor:
       supervisors.find((person) => person.person_id === data.reviewer?.[0]?.id)
         ?.full_name ?? "",
+    tabs,
+    rights: Object.fromEntries(
+      rights.map((row) => [
+        row.page_name,
+        { read: row.read_access === "Y", edit: row.edit_access === "Y" },
+      ]),
+    ),
   };
+}
+
+/** The VBCS History fragment uses the first stakeholder for status rows. */
+export async function dueDiligenceHistoryHost(id: string): Promise<HistoryHost> {
+  const [record, { session, user }] = await Promise.all([
+    dueDiligenceRecord(id),
+    authenticate(),
+  ]);
+  if (!record.tabs.includes("duediligence-history"))
+    throw new AppError(
+      "FORBIDDEN",
+      "Due Diligence History access has not been granted.",
+      403,
+    );
+  const stakeholder = record.respondents[0];
+  if (!stakeholder)
+    throw new AppError(
+      "CONTRACT",
+      "Due Diligence History has no stakeholder record.",
+    );
+  return {
+    token: session.token,
+    user,
+    objectType: "DUE_DILIGENCE",
+    objectId: stakeholder.id,
+    objectNumber: stakeholder.id,
+    approvalType: "DUE_DILIGENCE",
+    bundle: "due_diligence",
+    statusLookup: "DUE_DILIGENCE_STATUS",
+    statusCode: record.statusCode,
+    rights: {
+      addStatus: record.rights["due-diligence-add-status"]?.edit === true,
+      abandon: record.rights["due-diligence-history-abandon-button"]?.edit === true,
+    },
+    keys: {
+      title: ["header-labels", "due-diligence-status-history"],
+      status: ["table-headers", "history-application-status"],
+      comments: ["table-headers", "hitory-comments"],
+      approvalTitle: ["header-labels", "history-page-approval-history"],
+      statusLabel: ["labels", "due-diligence-status"],
+      commentPlaceholder: ["placeholders", "history-comments"],
+      cancel: ["button-labels", "history-cancel"],
+      save: ["button-labels", "history-save"],
+    },
+  };
+}
+
+
+/** Listing Linked action: scope the DD record before reading shared object links. */
+export async function dueDiligenceLinks(id: string, access?: string) {
+  const record = await dueDiligenceRecord(id, access);
+  return linkedObjects(
+    { module: "DUE_DILIGENCE", id: Number(record.id) },
+    {
+      bundle: "due_diligence",
+      key: "no-linked-data-found",
+      fallback: "No Linked Data Found",
+    },
+  );
 }

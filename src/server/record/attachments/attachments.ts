@@ -28,6 +28,8 @@ import { awardAttachmentHost } from "@/server/modules/awards/record";
 import { fundAttachmentHost } from "@/server/modules/claims/funds/record";
 import { proposalAttachmentHost } from "@/server/modules/proposals/attachments";
 import { recordIdentity } from "@/features/modules/proposals/record";
+import { ethicsRecord } from "@/server/modules/ethics/record";
+import { authenticate } from "@/server/identity/session/service";
 import { fileProblem } from "@/features/record/dynamic-form/engine";
 import {
   ATTACHMENT_LABELS,
@@ -76,6 +78,26 @@ const HOSTS: Record<
   eoi: eoiAttachmentHost,
   award: awardAttachmentHost,
   "claim-funds": fundAttachmentHost,
+  ethics: async (id, mode) => {
+    const [record, { session, user }] = await Promise.all([ethicsRecord(id), authenticate()]);
+    if (!record.tabs.includes("ethics-attachments"))
+      throw new AppError("FORBIDDEN", "Ethics Attachments access has not been granted.", 403);
+    const person = record.respondents[0];
+    if (!person) throw new AppError("CONTRACT", "Ethics stakeholder record is unavailable.");
+    const canEdit = record.rights["ethics-attachments"]?.edit === true && person.statusCode === "DRFT";
+    if (mode === "edit" && !canEdit)
+      throw new AppError("FORBIDDEN", "Ethics Attachments cannot be changed.", 403);
+    return {
+      objectType: "ETHICS",
+      objectId: person.id,
+      objectNumber: person.id,
+      pathSegment: "ETHICS",
+      bundle: "ethics",
+      token: session.token,
+      user,
+      canEdit,
+    };
+  },
 };
 
 for (const type of recordIdentity.shape.type.options)
@@ -206,6 +228,23 @@ const BUNDLE_KEYS: Record<
     noData: ["helper-texts", "attachment-no-data"],
     treeAriaLabel: ["aria-labels", "list-with-static-data"],
   },
+  ethics: {
+    addDocument: ["button-labels", "attachments-add-document"],
+    newFolderName: null,
+    fileName: null,
+    fileSize: null,
+    fileType: null,
+    uploadedBy: null,
+    lastUpdatedDate: null,
+    description: ["labels", "description"],
+    add: ["button-labels", "add-attachment-add"],
+    confirmDelete: ["button-labels", "delete"],
+    addNewDocumentTitle: ["dialog-titles", "attachments-add-new-document"],
+    deleteWarningTitle: ["dialog-titles", "attachments-warning"],
+    deleteWarningText: ["helper-texts", "this-operation-will"],
+    pleaseNote: ["header-labels", "attachments-please-note"],
+    fileShouldNotExceed: ["labels", "attachment-file-should-not-exceed"],
+  },
 };
 export function attachmentLabels(rows: Resources, bundle: string) {
   return Object.fromEntries(
@@ -246,7 +285,7 @@ function gates(rows: Resources, bundle: string) {
       "header-labels",
       "attachment-links-header",
     ),
-    allowConfidential: serverFunctions.resources.resourceVisible(
+    allowConfidential: bundle !== "ethics" && serverFunctions.resources.resourceVisible(
       rows,
       bundle,
       "labels",
