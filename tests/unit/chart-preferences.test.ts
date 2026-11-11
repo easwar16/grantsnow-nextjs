@@ -86,7 +86,8 @@ it("uses the allowlisted POST and server token and accepts documented empty succ
     redirect: "error",
     cache: "no-store",
     headers: { token: "isolated-token" },
-    body: '{"infolet_id":201,"colspan":6,"rowspan":3}',
+    // Legacy saveChartDimentionButtonActionChain's body: the spans as text.
+    body: '{"colspan":"6","rowspan":"3","infolet_id":201}',
   });
 });
 it("does not treat HTTP 200 business errors as saved", async () => {

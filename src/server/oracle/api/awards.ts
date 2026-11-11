@@ -18,11 +18,6 @@ export const hierarchy = read<{ proposalId: number }>({
   op: "getPost_awardsAwardhierarchy",
   headers: (p) => ({ proposal_id: p.proposalId, module: "AWARD" }),
 });
-/** Proposals an award can be made from or linked to (getRelationItem: object_type PROPOSAL, object_status AWARD). */
-export const proposals = read<void>({
-  op: "getContractsGetRelationItem",
-  headers: () => ({ object_type: "PROPOSAL", object_status: "AWARD" }),
-});
 /** WRITES: the primary award generated from a proposal (GenerateAward, a GET that inserts). */
 export const generate = write<{ proposalId: number }>({
   op: "postPost_awardsGenerateAward",
@@ -102,18 +97,9 @@ export const reportMonthly = read<{ projectId: number }>({
   op: "getPost_awardsActualVsExpenditureMonthly",
   headers: (p) => ({ p_project_id: p.projectId }),
 });
-/** The due-diligence records linked to an award (getApplicationList: p_obj_ref_id, p_obj_type DUE_DILIGENCE). */
-export const dueDiligence = read<{ awardId: string }>({
-  op: "getProposalGetApplicationList",
-  headers: (p) => ({ p_obj_ref_id: p.awardId, p_obj_type: "DUE_DILIGENCE" }),
-});
-/** Project roles (GetProjectrole), funding sections (getFundingHdr) and a cost category's items. */
+/** Project roles (GetProjectrole) and a cost category's items; funding sections are `lookups.fundingSections`. */
 export const projectRoles = read<void>({
   op: "getPost_awardsGetProjectrole",
-  ttl: serverConstants.ttl.config,
-});
-export const fundingSections = read<void>({
-  op: "getPre_awards_costingGetFundingHdr",
   ttl: serverConstants.ttl.config,
 });
 export const costCategoryItems = read<{ type: string }>({

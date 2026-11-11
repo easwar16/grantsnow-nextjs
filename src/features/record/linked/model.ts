@@ -24,3 +24,17 @@ export interface LinkedObjects {
   groups: LinkedGroup[];
   texts: Record<LinkedTextKey, string>;
 }
+
+/** The Create / Link Due Diligence controls a Proposal or Award offers (legacy dialogLinkDueDiligence). */
+export type ParentDueDiligenceTextKey =
+  | "create"
+  | "link"
+  | "linkTitle"
+  | "number"
+  | "description"
+  | "linkRow"
+  | "cancel"
+  | "noData"
+  | "linked"
+  | "alreadyLinked";
+export type ParentDueDiligenceTexts = Record<ParentDueDiligenceTextKey, string>;

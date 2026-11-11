@@ -8,6 +8,7 @@ import { AttachmentsTab } from "@/features/record/attachments/attachments-tab";
 import { UnitSummaryTab } from "./summary-tab";
 import { UnitGoalsTab } from "./goals-tab";
 import { UnitActivitiesTab } from "./activities-tab";
+import { UnitClaimsTab } from "./claims-tab";
 
 /** One tab of a unit application; the caller has checked the record shows it. */
 export async function UnitTabContent({
@@ -21,6 +22,8 @@ export async function UnitTabContent({
     return <UnitGoalsTab appId={id} format={await displayFormat()} />;
   if (tab === "activities")
     return <UnitActivitiesTab appId={id} format={await displayFormat()} />;
+  if (tab === "claims")
+    return <UnitClaimsTab appId={id} format={await displayFormat()} />;
   if (tab === "attachments")
     return (
       <AttachmentsTab host="claims" record={id} id="claims-unit-attachments" />

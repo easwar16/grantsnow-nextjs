@@ -421,8 +421,13 @@ function ProjectDialog({
   const f = view.projectFields;
   const set = (k: keyof ProjectDraft) => (v: string) =>
     setD((s) => ({ ...s, [k]: v }));
+  // Only rendered fields count: the number shows (read-only) only for a saved project, as legacy's bind-if.
   const missing = (k: ProjectField) =>
-    f[k].show && f[k].required && k in d && d[k as keyof ProjectDraft] === "";
+    f[k].show &&
+    f[k].required &&
+    (k !== "number" || d.id !== "") &&
+    k in d &&
+    d[k as keyof ProjectDraft] === "";
   const bounds = dateBounds(view.award, d.start, d.end);
   const save = () => {
     setTouched(true);

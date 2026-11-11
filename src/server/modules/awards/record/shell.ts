@@ -137,7 +137,7 @@ export function awardShell(
       context.finalizable === null
         ? null
         : awardTabs.filter((tab) => context.finalizable!.includes(pageOf(tab))),
-    canSendToErp: canSendToErp(status, context.access),
+    canSendToErp: canSendToErp(status),
     canEditHeader:
       editable &&
       isDraft(context) &&

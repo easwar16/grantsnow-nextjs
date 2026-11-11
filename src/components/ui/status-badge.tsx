@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 
-/** Legacy oj-badge tones; "neutral" is the plain badge. */
-export type StatusTone = "neutral" | "info" | "success" | "warning" | "danger";
+/** Legacy oj-badge tones; "neutral" is the plain badge, "rework" legacy's second warning (claims). */
+export type StatusTone =
+  "neutral" | "info" | "success" | "warning" | "rework" | "danger";
 
 /**
  * The app's one status bubble (legacy oj-badge, measured on live DEV 2026-10-26): 12px text on an 18px line, 0 9px
@@ -11,12 +12,15 @@ export function StatusBadge({
   id,
   tone = "neutral",
   solid = false,
+  dot = false,
   className,
   children,
 }: {
   id?: string;
   tone?: StatusTone;
   solid?: boolean;
+  /** Legacy claim-status: the text after a dot in the tone, with no bubble. */
+  dot?: boolean;
   className?: string;
   children: ReactNode;
 }) {
@@ -26,6 +30,7 @@ export function StatusBadge({
       className={className ? `gn-status ${className}` : "gn-status"}
       data-tone={tone}
       data-solid={solid || undefined}
+      data-dot={dot || undefined}
     >
       {children}
     </span>

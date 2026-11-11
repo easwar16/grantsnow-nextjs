@@ -3,7 +3,7 @@ import {
   fundRecordIdentity,
 } from "@/server/modules/claims/funds/record";
 import { State } from "@/components/feedback/state";
-import { DeniedRedirect } from "@/features/modules/opportunities/eoi/denied-redirect";
+import { DeniedRedirect } from "@/features/record/shell/denied-redirect";
 import { FundTabContent } from "@/features/modules/claims/funds/record/tab-content";
 import { parseFundRecordFilters } from "@/shared/claims/fund-record";
 

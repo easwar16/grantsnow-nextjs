@@ -12,7 +12,7 @@ import type {
   UnitHeading,
   UnitSummaryField,
   UnitSummaryView,
-} from "@/features/modules/claims/units/types";
+} from "@/features/modules/claims/units/listing/types";
 import { signOffViews, type SignOffView } from "@/shared/claims/unit-record";
 import { BUNDLE, label, numberish, optionalText } from "../listing";
 import { unitRecordRead, type UnitRecordContext } from "../record";
@@ -55,7 +55,18 @@ const fundRow = z.object({
   grant_period: optionalText,
   last_date_for_amendment: optionalText,
   last_date_for_claim: optionalText,
+  grant_category_name: optionalText,
+  grant_value: optionalText,
+  payment_account_code: optionalText,
+  holding_account_code: optionalText,
 });
+/** Legacy getFundSummaryColumns' grantColumn: shown after Grant/CFDA only while its RB header is visible. */
+const GRANT_COLUMNS = [
+  ["grant-category-name", "grant_category_name", "Grant Category"],
+  ["grant-value-id", "grant_value", "Grant"],
+  ["payment-account-code", "payment_account_code", "Payment Account"],
+  ["holding-account-code", "holding_account_code", "Holding Account"],
+] as const;
 const FUND_HEADERS: Record<UnitFundColumn, [string, string]> = {
   fund: ["summary-grant", "Grant/CFDA"],
   status: ["summary-status", "Status"],
@@ -68,6 +79,8 @@ const FUND_HEADERS: Record<UnitFundColumn, [string, string]> = {
   period: ["summary-grant-period", "Grant Period"],
   amendmentDate: ["summary-amendment-date", "Amendment Date"],
   claimDate: ["summary-claim-date", "Claim Date"],
+  // MR 15893: seeded N, shown with legacy's `|| 'Key Dates'`.
+  keyDates: ["summary-key-dates", "Key Dates"],
   allocation: ["summary-allocation", "Allocations"],
 };
 
@@ -103,6 +116,9 @@ async function fundSummary(
       amendmentDate: r.last_date_for_amendment ?? "",
       claimDate: r.last_date_for_claim ?? "",
       allocate: canAllocate(context, config, r.fund_status_code),
+      grant: Object.fromEntries(
+        GRANT_COLUMNS.map(([key, field]) => [key, r[field] ?? ""]),
+      ),
     };
   });
   const sum = (
@@ -116,6 +132,17 @@ async function fundSummary(
         label(rows, "table-headers", key, fallback),
       ]),
     ) as Record<UnitFundColumn, string>,
+    grantColumns: GRANT_COLUMNS.filter(([key]) =>
+      serverFunctions.resources.resourceVisible(
+        rows,
+        BUNDLE,
+        "table-headers",
+        key,
+      ),
+    ).map(([key, , fallback]) => ({
+      key,
+      header: label(rows, "table-headers", key, fallback),
+    })),
     rows: mapped,
     totals: {
       original: sum("original"),

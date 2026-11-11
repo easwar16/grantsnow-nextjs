@@ -7,7 +7,7 @@ import {
   staffEntryAvailability,
   createStaffCostHeader,
   saveStaffCostLines,
-} from "@/server/modules/proposals/staff-entry";
+} from "@/server/modules/proposals/record/staff-entry";
 
 type Context = { params: Promise<{ type: string; id: string }> };
 
@@ -41,7 +41,11 @@ export const POST = route<Context>(
 export const PUT = route<Context>(
   async (request, context) => {
     const { type, id } = await context.params;
-    return saveStaffCostLines(type, id, JSON.parse(await readText(request, 20_000)));
+    return saveStaffCostLines(
+      type,
+      id,
+      JSON.parse(await readText(request, 20_000)),
+    );
   },
   {
     write: true,

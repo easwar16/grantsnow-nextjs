@@ -194,3 +194,51 @@ it("lets a cell span columns, skipping the ones it covers", async () => {
   expect(head.children[0].getAttribute("colspan")).toBe("2");
   expect(line.children).toHaveLength(3);
 });
+
+it("opens a tree to openDepth (legacy 9305), and the expanders still open and close any row", async () => {
+  const rows: Line[] = [
+    {
+      key: "s",
+      name: "Section",
+      amount: 30,
+      children: [
+        {
+          key: "c",
+          name: "Category",
+          amount: 30,
+          children: [{ key: "l", name: "Line", amount: 30 }],
+        },
+      ],
+    },
+  ];
+  const ids = (t: HTMLElement) =>
+    [...t.querySelectorAll("tbody tr")].map((r) => r.id);
+  const base = {
+    columns,
+    rows,
+    rowKey: (l: Line) => l.key,
+    childrenOf: (l: Line) => l.children,
+  };
+  expect(ids(await render({ id: "t", ...base }))).toEqual([
+    "t-s",
+    "t-c",
+    "t-l",
+  ]);
+  act(() => root?.unmount());
+  expect(ids(await render({ id: "t", ...base, openDepth: 1 }))).toEqual([
+    "t-s",
+    "t-c",
+  ]);
+  act(() => root?.unmount());
+  const table = await render({ id: "t", ...base, openDepth: 0 });
+  expect(ids(table)).toEqual(["t-s"]);
+  await act(async () => document.getElementById("t-s-toggle")!.click());
+  expect(ids(table)).toEqual(["t-s", "t-c"]);
+});
+
+it("maps a costing tree's expand level to a starting depth", async () => {
+  const { functions } = await import("@/lib/functions");
+  expect(
+    [1, "2", " 3 ", null, "Level 2"].map(functions.tables.expandDepth),
+  ).toEqual([0, 1, undefined, undefined, undefined]);
+});

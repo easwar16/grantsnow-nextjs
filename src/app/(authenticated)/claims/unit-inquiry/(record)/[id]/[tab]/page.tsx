@@ -3,7 +3,7 @@ import {
   unitRecordIdentity,
 } from "@/server/modules/claims/units/record";
 import { State } from "@/components/feedback/state";
-import { DeniedRedirect } from "@/features/modules/opportunities/eoi/denied-redirect";
+import { DeniedRedirect } from "@/features/record/shell/denied-redirect";
 import { UnitTabContent } from "@/features/modules/claims/units/record/tab-content";
 
 /** One tab of a unit application; a tab the record does not show goes to Summary (subFlowAccessGuard). */

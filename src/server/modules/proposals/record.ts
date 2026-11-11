@@ -3,7 +3,7 @@ import { cache } from "react";
 import moment from "moment";
 import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
-import { proposals, roles as recordRoles } from "@/server/oracle/api";
+import { locks, proposals, roles as recordRoles } from "@/server/oracle/api";
 import {
   resources,
   type Resources,
@@ -596,7 +596,7 @@ export const proposalContext = cache(
       (role) => role.page_name === "proposals-summary",
     );
     const finalizablePages = summaryPage?.page_id
-      ? await proposals.finalizablePages({ type, id }).then(
+      ? await locks.finalizablePages({ objectType: type, objectId: id }).then(
           (raw) =>
             z
               .object({ items: z.array(z.object({ page_name: z.string() })) })
@@ -608,8 +608,12 @@ export const proposalContext = cache(
     const lock =
       summaryPage?.page_id &&
       summary.lockedPageIds.includes(summaryPage.page_id)
-        ? await proposals
-            .lockStatus({ type, id, pageId: summaryPage.page_id })
+        ? await locks
+            .lockStatus({
+              module: type,
+              recordId: id,
+              pageId: summaryPage.page_id,
+            })
             .then((raw) =>
               z
                 .object({

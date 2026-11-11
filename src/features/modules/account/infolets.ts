@@ -72,7 +72,12 @@ export const infoletSwitches = {
       "highest-performing-grant-categories",
       "Highest Performing Grant Categories (Awarded)",
     ],
-    ["pByYearChart", "header-labels", "proposals-by-year", "Proposals by Year"],
+    [
+      "pByYearChart",
+      "header-labels",
+      "proposals-by-year",
+      "Submitted vs Awarded Proposals by Year",
+    ],
     [
       "totalPAValueByYearChart",
       "header-labels",

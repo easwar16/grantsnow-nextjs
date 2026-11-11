@@ -1,11 +1,13 @@
 import "server-only";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
-import { awards } from "@/server/oracle/api";
+import { applications } from "@/server/oracle/api";
 import { resources } from "@/server/platform/configuration/resources";
 import type { DueDiligenceView } from "@/features/modules/awards/record/due-diligence-model";
 import { awardRecordRead } from "../record";
 import { serverFunctions } from "@/server/functions";
+import { parentDueDiligenceTexts } from "@/server/record/linked/linked";
+import { accessType } from "@/server/modules/due-diligence/record";
 
 const BUNDLE = "award";
 const text = z.union([z.string(), z.number()]).nullish();
@@ -13,6 +15,7 @@ const rowSchema = z.object({
   setup_flow_id: z.union([z.string(), z.number()]),
   obj_ref_id: z.coerce.number().int().positive().nullish(),
   obj_ref_type: z.string().nullish(),
+  access_type: z.string().nullish(),
   application_number: text,
   status: text,
   status_lkp_code: text,
@@ -67,7 +70,7 @@ const FIELDS = [
 export async function dueDiligenceView(id: string): Promise<DueDiligenceView> {
   const context = await awardRecordRead(id, "due-diligence");
   const [raw, rows] = await Promise.all([
-    awards.dueDiligence({ awardId: id }),
+    applications.linked({ objectType: "DUE_DILIGENCE", refId: id }),
     resources(),
   ]);
   const items =
@@ -79,11 +82,18 @@ export async function dueDiligenceView(id: string): Promise<DueDiligenceView> {
   return {
     parentId: id,
     canCreate: context.access.roles.get("awards-due-diligence")?.edit === true,
-    canLink: context.access.roles.get("awards-link-due-diligence")?.edit === true,
+    canLink:
+      context.access.roles.get("awards-link-due-diligence")?.edit === true,
     records: items.map((r) => {
       const code = String(r.status_lkp_code ?? "");
+      const access = accessType.safeParse(r.access_type);
       return {
         id: String(r.setup_flow_id),
+        // Legacy viewButtonActionChain: the record in its own access view, the administrator's on the overview. A view
+        // the module has not built (READONLY_ACCESS) gets no link.
+        href: access.success
+          ? `/due-diligence/${r.setup_flow_id}?access=${access.data}&tab=duediligence-${access.data === "DDA_ACCESS" ? "general-overview" : "responses"}`
+          : undefined,
         number: String(r.application_number ?? ""),
         status: r.status ? String(r.status) : undefined,
         // Legacy: in progress is info, a draft the plain badge, anything else success.
@@ -118,7 +128,23 @@ export async function dueDiligenceView(id: string): Promise<DueDiligenceView> {
         "dd-no-records",
         "No due diligence records",
       ),
+      // The card's View button, shown only when its RB row is visible.
+      view: serverFunctions.resources.resourceVisible(
+        rows,
+        BUNDLE,
+        "button-labels",
+        "dd-list-view-record",
+      )
+        ? serverFunctions.resources.label(
+            rows,
+            BUNDLE,
+            "button-labels",
+            "dd-list-view-record",
+            "View",
+          )
+        : null,
     },
+    parentTexts: parentDueDiligenceTexts(rows, BUNDLE),
   };
 }
 
@@ -127,7 +153,15 @@ export function assertAwardDueDiligenceScope(
   items: { obj_ref_id?: number | null; obj_ref_type?: string | null }[],
   id: string,
 ) {
-  if (items.some((row) => String(row.obj_ref_id ?? "") !== id ||
-      row.obj_ref_type !== "AWARD"))
-    throw new AppError("FORBIDDEN", "Due Diligence record is outside this Award.", 403);
+  if (
+    items.some(
+      (row) =>
+        String(row.obj_ref_id ?? "") !== id || row.obj_ref_type !== "AWARD",
+    )
+  )
+    throw new AppError(
+      "FORBIDDEN",
+      "Due Diligence record is outside this Award.",
+      403,
+    );
 }

@@ -67,11 +67,14 @@ Then confirm three things before you edit anything:
 | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
 | Any dropdown                                                                           | `Select` / `MultiSelect` (`components/ui`), `FormSelect` inside a plain form                                                                               | native `<select>`                                         |
 | Date field                                                                             | `DateInput`                                                                                                                                                | `<input type="date">`                                     |
-| Dialog (every modal, incl. a non-dismissible one, title More Info)                     | `ActionDialog` (`help`, `dismissible`, `busy`), `useConfirm` (`components/dialog`)                                                                         | `<dialog>` by hand, a fixed backdrop `div`                |
+| Dialog (every modal, incl. a non-dismissible one, title More Info)                     | `ActionDialog` (`help`, `dismissible`, `busy`, `side` for a record beside its list), `useConfirm` (`components/dialog`)                                    | `<dialog>` by hand, a fixed backdrop `div`                |
 | Table (flat or tree), row actions                                                      | `DataTable` (`components/ui`): `columns`, `rows`, `rowKey`, `actions`, `childrenOf`                                                                        | a hand-written `<table>`, unpinned action cells           |
 | Read-only value                                                                        | `ReadonlyField` (label and value)                                                                                                                          | a disabled or read-only control                           |
 | Loading / error / empty                                                                | the skeleton of the content's shape (`ListingSkeleton`, `DetailSkeleton`, `FormSkeleton`, `TableSkeleton`, `ListSkeleton`), `State`, toasts via `useToast` | "Loading…" text, ad-hoc error markup                      |
-| Status pill                                                                            | `StatusBadge` with a tone map                                                                                                                              | per-module chip CSS                                       |
+| Status pill                                                                            | `StatusBadge` with a tone map (`dot` for legacy's claim-status dots; Claims tones from `claimStatusTone`)                                                  | per-module chip CSS                                       |
+| A row of figures (fund totals)                                                         | `Figures` (`components/ui`): label/value pairs separated by rules, "—" when empty                                                                          | a module's own figure CSS                                 |
+| One scrolling page of sections                                                         | `SectionNav` (`components/ui`): jump links that mark the section in view                                                                                   | nested tabs inside a panel                                |
+| Access redirect on a record page                                                       | `DeniedRedirect` (`features/record/shell`)                                                                                                                 | a module's own redirect                                   |
 | Created by                                                                             | `CreatorLink` / `CreatorDialog`, `personCard` (server)                                                                                                     | a module's own creator dialog                             |
 | Timestamp in the viewer's zone                                                         | `LocalTime` (browser), `stampDisplay` / `dateTimeDisplay`                                                                                                  | formatting on the server, `Intl` with a fixed zone        |
 | Collapsible section                                                                    | `Collapsible` (owns the chevron, its rotation and the heading row; `headClassName` for size, `actions` for heading buttons)                                | a hand-written `<details>`, its own chevron or marker CSS |
@@ -154,6 +157,10 @@ docs/changes/YYYY-MM-DD-<author>-<slug>.md          one record per change
   (Due Diligence importing Ethics' CSS was wrong). If two modules need the same UI, it becomes a shared piece.
 - **An API route only dispatches.** It reads the action and the body (`readText` with a size cap) and calls one
   server function. Input validation (zod) happens in that server function, never in the route.
+- **A shared host registry only maps a name to the module's host** (owner, 2026-11-10). The resolver for
+  attachments, comments and audit, history or delegations (`ethicsAttachmentHost`, `unitPanelHost`, …) is exported
+  from the module's `record.ts` and imported into the registry. A module's own rule (no confidential files, a
+  stakeholder id) is a field on the host it returns, never an `if bundle === "<module>"` in the shared file.
 
 ### The one request path (the framework)
 
@@ -196,6 +203,10 @@ A module never builds its own:
   control stays disabled until its request settles.
 - **Unavailable controls are hidden, not disabled** (owner, 2026-11-03): no access, RB-hidden or not editable means
   the control is not rendered. `disabled` is only for a passing state (busy, nothing selected yet).
+  An action that is not built yet is not rendered either: no menu item with `disabled: true` and an empty `run`.
+- **The RB gate wins over what live VBCS shows** (owner rule, 2026-11-10). A control whose RB row is `N` stays hidden
+  even when the live app shows it (legacy reads that label without its gate). Record the difference; do not drop the
+  gate. Precedent: the Shared tab's Comments (`share-comments`) and the Budget Add Cost buttons.
 - **Every page's labels come from the RB**, including create pages, record panels and tab names, not only the
   listing. Take the keys from the legacy page's HTML (`translations.<bundle>.labels['…']`, `page-name.<page>`) and
   give each a literal fallback. A field shown from the RB is gated on `is_visible === 'Y'`, and the fixture rows in
@@ -320,8 +331,9 @@ code, outside your task, goes into your change record as open:
 - route folders hold only pages and layouts:
   `find src/app -name "*.tsx" | grep -vE "/(page|layout|loading|error|not-found)\.tsx$"` prints nothing;
 - every `<button`, `<a`, `<input` you added has an `id`, including ones split over several lines:
-  `perl -0ne 'while(/<(button|a|input|DataTable|ActionDialog)\b((?:[^<>]|=>|\{[^{}]*\})*?)\/?>/gs){next if $2=~/\bid=/||$2=~/type="hidden"/;print "$ARGV:".(substr($_,0,$-[0])=~tr/\n//)+1 ." <$1\n"}' <your .tsx files>`
-  prints nothing;
+  `perl -0ne 'while(/<(button|a|input|DataTable|ActionDialog)\b((?:[^<>]|=>|\{[^{}]*\})*?)\/?>/gs){next if $2=~/\bid=/||$2=~/type="hidden"/;my $n=(substr($_,0,$-[0])=~tr/\n//)+1;print "$ARGV:$n <$1\n"}' <your .tsx files>`
+  prints nothing. It can also list an element whose `id` comes after a handler with nested braces, or from a spread
+  (`{...field}`): look before adding a second `id`;
 - the module follows §4. For the module `<m>` you touched, each of these prints nothing:
   - `find src/features/modules -type d -name components | grep -v home/components` (known §10 debt aside);
   - `find src/features/modules/<m> -maxdepth 1 -type f \( -name "*.tsx" -o -name "*.css" \)` (no UI at the module
@@ -423,3 +435,124 @@ Kept, because they were right:
 - explicit write picks;
 - the fixtures inside `test-support`;
 - the full check runs.
+
+## 12. What was corrected on 2026-11-10 (Proposal, Ethics and Due Diligence sync, `4542021`), and why
+
+The owner brought these onto the framework after the rebase. Do not reintroduce them. Each has a rule (§4, §5) and a
+§9 command.
+
+- **`api/proposals/approved-aoi/` beside `actions/`.** Moved into `actions/[action]` as the `approved-aois` and
+  `approved-aoi-source` reads. Why: §4, one dispatcher per module; the §9 API-folder command prints it.
+- **`server/modules/proposals/staff-entry.ts` added flat.** Moved to `record/staff-entry.ts`, the first file of the
+  §10 server move. Why: a new tab file goes in `record/`, even while older files wait for their move.
+- **The create route left at `proposals/new/[type]` while its page was rewritten.** Moved to `(list)/new/[type]`
+  (same URL). Why: §4; the module was worked on, so its §10 move was due.
+- **The Ethics attachments and panel hosts written inside the shared `attachments.ts` and `panels.ts`, and
+  `bundle !== "ethics"` in the shared gates.** Moved to `ethicsAttachmentHost` / `ethicsPanelHost` in
+  `ethics/record.ts`; the confidential choice is the host's `confidential: false`. Why: §4 host rule.
+- **Budget Add Cost buttons shown although their RB rows are `N`, and rendered disabled without rights or on a
+  non-current version.** The RB gate is back and an unusable action is not rendered. Why: §5, fail-closed RB and
+  hide-not-disable.
+- **A Budget row menu with Delete and Clone permanently disabled.** Removed until they are built. Why: §5.
+- **About 18 controls without ids** in the staff entry page and the approved-AOI dialog. Ids added.
+
+Kept, because they were right: the change records with legacy sources, the shared `Summary` for creation, the
+type-level roles read with no record id (legacy `proposals-info-start-page`), Ethics and Due Diligence on
+`RecordFrame` and the shared History host, the latest-wins AOI picker, fixtures inside `test-support`.
+
+Still to bring onto the framework in the staff entry page (`record/budget/staff-entry.tsx`): labels from the RB
+(`proposal` bundle keys in legacy `proposals-budget-staff-page.html`: `labels.full-name`, `labels.employee-number`,
+`header-labels.personal-details`, `button-labels.get-cost-lines`, `table-headers.staff-*`, …); read-only values as
+`ReadonlyField`; dates through `functions.format`; the staff search on `Select`; the Add New Cost links gated as on the
+Budget page; the First Increment list from its source, not a range invented to 2035. Also: the create form's
+Create returns with no message while the dynamic form is not ready (`!formReady`); show the skeleton or a message
+instead (it makes `zz-proposal-create` fail when the dev server is slow).
+
+## 13. What was corrected on 2026-11-11 (Proposal pricing, Ethics and Due Diligence parity, `e9c1550`), and why
+
+The owner brought these onto the framework after the rebase. Do not reintroduce them. Each has a rule (§3–§5) and a §9
+command.
+
+- **New flat server files** (`ethics/{approval,auto-submit,finalize,print,status,versions,references}.ts`,
+  `due-diligence/{approval,finalize,print,submit,references,versions}.ts`, `proposals/{in-kind,research-partner-costs}.ts`)
+  and edits to the flat `proposals/staff-entry.ts` that §12 had already moved. All moved to `record/<file>.ts`, and the
+  staff-entry edits ported onto `record/staff-entry.ts`. Why: §4; the §9 flat-server command prints them.
+- **Oracle functions duplicated or re-added beside the shared ones:** `oracle/api/ethics.ts`, `oracle/api/due-diligence.ts`,
+  `proposals.linkedApplications`, `proposals.finalizablePages` / `lockStatus` / `setLock`, `proposals.contactDetails`,
+  `contracts.linkedToProposal`, `awards.dueDiligence`, `dynamicForm.costForms`, `costItemsForCategory`,
+  `savePricingFunder`. Replaced by `applications.*` (list, setup, versions, linked, unlinkReference), `locks.*`,
+  `people.contact`, `contracts.list({ reference })`, `dynamicForm.forms({ slot })`, `proposals.costItems({ category })`
+  and `proposals.savePricingLines({ funderId })`. Why: one function per operation (§5); search `src/server/oracle/api`
+  for the operation name first. `tests/unit/oracle-catalogue.test.ts` now fails on a duplicate.
+- **Module rules inside shared hosts:** the Ethics and Due Diligence comments/audit and attachment resolvers written in
+  `panels.ts` and `attachments.ts`, and `bundle !== "ethics" && bundle !== "due_diligence"` in the confidential gate.
+  Moved to `ethicsPanelHost` / `ethicsAttachmentHost` (Ethics `record.ts`, now with the selected participant) and
+  `dueDiligencePanelHost` / `dueDiligenceAttachmentHost` (DD `record.ts`); the gate is the host's `confidential: false`.
+  Why: §4 host rule.
+- **One module's UI imported by two others:** `due-diligence/parent-actions.tsx` (used by Awards and Proposals) at the
+  module root, with literal labels and toasts, inputs without ids and "Loading…" text. Now
+  `src/features/record/linked/parent-due-diligence.tsx` (`ParentDueDiligence`), texts from the parent's bundle
+  (`parentDueDiligenceTexts`), `InsideField`, `ListSkeleton`, `State`, ids from the page (`award-record-dd-*`,
+  `proposal-<id>-dd-*`). Why: §3/§4 shared pieces, ids, RB labels.
+- **Copy-paste pairs:** Ethics and DD `print.tsx` and `reference-link.tsx`. Now the shared `RecordPrint`
+  (`features/record/shell`, on `ActionMenu`) and `ReferenceLink` (`features/record/linked`, legacy `reference-link-to`,
+  `reference-type`, `reference-id` keys). Why: two modules needing the same thing make one shared piece.
+- **Browser calls outside `@/lib/api` endpoints:** `post(...)` and `download(...)` with hand-built paths in the
+  Ethics/DD record shells and prints. Now `ethics.finalize` / `autoSubmit` / `print` and the DD equivalents; errors go
+  through `useActionFailure`, not an inline `<p role="alert">`.
+- **Native `<select>` and `window.confirm`** on the Responses tabs; a hand-written unsaved-changes listener. Now `Select`,
+  `useConfirm` and the shared `useLeaveGuard`.
+- **Literal labels** (Print, Finalize, Edit setup, Submit for Approval, Version, Edit/Cancel/Save response, Unlink,
+  "Please select a participant…") now come from the shell models with legacy keys and literal fallbacks.
+- **`Intl.NumberFormat` in `pricing-tree.tsx`.** Now `functions.format.numberDisplay(n, format, true)`.
+- **Pricing Reset and Global Funder Values disabled for missing rights.** Now hidden (`canReset`, `canEditGlobal`).
+- **Parent authorisation inside the DD New route page.** Now `dueDiligenceCreateParent` in `actions.ts`; the page only
+  renders.
+- **A second `canDeleteEthicsRow` beside `@/shared/ethics/listing` `canDeleteEthics`.** Removed (its missing-codes case
+  is in `ethics-delete-rule.test.ts`).
+- **About 25 controls without ids** (pricing dialogs and tree, staff-entry links, linked-application links, participant
+  links, panel links). Ids added.
+
+Kept, because they were right: the change records, legacy sources cited, the explicit LINK payload that keeps existing
+references, the server re-reading every parent before a link, the participant-scoped hosts, fixtures in
+`test-support`, the failure-mode unit tests.
+
+Still to bring onto the framework (Easwar, next change in the module):
+
+- **Proposals Pricing** (`pricing-display.tsx`, `pricing-tree.tsx`, `pricing-global-dialog.tsx`): every literal label
+  ("Save", "Cancel", "Reset to default", "Funder Percentage Indexed", "Pricing view", …) from the `proposal` bundle keys
+  in legacy `proposals-pricing-start-page.html`, with fallbacks.
+- **Proposals staff entry** (`record/budget/staff-entry.tsx`): the §12 list still applies (labels, `ReadonlyField`,
+  `Select`, "Loading…" on Get Cost Lines, First Increment source).
+- **Ethics/DD record pages** (`(record)/[id]/page.tsx`): about 200 lines of tab selection and reads in the route; move
+  the per-tab reads into `record/<tab>.ts` and render one component per tab (§4: a page reads its data and renders one
+  component), ideally `(record)/[id]/[tab]/page.tsx` like Awards.
+- **DD and Ethics Responses:** legacy has no Version control on this page; confirm where VBCS shows response versions
+  before keeping it.
+
+Found by the live re-run of the award Due Diligence Create on 2026-11-11 (award 1190 → DD_403), with the legacy source
+for each. Fix in this order:
+
+1. **Admin answer on create fails live** ("Application saved. The response still needs to be saved."; `POST
+   /api/dynamic-form` 403). `authorizeDueDiligenceForm` in edit mode reads the record with `RESPONDENT_ACCESS`, and DEV's
+   `getDynamicFormsApplicationList` does not list a draft in that view (DD_403 is listed only under `DDA_ACCESS`,
+   although the creator is its participant). Legacy answers on the just-saved setup it reads by id
+   (`duediligence-general-overview-start-page-chains/GeneralOverviewPageTemplateSpPrimaryActionChain.js`, the
+   `submitTrigger` path). Authorise the creator's own draft stakeholder row without requiring the respondent listing,
+   keep every other check, and add the failure case to the fixtures (`transport.ts` must stop listing drafts under
+   `RESPONDENT_ACCESS`, as DEV does).
+2. **Where Save goes after create.** Legacy (same chain, not `forceEdit`): if the creator is a stakeholder, it stays on
+   the new record; otherwise it returns to the Due Diligence list (`/shell/due-diligence/duediligence-start`).
+   `new-due-diligence.tsx` always opens `?access=DDA_ACCESS`; follow legacy.
+3. **`READONLY_ACCESS` view.** The award and proposal linked lists (`getProposalGetApplicationList`) return
+   `access_type: READONLY_ACCESS` for a record the viewer only reads through its parent. Legacy opens it on
+   `duediligence-responses`, read-only, with Participants, Supervisor and Referenced by beside it (621: DD_402 from award
+   1190). Build it on `RecordFrame`, then add the value to `accessType` in `due-diligence/record.ts`; the award tab's
+   card links appear for it by themselves (they link only to views in `accessType`).
+4. **Proposal Due Diligence / Ethics cards** (`proposals/record/linked-applications.tsx`): legacy opens a card from its
+   title and from a View button gated on `button-labels.dd-list-view-record`, in the record's own access view, like the
+   award tab (`dueDiligenceView` in `awards/record/due-diligence.ts`). Ours links the number to `/due-diligence/<id>`
+   with no access view.
+5. **Ethics/DD setup parsing.** A setup without a supervisor has a non-numeric reviewer id; `z.coerce.number().int()`
+   threw and took the whole record page down (DD_402 and DD_403 on DEV). Now `.nullable().catch(null)` in both
+   `record.ts` files. Parse optional display fields so that one odd value cannot fail the record.

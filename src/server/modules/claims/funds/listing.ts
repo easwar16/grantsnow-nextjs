@@ -8,12 +8,12 @@ import {
 } from "@/server/platform/configuration/resources";
 import { AppError } from "@/lib/errors";
 import { serverFunctions } from "@/server/functions";
-import { type FundFilters } from "@/features/modules/claims/funds/schema";
+import { type FundFilters } from "@/features/modules/claims/funds/listing/schema";
 import type {
   FundListView,
   FundPage,
   FundTextKey,
-} from "@/features/modules/claims/funds/types";
+} from "@/features/modules/claims/funds/listing/types";
 import { fiscalYears } from "@/shared/claims/fiscal";
 import { constants } from "@/lib/constants";
 

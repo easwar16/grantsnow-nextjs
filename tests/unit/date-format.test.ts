@@ -62,3 +62,10 @@ it("shows an instant in the viewer's zone, a wall-clock time as written, as lega
   expect(functions.format.stampDisplay("2026-10-13")).toBe("13-Oct-2026");
   expect(functions.format.stampDisplay(null)).toBe("—");
 });
+
+it("cuts a currency display to whole pounds without rounding (legacy 9568)", () => {
+  expect(functions.format.wholeAmount("£1,234,567.89")).toBe("£1,234,567");
+  expect(functions.format.wholeAmount("£ -12.5 ")).toBe("£ -12 ");
+  expect(functions.format.wholeAmount("£1,234")).toBe("£1,234");
+  expect(functions.format.wholeAmount("1,234.56 GBP")).toBe("1,234.56 GBP");
+});

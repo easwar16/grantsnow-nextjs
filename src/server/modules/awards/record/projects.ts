@@ -25,6 +25,7 @@ import {
   type AwardRecordContext,
 } from "../record";
 import { serverFunctions } from "@/server/functions";
+import { functions } from "@/lib/functions";
 
 const BUNDLE = "award";
 const PAGE = pageOf("projects");
@@ -166,7 +167,7 @@ async function projectChoices() {
       ),
     ),
     orNull(
-      awards.fundingSections().then(
+      lookups.fundingSections().then(
         (raw) =>
           items(
             z.object({
@@ -258,6 +259,10 @@ export async function projectsView(id: string): Promise<ProjectsView> {
     projects: projectsOf(context.raw),
     team: teamOf(context.raw),
     costs: costTree(costLinesOf(context.raw)),
+    costsOpenDepth: functions.tables.expandDepth(
+      globals.find((g) => g.var_key === "AWARD_PROJECT_COSTS_EXPAND_LEVEL")
+        ?.var_value,
+    ),
     gates: {
       edit: gates.edit,
       remove: gates.remove,

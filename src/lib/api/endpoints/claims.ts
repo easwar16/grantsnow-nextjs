@@ -2,7 +2,7 @@
 import {
   serializeUnitFilters,
   type UnitFilters,
-} from "@/features/modules/claims/units/schema";
+} from "@/features/modules/claims/units/listing/schema";
 import type {
   FundTypeOption,
   GrantChoices,
@@ -11,19 +11,36 @@ import type {
   UnitDialogSetup,
   UnitPage,
   UnitRow,
-} from "@/features/modules/claims/units/types";
+} from "@/features/modules/claims/units/listing/types";
 import {
   serializeFundFilters,
   type FundFilters,
-} from "@/features/modules/claims/funds/schema";
+} from "@/features/modules/claims/funds/listing/schema";
 import type {
   FundPage,
   FundRow,
   FundSummary,
-} from "@/features/modules/claims/funds/types";
+} from "@/features/modules/claims/funds/listing/types";
 import type {
   UnitActivityTable,
   UnitActivityView,
+  UnitActivityEditView,
+  UnitActivityDraft,
+  UnitAmendmentsView,
+  UnitAmendmentLinesView,
+  UnitIncludeView,
+  UnitEquipmentView,
+  UnitRosterView,
+  UnitRequirementsView,
+  UnitClaimsView,
+  UnitClaimsSummary,
+  UnitClaimList,
+  UnitClaimView,
+  UnitClaimEditView,
+  UnitAdjustmentsView,
+  UnitAdjustmentView,
+  UnitRejectedLines,
+  ClaimLineDraft,
   UnitClaimableView,
   UnitActivitiesView,
   UnitActivityList,
@@ -32,8 +49,9 @@ import type {
   UnitGoalDialog,
   UnitGoalsView,
   UnitSignOffList,
-} from "@/features/modules/claims/units/types";
+} from "@/features/modules/claims/units/listing/types";
 import type { SignOffView } from "@/shared/claims/unit-record";
+import type { WorkflowView } from "@/features/record/approvals/types";
 import { del, download, get, post } from "../http";
 import { endpoint, pagedEndpoint } from "../hooks";
 import { constants } from "@/lib/constants";
@@ -87,10 +105,10 @@ export const fundChoices = endpoint<"orgs", UnitChoiceList>(
 );
 /** A fund's account summary (legacy reads it again for another fund). */
 export const fundSummary = (id: string, year: string) =>
-  get<FundSummary>("/claims/funds/summary", { id, year });
+  get<FundSummary>("/claims/funds/actions/summary", { id, year });
 /** WRITES (generate-report): the Unit Inquiry listing's report for the filters (legacy `report-vbcs-app-unit-listing`). */
 export const exportUnits = (f: UnitFilters) =>
-  download("/claims/units/export", undefined, {
+  download("/claims/units/actions/export", undefined, {
     filters: Object.fromEntries(
       new URLSearchParams(serializeUnitFilters({ ...f, offset: 0 })),
     ),
@@ -101,7 +119,7 @@ export const exportUnit = (row: {
   unitId: string;
   fiscalYear: string;
 }) =>
-  download("/claims/units/export", undefined, {
+  download("/claims/units/actions/export", undefined, {
     appId: row.id,
     unitId: row.unitId,
     fiscalYear: row.fiscalYear,
@@ -258,6 +276,47 @@ export const activityList = endpoint<
     ...(p.status ? { status: p.status } : {}),
   },
 }));
+/** The Add / Edit Activity form's setup: a fund's codes and lists, and the version as a draft when editing. */
+export const activityEdit = endpoint<
+  {
+    appId: string;
+    fund: string;
+    activity: string;
+    version: string;
+    /** Amendment mode: the reason, and the amendment once it exists. */
+    amendment?: string;
+    reason?: string;
+  },
+  UnitActivityEditView
+>((p) => ({
+  path: `/claims/units/${p.appId}/activities`,
+  query: {
+    view: "edit",
+    fund: p.fund,
+    ...(p.activity ? { activity: p.activity, version: p.version } : {}),
+    ...(p.amendment ? { amendment: p.amendment } : {}),
+    ...(p.reason ? { reason: p.reason } : {}),
+  },
+}));
+/** WRITES: creates or updates an activity version (legacy saveActivity). */
+export const saveActivity = (
+  appId: string,
+  body: {
+    fund: string;
+    activity?: string;
+    version?: string;
+    amendment?: string;
+    reason?: string;
+    draft: UnitActivityDraft;
+  },
+) =>
+  post<{
+    activity: string;
+    version: string;
+    amendment: string;
+    info: { summary: string; message: string } | null;
+    warning: { summary: string; message: string } | null;
+  }>(`/claims/units/${appId}/activities`, body, { action: "save" });
 /** WRITES: removes one activity version; `warning` when the unapplied balance turned negative. */
 export const deleteActivity = (
   appId: string,
@@ -298,3 +357,319 @@ export const setActiveVersion = (
   appId: string,
   body: { fund: string; activity: string; version: string },
 ) => post<{ activated: true }>(`/claims/units/${appId}/activities`, body);
+
+/** The Amendments sub-tab: the fund's amendments (optionally one status), reasons and gates. */
+export const amendments = endpoint<
+  { appId: string; fund: string; status: string },
+  UnitAmendmentsView
+>((p) => ({
+  path: `/claims/units/${p.appId}/activities`,
+  query: { view: "amendments", fund: p.fund, status: p.status },
+}));
+/** One amendment's lines. */
+export const amendmentLines = endpoint<
+  { appId: string; fund: string; amendment: string },
+  UnitAmendmentLinesView
+>((p) => ({
+  path: `/claims/units/${p.appId}/activities`,
+  query: { view: "amendment-lines", fund: p.fund, amendment: p.amendment },
+}));
+/** Include Activity's picker. */
+export const includeCandidates = endpoint<
+  { appId: string; fund: string; amendment: string },
+  UnitIncludeView
+>((p) => ({
+  path: `/claims/units/${p.appId}/activities`,
+  query: {
+    view: "include",
+    fund: p.fund,
+    ...(p.amendment ? { amendment: p.amendment } : {}),
+  },
+}));
+/** WRITES: includes activities in the amendment (the first include mints it). */
+export const includeActivities = (
+  appId: string,
+  body: {
+    fund: string;
+    amendment?: string;
+    reason: string;
+    activities: { activity: string; version: string }[];
+  },
+) =>
+  post<{ amendment: string }>(`/claims/units/${appId}/activities`, body, {
+    action: "include",
+  });
+/** WRITES: saves the amendment's reason. */
+export const saveAmendment = (
+  appId: string,
+  body: { fund: string; amendment: string; reason: string },
+) =>
+  post<{ saved: true }>(`/claims/units/${appId}/activities`, body, {
+    action: "save-amendment",
+  });
+/** WRITES: removes an amendment, or one of its lines with `version`. */
+export const deleteAmendment = (
+  appId: string,
+  body: { fund: string; amendment: string; version?: string },
+) =>
+  del<{ deleted: true }>(
+    `/claims/units/${appId}/activities`,
+    { action: "amendment" },
+    body,
+  );
+
+const unitTab = (appId: string) => `/claims/units/${appId}/activities`;
+/** Furniture & Equipment, read when its panel opens. */
+export const equipment = endpoint<{ appId: string }, UnitEquipmentView>(
+  (p) => ({ path: unitTab(p.appId), query: { view: "equipment" } }),
+);
+/** WRITES: adds or saves an item. */
+export const saveEquipment = (
+  appId: string,
+  body: {
+    equipment?: string;
+    description: string;
+    date: string;
+    price: string;
+    serial: string;
+    location: string;
+    condition: string;
+    comments: string;
+    funds: string[];
+  },
+) => post<{ saved: true }>(unitTab(appId), body, { action: "save-equipment" });
+/** WRITES: removes an item. */
+export const deleteEquipment = (appId: string, equipment: string) =>
+  del<{ deleted: true }>(
+    unitTab(appId),
+    { action: "equipment" },
+    { equipment },
+  );
+/** The Roster, read when its panel opens. */
+export const roster = endpoint<{ appId: string }, UnitRosterView>((p) => ({
+  path: unitTab(p.appId),
+  query: { view: "roster" },
+}));
+/** A fund's job titles for the roster dialog. */
+export const rosterTitles = endpoint<
+  { appId: string; fund: string },
+  { value: string; label: string }[]
+>((p) => ({
+  path: unitTab(p.appId),
+  query: { view: "roster-titles", fund: p.fund },
+}));
+/** WRITES: adds or saves a roster member. */
+export const saveRoster = (
+  appId: string,
+  body: {
+    roster?: string;
+    firstName: string;
+    lastName: string;
+    primaryFund: string;
+    primaryTitle: string;
+    secondaryFund: string;
+    secondaryTitle: string;
+    teacher: boolean;
+    parapro: boolean;
+    localFund: boolean;
+  },
+) => post<{ saved: true }>(unitTab(appId), body, { action: "save-roster" });
+/** WRITES: removes a roster member. */
+export const deleteRoster = (appId: string, roster: string) =>
+  del<{ deleted: true }>(unitTab(appId), { action: "roster" }, { roster });
+/** The fund's surveys (Fund Summary requirements). */
+export const requirements = endpoint<
+  { appId: string; fund: string },
+  UnitRequirementsView
+>((p) => ({
+  path: unitTab(p.appId),
+  query: { view: "requirements", fund: p.fund },
+}));
+/** WRITES: saves or creates a survey's requirement before its answers; its id. */
+export const saveRequirement = (
+  appId: string,
+  body: { fund: string; form: string; name: string; email: string },
+) =>
+  post<{ requirementId: string }>(unitTab(appId), body, {
+    action: "save-requirement",
+  });
+/** A fund's (`fund-<id>`) or amendment's (`amendment-<fund>-<id>`) approval route: the shared workflow's `api`. */
+export const workflowApi = (appId: string, doc: string) =>
+  `/claims/units/${appId}/workflow/${doc}`;
+/** The route's stages and gates for the shared workflow. */
+export const workflow = endpoint<{ appId: string; doc: string }, WorkflowView>(
+  (p) => ({ path: workflowApi(p.appId, p.doc) }),
+);
+const unitClaims = (appId: string) => `/claims/units/${appId}/claims`;
+/** The Claims tab's header and fund bar for a fund (the first fund when `fund` is empty). */
+export const claimsTab = endpoint<
+  { appId: string; fund: string },
+  UnitClaimsView
+>((p) => ({
+  path: unitClaims(p.appId),
+  query: p.fund ? { fund: p.fund } : {},
+}));
+/** The Claims Summary table. */
+export const claimsSummaryTable = endpoint<
+  { appId: string; fund: string },
+  UnitClaimsSummary
+>((p) => ({
+  path: unitClaims(p.appId),
+  query: { view: "summary", fund: p.fund },
+}));
+/** The Claims List, by status. */
+export const claimsList = endpoint<
+  { appId: string; fund: string; status: string },
+  UnitClaimList
+>((p) => ({
+  path: unitClaims(p.appId),
+  query: { view: "list", fund: p.fund, status: p.status },
+}));
+/** WRITES: copies an approved or paid claim. */
+export const cloneClaim = (appId: string, fund: string, claim: string) =>
+  post<{ cloned: true }>(
+    unitClaims(appId),
+    { fund, claim },
+    { action: "clone" },
+  );
+/** WRITES: removes a claim. */
+export const deleteClaim = (appId: string, fund: string, claim: string) =>
+  del<{ deleted: true }>(unitClaims(appId), {}, { fund, claim });
+/** WRITES (generate-report): the Claims List as a file. */
+export const exportClaims = (appId: string, fund: string, status: string) =>
+  download(unitClaims(appId), { action: "export" }, { fund, status });
+/** One claim in the side panel: its header, lines and their gates. */
+export const claimDetail = endpoint<
+  { appId: string; fund: string; claim: string },
+  UnitClaimView
+>((p) => ({
+  path: unitClaims(p.appId),
+  query: { view: "claim", fund: p.fund, claim: p.claim },
+}));
+/** WRITES (generate-report): one claim's lines as a file. */
+export const exportClaimLines = (
+  appId: string,
+  fund: string,
+  claim: string,
+  status: string,
+) =>
+  download(
+    unitClaims(appId),
+    { action: "export", claim: "1" },
+    { fund, claim, status },
+  );
+/** The claim editor's setup: the picker's tree, periods, cohorts and the claim's lines as drafts (`claim` empty: new). */
+export const claimEdit = endpoint<
+  { appId: string; fund: string; claim: string },
+  UnitClaimEditView
+>((p) => ({
+  path: unitClaims(p.appId),
+  query: { view: "edit", fund: p.fund, claim: p.claim },
+}));
+/** The fund's rejected lines for the claim's period. */
+export const rejectedClaimLines = (
+  appId: string,
+  fund: string,
+  period: string,
+  claim: string,
+) =>
+  get<UnitRejectedLines>(unitClaims(appId), {
+    view: "rejected",
+    fund,
+    period,
+    claim,
+  });
+/** WRITES: Save Claim (the period and every line); the claim's id (minted for a new one). */
+export const saveClaim = (
+  appId: string,
+  body: {
+    fund: string;
+    claim: string;
+    period: string;
+    lines: Omit<
+      ClaimLineDraft,
+      | "key"
+      | "lineNo"
+      | "positionTypeLabel"
+      | "functionLabel"
+      | "objectLabel"
+      | "fte"
+      | "categoryLabel"
+      | "rosterLabel"
+      | "status"
+      | "statusLabel"
+      | "adjust"
+      | "comments"
+      | "editable"
+    >[];
+  },
+) => post<{ claim: string }>(unitClaims(appId), body, { action: "save" });
+/** A claim's adjustments. */
+export const claimAdjustments = endpoint<
+  { appId: string; fund: string; claim: string },
+  UnitAdjustmentsView
+>((p) => ({
+  path: unitClaims(p.appId),
+  query: { view: "adjustments", fund: p.fund, claim: p.claim },
+}));
+/** One adjustment, or a new one (`adjustment` empty). */
+export const claimAdjustment = endpoint<
+  { appId: string; fund: string; claim: string; adjustment: string },
+  UnitAdjustmentView
+>((p) => ({
+  path: unitClaims(p.appId),
+  query: {
+    view: "adjustment",
+    fund: p.fund,
+    claim: p.claim,
+    adjustment: p.adjustment,
+  },
+}));
+/** WRITES: an adjustment's Save; its id (minted for a new one). */
+export const saveAdjustment = (
+  appId: string,
+  body: {
+    fund: string;
+    claim: string;
+    adjustment: string;
+    refundCheck: string;
+    comment: string;
+    lines: {
+      adjLineId: string;
+      claimLineId: string;
+      type: string;
+      toFunction: string;
+      toObject: string;
+      justification: string;
+      refund: string;
+    }[];
+  },
+) =>
+  post<{ adjustment: string }>(unitClaims(appId), body, {
+    action: "save-adjustment",
+  });
+/** WRITES: removes an adjustment. */
+export const deleteAdjustment = (
+  appId: string,
+  fund: string,
+  claim: string,
+  adjustment: string,
+) =>
+  del<{ deleted: true }>(
+    unitClaims(appId),
+    { action: "adjustment" },
+    { fund, claim, adjustment },
+  );
+/** WRITES (generate-report): an adjustment's lines as a file. */
+export const exportAdjustmentLines = (
+  appId: string,
+  fund: string,
+  claim: string,
+  adjustment: string,
+  status: string,
+) =>
+  download(
+    unitClaims(appId),
+    { action: "export", claim: "1", adjustment: "1" },
+    { fund, claim, adjustment, status },
+  );

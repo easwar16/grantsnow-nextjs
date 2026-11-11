@@ -1,6 +1,7 @@
 /*
  * GN-Angular configure-drawer.css (the original .vb-configure-drawer): the nav drawer's brand colour and pattern,
- * inverted text. Legacy and GN-Angular size it in rem (owner, 2026-10-27).
+ * inverted text. Legacy and GN-Angular size it in rem (owner, 2026-10-27); its width follows the content between
+ * the two limits and the whole drawer scrolls (measured on 621, 2026-11-05).
  */
 .drawer {
   position: fixed;
@@ -8,10 +9,10 @@
   z-index: 50;
   display: flex;
   flex-direction: column;
-  width: 26rem;
   min-width: min(20rem, 100vw);
   max-width: min(31.25rem, 100vw);
   height: 100dvh;
+  overflow-y: auto;
   color: var(--gn-on-brand);
   background: var(--gn-brand) url("/brand/sidebar-background-pattern.png")
     repeat;
@@ -37,20 +38,21 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 3.6px 12px 0;
+  padding: 12px 12px 0;
 }
 .head h2 {
   margin: 0;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 800;
 }
 .heading {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin: 0 0 12px;
-  font-size: 10.8px;
-  font-weight: 600;
+  margin: 0 0 9px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
 }
 .iconButton,
 .textButton,
@@ -64,7 +66,7 @@
 }
 .iconButton {
   display: flex;
-  padding: 8px;
+  padding: 6px;
   border-radius: 4px;
 }
 .iconButton:hover,
@@ -73,11 +75,9 @@
 }
 .body {
   display: flex;
-  flex: 1;
   flex-direction: column;
-  gap: 20px;
-  padding: 20px;
-  overflow-y: auto;
+  gap: 30px;
+  padding: 24px 15px 15px;
 }
 .body p {
   margin: 0;
@@ -131,21 +131,25 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 0 8px;
 }
+/* Three buttons a row, the last row's stretched to fill it (621: 3 × 109, then 2 × 169). */
 .swatches {
   display: flex;
+  flex: 1 1 100%;
   flex-wrap: wrap;
-  gap: 4.8px;
+  gap: 4px 8px;
 }
 .theme {
   display: flex;
+  flex: 1 0 calc(33.333% - 6px);
+  justify-content: center;
   gap: 0;
   height: 87px;
   padding: 0 5px;
   align-items: center;
   border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 6px;
+  border-radius: 3px;
 }
 .theme:hover {
   background: rgba(255, 255, 255, 0.12);
@@ -166,13 +170,15 @@
   padding: 0 10px;
   border-radius: 4px;
 }
-/* Infolets: label then switch, children indented as the original's 10x start padding. */
+/* Infolets: label then switch (621, 2026-11-05): a group row 16 + 27px; a child 30 + 8 + 27px and 12px below,
+   children 30px in, two columns 18px apart. */
 .switch {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
-  padding: 6px 0;
+  gap: 1px;
+  padding: 0;
+  font-weight: 600;
   /* The global label rule is muted grey; on the brand drawer the text must stay on-brand white. */
   color: var(--gn-on-brand);
   cursor: pointer;
@@ -180,60 +186,63 @@
 .children {
   display: flex;
   flex-wrap: wrap;
-  column-gap: 16px;
-  padding: 0 0 8px 40px;
+  column-gap: 18px;
+  padding: 0 0 0 30px;
 }
 .children .switch {
-  flex: 1 1 calc(50% - 8px);
+  flex: 1 1 calc(50% - 9px);
+  gap: 8px;
+  padding-bottom: 12px;
 }
 .switch input[type="checkbox"][role="switch"] {
   appearance: none;
   position: relative;
   flex: none;
-  width: 36px;
-  height: 20px;
-  margin: 0;
+  width: 27px;
+  height: 15px;
+  margin: 6px 0;
   padding: 0;
   border: 0;
   background: rgba(255, 255, 255, 0.3);
-  border-radius: 10px;
+  border-radius: 4.5px;
   cursor: pointer;
   transition: background var(--dur-fast) var(--ease);
 }
 .switch input[type="checkbox"][role="switch"]::after {
   content: "";
   position: absolute;
-  top: 2px;
+  top: 1.5px;
   left: 2px;
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   background: #fff;
-  border-radius: 50%;
+  border-radius: 3px;
   /* The global switch centres its thumb with translateY(-50%); this one is placed by `top`. */
   transform: none;
   transition: left var(--dur-fast) var(--ease);
 }
 .switch input[type="checkbox"][role="switch"]:checked {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgb(143, 188, 143);
 }
 .switch input[type="checkbox"][role="switch"]:checked::after {
-  left: 18px;
-  background: var(--gn-brand);
+  left: 13px;
 }
 .switch input[type="checkbox"][role="switch"]:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 2px;
   box-shadow: none;
 }
-/* The sticky Save bar of the original, centred. */
+/* The sticky Save bar of the original, centred: right after the content, held at the bottom while it scrolls. */
 .foot {
+  position: sticky;
+  bottom: 0;
   display: flex;
   justify-content: center;
   padding: 10px;
 }
 .primary {
-  height: 32px;
-  padding: 0 18px;
+  height: 28px;
+  padding: 0 13px;
   font-weight: 600;
   color: var(--gn-brand);
   background: #fff;

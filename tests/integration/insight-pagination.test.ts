@@ -1,5 +1,8 @@
 import { beforeEach, expect, it, vi } from "vitest";
-const state = vi.hoisted(() => ({ oracle: vi.fn() }));
+const state = vi.hoisted(() => ({
+  oracle: vi.fn(),
+  labels: [] as Record<string, string>[],
+}));
 vi.mock("@/server/identity/session/service", () => ({
   authenticate: async () => ({
     session: { token: "isolated-token" },
@@ -15,6 +18,7 @@ const queueRow = (i: number) => ({
   deadline_id: i + 1,
 });
 beforeEach(() => {
+  state.labels = [];
   state.oracle.mockReset();
   state.oracle.mockImplementation(
     async (op: string, _headers: unknown, query?: URLSearchParams) => {
@@ -26,6 +30,7 @@ beforeEach(() => {
       if (op === "getPre_awardGetLkpOrgUnitType")
         return { items: [{ org_unit_id: 202, org_unit_name: "Fixture" }] };
       if (op === "getPre_award_costingGetGlobalVar") return { items: [] };
+      if (op === "getSharedLabels") return state.labels;
       const offset = Number(query?.get("p_offset") || 0);
       if (op === "getProposalProp_appr_deadline")
         // Live envelopes misreport hasMore; the page size is what counts.
@@ -101,4 +106,38 @@ it("refuses queue offsets beyond the cap or off the page grid before Oracle call
       loadWidget("pApproachingDeadlines", { organization: "202", offset }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   expect(calls("getProposalProp_appr_deadline")).toEqual([]);
+});
+it("9555: the year chart names its series by status code, from the RB or Submitted/Awarded", async () => {
+  const rows = [
+    {
+      label: "2025",
+      code: "Submitted to Sponsor",
+      status_code: "SUB",
+      value: 2,
+    },
+    { label: "2025", code: "Closed Funded", status_code: "AWARD", value: 1 },
+    { label: "2025", code: "Other", status_code: "X", value: 1 },
+  ];
+  const base = state.oracle.getMockImplementation()!;
+  state.oracle.mockImplementation(async (op: string, ...rest: unknown[]) =>
+    op === "getProposalGetProposalStatistics"
+      ? { items: rows }
+      : base(op, ...(rest as [unknown, URLSearchParams])),
+  );
+  state.labels = [
+    {
+      module_name: "DASHBOARD",
+      label_type: "labels",
+      label_name: "proposals-by-year-awarded",
+      label_value: "Funded",
+      is_visible: "Y",
+      is_mandatory: "N",
+    },
+  ];
+  const data = await loadWidget("pByYearChart", { offset: 0 });
+  expect(data.statistics.map((r) => r.series)).toEqual([
+    "Submitted",
+    "Funded",
+    "Other",
+  ]);
 });

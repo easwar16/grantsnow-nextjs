@@ -97,7 +97,7 @@ export function AttachmentsPanel({ view }: { view: AttachmentsView }) {
       const r = await attachments.deleteDocument(view.query, item.id);
       if (r.ok) {
         setSelectedId(null);
-        toast.show("success", "Record deleted successfully.");
+        toast.show("success", labels.deleteSuccess);
       } else toast.error(r.error);
       refresh();
     }, `delete-${item.id}`);
@@ -220,7 +220,8 @@ export function AttachmentsPanel({ view }: { view: AttachmentsView }) {
       </div>
       {!storage && (
         <p id={`${id}-storage-off`} className={styles.notice} role="status">
-          File storage is not connected here, so documents cannot be opened or changed.
+          File storage is not connected here, so documents cannot be opened or
+          changed.
         </p>
       )}
       {target && (
@@ -361,11 +362,15 @@ function AddDocumentDialog({
   const [confidential, setConfidential] = useState<"Y" | "N">("N");
   const pick = (picked: File | undefined) => {
     if (!picked) return;
-    const issue = fileProblem(
-      { name: picked.name, size: picked.size },
-      view.maxMb,
-      view.accept,
-    );
+    // 9549: the shared panel names the file; other legacy pickers keep the plain text.
+    const issue =
+      picked.size > view.maxMb * 1024 * 1024
+        ? `${picked.name}: file size should be less than ${view.maxMb}MB`
+        : fileProblem(
+            { name: picked.name, size: picked.size },
+            view.maxMb,
+            view.accept,
+          );
     setProblem(issue);
     setFile(issue === null ? picked : null);
   };
@@ -387,7 +392,7 @@ function AddDocumentDialog({
         onUploaded();
         return;
       }
-      toast.show("success", "Attachment uploaded successfully");
+      toast.show("success", labels.uploadSuccess);
       onUploaded();
       onClose();
     });
@@ -688,7 +693,12 @@ function LinksSection({
         <ul id={`${id}-list`} className={styles.linkList}>
           {links.map((link) => (
             <li key={link.id} id={`${id}-${link.id}`} className="enter-rise">
-              <a href={link.href} target="_blank" rel="noopener noreferrer">
+              <a
+                id={`${id}-${link.id}-link`}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 {link.title}
               </a>
               {canEdit && (

@@ -80,3 +80,18 @@ it("shows a tree option's label without its indent in the field (org units by de
     (document.getElementById("org-trigger") as HTMLInputElement).value,
   ).toBe("Grants Now dev");
 });
+
+it("allowCustom: a chosen value outside the options keeps its chip (live oj-combobox-many)", async () => {
+  await render(
+    createElement(MultiSelect, {
+      id: "kw",
+      label: "Keywords",
+      variant: "chips",
+      allowCustom: true,
+      options,
+      value: ["my keyword"],
+      onChange: () => {},
+    }),
+  );
+  expect(document.getElementById("kw")!.textContent).toContain("my keyword");
+});

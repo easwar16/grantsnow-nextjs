@@ -7,7 +7,7 @@ import {
   researchPartnerCostItems,
   removeResearchPartnerCost,
   saveResearchPartnerCost,
-} from "@/server/modules/proposals/research-partner-costs";
+} from "@/server/modules/proposals/record/research-partner-costs";
 
 type Context = { params: Promise<{ type: string; id: string }> };
 const error = (cause: unknown) =>

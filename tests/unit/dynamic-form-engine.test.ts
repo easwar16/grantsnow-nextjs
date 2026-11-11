@@ -332,6 +332,17 @@ describe("toPayload", () => {
       },
     ]);
   });
+  it("names the first form when nothing is left to answer (legacy preparePayload; ORDS breaks on an empty list)", () => {
+    const empty: DynForm[] = [{ formId: 103, sections: [] }];
+    const src = {
+      enabled: () => true,
+      valueOf: () => null,
+      rowsOf: () => [],
+      resolution: resolve(empty, () => null),
+    };
+    expect(toPayload(empty, src)).toEqual([{ form_id: "103", sections: [] }]);
+    expect(toPayload([], src)).toEqual([]);
+  });
 });
 describe("layout and loading helpers", () => {
   it("spans columns from twelfths", () => {

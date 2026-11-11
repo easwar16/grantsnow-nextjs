@@ -2,14 +2,17 @@ import "server-only";
 import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
 import type { HistoryHost } from "@/server/record/objects/history";
+import type { PanelHost, PanelMode } from "@/server/record/objects/panels";
+import type { AttachmentHost } from "@/server/record/attachments/attachments";
 import { linkedObjects } from "@/server/record/linked/linked";
 import { AppError } from "@/lib/errors";
-import { dueDiligence, people, roles } from "@/server/oracle/api";
+import { applications, people, roles } from "@/server/oracle/api";
 import { dueDiligenceListView } from "./listing";
 import { organizations } from "@/server/platform/configuration/service";
 import { serverFunctions } from "@/server/functions";
 
-const accessType = z.enum([
+/** The access views the Due Diligence record opens in (legacy also has READONLY_ACCESS, not built yet). */
+export const accessType = z.enum([
   "DDA_ACCESS",
   "RESPONDENT_ACCESS",
   "APPROVER_ACCESS",
@@ -61,7 +64,10 @@ const setup = z.object({
       }),
     )
     .default([]),
-  reviewer: z.array(z.object({ id: z.coerce.number().int() })).nullish(),
+  // A setup with no supervisor carries a non-numeric reviewer id (shown as "NA"); that is no supervisor, not a failure.
+  reviewer: z
+    .array(z.object({ id: z.coerce.number().int().nullable().catch(null) }))
+    .nullish(),
 });
 
 /** The same access-specific list as VBCS scopes this setup before the record read. */
@@ -85,7 +91,8 @@ export async function dueDiligenceRecord(id: string, requestedAccess?: string) {
   const scoped = await Promise.all(
     available.map(async (tab) => {
       const body = listEnvelope.parse(
-        await dueDiligence.applications({
+        await applications.list({
+          objectType: "DUE_DILIGENCE",
           accessType: tab.value,
           query: {
             p_where_clause: `("setup_flow_id"=${recordId})`,
@@ -107,10 +114,10 @@ export async function dueDiligenceRecord(id: string, requestedAccess?: string) {
       403,
     );
   const [rawSetup, rawRoles, peopleRows, supervisorRows] = await Promise.all([
-    dueDiligence.setup({ id: String(recordId) }),
+    applications.setup({ id: String(recordId) }),
     roles.record({ objectType: "DUE_DILIGENCE", objectId: String(recordId) }),
     people.all(),
-    dueDiligence.supervisors(),
+    applications.approvers(),
   ]);
   const data = setup.parse(rawSetup);
   const rights = roleEnvelope.parse(rawRoles).items;
@@ -173,7 +180,10 @@ export async function dueDiligenceRecord(id: string, requestedAccess?: string) {
     })),
     respondents: data.stakeholders.map((person) => ({
       id: String(person.id),
-      personId: person.p_id === null || person.p_id === undefined ? "" : String(person.p_id),
+      personId:
+        person.p_id === null || person.p_id === undefined
+          ? ""
+          : String(person.p_id),
       statusCode: person.resp_status_code ?? "",
       name:
         peopleRows.find((candidate) => candidate.person_id === person.p_id)
@@ -189,7 +199,11 @@ export async function dueDiligenceRecord(id: string, requestedAccess?: string) {
     rights: Object.fromEntries(
       rights.map((row) => [
         row.page_name,
-        { read: row.read_access === "Y", edit: row.edit_access === "Y", pageId: row.page_id ?? null },
+        {
+          read: row.read_access === "Y",
+          edit: row.edit_access === "Y",
+          pageId: row.page_id ?? null,
+        },
       ]),
     ),
   };
@@ -243,11 +257,142 @@ export async function dueDiligenceHistoryHost(
   };
 }
 
-/** Listing Linked action: scope the DD record before reading shared object links. */
+const PANEL_PAGES = [
+  "duediligence-general-overview",
+  "duediligence-responses",
+  "duediligence-attachments",
+  "duediligence-approvals",
+  "duediligence-history",
+];
+/** Comments and audit: the overview is the setup's, every other page the selected (or own) stakeholder's. */
+export async function dueDiligencePanelHost(
+  id: string,
+  page: string,
+  mode: PanelMode,
+  sec?: string,
+): Promise<PanelHost> {
+  if (!PANEL_PAGES.includes(page))
+    throw new AppError("BAD_REQUEST", "Invalid Due Diligence page.", 400);
+  const [record, { session, user }] = await Promise.all([
+    dueDiligenceRecord(id),
+    authenticate(),
+  ]);
+  const right = record.rights[page];
+  if (
+    !record.tabs.includes(page as (typeof record.tabs)[number]) ||
+    !right?.read ||
+    (mode === "write" && !right.edit)
+  )
+    throw new AppError(
+      "FORBIDDEN",
+      "Due Diligence panel access has not been granted.",
+      403,
+    );
+  const own = (row: { personId: string }) =>
+    record.access !== "RESPONDENT_ACCESS" ||
+    row.personId === String(user.personId);
+  const respondent = sec
+    ? record.respondents.find((row) => row.id === sec)
+    : record.respondents.find(own);
+  if (
+    page !== "duediligence-general-overview" &&
+    (!respondent || !own(respondent))
+  )
+    throw new AppError(
+      "FORBIDDEN",
+      "Due Diligence participant access has not been granted.",
+      403,
+    );
+  return {
+    objectType: "DUE_DILIGENCE",
+    objectId: page === "duediligence-general-overview" ? id : respondent!.id,
+    page,
+    bundle: "due_diligence",
+    token: session.token,
+    user,
+    canComment: right.edit,
+  };
+}
+
+/** Documents: the reviewer's own files (an administrator sees the first stakeholder's), never confidential. */
+export async function dueDiligenceAttachmentHost(
+  id: string,
+  mode: "read" | "view" | "edit",
+): Promise<AttachmentHost> {
+  const [record, { session, user }] = await Promise.all([
+    dueDiligenceRecord(id),
+    authenticate(),
+  ]);
+  if (!record.tabs.includes("duediligence-attachments"))
+    throw new AppError(
+      "FORBIDDEN",
+      "Due Diligence Attachments access has not been granted.",
+      403,
+    );
+  const person =
+    record.access === "DDA_ACCESS"
+      ? record.respondents[0]
+      : record.respondents.find((item) => item.personId === user.personId);
+  if (!person)
+    throw new AppError(
+      "FORBIDDEN",
+      "Due Diligence stakeholder access has not been granted.",
+      403,
+    );
+  const canEdit =
+    record.rights["duediligence-attachments"]?.edit === true &&
+    person.statusCode === "DRFT";
+  if (mode === "edit" && !canEdit)
+    throw new AppError(
+      "FORBIDDEN",
+      "Due Diligence Attachments cannot be changed.",
+      403,
+    );
+  return {
+    objectType: "DUE_DILIGENCE",
+    objectId: person.id,
+    objectNumber: person.id,
+    pathSegment: "DUE_DILIGENCE",
+    bundle: "due_diligence",
+    token: session.token,
+    user,
+    canEdit,
+    confidential: false,
+  };
+}
+
+/**
+ * Listing Link action (legacy reads the links straight away): the record must be in the user's listing view, as the row
+ * the action sits on; the full record scope (roles, setup, people) is not needed to read links.
+ */
 export async function dueDiligenceLinks(id: string, access?: string) {
-  const record = await dueDiligenceRecord(id, access);
+  const recordId = z.coerce.number().int().positive().parse(id);
+  const view = await dueDiligenceListView();
+  const requested = accessType.safeParse(access);
+  if (
+    !requested.success ||
+    !view.tabs.some((tab) => tab.value === requested.data)
+  )
+    throw new AppError("FORBIDDEN", "Invalid Due Diligence access view.", 403);
+  const listed = listEnvelope.parse(
+    await applications.list({
+      objectType: "DUE_DILIGENCE",
+      accessType: requested.data,
+      query: {
+        p_where_clause: `("setup_flow_id"=${recordId})`,
+        p_offset: "0",
+        p_limit: "1",
+      },
+    }),
+  );
+  if (!listed.items.some((item) => item.setup_flow_id === recordId))
+    throw new AppError(
+      "FORBIDDEN",
+      "Due Diligence application not found or access denied.",
+      403,
+    );
   return linkedObjects(
-    { module: "DUE_DILIGENCE", id: Number(record.id) },
+    { module: "DUE_DILIGENCE", id: recordId },
     {
       bundle: "due_diligence",
       key: "no-linked-data-found",

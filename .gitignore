@@ -16,3 +16,6 @@ coverage/
 .catalogue-preview/
 .claude
 .codex
+
+# graphify knowledge graph output (local)
+graphify-out/

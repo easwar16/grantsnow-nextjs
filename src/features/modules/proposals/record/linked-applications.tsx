@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { DueDiligenceParentActions } from "@/features/modules/due-diligence/parent-actions";
+import { ParentDueDiligence } from "@/features/record/linked/parent-due-diligence";
+import { parentDueDiligenceTexts } from "@/server/record/linked/linked";
 import { serverFunctions } from "@/server/functions";
 import { functions } from "@/lib/functions";
 import { pageIdentity } from "@/server/identity/auth/page";
@@ -49,7 +50,9 @@ export async function LinkedApplications({
   const [rb, format] = await Promise.all([resources(), displayFormat()]);
   const prefix = isEthics ? "ethics" : "dd";
   const createUrl = new URLSearchParams({
-    parentType: "PROPOSAL", parentId: id, proposalType: type,
+    parentType: "PROPOSAL",
+    parentId: id,
+    proposalType: type,
   });
   const fields = [
     ["created-by", "Created by", "createdBy"],
@@ -67,20 +70,38 @@ export async function LinkedApplications({
       className={styles.linkedApplications}
     >
       {isEthics && applications.canCreate && (
-        <Link id={`proposal-${id}-ethics-create`}
+        <Link
+          id={`proposal-${id}-ethics-create`}
           className={`gn-btn gn-btn--primary ${styles.linkedEthicsCreate}`}
-          href={`/ethics/new?${createUrl}`}>
+          href={`/ethics/new?${createUrl}`}
+        >
           <Icon name="inbox-add" size={16} />
-          {serverFunctions.resources.label(rb, applications.bundle,
-            "button-labels", "new-ethics-application", "New Ethics")}
+          {serverFunctions.resources.label(
+            rb,
+            applications.bundle,
+            "button-labels",
+            "new-ethics-application",
+            "New Ethics",
+          )}
         </Link>
       )}
-      {!isEthics && <DueDiligenceParentActions
-        parent={{ type: "PROPOSAL", id, proposalType: type }}
-        canCreate={applications.canCreate}
-        canLink={applications.canLink}
-        createLabel={serverFunctions.resources.label(rb, applications.bundle,
-          "button-labels", "new-duediligence-application", "New DueDiligence Application")} />}
+      {!isEthics && (
+        <ParentDueDiligence
+          id={`proposal-${id}`}
+          parent={{ type: "PROPOSAL", id, proposalType: type }}
+          canCreate={applications.canCreate}
+          canLink={applications.canLink}
+          texts={parentDueDiligenceTexts(rb, applications.bundle, {
+            create: serverFunctions.resources.label(
+              rb,
+              applications.bundle,
+              "button-labels",
+              "new-duediligence-application",
+              "New DueDiligence Application",
+            ),
+          })}
+        />
+      )}
       {applications.rows.length === 0 ? (
         <p className={styles.linkedEthicsEmpty}>No data to display.</p>
       ) : (
@@ -91,12 +112,35 @@ export async function LinkedApplications({
             key={row.id}
           >
             <div className={styles.linkedApplicationHeading}>
-              {isEthics ? <Link href={`/ethics/${row.id}${row.accessType ? `?access=${row.accessType}` : ""}`}>{row.reference}</Link> : (
-                <Link href={`/due-diligence/${row.id}`}>{row.reference}</Link>
+              {isEthics ? (
+                <Link
+                  id={`proposal-${id}-${segment}-${row.id}-open`}
+                  href={`/ethics/${row.id}${row.accessType ? `?access=${row.accessType}` : ""}`}
+                >
+                  {row.reference}
+                </Link>
+              ) : (
+                <Link
+                  id={`proposal-${id}-${segment}-${row.id}-open`}
+                  href={`/due-diligence/${row.id}`}
+                >
+                  {row.reference}
+                </Link>
               )}
               {row.status && <span>{row.status}</span>}
             </div>
-            <h2>{isEthics ? <Link href={`/ethics/${row.id}${row.accessType ? `?access=${row.accessType}` : ""}`}>{row.title}</Link> : row.title}</h2>
+            <h2>
+              {isEthics ? (
+                <Link
+                  id={`proposal-${id}-${segment}-${row.id}-title`}
+                  href={`/ethics/${row.id}${row.accessType ? `?access=${row.accessType}` : ""}`}
+                >
+                  {row.title}
+                </Link>
+              ) : (
+                row.title
+              )}
+            </h2>
             <dl>
               {fields.map(([key, fallback, field]) =>
                 row[field] &&

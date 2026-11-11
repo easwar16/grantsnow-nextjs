@@ -3,7 +3,8 @@
   min-height: 0;
   height: 100%;
   overflow: auto;
-  padding: 12px 14px 28px;
+  /* 621: the list runs to its own scrollbar at the page's right edge (no right gutter). */
+  padding: 12px 0 28px 14px;
   background: var(--bg);
 }
 .toolbar {
@@ -53,23 +54,6 @@
 .filters :global(.gn-control) {
   width: 100%;
 }
-.radios {
-  display: grid;
-  gap: 7px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-.radios legend {
-  margin-bottom: 7px;
-  color: var(--muted);
-  font-weight: 600;
-}
-.radios label {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
 .sort {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 26px;
@@ -102,47 +86,6 @@
 .cards {
   display: grid;
   gap: 14px;
-}
-.card {
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
-  padding: 8px 8px 10px;
-}
-.cardHead {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  flex-wrap: wrap;
-}
-.cardHead a {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--text);
-  font-size: 18px;
-  font-weight: 700;
-  text-decoration: none;
-}
-.cardHead a:hover {
-  text-decoration: underline;
-}
-.response {
-  display: inline-flex;
-  border-radius: 99px;
-  background: #008b8b;
-  color: #fff;
-  padding: 2px 10px;
-  line-height: 18px;
-  font-size: 12px;
-}
-.card h2 {
-  font-size: 17px;
-  margin: 7px 0 18px;
-}
-.card :global(.record-metadata) {
-  font-size: 13px;
-  line-height: 1.16;
 }
 .more {
   margin-top: 12px;

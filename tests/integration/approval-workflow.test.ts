@@ -68,7 +68,10 @@ import { GET, POST } from "@/app/api/opportunities/eoi/[id]/workflow/route";
 // The client also passes its optional signal / query / path arguments; assertions compare the leading ones.
 const lead = (mock: { mock: { calls: unknown[][] } }, n = 3) =>
   mock.mock.calls.map((c) => c.slice(0, n));
-import { workflowView } from "@/server/record/approvals/workflow";
+import {
+  workflowView,
+  workflowWrite,
+} from "@/server/record/approvals/workflow";
 import { eoiApprovalHost } from "@/server/modules/opportunities/eoi-record/workflow";
 
 const origin = "http://127.0.0.1:3000";
@@ -407,6 +410,44 @@ describe("actor and payloads", () => {
         approval_stage_id: "501",
       },
     ]);
+  });
+});
+
+describe("a host whose Submit generates the route (Claims)", () => {
+  const claimsLike = async () => ({
+    ...(await eoiApprovalHost("12")),
+    submitGenerates: true,
+    keys: { submit: "submit-approval", withdraw: "withdraw-approval" },
+  });
+  it("offers Submit with no route yet, and no separate Generate", async () => {
+    grantAll();
+    route = [];
+    expect((await workflowView(await claimsLike())).gates).toMatchObject({
+      generate: false,
+      submit: true,
+    });
+  });
+  it("generates, then submits; a refused submit is withdrawn again (legacy submitApprovalAction)", async () => {
+    grantAll();
+    route = [];
+    await workflowWrite(await claimsLike(), { op: "act", action: "Submitted" });
+    expect(state.oracleWrite.mock.calls.map((c) => c[0])).toEqual([
+      "getApproval_setupGenerate_stages",
+      "postApproval_setupPost_approval",
+    ]);
+    state.oracleWrite.mockReset();
+    state.oracleWrite
+      .mockResolvedValueOnce({})
+      .mockRejectedValueOnce(new AppError("BUSINESS", "FPA032", 502))
+      .mockResolvedValueOnce({});
+    await expect(
+      workflowWrite(await claimsLike(), { op: "act", action: "Submitted" }),
+    ).rejects.toMatchObject({ message: "FPA032" });
+    expect(
+      state.oracleWrite.mock.calls.map(
+        (c) => (c[2] as { action_done?: string } | undefined)?.action_done,
+      ),
+    ).toEqual([undefined, "Submitted", "Withdrawn"]);
   });
 });
 

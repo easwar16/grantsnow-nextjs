@@ -50,7 +50,8 @@ it("reads the bell's list once, and again after marking read", async () => {
   await notifications.latest();
   await notifications.latest();
   expect(state.read).toHaveBeenCalledTimes(1);
-  expect(state.read.mock.calls[0][2]).toBeUndefined();
+  // No paging parameters on the wire, as legacy.
+  expect(String(state.read.mock.calls[0][2] ?? "")).toBe("");
   await notifications.markRead({ ids: [7, 9] });
   expect(state.write.mock.calls[0].slice(0, 3)).toEqual([
     "postNotificationsNotifications",
@@ -67,7 +68,7 @@ it("reads the bell's list once, and again after marking read", async () => {
 });
 it("pages the Notifications tab and never answers it from the bell's held list", async () => {
   await notifications.latest();
-  await notifications.page({ offset: 50, limit: 25 });
+  await notifications.latest({ offset: 50, limit: 25 }, { fresh: true });
   expect(state.read).toHaveBeenCalledTimes(2);
   expect(query(state.read.mock.calls[1])).toEqual({
     p_offset: "50",

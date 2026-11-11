@@ -26,7 +26,17 @@ export async function saveChartPreference(
       ])
     : AbortSignal.timeout(serverConstants.timeouts.save);
   try {
-    await home.saveChartDimensions({ body }, { signal: deadline });
+    // Legacy's exact body: the spans as text (its inputs are oj-input-text).
+    await home.saveChartDimensions(
+      {
+        body: {
+          colspan: String(body.colspan),
+          rowspan: String(body.rowspan),
+          infolet_id: body.infolet_id,
+        },
+      },
+      { signal: deadline },
+    );
   } catch (e) {
     if (!(e instanceof AppError)) throw e;
     if (e.code === "UPSTREAM")

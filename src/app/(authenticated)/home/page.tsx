@@ -267,6 +267,11 @@ export default async function Home({
             "button-labels.dynamic-charts",
             "Dynamic Charts",
           ),
+          featured: dashboardLabel(
+            rb,
+            "header-labels.featured-opportunities",
+            "Featured Opportunities",
+          ),
         }}
         attention={panels[0]}
         insights={

@@ -17,10 +17,13 @@ import type {
   UnitHeading,
   UnitSummaryField,
   UnitSummaryView,
-} from "../types";
+} from "../listing/types";
 import { AllocationsDialog } from "./allocations-dialog";
 import { useRecordAudit } from "@/features/record/shell/record-frame";
 import { SignOffLists } from "./sign-off-lists";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Collapsible } from "@/components/ui/collapsible";
+import { claimStatusTone } from "@/shared/claims/status";
 import styles from "./summary.module.css";
 
 type Format = FormatSettings & { currency?: string };
@@ -30,6 +33,24 @@ const day = (v: string, format?: Format) =>
 type MoneyKey =
   "original" | "day20" | "other" | "budget" | "unapplied" | "pending";
 
+/** Legacy's three allocation lines under Total Budget (label, then the amount). */
+function BudgetParts({
+  headers,
+  parts,
+  money,
+}: {
+  headers: Record<"original" | "day20" | "other", string>;
+  parts: Record<"original" | "day20" | "other", number | null>;
+  money: (v: number | null) => string;
+}) {
+  return (
+    <span className={styles.cellLines}>
+      {(["original", "day20", "other"] as const).map((k) => (
+        <span key={k}>{`${headers[k]} ${money(parts[k])}`}</span>
+      ))}
+    </span>
+  );
+}
 /** A panel's heading with its RB More Info (legacy `h1` + rb-help-btn). */
 function Heading({ id, heading }: { id: string; heading: UnitHeading }) {
   return (
@@ -272,28 +293,71 @@ export function UnitSummaryTab({
               cell: (r) => r.fund,
               footer: <strong>{fs.totalLabel}</strong>,
             },
-            { id: "status", header: fs.headers.status, cell: (r) => r.status },
-            moneyColumn("original"),
-            moneyColumn("day20"),
-            moneyColumn("other"),
-            moneyColumn("budget"),
+            ...fs.grantColumns.map((g) => ({
+              id: g.key,
+              header: g.header,
+              cell: (r: UnitFundSummaryRow) => r.grant[g.key] ?? "",
+            })),
+            {
+              id: "status",
+              header: fs.headers.status,
+              cell: (r) => {
+                const tone = claimStatusTone(r.status);
+                return tone ? (
+                  <StatusBadge
+                    id={`claims-unit-fund-${r.key}-status`}
+                    dot
+                    tone={tone}
+                  >
+                    {r.status}
+                  </StatusBadge>
+                ) : (
+                  r.status
+                );
+              },
+            },
+            // MR 15893: Original / 20th day / Other as small lines under Total Budget, row and footer.
+            {
+              id: "budget",
+              header: fs.headers.budget,
+              cell: (r) => (
+                <>
+                  {money(r.budget)}
+                  <BudgetParts headers={fs.headers} parts={r} money={money} />
+                </>
+              ),
+              footer: (
+                <>
+                  <strong>{money(fs.totals.budget)}</strong>
+                  <BudgetParts
+                    headers={fs.headers}
+                    parts={fs.totals}
+                    money={money}
+                  />
+                </>
+              ),
+            },
             moneyColumn("unapplied"),
             moneyColumn("pending"),
+            // MR 15893: the grant period with the amendment and claim dates under it, in one cell.
             {
-              id: "period",
-              header: fs.headers.period,
-              cell: (r) =>
-                r.period ? `${date(r.period[0])} - ${date(r.period[1])}` : "",
-            },
-            {
-              id: "amendment-date",
-              header: fs.headers.amendmentDate,
-              cell: (r) => date(r.amendmentDate),
-            },
-            {
-              id: "claim-date",
-              header: fs.headers.claimDate,
-              cell: (r) => date(r.claimDate),
+              id: "key-dates",
+              header: fs.headers.keyDates,
+              cell: (r) => (
+                <>
+                  {r.period
+                    ? `${date(r.period[0])} - ${date(r.period[1])}`
+                    : ""}
+                  <span className={styles.cellLines}>
+                    {r.amendmentDate && (
+                      <span>{`${fs.headers.amendmentDate} ${date(r.amendmentDate)}`}</span>
+                    )}
+                    {r.claimDate && (
+                      <span>{`${fs.headers.claimDate} ${date(r.claimDate)}`}</span>
+                    )}
+                  </span>
+                </>
+              ),
             },
             // Legacy's grand total (the total budget) sits under Allocations.
             {
@@ -394,19 +458,31 @@ export function UnitSummaryTab({
           format={format}
         />
       </section>
-      <section id="claims-unit-terms" className={styles.panel}>
-        <Heading id="claims-unit-terms" heading={view.terms} />
-        {view.terms.parts.map((p) => (
-          <div key={p.key} id={`claims-unit-terms-${p.key}`}>
-            <h3 className={styles.subheading}>{p.title}</h3>
-            {p.html && (
-              <div
-                className={styles.note}
-                dangerouslySetInnerHTML={{ __html: p.html }}
-              />
-            )}
-          </div>
-        ))}
+      {/* MR 15893: long reference text, collapsed so it does not push the working sections down. */}
+      <section className={styles.panel}>
+        <Collapsible
+          id="claims-unit-terms"
+          defaultOpen={false}
+          headClassName={styles.heading}
+          heading={
+            <>
+              {view.terms.title}
+              <HelpButton id="claims-unit-terms-help" html={view.terms.help} />
+            </>
+          }
+        >
+          {view.terms.parts.map((p) => (
+            <div key={p.key} id={`claims-unit-terms-${p.key}`}>
+              <h3 className={styles.subheading}>{p.title}</h3>
+              {p.html && (
+                <div
+                  className={styles.note}
+                  dangerouslySetInnerHTML={{ __html: p.html }}
+                />
+              )}
+            </div>
+          ))}
+        </Collapsible>
       </section>
     </div>
   );

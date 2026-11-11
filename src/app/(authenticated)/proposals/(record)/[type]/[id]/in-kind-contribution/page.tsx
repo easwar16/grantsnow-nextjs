@@ -1,6 +1,6 @@
 import { pageIdentity } from "@/server/identity/auth/page";
 import { recordIdentity } from "@/features/modules/proposals/record";
-import { proposalInKind } from "@/server/modules/proposals/in-kind";
+import { proposalInKind } from "@/server/modules/proposals/record/in-kind";
 import { resources } from "@/server/platform/configuration/resources";
 import { displayFormat } from "@/server/platform/configuration/formatting";
 import { serverFunctions } from "@/server/functions";

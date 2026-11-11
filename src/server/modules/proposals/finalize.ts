@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
-import { proposals } from "@/server/oracle/api";
+import { locks } from "@/server/oracle/api";
 import { loadAttributes } from "@/server/record/attributes/service";
 import { attributeErrors } from "@/features/record/attributes/model";
 import { proposalPage } from "./record";
@@ -73,13 +73,13 @@ export async function setProposalSummaryFinalized(
     }
   }
   const current = status.parse(
-    await proposals.lockStatus({
-      type: record.type,
-      id: record.id,
+    await locks.lockStatus({
+      module: record.type,
+      recordId: record.id,
       pageId: state.pageId,
     }),
   );
-  await proposals.setLock({
+  await locks.setLock({
     body: {
       proposal_id: Number(record.id),
       created_by: context.session.token,

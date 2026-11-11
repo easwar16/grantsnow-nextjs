@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { read, write } from "../client";
 import { figureOperations } from "./home";
+import { recordStateReads } from "./record-state";
 
 /**
  * A record's shared panels besides comments: its audit trail, status history and delegations. Record data, so every
@@ -100,11 +101,7 @@ export const addStatus = write<{ body: unknown }>({
   body: (p) => p.body,
   // A status change can change the record roles held for this session.
   // A new status changes the record's roles and status, and Home's queues and counts.
-  invalidates: [
-    "getSecurityUser_roles",
-    "getDynamicFormsGetRequestDetails",
-    ...figureOperations,
-  ],
+  invalidates: [...recordStateReads, ...figureOperations],
 });
 
 const id = z.union([z.number(), z.string().regex(/^\d+$/)]).transform(String);

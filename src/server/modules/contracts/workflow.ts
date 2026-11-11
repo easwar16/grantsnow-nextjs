@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { eoi } from "@/server/oracle/api";
+import { locks } from "@/server/oracle/api";
 import { orNull } from "@/server/record/shared";
 import type { ApprovalHost } from "@/server/record/approvals/workflow";
 import { approvalActor } from "@/server/record/approvals/actor";
@@ -22,7 +22,7 @@ export async function contractApprovalHost(id: string): Promise<ApprovalHost> {
   const [lock, username] = await Promise.all([
     page
       ? orNull(
-          eoi
+          locks
             .lockStatus({
               recordId: context.id,
               pageId: page.id,

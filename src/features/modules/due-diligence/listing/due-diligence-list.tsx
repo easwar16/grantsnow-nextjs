@@ -13,7 +13,8 @@ import { TabBar } from "@/components/ui/tab-bar";
 import { State } from "@/components/feedback/state";
 import { ActionDialog, useConfirm } from "@/components/dialog/action-dialog";
 import { ListSkeleton } from "@/components/feedback/skeleton";
-import { LinkedObjectsDialog } from "@/features/record/linked/linked-dialog";
+import { LinkedObjectsLoader } from "@/features/record/linked/linked-dialog";
+import { CloneApplicationDialog } from "@/components/dialog/clone-application-dialog";
 import {
   parseDueDiligenceFilters,
   serializeDueDiligenceFilters,
@@ -24,6 +25,10 @@ import type {
   DueDiligenceListView,
   DueDiligenceRow,
 } from "@/server/modules/due-diligence/listing";
+import { ApplicationCard } from "@/components/ui/application-card";
+import { useFormat } from "@/components/layout/shell-context";
+import { functions } from "@/lib/functions";
+import type { FormatSettings } from "@/lib/format";
 import styles from "./due-diligence-list.module.css";
 
 const EMPTY: SelectOption[] = [];
@@ -54,7 +59,6 @@ export function DueDiligenceList({
   const [restoreError, setRestoreError] = useState("");
   const [linkedId, setLinkedId] = useState<string | null>(null);
   const [cloneId, setCloneId] = useState<string | null>(null);
-  const [cloneSelected, setCloneSelected] = useState<string[] | null>(null);
   const [cloneBusy, setCloneBusy] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
@@ -73,6 +77,7 @@ export function DueDiligenceList({
       : view.tabs[0].value;
   const active = { ...filters, access, offset: 0 };
   const [draft, setDraft] = useState(active);
+  const format = useFormat();
   const statuses = useApi(dueDiligence.choices, { kind: "status", access });
   const creator = useApi(dueDiligence.choices, { kind: "createdBy", access });
   const types = useApi(dueDiligence.choices, { kind: "type", access });
@@ -95,31 +100,37 @@ export function DueDiligenceList({
   };
   const list = usePagedApi(dueDiligence.list, active);
   const deleted = useApi(dueDiligence.deleted, recycleOpen ? undefined : null);
-  const linked = useApi(dueDiligence.links, linkedId ? { id: linkedId, access } : null);
+  const linked = useApi(
+    dueDiligence.links,
+    linkedId ? { id: linkedId, access } : null,
+  );
   const cloneOptions = useApi(
     dueDiligence.cloneOptions,
     cloneId ? { id: cloneId, access } : null,
   );
-  const selectedObjects = cloneSelected ??
-    cloneOptions.data?.filter((option) => option.selected).map((option) => option.value) ?? [];
-  async function clone() {
+  async function clone(objects: string[]) {
     if (!cloneId || cloneBusy) return;
     setCloneBusy(true);
     setActionError("");
-    const result = await dueDiligence.clone(cloneId, access, selectedObjects);
+    const result = await dueDiligence.clone(cloneId, access, objects);
     setCloneBusy(false);
     if (!result.ok) return setActionError(result.error.message);
     setCloneId(null);
-    setCloneSelected(null);
     list.reload();
   }
   async function remove(id: string, number: string) {
-    if (deleteBusy || !(await deleteConfirm.ask({
-      title: "Delete Due Diligence application",
-      message: `Delete Draft ${number}?`,
-      confirm: "Delete",
-      cancel: "Cancel",
-    }))) return;
+    if (
+      deleteBusy ||
+      !(await deleteConfirm.ask({
+        title: view.labels.deleteTitle,
+        message: view.labels.deleteMessage,
+        detail: number,
+        confirm: view.labels.deleteConfirm,
+        cancel: view.labels.deleteCancel,
+        danger: true,
+      }))
+    )
+      return;
     setDeleteBusy(id);
     setActionError("");
     const result = await dueDiligence.remove(id, access);
@@ -299,21 +310,23 @@ export function DueDiligenceList({
     >
       <div className={styles.content}>
         <div className={styles.toolbar}>
-          <button
-            id="due-diligence-toggle-filters"
-            type="button"
-            aria-label={open ? "Close filters" : "Open filters"}
-            aria-expanded={open}
-            aria-controls="due-diligence-filters"
-            onClick={() => setOpen(!open)}
-          >
-            <Icon name="collapse-menu" size={18} />
-          </button>
-          {view.actions.create && (
-            <Link id="due-diligence-create" href="/due-diligence/new">
-              <Icon name="file-stage" size={17} /> {view.labels.create}
-            </Link>
-          )}
+          <div className={styles.toolbarStart}>
+            <button
+              id="due-diligence-toggle-filters"
+              type="button"
+              aria-label={open ? "Close filters" : "Open filters"}
+              aria-expanded={open}
+              aria-controls="due-diligence-filters"
+              onClick={() => setOpen(!open)}
+            >
+              <Icon name="collapse-menu" size={18} />
+            </button>
+            {view.actions.create && (
+              <Link id="due-diligence-create" href="/due-diligence/new">
+                <Icon name="file-stage" size={17} /> {view.labels.create}
+              </Link>
+            )}
+          </div>
           {view.actions.recycle && (
             <button
               id="due-diligence-recycle"
@@ -327,7 +340,7 @@ export function DueDiligenceList({
         <TabBar
           id="due-diligence"
           label="Due Diligence access"
-          align="start"
+          align="stretch"
           tabs={view.tabs.map((tab) => ({
             key: tab.value.toLowerCase(),
             name: tab.label,
@@ -372,11 +385,11 @@ export function DueDiligenceList({
               onLinks={() => setLinkedId(row.id)}
               onClone={() => {
                 setActionError("");
-                setCloneSelected(null);
                 setCloneId(row.id);
               }}
               onDelete={() => remove(row.id, row.number)}
               busy={deleteBusy !== null}
+              format={format}
             />
           ))}
         </div>
@@ -397,73 +410,35 @@ export function DueDiligenceList({
         )}
       </div>
       {actionError && !cloneId && (
-        <p id="due-diligence-action-error" role="alert">{actionError}</p>
+        <p id="due-diligence-action-error" role="alert">
+          {actionError}
+        </p>
       )}
       {cloneId && (
-        <ActionDialog
+        <CloneApplicationDialog
           id="due-diligence-clone-dialog"
-          title="Clone Due Diligence application"
-          busy={cloneBusy}
-          onClose={() => {
-            setCloneId(null);
-            setCloneSelected(null);
+          texts={{
+            title: view.labels.cloneTitle,
+            entire: view.labels.cloneEntire,
+            clone: view.labels.cloneSubmit,
+            cancel: view.labels.cancel,
           }}
-        >
-          {cloneOptions.loading && <ListSkeleton />}
-          {cloneOptions.error && (
-            <State title="Clone options unavailable" message={cloneOptions.error.message} code={cloneOptions.error.code} retry={cloneOptions.retry} />
-          )}
-          {cloneOptions.data?.map((option) => (
-            <label key={option.value} htmlFor={`due-diligence-clone-${option.value}`}>
-              <input
-                id={`due-diligence-clone-${option.value}`}
-                type="checkbox"
-                checked={selectedObjects.includes(option.value)}
-                disabled={cloneBusy}
-                onChange={(event) => setCloneSelected(
-                  event.target.checked
-                    ? [...selectedObjects, option.value]
-                    : selectedObjects.filter((value) => value !== option.value),
-                )}
-              />
-              {option.label}
-            </label>
-          ))}
-          {actionError && <p id="due-diligence-clone-error" role="alert">{actionError}</p>}
-          {cloneOptions.data && (
-            <button
-              id="due-diligence-clone-submit"
-              type="button"
-              disabled={cloneBusy}
-              onClick={clone}
-            >
-              Clone
-            </button>
-          )}
-        </ActionDialog>
+          options={cloneOptions.data}
+          error={cloneOptions.error}
+          retry={cloneOptions.retry}
+          busy={cloneBusy}
+          failure={actionError || undefined}
+          onClone={clone}
+          onClose={() => setCloneId(null)}
+        />
       )}
       {linkedId && (
-        linked.data ? (
-          <LinkedObjectsDialog
-            id="due-diligence-linked-dialog"
-            linked={linked.data}
-            onClose={() => setLinkedId(null)}
-          >
-            {!linked.data.groups.length && <p>{linked.data.texts.none}</p>}
-          </LinkedObjectsDialog>
-        ) : (
-          <ActionDialog
-            id="due-diligence-linked-dialog"
-            title="Linked Objects"
-            onClose={() => setLinkedId(null)}
-          >
-            {linked.error ? (
-              <State title="Linked records unavailable" message={linked.error.message} code={linked.error.code} retry={linked.retry} />
-            ) : (
-              <ListSkeleton />
-            )}
-          </ActionDialog>
-        )
+        <LinkedObjectsLoader
+          id="due-diligence-linked-dialog"
+          title={view.labels.linkTitle}
+          linked={linked}
+          onClose={() => setLinkedId(null)}
+        />
       )}
       {recycleOpen && (
         <ActionDialog
@@ -531,6 +506,7 @@ function DueDiligenceCard({
   onClone,
   onDelete,
   busy,
+  format,
 }: {
   row: DueDiligenceRow;
   view: DueDiligenceListView;
@@ -539,98 +515,95 @@ function DueDiligenceCard({
   onClone: () => void;
   onDelete: () => void;
   busy: boolean;
+  format: FormatSettings | undefined;
 }) {
+  const shown = (key: keyof DueDiligenceListView["fields"], value: string) =>
+    view.fields[key] && value ? value : undefined;
+  const date = (value: string) =>
+    value ? functions.format.dateDisplay(value, format) : "";
   return (
-    <article id={`due-diligence-application-${row.id}`} className={styles.card}>
-      <div className={styles.cardHead}>
-        <Link
-          id={`due-diligence-open-${row.id}`}
-          href={`/due-diligence/${row.id}?access=${access}`}
-        >
-          <Icon name="composite-form" size={16} /> {row.number}
-        </Link>
-        {view.actions.link && (
-          <button
-            id={`due-diligence-links-${row.id}`}
-            type="button"
-            aria-label={`Linked records for ${row.number}`}
-            onClick={onLinks}
-          >
-            <Icon name="link" size={16} />
-          </button>
-        )}
-        {view.actions.clone && ["DDA_ACCESS", "RESPONDENT_ACCESS"].includes(access) && (
-          <button
-            id={`due-diligence-clone-${row.id}`}
-            type="button"
-            aria-label={`Clone ${row.number}`}
-            onClick={onClone}
-          >
-            <Icon name="copy" size={16} />
-          </button>
-        )}
-        {view.actions.clone && view.actions.delete && row.statusCode === "DRFT" &&
-          ["DDA_ACCESS", "RESPONDENT_ACCESS"].includes(access) && (
-          <button
-            id={`due-diligence-delete-${row.id}`}
-            type="button"
-            aria-label={`Delete ${row.number}`}
-            disabled={busy}
-            onClick={onDelete}
-          >
-            <Icon name="trash" size={16} />
-          </button>
-        )}
-        {row.status && <span className={styles.badge}>{row.status}</span>}
-        {row.risk && <span className={styles.risk}>{row.risk}</span>}
-        {access === "DDA_ACCESS" && row.responseStatus && (
-          <span className={styles.badge}>{row.responseStatus}</span>
-        )}
-      </div>
-      <h2>{row.title || row.number}</h2>
-      <div className={styles.meta}>
-        {view.fields.createdBy && row.createdBy && (
-          <Meta label={view.texts.createdBy} value={row.createdBy} />
-        )}
-        {view.fields.updatedBy && row.updatedBy && (
-          <Meta label={view.texts.updatedBy} value={row.updatedBy} />
-        )}
-        {view.fields.created && row.created && (
-          <Meta label={view.texts.created} value={row.created} />
-        )}
-        {view.fields.updated && row.updated && (
-          <Meta label={view.texts.updated} value={row.updated} />
-        )}
-        {view.fields.deadline && row.deadline && (
-          <Meta label={view.texts.deadline} value={row.deadline} />
-        )}
-        {view.fields.expiry && row.expiry && (
-          <Meta label={view.texts.expiry} value={row.expiry} />
-        )}
-        {view.fields.dueDiligenceType && row.dueDiligenceType && (
-          <Meta
-            label={view.texts.dueDiligenceType}
-            value={row.dueDiligenceType}
-          />
-        )}
-        {view.fields.formType && row.formType && (
-          <Meta label={view.texts.formType} value={row.formType} />
-        )}
-        {view.fields.org && row.org && (
-          <Meta label={view.texts.org} value={row.org} />
-        )}
-        {view.fields.reviewer && row.reviewer && (
-          <Meta label={view.texts.reviewer} value={row.reviewer} />
-        )}
-      </div>
-    </article>
-  );
-}
-function Meta({ label, value }: { label: string; value: string }) {
-  return (
-    <div className={styles.metaItem}>
-      <strong>{label}</strong>
-      <span>{value}</span>
-    </div>
+    <ApplicationCard
+      id={`due-diligence-application-${row.id}`}
+      openId={`due-diligence-open-${row.id}`}
+      metadataId={`due-diligence-metadata-${row.id}`}
+      href={`/due-diligence/${row.id}?access=${access}`}
+      icon="composite-form"
+      number={row.number}
+      title={row.title}
+      status={{ label: row.status, code: row.statusCode }}
+      risk={{ label: row.risk, code: row.riskCode }}
+      fields={[
+        {
+          label: view.texts.createdBy,
+          value: shown("createdBy", row.createdBy),
+        },
+        { label: view.texts.reviewer, value: shown("reviewer", row.reviewer) },
+        {
+          label: view.texts.updatedBy,
+          value: shown("updatedBy", row.updatedBy),
+        },
+        {
+          label: view.texts.created,
+          value: shown("created", date(row.created)),
+        },
+        {
+          label: view.texts.updated,
+          value: shown("updated", date(row.updated)),
+        },
+        {
+          label: view.texts.deadline,
+          value: shown("deadline", date(row.deadline)),
+        },
+        { label: view.texts.expiry, value: shown("expiry", date(row.expiry)) },
+        {
+          label: view.texts.dueDiligenceType,
+          value: shown("dueDiligenceType", row.dueDiligenceType),
+        },
+        { label: view.texts.formType, value: shown("formType", row.formType) },
+        { label: view.texts.org, value: shown("org", row.org) },
+      ]}
+      actions={
+        <>
+          {view.actions.link && (
+            <button
+              id={`due-diligence-links-${row.id}`}
+              type="button"
+              aria-label={`${view.labels.link} ${row.number}`}
+              title={view.labels.link}
+              onClick={onLinks}
+            >
+              <Icon name="link" size={16} />
+            </button>
+          )}
+          {view.actions.clone &&
+            ["DDA_ACCESS", "RESPONDENT_ACCESS"].includes(access) && (
+              <button
+                id={`due-diligence-clone-${row.id}`}
+                type="button"
+                aria-label={`${view.labels.clone} ${row.number}`}
+                title={view.labels.clone}
+                onClick={onClone}
+              >
+                <Icon name="copy" size={16} />
+              </button>
+            )}
+          {view.actions.clone &&
+            view.actions.delete &&
+            row.statusCode === "DRFT" &&
+            ["DDA_ACCESS", "RESPONDENT_ACCESS"].includes(access) && (
+              <button
+                id={`due-diligence-delete-${row.id}`}
+                type="button"
+                aria-label={`${view.labels.delete} ${row.number}`}
+                title={view.labels.delete}
+                disabled={busy}
+                onClick={onDelete}
+              >
+                <Icon name="trash" size={16} />
+              </button>
+            )}
+        </>
+      }
+    />
   );
 }

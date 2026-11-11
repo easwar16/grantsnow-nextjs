@@ -9,7 +9,7 @@ import { Select } from "@/components/ui/select";
 import { proposals } from "@/lib/api";
 import { functions } from "@/lib/functions";
 import type { FormattingConfiguration } from "@/server/platform/configuration/formatting";
-import type { proposalInKind } from "@/server/modules/proposals/in-kind";
+import type { proposalInKind } from "@/server/modules/proposals/record/in-kind";
 import styles from "./proposal-record.module.css";
 
 type Data = Awaited<ReturnType<typeof proposalInKind>>;

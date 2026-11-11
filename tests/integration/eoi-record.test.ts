@@ -29,6 +29,7 @@ import {
   eoiRecordIdentity,
   eoiRecordRead,
   eoiSetFinalized,
+  saveEoiApplication,
   newApplicationContext,
 } from "@/server/modules/opportunities/record";
 import { AppError } from "@/lib/errors";
@@ -304,6 +305,57 @@ describe("locks and finalize", () => {
     ).rejects.toThrow();
   });
 });
+describe("Save (legacy 9284 upsert)", () => {
+  it("posts the request id, its opportunity and the attributes once the form's edit rules pass", async () => {
+    state.calls.mockImplementation(reads());
+    const id = next();
+    await saveEoiApplication(id, { attributes: { attribute_3: "Red" } });
+    expect(lead(state.writes)).toEqual([
+      [
+        "postDynamicFormsInsertRequest",
+        { token: "isolated-token" },
+        {
+          request_id: Number(id),
+          ref_object_id: 7,
+          ref_object_type: "OPPORTUNITIES",
+          request_type: "OPPORTUNITIES-EOI",
+          attribute_3: "Red",
+        },
+      ],
+    ]);
+  });
+  it("writes nothing for a non-draft, a finalized page, or a key that is not an attribute", async () => {
+    const submitted = (h: Record<string, string>) => ({
+      items: [
+        {
+          request_id: Number(h.request_id),
+          request_number: "EOI_1",
+          request_type: "OPPORTUNITIES-EOI",
+          status_code: "IA",
+          ref_object_id: 7,
+        },
+      ],
+    });
+    state.calls.mockImplementation(
+      reads({ getDynamicFormsGetRequestDetails: submitted }),
+    );
+    await expect(
+      saveEoiApplication(next(), { attributes: {} }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    state.calls.mockImplementation(
+      reads({
+        getProposalGetLockStatus: { status: "LOCK", lock_module_id: 31 },
+      }),
+    );
+    await expect(
+      saveEoiApplication(next(), { attributes: {} }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      saveEoiApplication(next(), { attributes: { request_id: 1 } }),
+    ).rejects.toThrow();
+    expect(state.writes).not.toHaveBeenCalled();
+  });
+});
 describe("new application", () => {
   it("fails closed without apply access, on a closed opportunity, or without the flag", async () => {
     await expect(newApplicationContext("7")).rejects.toMatchObject({
@@ -352,20 +404,29 @@ describe("new application", () => {
     await newApplicationContext("11");
     expect(state.writes).not.toHaveBeenCalled();
     state.writes.mockResolvedValue({ request_id: 88 });
-    expect(await createEoiApplication({ opportunityId: 11 })).toEqual({
-      requestId: "88",
-      number: "AOI_88",
-    });
+    expect(
+      await createEoiApplication({
+        opportunityId: 11,
+        attributes: { attribute_1: "Blue", attribute_2: null },
+      }),
+    ).toEqual({ requestId: "88", number: "AOI_88" });
     expect(state.writes).toHaveBeenCalledTimes(1);
-    expect(lead(state.writes, 2)).toContainEqual([
-      "getDynamicFormsInsertRequest",
+    // Legacy 9284: a POST whose body carries the reference and the attributes.
+    expect(lead(state.writes, 3)).toContainEqual([
+      "postDynamicFormsInsertRequest",
+      { token: "isolated-token" },
       {
-        token: "isolated-token",
-        P_REF_OBJECT_ID: "11",
-        P_REF_OBJECT_TYPE: "OPPORTUNITIES",
-        P_REQUEST_TYPE: "OPPORTUNITIES-EOI",
+        request_id: null,
+        ref_object_id: 11,
+        ref_object_type: "OPPORTUNITIES",
+        request_type: "OPPORTUNITIES-EOI",
+        attribute_1: "Blue",
+        attribute_2: null,
       },
     ]);
+    await expect(
+      createEoiApplication({ opportunityId: 11, attributes: { org_id: 1 } }),
+    ).rejects.toBeInstanceOf(Error);
   });
   it("returns no number when it cannot be read, so no files go under an unknown folder", async () => {
     state.dashboard = [{ page_name: "apply-opportunities", read_access: "Y" }];

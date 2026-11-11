@@ -35,6 +35,7 @@ beforeEach(() => {
           ],
         };
       if (op === "getPre_award_costingGetGlobalVar") return { items: [] };
+      if (op === "getSharedLabels") return [];
       if (op === "getSharedGetOppCategoryStat")
         return {
           items: [{ SECTORS: "Health", APPLIED_AMT: 9, AWARDED_AMT: 4 }],

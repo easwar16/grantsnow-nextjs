@@ -58,7 +58,11 @@ export function PricingGlobalDialog({
   const unindexed = Number(pricing.unindexed);
   const money = (value: string | number) =>
     Number.isFinite(Number(value))
-      ? functions.format.moneyDisplay(String(Number(value) * rate), currency, format)
+      ? functions.format.moneyDisplay(
+          String(Number(value) * rate),
+          currency,
+          format,
+        )
       : String(value);
   const percent = (value: string | number) =>
     Number.isFinite(Number(value))
@@ -66,7 +70,8 @@ export function PricingGlobalDialog({
       : String(value);
   const draftContribution = draft ? Number(draft.contribution) / rate : 0;
   const change = (
-    field: "contribution" | "percent" | "unindexedContribution" | "unindexedPercent",
+    field:
+      "contribution" | "percent" | "unindexedContribution" | "unindexedPercent",
     value: string,
   ) => {
     if (!draft) return;
@@ -74,7 +79,8 @@ export function PricingGlobalDialog({
     let contribution = amount;
     if (field === "percent") contribution = (amount / 100) * indexed;
     if (field === "unindexedContribution")
-      contribution = unindexed === 0 ? 0 : (amount / rate / unindexed) * indexed;
+      contribution =
+        unindexed === 0 ? 0 : (amount / rate / unindexed) * indexed;
     if (field === "unindexedPercent") contribution = (amount / 100) * unindexed;
     setDraft({
       ...draft,
@@ -116,12 +122,14 @@ export function PricingGlobalDialog({
   };
   const input = (
     row: Funder,
-    field: "contribution" | "percent" | "unindexedContribution" | "unindexedPercent",
+    field:
+      "contribution" | "percent" | "unindexedContribution" | "unindexedPercent",
     value: string,
     label: string,
   ) =>
     draft?.id === row.id ? (
       <input
+        id={`proposal-${id}-pricing-global-${row.id}-${field}`}
         aria-label={label}
         className={styles.pricingGlobalInput}
         type="number"
@@ -161,8 +169,12 @@ export function PricingGlobalDialog({
               id: "contribution",
               header: labels.contribution,
               cell: (row: Funder) =>
-                input(row, "contribution", draft?.contribution ?? "", labels.contribution) ??
-                money(row.contribution),
+                input(
+                  row,
+                  "contribution",
+                  draft?.contribution ?? "",
+                  labels.contribution,
+                ) ?? money(row.contribution),
             },
             {
               id: "percent",
@@ -171,39 +183,47 @@ export function PricingGlobalDialog({
                 input(
                   row,
                   "percent",
-                  indexed === 0 ? "0" : String((draftContribution / indexed) * 100),
+                  indexed === 0
+                    ? "0"
+                    : String((draftContribution / indexed) * 100),
                   labels.percent,
                 ) ?? percent(row.percent),
             },
             ...(labels.showUnindexedContribution
-              ? [{
-                  id: "unindexedContribution",
-                  header: labels.unindexedContribution,
-                  cell: (row: Funder) =>
-                    input(
-                      row,
-                      "unindexedContribution",
-                      indexed === 0
-                        ? "0"
-                        : String((draftContribution / indexed) * unindexed * rate),
-                      labels.unindexedContribution,
-                    ) ?? money(row.unindexedContribution),
-                }]
+              ? [
+                  {
+                    id: "unindexedContribution",
+                    header: labels.unindexedContribution,
+                    cell: (row: Funder) =>
+                      input(
+                        row,
+                        "unindexedContribution",
+                        indexed === 0
+                          ? "0"
+                          : String(
+                              (draftContribution / indexed) * unindexed * rate,
+                            ),
+                        labels.unindexedContribution,
+                      ) ?? money(row.unindexedContribution),
+                  },
+                ]
               : []),
             ...(labels.showUnindexedPercent
-              ? [{
-                  id: "unindexedPercent",
-                  header: labels.unindexedPercent,
-                  cell: (row: Funder) =>
-                    input(
-                      row,
-                      "unindexedPercent",
-                      unindexed === 0
-                        ? "0"
-                        : String((draftContribution / unindexed) * 100),
-                      labels.unindexedPercent,
-                    ) ?? percent(row.unindexedPercent),
-                }]
+              ? [
+                  {
+                    id: "unindexedPercent",
+                    header: labels.unindexedPercent,
+                    cell: (row: Funder) =>
+                      input(
+                        row,
+                        "unindexedPercent",
+                        unindexed === 0
+                          ? "0"
+                          : String((draftContribution / unindexed) * 100),
+                        labels.unindexedPercent,
+                      ) ?? percent(row.unindexedPercent),
+                  },
+                ]
               : []),
           ]}
           rows={rows}
@@ -214,6 +234,7 @@ export function PricingGlobalDialog({
               <>
                 <button
                   type="button"
+                  id={`proposal-${id}-pricing-global-${row.id}-save`}
                   aria-label={`Save ${row.name}`}
                   title="Save"
                   onClick={() => void save()}
@@ -223,9 +244,13 @@ export function PricingGlobalDialog({
                 </button>
                 <button
                   type="button"
+                  id={`proposal-${id}-pricing-global-${row.id}-cancel`}
                   aria-label={`Cancel ${row.name}`}
                   title="Cancel"
-                  onClick={() => { setDraft(null); setError(""); }}
+                  onClick={() => {
+                    setDraft(null);
+                    setError("");
+                  }}
                   disabled={busy}
                 >
                   <Icon name="close" size={16} />
@@ -234,6 +259,7 @@ export function PricingGlobalDialog({
             ) : (
               <button
                 type="button"
+                id={`proposal-${id}-pricing-global-${row.id}-edit`}
                 aria-label={`Edit ${row.name}`}
                 title="Edit"
                 onClick={() => {
@@ -244,7 +270,11 @@ export function PricingGlobalDialog({
                   });
                   setError("");
                 }}
-                disabled={busy || draft !== null || !Number.isFinite(Number(row.contribution))}
+                disabled={
+                  busy ||
+                  draft !== null ||
+                  !Number.isFinite(Number(row.contribution))
+                }
               >
                 <Icon name="edit" size={16} />
               </button>
@@ -252,7 +282,11 @@ export function PricingGlobalDialog({
           }
         />
       </div>
-      {error && <p role="alert" className={styles.pricingError}>{error}</p>}
+      {error && (
+        <p role="alert" className={styles.pricingError}>
+          {error}
+        </p>
+      )}
     </ActionDialog>
   );
 }

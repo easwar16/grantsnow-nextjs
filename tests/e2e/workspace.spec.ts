@@ -1213,65 +1213,97 @@ test("Proposal Credit Allocation headers do not overlap at a narrow viewport", a
   }
 });
 
-test("Proposal Ethics shows New Ethics and scopes the creation link", async ({ page }) => {
+test("Proposal Ethics shows New Ethics and scopes the creation link", async ({
+  page,
+}) => {
   await login(page);
   await page.goto("/proposals/OUTLINE_PROPOSAL/1000/ethics");
   const create = page.locator("#proposal-1000-ethics-create");
   await expect(create).toBeVisible();
-  await expect(page.locator("#proposal-1000-ethics")).toContainText("No data to display.");
+  await expect(page.locator("#proposal-1000-ethics")).toContainText(
+    "No data to display.",
+  );
   await create.click();
-  await expect(page).toHaveURL(/\/ethics\/new\?parentType=PROPOSAL&parentId=1000&proposalType=OUTLINE_PROPOSAL/);
+  await expect(page).toHaveURL(
+    /\/ethics\/new\?parentType=PROPOSAL&parentId=1000&proposalType=OUTLINE_PROPOSAL/,
+  );
   await expect(page.locator("#ethics-new-form")).toBeVisible();
   await expect(page.locator("#ethics-new-back")).toHaveAttribute(
-    "href", "/proposals/OUTLINE_PROPOSAL/1000/ethics",
+    "href",
+    "/proposals/OUTLINE_PROPOSAL/1000/ethics",
   );
   await expect(page.locator("#ethics-new-cancel")).toHaveAttribute(
-    "href", "/proposals/OUTLINE_PROPOSAL/1000/ethics",
+    "href",
+    "/proposals/OUTLINE_PROPOSAL/1000/ethics",
   );
   await expect(page.getByText("Invalid ethics action.")).toHaveCount(0);
   const draft = {
-    title: "Linked fixture Ethics", org: "203", formType: "STANDARD",
-    ethicsType: "INDIVIDUAL", parent: {
-      type: "PROPOSAL", id: "1000", proposalType: "OUTLINE_PROPOSAL",
+    title: "Linked fixture Ethics",
+    org: "203",
+    formType: "STANDARD",
+    ethicsType: "INDIVIDUAL",
+    parent: {
+      type: "PROPOSAL",
+      id: "1000",
+      proposalType: "OUTLINE_PROPOSAL",
     },
   };
   const origin = new URL(page.url()).origin;
   const created = await page.request.post("/api/ethics/actions/create", {
-    data: draft, headers: { Origin: origin },
+    data: draft,
+    headers: { Origin: origin },
   });
   expect(created.status(), await created.text()).toBe(200);
   expect(await created.json()).toMatchObject({ id: "941" });
   const invalid = await page.request.post("/api/ethics/actions/create", {
     headers: { Origin: origin },
     data: {
-      ...draft, parent: { ...draft.parent, id: "1001" },
+      ...draft,
+      parent: { ...draft.parent, id: "1001" },
     },
   });
   expect(invalid.status()).toBe(403);
 });
 
-test("Proposal linked tabs show VBCS actions and shared panels", async ({ page }) => {
+test("Proposal linked tabs show VBCS actions and shared panels", async ({
+  page,
+}) => {
   await login(page);
   await page.goto("/proposals/OUTLINE_PROPOSAL/1000/due-diligence");
-  await expect(page.locator("#parent-due-diligence-create")).toHaveText(/New Duediligence Application/);
-  await expect(page.locator("#proposal-1000-due-diligence")).toContainText("No data to display.");
+  await expect(page.locator("#proposal-1000-dd-create")).toHaveText(
+    /New Duediligence Application/,
+  );
+  await expect(page.locator("#proposal-1000-due-diligence")).toContainText(
+    "No data to display.",
+  );
   await page.goto("/proposals/OUTLINE_PROPOSAL/1000/contracts");
   const contract = page.locator("#proposal-1000-new-contract");
   await expect(contract).toBeVisible();
-  await expect(page.locator("#proposal-1000-contracts")).toContainText("No data to display.");
+  await expect(page.locator("#proposal-1000-contracts")).toContainText(
+    "No data to display.",
+  );
   await contract.click();
-  await expect(page).toHaveURL(/\/contracts\/new\?parentType=OUTLINE_PROPOSAL&parentId=1000/);
-  await expect(page.locator("#contract-new-back")).toHaveAttribute("href", "/proposals/OUTLINE_PROPOSAL/1000/contracts");
+  await expect(page).toHaveURL(
+    /\/contracts\/new\?parentType=OUTLINE_PROPOSAL&parentId=1000/,
+  );
+  await expect(page.locator("#contract-new-back")).toHaveAttribute(
+    "href",
+    "/proposals/OUTLINE_PROPOSAL/1000/contracts",
+  );
   await page.goto("/proposals/OUTLINE_PROPOSAL/1000/attachments");
   await expect(page.locator("#proposal-1000-attachments-panel")).toBeVisible();
   await page.goto("/proposals/OUTLINE_PROPOSAL/1000/delegation");
-  await expect(page.locator("#proposal-1000-delegation-panel-add")).toBeVisible();
+  await expect(
+    page.locator("#proposal-1000-delegation-panel-add"),
+  ).toBeVisible();
   await page.goto("/proposals/PROPOSAL/1001/contracts");
   await expect(page.locator("#proposal-1001-contracts")).toBeVisible();
   await expect(page.locator("#proposal-1001-new-contract")).toHaveCount(0);
   await page.goto("/proposals/PROPOSAL/1001/delegation");
   await expect(page.locator("#proposal-1001-delegation-panel")).toBeVisible();
-  await expect(page.locator("#proposal-1001-delegation-panel-add")).toHaveCount(0);
+  await expect(page.locator("#proposal-1001-delegation-panel-add")).toHaveCount(
+    0,
+  );
 });
 
 test("Proposal In-kind Contribution reads sponsors and saves a line after failure", async ({
@@ -1786,9 +1818,10 @@ test("Proposal Budget keeps funding and category rows aligned as an expandable t
   await expect(
     page.locator("#proposal-1001-budget-cost-57993-list"),
   ).toBeVisible();
+  // Delete and Clone are not built, so they are not offered (hide-not-disable).
   await expect(
     page.locator("#proposal-1001-budget-cost-57993-delete"),
-  ).toBeDisabled();
+  ).toHaveCount(0);
   await page.locator("#proposal-1001-budget-cost-57993-edit").click();
   await expect(page).toHaveURL(/\/budget\/staff\/57993/);
   await expect(
@@ -2670,12 +2703,15 @@ test("Claims Unit Inquiry: drawer link, status and filters, panels, the unit dia
   await page.locator("#claims-units-clear").click();
   await expect(page.locator("#claims-units-count")).toContainText("25 of 30");
   await expect(page.locator("#claims-units-clear")).toBeDisabled();
-  // The panels close and open with their chevron (shared Collapsible).
-  const funds = page.locator("#claims-unit-6000-funds");
-  await page.locator("#claims-unit-6000-funds-heading").click();
-  await expect(funds).toHaveAttribute("data-open", "false");
-  await page.locator("#claims-unit-6000-funds-heading").click();
-  await expect(funds).toHaveAttribute("data-open", "true");
+  // MR 15893 card body: each fund with its status dot, the claim counts beside the funds.
+  await expect(page.locator("#claims-unit-6000-funds")).toContainText(
+    "TITLE I Low Income (84.010A)",
+  );
+  await expect(page.locator("#claims-unit-6000-fund-0-status")).toHaveAttribute(
+    "data-dot",
+    "true",
+  );
+  await expect(page.locator("#claims-unit-6000-claims")).toBeVisible();
   await expect(rows.first()).toContainText("TITLE I Low Income (84.010A)");
   // Create: one fund type and grant once only.
   await page.locator("#claims-units-create").click();
@@ -2740,11 +2776,18 @@ test("Claims Unit record: open from the listing, panel, Fund Summary totals, sig
     "2027",
   );
   // Only implemented tabs show; the container has no comments.
-  await expect(page.locator("#claims-unit-tabs a")).toHaveCount(4);
+  await expect(page.locator("#claims-unit-tabs a")).toHaveCount(5);
   await expect(page.locator("#claims-unit-comments")).toHaveCount(0);
   const funds = page.locator("#claims-unit-fund-summary-table");
   await expect(funds).toContainText("TITLE III (84.365A)");
   await expect(funds.locator("tfoot")).toContainText("28,500.00");
+  // MR 15893: the allocations under Total Budget, the dates in one Key Dates cell; Terms collapsed.
+  await expect(funds.locator("thead")).toContainText("Key Dates");
+  await expect(funds.locator("thead")).not.toContainText("Grant Period");
+  await expect(page.locator("#claims-unit-terms")).toHaveAttribute(
+    "data-open",
+    "false",
+  );
   await expect(page.locator("#claims-unit-preparer")).toContainText(
     "Fixture Preparer",
   );
@@ -2830,34 +2873,226 @@ test("Claims Unit record: open from the listing, panel, Fund Summary totals, sig
   await expect(
     page.locator("#claims-unit-activities-fund-summary-table"),
   ).toContainText("Instruction");
+  // Roster: an approved member is read-only; a new one is added, then removed (confirm).
+  const fp = "#claims-unit-fund-panels";
+  await page.locator(`${fp}-roster-heading`).click();
+  const roster = page.locator(`${fp}-roster-table`);
+  await expect(roster).toContainText("Lovelace");
+  await expect(page.locator(`${fp}-roster-row-8100-edit`)).toHaveCount(0);
+  await page.locator(`${fp}-roster-add`).click();
+  const rd = page.locator(`${fp}-roster-dialog`);
+  await rd.locator(`${fp}-roster-dialog-firstName`).fill("Grace");
+  await rd.locator(`${fp}-roster-dialog-lastName`).fill("Hopper");
+  await rd.getByRole("combobox", { name: "Primary Fund" }).click();
+  await page.getByRole("option", { name: "TITLE I (84.010A)" }).click();
+  await rd.getByRole("combobox", { name: "Primary Job Title" }).click();
+  await page.getByRole("option", { name: "Teacher" }).click();
+  await rd.locator(`${fp}-roster-dialog-submit`).click();
+  await expect(rd).toHaveCount(0);
+  await expect(roster).toContainText("Hopper");
+  await page.locator(`${fp}-roster-row-8101-delete`).click();
+  await page.locator(`${fp}-roster-confirm-confirm`).click();
+  await expect(roster).not.toContainText("Hopper");
+  // Furniture & Equipment: edit an item, then delete it.
+  await page.locator(`${fp}-equipment-heading`).click();
+  const equipment = page.locator(`${fp}-equipment-table`);
+  await expect(equipment).toContainText("Classroom projector");
+  await page.locator(`${fp}-equipment-row-8200-edit`).click();
+  await page.locator(`${fp}-equipment-dialog-location`).fill("Library");
+  await page.locator(`${fp}-equipment-dialog-submit`).click();
+  await expect(equipment).toContainText("Library");
+  await page.locator(`${fp}-equipment-row-8200-delete`).click();
+  await expect(equipment).not.toContainText("Classroom projector");
+  // Requirements: the draft fund's survey, the person responsible, Submit (requirement first, then the answers).
+  await page.locator("#claims-unit-requirements-5-heading").click();
+  await page.locator("#claims-unit-requirements-5-name").fill("Ada Lovelace");
+  await page
+    .locator("#claims-unit-requirements-5-email")
+    .fill("ada@example.com");
+  // The sample form's required answers; Submit waits for the form to load.
+  const survey = page.locator("#claims-unit-requirements-5");
+  await survey
+    .getByRole("textbox", { name: "Project title" })
+    .fill("Fixture survey");
+  await survey.getByRole("spinbutton", { name: "Amount" }).fill("100");
+  await page.locator("#claims-unit-requirements-5-submit").click();
+  await expect(page.locator("#toast-stack")).toContainText("Response saved");
   await page
     .locator("#claims-unit-activities-tabs-tab-activities-list")
     .click();
   const activities = page.locator("#claims-unit-activities-list-table");
   await expect(activities).toContainText("Reading teacher");
+  // The fund's approval route below the list: an Unapplied Balance says why Submit is missing.
+  await expect(
+    page.locator("#claims-unit-activities-approval-hint"),
+  ).toBeVisible();
+  await expect(
+    page.locator("#claims-unit-activities-approval-workflow-submit"),
+  ).toHaveCount(0);
   await expect(
     page.locator("#claims-unit-activities-list-row-5101-delete"),
   ).toHaveCount(0);
-  // View: the details tab with the goals, the position's benefit line and the claimable periods.
+  // Add Activity (draft fund): the form in the side panel; the fund's codes cascade; Create returns to view.
+  await page.locator("#claims-unit-activities-add").click();
+  const editor = page.locator("#claims-unit-activity-edit");
+  await editor.getByRole("combobox", { name: "Activity Type" }).click();
+  await page.getByRole("option", { name: "Non Position" }).click();
+  await editor.getByRole("combobox", { name: "Function Code" }).click();
+  await page.getByRole("option", { name: "1000 - Instruction" }).click();
+  await editor.getByRole("combobox", { name: "Object Code" }).click();
+  await page.getByRole("option", { name: "400 - Supplies" }).click();
+  await editor.locator("#claims-unit-activity-edit-amount").fill("250");
+  await editor
+    .locator("#claims-unit-activity-edit-itemization")
+    .fill("Fixture laptop");
+  // No goal yet: the server refuses, as legacy's "at least one goal".
+  await editor.locator("#claims-unit-activity-edit-save").click();
+  await expect(page.locator("#toast-stack")).toContainText(
+    "Please add at least one goal.",
+  );
+  await editor.getByRole("combobox", { name: "Goals" }).click();
+  await page.getByRole("option", { name: /Raise attainment/ }).click();
+  await page.keyboard.press("Escape");
+  await editor.locator("#claims-unit-activity-edit-save").click();
+  await expect(editor).toHaveCount(0);
+  await expect(activities).toContainText("Fixture laptop");
+  await page.locator("#claims-unit-activities-activity-close").click();
+  // View: the activity opens in a side panel over the list, one page with jump links (goals, benefits, periods).
   await page.locator("#claims-unit-activities-list-row-5100-view").click();
-  await expect(page.locator("#claims-unit-activity-goals")).toContainText(
+  const panel = page.locator("#claims-unit-activities-activity");
+  await expect(panel.locator("#claims-unit-activity-goals")).toContainText(
     "Raise attainment",
   );
-  await page.locator("#claims-unit-activity-tabs-tab-position-details").click();
   await expect(
-    page.locator("#claims-unit-activity-benefits-table"),
+    panel.locator("#claims-unit-activity-benefits-table"),
   ).toContainText("FICA");
-  await page
-    .locator("#claims-unit-activity-tabs-tab-claimable-amount-details")
+  await panel
+    .locator("#claims-unit-activity-sections-claimable-amount-details")
     .click();
   await expect(
-    page.locator("#claims-unit-activity-claimable-salary-table"),
+    panel.locator("#claims-unit-activity-claimable-salary-table"),
   ).toContainText("30,000");
-  await page
-    .locator("#claims-unit-activities-tabs-tab-activities-list")
-    .click();
+  await panel.locator("#claims-unit-activities-activity-close").click();
+  await expect(panel).toHaveCount(0);
   await page.locator("#claims-unit-activities-list-row-5100-delete").click();
   await expect(activities).not.toContainText("Reading teacher");
+  // Amendments (approved fund): New, a reason, Include an activity (mints the amendment), its line, Save.
+  await page
+    .locator("#claims-unit-activities")
+    .getByRole("combobox", { name: "Fund Type" })
+    .click();
+  await page.getByRole("option", { name: "TITLE III (84.365A)" }).click();
+  await page.locator("#claims-unit-activities-tabs-tab-amendments").click();
+  await page.locator("#claims-unit-amendments-new").click();
+  await page
+    .locator("#claims-unit-amendments")
+    .getByRole("combobox", { name: "Amendment Reason" })
+    .click();
+  await page.getByRole("option", { name: "School Budget Adjustment" }).click();
+  await page.locator("#claims-unit-amendments-include").click();
+  await page
+    .locator("#claims-unit-amendments-include-dialog-pick-5102-3")
+    .check();
+  await page.locator("#claims-unit-amendments-include-dialog-submit").click();
+  await expect(
+    page.locator("#claims-unit-amendments-include-dialog"),
+  ).toHaveCount(0);
+  await expect(page.locator("#claims-unit-amendments-lines")).toContainText(
+    "Approved tablets",
+  );
+  await expect(page.locator("#claims-unit-amendments-table")).toContainText(
+    "School Budget Adjustment",
+  );
+  await page.locator("#claims-unit-amendments-save").click();
+  await expect(page.locator("#toast-stack")).toContainText("Amendment saved.");
+  // Claims: the fund bar, Claims Summary, the Claims List; a paid claim clones, a draft deletes (confirm).
+  await page.locator("#claims-unit-tab-claims").click();
+  await expect(page).toHaveURL(/\/claims\/unit-inquiry\/6000\/claims$/);
+  await expect(page.locator("#claims-unit-claims-summary-table")).toContainText(
+    "Instruction",
+  );
+  await page.locator("#claims-unit-claims-tabs-tab-claims-list").click();
+  const claimList = page.locator("#claims-unit-claims-list-table");
+  await expect(claimList).toContainText("September");
+  await expect(
+    page.locator("#claims-unit-claims-list-row-8400-clone"),
+  ).toHaveCount(0);
+  await page.locator("#claims-unit-claims-list-row-8401-clone").click();
+  await page.locator("#claims-unit-claims-list-confirm-confirm").click();
+  await expect(claimList.locator("tbody tr")).toHaveCount(3);
+  await page.locator("#claims-unit-claims-list-row-8400-delete").click();
+  await page.locator("#claims-unit-claims-list-confirm-confirm").click();
+  await expect(claimList.locator("tbody tr")).toHaveCount(2);
+  // A claim in the side panel: its lines; closing a dialog inside it keeps the panel open.
+  await page.locator("#claims-unit-claims-list-row-8401-view").click();
+  const claimPanel = page.locator("#claims-unit-claims-claim");
+  await expect(page.locator("#claims-unit-claim-lines")).toContainText(
+    "Classroom supplies",
+  );
+  await page.locator("#claims-unit-claim-line-9501-audits").click();
+  await page.keyboard.press("Escape");
+  await expect(claimPanel).toBeVisible();
+  // Adjustments on the paid claim: Add Adjustment, Add All Claim Lines, a refund on the line, Save.
+  await page.locator("#claims-unit-adjustments-add").click();
+  await page.locator("#claims-unit-adjustments-form-add-all").click();
+  await page
+    .locator("#claims-unit-adjustments-form-line-line-9501-edit")
+    .click();
+  const adjLine = page.locator("#claims-unit-adjustments-line-dialog");
+  await adjLine.getByRole("combobox", { name: "Type" }).click();
+  await page.getByRole("option", { name: "Reject" }).click();
+  await adjLine
+    .locator("#claims-unit-adjustments-line-dialog-refund")
+    .fill("10");
+  await adjLine
+    .locator("#claims-unit-adjustments-line-dialog-justification")
+    .fill("Over-claimed");
+  await adjLine.locator("#claims-unit-adjustments-line-dialog-update").click();
+  await page
+    .locator("#claims-unit-adjustments-form-refund-check-number")
+    .fill("CHK-1");
+  await page
+    .locator("#claims-unit-adjustments-form-adjustment-comment")
+    .fill("Refund");
+  await page.locator("#claims-unit-adjustments-form-save").click();
+  await expect(page.locator("#claims-unit-adjustments-table")).toContainText(
+    "Pending",
+  );
+  await page.locator("#claims-unit-claims-claim-close").click();
+  // New Claim: a line through the dialog, then Save Claim; the saved claim stays open and joins the list.
+  await page.locator("#claims-unit-claims-add").click();
+  await page.locator("#claims-unit-claim-editor-add-line").click();
+  const lineDialog = page.locator("#claims-unit-claim-editor-line-dialog");
+  await lineDialog.getByRole("combobox", { name: "Position Type" }).click();
+  await page.getByRole("option", { name: "Non Position" }).click();
+  await lineDialog.getByRole("combobox", { name: "Function" }).click();
+  await page.getByRole("option", { name: "1000 - Instruction" }).click();
+  await lineDialog.getByRole("combobox", { name: "Object" }).click();
+  await page.getByRole("option", { name: "300 - Purchased Services" }).click();
+  await lineDialog
+    .locator("#claims-unit-claim-editor-line-dialog-expenditure")
+    .fill("Workbooks");
+  await lineDialog
+    .locator("#claims-unit-claim-editor-line-dialog-company")
+    .fill("Books Ltd");
+  await lineDialog
+    .locator("#claims-unit-claim-editor-line-dialog-transNo")
+    .fill("TX-9");
+  await lineDialog
+    .locator("#claims-unit-claim-editor-line-dialog-transDate")
+    .fill("15-Jan-2027");
+  await lineDialog
+    .locator("#claims-unit-claim-editor-line-dialog-submit")
+    .click();
+  await expect(page.locator("#claims-unit-claim-editor-lines")).toContainText(
+    "Workbooks",
+  );
+  await page.locator("#claims-unit-claim-editor-save").click();
+  await expect(page.locator("#claims-unit-claim-header")).toContainText(
+    "Pending Submission",
+  );
+  await expect(claimList.locator("tbody tr")).toHaveCount(3);
+  await page.locator("#claims-unit-claims-claim-close").click();
   // Attachments: the shared panel on the application.
   await page.locator("#claims-unit-tab-attachments").click();
   await expect(page.locator("#claims-unit-attachments")).toBeVisible();
@@ -2896,6 +3131,11 @@ test("Claims Funds Inquiry: listing, Summary dialog, the record's tabs, filters 
   );
   await page.getByRole("combobox", { name: "Object" }).click();
   await page.getByRole("option", { name: "Salaries" }).click();
+  // The tab link takes the filter once the URL has it; clicking sooner follows the previous object.
+  await expect(page.locator("#claims-fund-tab-claims")).toHaveAttribute(
+    "href",
+    /object=100/,
+  );
   await page.locator("#claims-fund-tab-claims").click();
   await expect(page.locator("#claims-fund-claims tbody tr")).toHaveCount(4);
   await page.getByRole("combobox", { name: "Status" }).click();

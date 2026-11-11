@@ -3,7 +3,10 @@ import { readText } from "@/server/http/body";
 import { route, fileRoute, searchOf } from "@/server/http/route";
 import { AppError } from "@/lib/errors";
 import { ethicsRecord } from "@/server/modules/ethics/record";
-import { ethicsPrintOptions, printEthics } from "@/server/modules/ethics/print";
+import {
+  ethicsPrintOptions,
+  printEthics,
+} from "@/server/modules/ethics/record/print";
 
 type Context = { params: Promise<{ id: string }> };
 export const GET = route<Context>(async (request, { params }) => {
@@ -12,8 +15,16 @@ export const GET = route<Context>(async (request, { params }) => {
   const record = await ethicsRecord(id, query.get("access") ?? undefined);
   return ethicsPrintOptions(record, query.get("participant") ?? "");
 });
-export const POST = fileRoute<Context>(async (request, { params }) => {
-  const { id } = await params;
-  return printEthics(id, JSON.parse(await readText(request, 2048)));
-}, { write: true, onError: (error) => error instanceof ZodError || error instanceof SyntaxError
-  ? new AppError("BAD_REQUEST", "Invalid print request.", 400) : error });
+export const POST = fileRoute<Context>(
+  async (request, { params }) => {
+    const { id } = await params;
+    return printEthics(id, JSON.parse(await readText(request, 2048)));
+  },
+  {
+    write: true,
+    onError: (error) =>
+      error instanceof ZodError || error instanceof SyntaxError
+        ? new AppError("BAD_REQUEST", "Invalid print request.", 400)
+        : error,
+  },
+);

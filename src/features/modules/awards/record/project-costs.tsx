@@ -311,6 +311,7 @@ export function ProjectCostsPanel({
               rows={costTree(p)}
               rowKey={(n) => n.key}
               childrenOf={(n) => n.children}
+              openDepth={view.costsOpenDepth}
               rowLabel={(n) => n.name}
               // Measured text starts: section 30px, category 49px, line 60px (legacy td padding-left: 60px).
               indent={(depth, leaf) =>

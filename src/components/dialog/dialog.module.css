@@ -9,6 +9,28 @@
 .standard {
   max-height: 70vh;
 }
+/* A side panel: the full viewport height at the end edge, sliding in from it (global dialog motion, by transform). */
+.side {
+  inset: 0 0 0 auto;
+  height: 100vh;
+  max-height: 100vh;
+  margin: 0;
+  border-radius: 0;
+  transform: translateX(100%);
+}
+.side[open] {
+  transform: none;
+}
+@starting-style {
+  .side[open] {
+    transform: translateX(100%);
+  }
+}
+@media (max-width: 767px) {
+  .side {
+    width: 100vw !important;
+  }
+}
 .dialog[open] {
   display: flex;
   flex-direction: column;

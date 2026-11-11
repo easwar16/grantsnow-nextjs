@@ -86,14 +86,3 @@ export const share = write<{ body: unknown }>({
   op: "postNotificationsSendPersonNotifications",
   body: (p) => p.body,
 });
-/** WRITES: a new outline or full proposal from the convert's payload. */
-export const createProposal = write<{ body: unknown }>({
-  op: "postProposalProposal",
-  identity: ["legal_id", "org_id"],
-  body: (p) => p.body,
-  // A convert from an EOI moves the application on, so its held details go too.
-  invalidates: [
-    "getSharedGetOpportunities",
-    "getDynamicFormsGetRequestDetails",
-  ],
-});

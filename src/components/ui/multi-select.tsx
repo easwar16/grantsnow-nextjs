@@ -29,6 +29,7 @@ export interface MultiSelectOption {
  * The chips variant has no label of its own, for an `InsideField` box (live's oj-select-many). `limit` caps the
  * rows offered, with live's "More results available" note; `closeOnPick` closes the list after each pick, as live.
  * Only the visible rows are drawn. `id` names the root; its parts take `${id}-<part>` (the field is `${id}-field`).
+ * `allowCustom` also takes typed values (live's oj-combobox-many): the text is offered as the first row.
  */
 export function MultiSelect({
   id,
@@ -41,6 +42,7 @@ export function MultiSelect({
   limit,
   closeOnPick = false,
   disabled = false,
+  allowCustom = false,
 }: {
   id?: string;
   label: string;
@@ -52,6 +54,7 @@ export function MultiSelect({
   limit?: number;
   closeOnPick?: boolean;
   disabled?: boolean;
+  allowCustom?: boolean;
 }) {
   // null while not typing: the control variant then shows its summary and the list is unfiltered.
   const [query, setQuery] = useState<string | null>(null),
@@ -64,17 +67,22 @@ export function MultiSelect({
     panel = `${base}-panel`;
   const control = variant === "control",
     chips = variant === "chips";
-  const needle = (query ?? "").trim().toLowerCase(),
-    matches = useMemo(
-      () =>
+  const typed = (query ?? "").trim(),
+    needle = typed.toLowerCase(),
+    matches = useMemo(() => {
+      const found =
         needle === ""
           ? options
           : options.filter((o) =>
               `${o.label} ${o.detail ?? ""}`.toLowerCase().includes(needle),
-            ),
+            );
+      return allowCustom &&
+        typed !== "" &&
+        !options.some((o) => o.label.trim().toLowerCase() === needle)
+        ? [{ value: typed, label: typed }, ...found]
+        : found;
       // Long people and funder lists: arrow keys re-render without filtering again.
-      [options, needle],
-    ),
+    }, [options, needle, typed, allowCustom]),
     rows = limit === undefined ? matches : matches.slice(0, limit),
     // The cap note is the window's first line when shown.
     lead = matches.length > rows.length ? 1 : 0,
@@ -82,7 +90,8 @@ export function MultiSelect({
   // Values that are not among the options show nothing, as legacy's JET selects (and as Select).
   // Chips and the summary drop a tree list's indent; the list keeps it.
   const labelOf = (v: string) =>
-      options.find((o) => o.value === v)?.label?.trimStart(),
+      options.find((o) => o.value === v)?.label?.trimStart() ??
+      (allowCustom ? v : undefined),
     shown = value.filter((v) => labelOf(v) !== undefined),
     summary = shown.map(labelOf).join(", ");
   // Downshift's own: it tells a click inside the list from one outside.

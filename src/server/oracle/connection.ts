@@ -9,6 +9,7 @@ import {
 import { AppError } from "@/lib/errors";
 import { Agent, fetch as poolFetch, type Response } from "undici";
 import { serverConstants } from "@/server/constants";
+import { serverFunctions } from "@/server/functions";
 import { dropServiceToken, serviceToken } from "./service-token";
 export type Operation = keyof typeof operations;
 /**
@@ -54,8 +55,15 @@ const DEAD_SESSION = /^\s*Context Not Set\b/i;
 function backendText(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   if (typeof value !== "string") return "";
-  return value
-    .replace(/[\x00-\x1f\x7f]+/g, " ")
+  // Some messages arrive as escaped markup (FPX001 "&lt;p&gt;…&lt;br&gt;…"): the same words as text, lines kept.
+  let text = value;
+  for (let pass = 0; pass < 2 && /[<&]/.test(text); pass++)
+    text = serverFunctions.sanitize.plainText(
+      text.replace(/<br\s*\/?>|<\/p>/gi, "\n"),
+    );
+  return text
+    .replace(/[\x00-\x09\x0b-\x1f\x7f]+/g, " ")
+    .replace(/ *\n[\s]*/g, "\n")
     .trim()
     .slice(0, 500);
 }
@@ -120,7 +128,7 @@ function devTrace(operation: Operation, detail: string) {
 }
 const writes = (operation: Operation) =>
   (operations[operation] as { write?: boolean }).write === true;
-/** Reads only: an operation that writes (even a GET such as insertRequest) must go through `oracleWrite`. */
+/** Reads only: an operation that writes (even a GET such as GenerateAward) must go through `oracleWrite`. */
 export async function oracle(
   operation: Operation,
   headers: Record<string, string> = {},

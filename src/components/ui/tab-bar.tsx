@@ -18,8 +18,8 @@ export function TabBar<K extends string>({
   tabs: { key: K; name: string }[];
   selected: K;
   onSelect: (key: K) => void;
-  /** Legacy centres some bars in their container; a plain oj-tab-bar sits at the start. */
-  align?: "center" | "start";
+  /** Legacy centres some bars in their container; a plain oj-tab-bar sits at the start; `stretch` shares the width. */
+  align?: "center" | "start" | "stretch";
 }) {
   const at = tabs.findIndex((t) => t.key === selected);
   return (
@@ -27,7 +27,7 @@ export function TabBar<K extends string>({
       id={id}
       role="tablist"
       aria-label={label}
-      className={`${styles.bar} ${align === "start" ? styles.start : ""}`}
+      className={`${styles.bar} ${align === "center" ? "" : styles[align]}`}
       onKeyDown={(e) => {
         if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
         e.preventDefault();

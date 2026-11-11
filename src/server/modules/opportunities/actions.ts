@@ -6,6 +6,7 @@ import {
   lookups,
   opportunities,
   people as peopleApi,
+  proposals,
 } from "@/server/oracle/api";
 import {
   dashboardRoles,
@@ -572,7 +573,7 @@ export async function convert(raw: unknown) {
       Prop_id: z.union([z.number(), z.string()]).nullish(),
     })
     .parse(
-      await opportunities.createProposal({
+      await proposals.save({
         body: proposalPayload({
           kind: input.kind,
           opportunity: {

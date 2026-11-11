@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { z } from "zod";
-import { proposals } from "@/server/oracle/api";
+import { people, proposals } from "@/server/oracle/api";
 import { AppError } from "@/lib/errors";
 import type { RecordIdentity } from "@/features/modules/proposals/record";
 import { proposalContext, proposalPage } from "./record";
@@ -437,10 +437,10 @@ export async function proposalStaffContact(
       "Staff contact details are unavailable.",
       404,
     );
-  const raw = await proposals.contactDetails({
+  const raw = await people.contact({
     recordType: "PI",
-    personId: String(cost.personId),
-    departmentId: String(cost.orgUnitId ?? 0),
+    personId: cost.personId,
+    orgId: cost.orgUnitId ?? 0,
   });
   const parsed = contactResponse.safeParse(raw);
   if (!parsed.success)

@@ -789,6 +789,43 @@ main {
 .gn-status[data-solid][data-tone="danger"] {
   background: var(--gn-danger);
 }
+.gn-status[data-tone="rework"] {
+  background: var(--gn-status-warning);
+}
+/* Legacy claim-status (MR 15893): an 8px dot in the tone before the text, inline with the cell's own text. */
+.gn-status[data-dot] {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  font-size: inherit;
+  line-height: inherit;
+  background: none;
+  border-radius: 0;
+}
+.gn-status[data-dot]::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgb(123 117 112);
+}
+.gn-status[data-dot][data-tone="success"]::before {
+  background: var(--gn-success);
+}
+.gn-status[data-dot][data-tone="warning"]::before {
+  background: var(--gn-badge-warning);
+}
+.gn-status[data-dot][data-tone="rework"]::before {
+  background: var(--gn-warning);
+}
+.gn-status[data-dot][data-tone="danger"]::before {
+  background: var(--gn-danger);
+}
+.gn-status[data-dot][data-tone="info"]::before {
+  background: rgb(0 104 140);
+}
 .record-tags {
   display: flex;
   gap: 9px;

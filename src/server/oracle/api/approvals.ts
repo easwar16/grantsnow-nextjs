@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { read, write } from "../client";
 import { figureOperations } from "./home";
+import { recordStateReads } from "./record-state";
 import { serverConstants } from "@/server/constants";
 
 /**
@@ -101,11 +102,7 @@ export const groups = read<
 });
 
 // An approval action changes the record's status and roles, and what Home's queues and counts show.
-const roles = [
-  "getSecurityUser_roles",
-  "getDynamicFormsGetRequestDetails",
-  ...figureOperations,
-] as const;
+const roles = [...recordStateReads, ...figureOperations] as const;
 /** WRITES: submit, withdraw or a verdict (post_approval); `body` is built by the route rules. */
 export const act = write<{ body: unknown }>({
   op: "postApproval_setupPost_approval",

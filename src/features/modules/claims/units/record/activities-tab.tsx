@@ -1,13 +1,15 @@
 "use client";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useActionFailure } from "@/components/dialog/action-failure";
 import { useToast } from "@/components/feedback/toast";
 import { State } from "@/components/feedback/state";
 import { TableSkeleton } from "@/components/feedback/skeleton";
 import { DataTable } from "@/components/ui/data-table";
-import { HelpButton } from "@/components/ui/help-button";
 import { InsideField } from "@/components/ui/inside-field";
-import { ReadonlyField } from "@/components/ui/readonly-field";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { ActionDialog } from "@/components/dialog/action-dialog";
+import { claimStatusTone } from "@/shared/claims/status";
 import { Select } from "@/components/ui/select";
 import { TabBar } from "@/components/ui/tab-bar";
 import { claims, useApi } from "@/lib/api";
@@ -15,18 +17,18 @@ import type { FormatSettings } from "@/lib/format";
 import { functions } from "@/lib/functions";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
 import type { ActivityView } from "@/shared/claims/unit-record";
-import type { UnitActivitiesView, UnitActivityRow } from "../types";
+import type { UnitActivitiesView, UnitActivityRow } from "../listing/types";
 import { ActivityDetails } from "./activity-details";
+import { ActivityEditor } from "./activity-editor";
+import { AmendmentsPanel, type AmendmentChoice } from "./amendments-panel";
+import { FundPanels } from "./fund-panels";
+import { RequirementPanels } from "./requirement-panels";
+import { FundBar, head } from "./fund-bar";
+import { ApprovalSection } from "./approval-section";
+import { Icon } from "@/components/ui/icon";
 import styles from "./summary.module.css";
 
 type Format = FormatSettings & { currency?: string };
-type Header = { label: string; help: string | null };
-const head = (id: string, h: Header) => (
-  <>
-    {h.label}
-    <HelpButton id={`${id}-help`} html={h.help} />
-  </>
-);
 const ID = "claims-unit-activities";
 
 /**
@@ -40,14 +42,23 @@ export function UnitActivitiesTab({
   appId: string;
   format?: Format;
 }) {
-  const [fund, setFund] = useState(""),
+  // The listing card's link opens a fund (MR 15893 openFundId); the server refuses a fund not on the application.
+  const query = useSearchParams().get("fund") ?? "";
+  const [fund, setFund] = useState(/^\d+$/.test(query) ? query : ""),
     [period, setPeriod] = useState("CURRENT"),
     [tab, setTab] = useState<ActivityView>("fund-summary"),
-    // The activity on the details tab; the tab shows only while one is open (legacy View).
+    // The activity in the side panel: viewed, or edited (an empty activity is a new one).
     [opened, setOpened] = useState<{
       activity: string;
       version: string;
-    } | null>(null);
+      editing: boolean;
+      /** Add Activity from the Amendments tab. */
+      amendment?: AmendmentChoice;
+    } | null>(null),
+    // The amendment chosen on the Amendments tab (a new one has an empty key until minted).
+    [amendment, setAmendment] = useState<AmendmentChoice | null>(null),
+    // Bumped after a save so the list behind the panel reads again.
+    [revision, setRevision] = useState(0);
   const read = useApi(claims.activities, { appId, fund });
   const view = read.data;
   if (read.error)
@@ -64,12 +75,17 @@ export function UnitActivitiesTab({
     v === null
       ? ""
       : functions.format.moneyDisplay(String(v), format?.currency, format);
-  const c = view.categories;
   return (
     <div id={ID} className={styles.tab}>
-      <div className={styles.pair}>
-        <section id={`${ID}-filters`} className={styles.panel}>
-          <div className={styles.fields}>
+      {/* MR 15893 fund bar: the fund and period with the category counts on one row, the fund's figures under them. */}
+      <FundBar
+        id={ID}
+        bar={view}
+        empty={view.empty}
+        format={format}
+        money={money}
+        filters={
+          <>
             <InsideField
               htmlFor={`${ID}-fund-trigger`}
               label={view.labels.fund}
@@ -81,10 +97,10 @@ export function UnitActivitiesTab({
                 options={view.funds}
                 value={view.fund}
                 onChange={(next) => {
-                  // Legacy activityFIlterChanged: a fund change leaves the details for Fund Summary.
+                  // Legacy activityFIlterChanged: a fund change closes the open activity.
                   setFund(next);
                   setOpened(null);
-                  if (tab === "activity-details") setTab("fund-summary");
+                  setAmendment(null);
                 }}
               />
             </InsideField>
@@ -101,52 +117,32 @@ export function UnitActivitiesTab({
                 onChange={setPeriod}
               />
             </InsideField>
-          </div>
-          <div className={`${styles.fields} ${styles.summaryFields}`}>
-            <ReadonlyField
-              id={`${ID}-fund-status`}
-              label={view.status.label}
-              value={view.status.value}
-            />
-            {view.amounts.map((a) => (
-              <ReadonlyField
-                key={a.key}
-                id={`${ID}-${a.key}`}
-                label={a.label}
-                value={money(a.value)}
-              />
-            ))}
-          </div>
-        </section>
-        <section id={`${ID}-categories`} className={styles.panel}>
-          <DataTable
-            id={`${ID}-categories-table`}
-            rowIds={`${ID}-category`}
-            label={c.headers.category.label}
-            rows={c.rows}
-            rowKey={(r) => r.key}
-            empty={view.empty}
-            columns={(
-              ["category", "pending", "review", "approved", "rejected"] as const
-            ).map((k) => ({
-              id: k,
-              header: head(`${ID}-categories-${k}`, c.headers[k]),
-              cell: (r: (typeof c.rows)[number]) => r[k],
-            }))}
-          />
-        </section>
-      </div>
+          </>
+        }
+        actions={
+          // Legacy: the fund's Add Activity sits on the bar, shown on the Activities List.
+          view.add &&
+          tab === "activities-list" && (
+            <button
+              type="button"
+              id={`${ID}-add`}
+              className="gn-btn gn-btn--outlined"
+              onClick={() =>
+                setOpened({ activity: "", version: "", editing: true })
+              }
+            >
+              <Icon name="plus" size={14} />
+              {view.add}
+            </button>
+          )
+        }
+      />
       <section id={`${ID}-panel`} className={styles.panel}>
         <TabBar
           align="start"
           id={`${ID}-tabs`}
           label="Activities"
-          tabs={[
-            ...view.tabs.map((t) => ({ key: t.id, name: t.label })),
-            ...(opened
-              ? [{ key: "activity-details" as const, name: view.texts.details }]
-              : []),
-          ]}
+          tabs={view.tabs.map((t) => ({ key: t.id, name: t.label }))}
           selected={tab}
           onSelect={setTab}
         />
@@ -158,14 +154,128 @@ export function UnitActivitiesTab({
           {view.fund === "" ? (
             <p id={`${ID}-no-fund`}>{view.empty}</p>
           ) : tab === "fund-summary" ? (
-            <FundSummary
+            <>
+              <FundPanels
+                appId={appId}
+                format={format}
+                money={money}
+                headings={{
+                  roster: view.texts.roster,
+                  equipment: view.texts.equipment,
+                }}
+              />
+              <FundSummary
+                appId={appId}
+                fund={view.fund}
+                period={period}
+                view={view}
+                money={money}
+              />
+              <RequirementPanels
+                key={view.fund}
+                appId={appId}
+                fund={view.fund}
+              />
+            </>
+          ) : tab === "amendments" ? (
+            <AmendmentsPanel
+              key={revision}
               appId={appId}
               fund={view.fund}
-              period={period}
-              view={view}
+              format={format}
               money={money}
+              chosen={amendment}
+              onChoose={setAmendment}
+              onView={(activity, version) =>
+                setOpened({
+                  activity,
+                  version,
+                  editing: false,
+                  amendment: amendment ?? undefined,
+                })
+              }
+              onAdd={(c) =>
+                setOpened({
+                  activity: "",
+                  version: "",
+                  editing: true,
+                  amendment: c,
+                })
+              }
+              onChanged={read.retry}
             />
-          ) : tab === "activity-details" && opened ? (
+          ) : (
+            <>
+              <ActivityList
+                key={revision}
+                appId={appId}
+                fund={view.fund}
+                view={view}
+                money={money}
+                onChanged={read.retry}
+                onView={(r) =>
+                  setOpened({
+                    activity: r.key,
+                    version: r.version,
+                    editing: false,
+                  })
+                }
+              />
+              {/* Legacy shows the fund's approval route below the list. */}
+              <ApprovalSection
+                key={`approval-${view.fund}-${revision}`}
+                id={`${ID}-approval`}
+                appId={appId}
+                doc={`fund-${view.fund}`}
+                hint={view.submitHint}
+                onChanged={() => {
+                  read.retry();
+                  setRevision((r) => r + 1);
+                }}
+              />
+            </>
+          )}
+        </div>
+      </section>
+      {/* MR 15893 record drawer: the activity opens beside the list, which keeps its place; closing returns to it. */}
+      {opened && view.fund !== "" && (
+        <ActionDialog
+          id={`${ID}-activity`}
+          title={view.texts.details}
+          side
+          onClose={() => setOpened(null)}
+        >
+          {opened.editing ? (
+            <ActivityEditor
+              key={`edit-${opened.activity}-${opened.version}`}
+              appId={appId}
+              fund={view.fund}
+              activity={opened.activity}
+              version={opened.version}
+              amendment={opened.amendment}
+              money={money}
+              onSaved={(activity, version, minted) => {
+                setRevision((r) => r + 1);
+                read.retry();
+                if (opened.amendment) {
+                  // Legacy navigateBackToAmendment: back to the amendment, now minted, with its lines.
+                  setAmendment({
+                    key: minted || opened.amendment.key,
+                    reason: opened.amendment.reason,
+                  });
+                  setOpened(null);
+                  return;
+                }
+                // Legacy saveActivity: the saved version opens in view; the summary and list read again.
+                setOpened({ activity, version, editing: false });
+              }}
+              onCancel={() =>
+                setOpened(
+                  opened.activity ? { ...opened, editing: false } : null,
+                )
+              }
+            />
+          ) : (
             <ActivityDetails
               key={`${opened.activity}-${opened.version}`}
               appId={appId}
@@ -176,22 +286,11 @@ export function UnitActivitiesTab({
               money={money}
               onVersion={(version) => setOpened({ ...opened, version })}
               onChanged={read.retry}
-            />
-          ) : (
-            <ActivityList
-              appId={appId}
-              fund={view.fund}
-              view={view}
-              money={money}
-              onChanged={read.retry}
-              onView={(r) => {
-                setOpened({ activity: r.key, version: r.version });
-                setTab("activity-details");
-              }}
+              onEdit={() => setOpened({ ...opened, editing: true })}
             />
           )}
-        </div>
-      </section>
+        </ActionDialog>
+      )}
     </div>
   );
 }
@@ -323,7 +422,11 @@ function ActivityList({
   type Row = (typeof data.rows)[number];
   const text = (
     k: Exclude<keyof typeof h, "amount">,
-  ): { id: string; header: React.ReactNode; cell: (r: Row) => string } => ({
+  ): {
+    id: string;
+    header: React.ReactNode;
+    cell: (r: Row) => React.ReactNode;
+  } => ({
     id: functions.ids.idPart(k),
     header: head(`${ID}-list-${functions.ids.idPart(k)}`, h[k]),
     cell: (r) => r[k],
@@ -370,7 +473,19 @@ function ActivityList({
           text("jobTitle"),
           text("itemization"),
           text("fte"),
-          text("status"),
+          {
+            ...text("status"),
+            cell: (r: Row) => {
+              const tone = claimStatusTone(r.status);
+              return tone ? (
+                <StatusBadge dot tone={tone}>
+                  {r.status}
+                </StatusBadge>
+              ) : (
+                r.status
+              );
+            },
+          },
           text("homeless"),
           text("amended"),
           text("functionDescription"),

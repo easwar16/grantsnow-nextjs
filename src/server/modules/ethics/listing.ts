@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { authenticate } from "@/server/identity/session/service";
-import { ethics, lookups, people } from "@/server/oracle/api";
+import { applications, lookups, people } from "@/server/oracle/api";
 import { resources } from "@/server/platform/configuration/resources";
 import {
   dashboardRoles,
@@ -62,6 +62,7 @@ const mapRow = (r: z.infer<typeof row>) => ({
   status: value(r.status),
   statusCode: value(r.status_lkp_code),
   responseStatus: value(r.response_status),
+  responseStatusCode: value(r.response_status_lkp_code),
   risk: value(r.risk_desc),
   riskCode: value(r.risk_code),
   createdBy: value(r.created_by),
@@ -72,13 +73,11 @@ const mapRow = (r: z.infer<typeof row>) => ({
   expiry: value(r.expiry_date),
   ethicsType: value(r.ethics_type),
   ethicsTypeCode: value(r.ethics_type_code),
-  responseStatusCode: value(r.response_status_lkp_code),
   formType: value(r.ethics_form_type),
   org: value(r.org_unit_name),
   reviewer: value(r.reviewer_name),
   currentApprover: r.my_approval === "Y",
 });
-
 
 const filterKeys = {
   number: "list-ethics-number",
@@ -203,6 +202,39 @@ export async function ethicsListView() {
       recycle: label(bundle, "button-labels", "recycle-bin", "Recycle bin"),
       clear: label(bundle, "button-labels", "clear", "Clear"),
       total: label(bundle, "labels", "total-count", "Total"),
+      // Legacy ethics-start-page card actions and dialogs.
+      link: label(bundle, "button-labels", "list-link", "Linked Objects"),
+      linkTitle: label(
+        bundle,
+        "dialog-titles",
+        "linked-objects",
+        "Linked Objects",
+      ),
+      clone: label(bundle, "button-labels", "list-clone", "Clone"),
+      delete: label(bundle, "button-labels", "list-delete", "Delete"),
+      cloneTitle: label(bundle, "dialog-titles", "clone-ethic", "Clone Ethics"),
+      cloneEntire: label(
+        bundle,
+        "option-keys",
+        "entire-ethic",
+        "Entire Ethics",
+      ),
+      cloneSubmit: label(bundle, "button-labels", "clone", "Clone"),
+      cancel: label(bundle, "button-labels", "cancel", "Cancel"),
+      deleteTitle: label(
+        bundle,
+        "dialog-titles",
+        "listing-delete-warning",
+        "Warning",
+      ),
+      deleteMessage: label(
+        bundle,
+        "warning-messages",
+        "listing-permanent-delete",
+        "Are you sure you want to delete this record?",
+      ),
+      deleteConfirm: label(bundle, "button-labels", "listing-delete", "Delete"),
+      deleteCancel: label(bundle, "button-labels", "listing-cancel", "Cancel"),
     },
   };
 }
@@ -264,8 +296,9 @@ export async function listEthics(f: EthicsFilters, signal?: AbortSignal) {
   if (f.sort && !sorts.some((s) => s.value === f.sort))
     throw new AppError("BAD_REQUEST", "Unknown Ethics sort column.", 400);
   const clause = ethicsWhereClause(f, view.gates);
-  const raw = await ethics.applications(
+  const raw = await applications.list(
     {
+      objectType: "ETHICS",
       accessType: access,
       query: {
         p_offset: String(f.offset),

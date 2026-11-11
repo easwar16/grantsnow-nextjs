@@ -4,7 +4,7 @@ import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
 import {
   awards,
-  eoi as locks,
+  locks,
   lookups,
   people,
   roles as recordRoles,
@@ -287,14 +287,7 @@ export async function awardSetFinalized(id: string, raw: unknown) {
   };
   if (fixtureMode()) {
     (await import("@/test-support/eoi-writes")).fixtureModuleLock(body);
-    await invalidate([
-      ...locks.setLock.invalidates,
-      "getPost_awardsAwardDetails",
-    ]);
-  } else {
-    await locks.setLock({ body });
-    // The finalized ticks come from AwardDetails' locked_modules.
-    await invalidate(["getPost_awardsAwardDetails"]);
-  }
+    await invalidate(locks.setLock.invalidates);
+  } else await locks.setLock({ body });
   return { finalized: input.finalize };
 }

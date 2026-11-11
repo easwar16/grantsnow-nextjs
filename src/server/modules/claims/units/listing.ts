@@ -9,7 +9,7 @@ import {
 import { dashboardRoles } from "@/server/platform/configuration/service";
 import { AppError } from "@/lib/errors";
 import { serverFunctions } from "@/server/functions";
-import type { UnitFilters } from "@/features/modules/claims/units/schema";
+import type { UnitFilters } from "@/features/modules/claims/units/listing/schema";
 import type {
   UnitChoiceList,
   UnitFund,
@@ -17,7 +17,7 @@ import type {
   UnitPage,
   UnitRow,
   UnitTextKey,
-} from "@/features/modules/claims/units/types";
+} from "@/features/modules/claims/units/listing/types";
 import { fiscalYears } from "@/shared/claims/fiscal";
 import { constants } from "@/lib/constants";
 
@@ -95,6 +95,8 @@ function unitActions(
     edit: can("edit-claims-unit"),
     clone: can("claims-clone"),
     export: can("claims-export"),
+    // Legacy openFundTab: shown on current_user.access[tab].read.
+    activities: can("claims-unit-activities"),
   };
 }
 
@@ -122,7 +124,10 @@ export const listGates = (rows: Resources) => ({
 
 /** Gates, texts, the status list, fund types and years (legacy loadLookups is one read of three types). */
 export async function unitListView(): Promise<UnitListView> {
-  const { rows, actions } = await actor();
+  const {
+    rows,
+    actions: { activities, ...actions },
+  } = await actor();
   const gates = listGates(rows);
   const texts = Object.fromEntries(
     Object.entries(TEXTS).map(([k, [group, key, fallback]]) => [
@@ -140,6 +145,11 @@ export async function unitListView(): Promise<UnitListView> {
   return {
     gates,
     actions,
+    links: {
+      activities: activities
+        ? label(rows, "page-name", "unit-activities", "Activities")
+        : null,
+    },
     texts,
     statuses: [
       { value: "", label: "All" },
@@ -217,6 +227,7 @@ const unitPage = z.object({
 
 export function mapFund(f: z.infer<typeof fundRow>): UnitFund {
   return {
+    appFundId: str(f.app_fund_id),
     fundTypeId: str(f.fund_type_id),
     name: f.full_fund_display || f.fund_name || "",
     start: day(f.grant_period_start),

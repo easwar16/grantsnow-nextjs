@@ -59,7 +59,7 @@ export async function accountData(panel = "profile"): Promise<AccountData> {
   );
   // Preferences are read fresh here: this panel edits them.
   const [raw, identity, rows, format] = await Promise.all([
-    configuration.storedPreferences(),
+    configuration.dashboardPreferences(undefined, { fresh: true }),
     // The validation authenticate() already shares for this token.
     panel === "profile"
       ? validatedIdentity(session.token)
@@ -341,7 +341,7 @@ export async function saveAccount(kind: string, body: unknown) {
     const input = personStatusSchema.parse(body);
     const chosen = input.status_code === "OOO" ? input.proxy_users : [];
     const [rawOwn, allowed] = await Promise.all([
-      account.storedPersonStatus(),
+      account.personStatus(undefined, { fresh: true }),
       input.status_code === "OOO" ? organizations() : [],
     ]);
     const own = assertBusiness(rawOwn);
@@ -422,7 +422,9 @@ export async function saveAccount(kind: string, body: unknown) {
     throw new AppError("BAD_REQUEST", "Unknown settings change.", 400);
   const input = dashboardChange.parse(body);
   // Read fresh (never the memo): the write merges over exactly what Oracle holds now.
-  const stored = serverFunctions.async.early(configuration.storedPreferences());
+  const stored = serverFunctions.async.early(
+    configuration.dashboardPreferences(undefined, { fresh: true }),
+  );
   if (
     input.theme !== undefined &&
     !(await availableThemes()).some((t) => t.id === input.theme)

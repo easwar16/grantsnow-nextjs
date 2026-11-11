@@ -578,7 +578,7 @@ export async function savePricingFunder(
     !Number.isFinite(institution)
   )
     throw new AppError("FORBIDDEN", "Masked pricing cannot be edited.", 403);
-  await proposals.savePricingFunder({
+  await proposals.savePricingLines({
     funderId: body.funderId,
     rows: [
       {
@@ -673,7 +673,7 @@ export async function saveGlobalPricingFunder(
     !Number.isFinite(Number(funder.contribution))
   )
     throw new AppError("FORBIDDEN", "Masked pricing cannot be edited.", 403);
-  await proposals.savePricingFunder({
+  await proposals.savePricingLines({
     funderId: body.funderId,
     rows: [
       {

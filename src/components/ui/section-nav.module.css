@@ -1,0 +1,26 @@
+/* The tab bar's look (TabBar, legacy oj-tab-bar), kept on top while its page scrolls under it. */
+.nav {
+  position: sticky;
+  top: -18px;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  padding: 12px 0 0;
+  background: var(--gn-surface);
+  border-bottom: 1px solid var(--gn-divider);
+}
+.nav > a {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gn-text-secondary);
+  text-decoration: none;
+  border-bottom: 3px solid transparent;
+}
+.nav > a[aria-current="location"] {
+  color: var(--gn-text);
+  border-bottom-color: var(--gn-brand);
+}

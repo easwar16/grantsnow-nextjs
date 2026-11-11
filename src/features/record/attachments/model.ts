@@ -35,6 +35,8 @@ export const ATTACHMENT_LABELS = [
   "addLink",
   "linkTitle",
   "linkUrl",
+  "deleteSuccess",
+  "uploadSuccess",
 ] as const;
 export type AttachmentLabel = (typeof ATTACHMENT_LABELS)[number];
 
@@ -179,4 +181,12 @@ export function folderNameProblem(name: string) {
   if (!/^[A-Za-z0-9 _.&()-]{1,80}$/.test(name) || name.trim() !== name)
     return "Use letters, numbers, spaces and - _ . & ( ) in the folder name.";
   return null;
+}
+
+/** 9549: the "should not exceed" note names the configured limit, replacing an MB figure in the label or appending it. */
+export function sizeNotice(label: string, maxMb: number) {
+  const mb = /\d+(?:\.\d+)?\s*MB/i;
+  return mb.test(label)
+    ? label.replace(mb, `${maxMb}MB`)
+    : `${label} (${maxMb}MB)`;
 }

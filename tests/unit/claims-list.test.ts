@@ -7,8 +7,8 @@ import {
   parseUnitFilters,
   serializeUnitFilters,
   unitFiltered,
-} from "@/features/modules/claims/units/schema";
-import { clearedFundFilters } from "@/features/modules/claims/funds/schema";
+} from "@/features/modules/claims/units/listing/schema";
+import { clearedFundFilters } from "@/features/modules/claims/funds/listing/schema";
 import { fiscalYears } from "@/shared/claims/fiscal";
 import { legacyDeepLink } from "@/shared/auth/legacy-link";
 
@@ -207,7 +207,7 @@ it("names a downloaded file from Content-Disposition (UTF-8 form first), and kee
         mime: "application/pdf",
         filename: "Grants Report – 2027.pdf",
       })) as typeof fetch;
-    const ok = await download("/claims/units/export", { appId: "1" });
+    const ok = await download("/claims/units/actions/export", { appId: "1" });
     expect(ok.ok && ok.data.filename).toBe("Grants Report – 2027.pdf");
     expect(ok.ok && ok.data.blob.size).toBe(3);
     globalThis.fetch = (async () =>
@@ -220,7 +220,7 @@ it("names a downloaded file from Content-Disposition (UTF-8 form first), and kee
         },
         { status: 404 },
       )) as typeof fetch;
-    const bad = await download("/claims/units/export", { appId: "9" });
+    const bad = await download("/claims/units/actions/export", { appId: "9" });
     expect(!bad.ok && bad.error.message).toBe(
       "The unit application was not found.",
     );
@@ -234,7 +234,7 @@ it("names a downloaded file from Content-Disposition (UTF-8 form first), and kee
         },
       });
     }) as typeof fetch;
-    const posted = await download("/claims/units/export", undefined, {
+    const posted = await download("/claims/units/actions/export", undefined, {
       filters: {},
     });
     expect(posted.ok && posted.data.filename).toBe(

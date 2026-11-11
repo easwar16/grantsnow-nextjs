@@ -140,6 +140,7 @@ export function PricingDisplay({
           <>
             <button
               type="button"
+              id={`proposal-${id}-pricing-save`}
               className="gn-btn gn-btn--primary"
               onClick={() => void save()}
               disabled={busy}
@@ -148,6 +149,7 @@ export function PricingDisplay({
             </button>
             <button
               type="button"
+              id={`proposal-${id}-pricing-cancel`}
               className="gn-btn gn-btn--outlined"
               onClick={() => {
                 setPreview(null);
@@ -160,20 +162,24 @@ export function PricingDisplay({
           </>
         ) : (
           <>
-            <button
-              type="button"
-              className="gn-btn gn-btn--outlined"
-              onClick={() => void reset()}
-              disabled={busy || !pricing.canReset}
-            >
-              <Icon name="reset" size={16} /> Reset to default
-            </button>
-            {globalVisible && (
+            {pricing.canReset && (
               <button
                 type="button"
+                id={`proposal-${id}-pricing-reset`}
+                className="gn-btn gn-btn--outlined"
+                onClick={() => void reset()}
+                disabled={busy}
+              >
+                <Icon name="reset" size={16} /> Reset to default
+              </button>
+            )}
+            {globalVisible && pricing.canEditGlobal && (
+              <button
+                type="button"
+                id={`proposal-${id}-pricing-global`}
                 className="gn-btn gn-btn--outlined"
                 onClick={() => setGlobalOpen(true)}
-                disabled={busy || !pricing.canEditGlobal}
+                disabled={busy}
               >
                 <Icon name="edit" size={16} /> {globalLabels.action}
               </button>

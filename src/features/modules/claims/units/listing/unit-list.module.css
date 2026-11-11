@@ -1,0 +1,143 @@
+/* Unit Inquiry's own parts; the drawer, rows and count are the shared listing styles. */
+.toolbar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 12px 0;
+}
+.push {
+  margin-left: auto;
+}
+li.row {
+  border-radius: 5px;
+}
+/* Legacy's number row (oj-flex) sits 6px inside the card. */
+.overline {
+  padding-top: 6px;
+}
+/* MR 15893 card body (legacy .claims-unit-card-*): funds on the left, the claim counts in a slim column on the
+   right, under the funds below 768px. Legacy rem sits on a ~12px root, so its sizes are given here in px. */
+.cardBody {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px 24px;
+  padding-top: 6px;
+}
+.cardFunds {
+  flex: 1 1 288px;
+  max-width: 624px;
+  min-width: 0;
+}
+.cardClaims {
+  flex: 0 0 auto;
+  padding-inline-start: 24px;
+  border-inline-start: 1px solid var(--gn-divider);
+}
+.cardHeading {
+  margin-bottom: 4.5px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gn-text-secondary);
+}
+.cardFund {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4.5px 0;
+  border-top: 1px solid var(--gn-divider);
+}
+.cardFund:first-of-type {
+  border-top: 0;
+}
+.cardFundName {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.cardFundEnd {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px 9px;
+}
+.cardLink {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+.cardCounts {
+  display: flex;
+}
+.cardCount {
+  padding: 0 12px;
+  text-align: center;
+  border-inline-start: 1px solid var(--gn-divider);
+}
+.cardCount:first-child {
+  padding-inline-start: 0;
+  border-inline-start: 0;
+}
+.cardCountValue {
+  font-size: 16.5px;
+  font-weight: 700;
+  line-height: 21px;
+}
+.cardCountLabel {
+  font-size: 9px;
+  color: var(--gn-text-secondary);
+}
+.cardCount[data-tone="success"] .cardCountValue {
+  color: var(--gn-success);
+}
+.cardCount[data-tone="warning"] .cardCountValue {
+  color: var(--gn-warning);
+}
+.cardCount[data-tone="info"] .cardCountValue {
+  color: rgb(0 104 140);
+}
+@media (max-width: 767px) {
+  .cardClaims {
+    padding-inline-start: 0;
+    border-inline-start: 0;
+  }
+}
+/* Legacy drawers put Clear Filters at their foot (margin-top: auto). */
+.drawer {
+  min-height: 100%;
+}
+.clear {
+  align-self: flex-start;
+  margin-top: auto;
+  margin-left: 3px;
+  margin-bottom: 8px;
+}
+/* oj-list-item-layout's action slot: the toolbar 15px below the card's inner top (measured on DEV). */
+.rowActions {
+  display: flex;
+  flex: none;
+  align-self: flex-start;
+  gap: 3px;
+  padding-top: 15px;
+}
+/* Funds rows: the View button sits in the row's middle. */
+.rowActionsCentre {
+  align-self: center;
+  padding-top: 0;
+}
+/* JET read-only fields (both listings' metadata): a 16px label (24px right padding) over a 15px value, 6px from
+   their divider. */
+.fields dl > div {
+  padding-right: 6px;
+  margin-right: 6px;
+}
+.fields dt {
+  padding-right: 24px;
+  line-height: 16px;
+}
+.fields dd {
+  line-height: 15px;
+}

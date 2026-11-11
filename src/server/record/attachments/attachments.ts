@@ -29,9 +29,8 @@ import { fundAttachmentHost } from "@/server/modules/claims/funds/record";
 import { unitAttachmentHost } from "@/server/modules/claims/units/record";
 import { proposalAttachmentHost } from "@/server/modules/proposals/attachments";
 import { recordIdentity } from "@/features/modules/proposals/record";
-import { ethicsRecord, ethicsStakeholder } from "@/server/modules/ethics/record";
-import { dueDiligenceRecord } from "@/server/modules/due-diligence/record";
-import { authenticate } from "@/server/identity/session/service";
+import { ethicsAttachmentHost } from "@/server/modules/ethics/record";
+import { dueDiligenceAttachmentHost } from "@/server/modules/due-diligence/record";
 import { fileProblem } from "@/features/record/dynamic-form/engine";
 import {
   ATTACHMENT_LABELS,
@@ -41,6 +40,7 @@ import {
   parseFolders,
   recordedName,
   safeLinkUrl,
+  sizeNotice,
   withExtension,
   type AttachmentItem,
   type AttachmentLabel,
@@ -71,6 +71,8 @@ export interface AttachmentHost {
   token: string;
   user: { organizationId: string; legalId?: string };
   canEdit: boolean;
+  /** `false` where the module's fragment turns the confidential choice off (Ethics). */
+  confidential?: false;
 }
 type Mode = "read" | "view" | "edit";
 const HOSTS: Record<
@@ -80,83 +82,8 @@ const HOSTS: Record<
   eoi: eoiAttachmentHost,
   award: awardAttachmentHost,
   "claim-funds": fundAttachmentHost,
-  ethics: async (id, mode, participant) => {
-    const [record, { session, user }] = await Promise.all([
-      ethicsRecord(id),
-      authenticate(),
-    ]);
-    if (!record.tabs.includes("ethics-attachments"))
-      throw new AppError(
-        "FORBIDDEN",
-        "Ethics Attachments access has not been granted.",
-        403,
-      );
-    const person = ethicsStakeholder(record, user.personId, participant);
-    if (!person)
-      throw new AppError(
-        "CONTRACT",
-        "Ethics stakeholder record is unavailable.",
-      );
-    const canEdit =
-      record.rights["ethics-attachments"]?.edit === true &&
-      person.statusCode === "DRFT";
-    if (mode === "edit" && !canEdit)
-      throw new AppError(
-        "FORBIDDEN",
-        "Ethics Attachments cannot be changed.",
-        403,
-      );
-    return {
-      objectType: "ETHICS",
-      objectId: person.id,
-      objectNumber: person.id,
-      pathSegment: "ETHICS",
-      bundle: "ethics",
-      token: session.token,
-      user,
-      canEdit,
-    };
-  },
-  "due-diligence": async (id, mode) => {
-    const [record, { session, user }] = await Promise.all([
-      dueDiligenceRecord(id),
-      authenticate(),
-    ]);
-    if (!record.tabs.includes("duediligence-attachments"))
-      throw new AppError(
-        "FORBIDDEN",
-        "Due Diligence Attachments access has not been granted.",
-        403,
-      );
-    const person = record.access === "DDA_ACCESS"
-      ? record.respondents[0]
-      : record.respondents.find((item) => item.personId === user.personId);
-    if (!person)
-      throw new AppError(
-        "FORBIDDEN",
-        "Due Diligence stakeholder access has not been granted.",
-        403,
-      );
-    const canEdit =
-      record.rights["duediligence-attachments"]?.edit === true &&
-      person.statusCode === "DRFT";
-    if (mode === "edit" && !canEdit)
-      throw new AppError(
-        "FORBIDDEN",
-        "Due Diligence Attachments cannot be changed.",
-        403,
-      );
-    return {
-      objectType: "DUE_DILIGENCE",
-      objectId: person.id,
-      objectNumber: person.id,
-      pathSegment: "DUE_DILIGENCE",
-      bundle: "due_diligence",
-      token: session.token,
-      user,
-      canEdit,
-    };
-  },
+  ethics: ethicsAttachmentHost,
+  "due-diligence": dueDiligenceAttachmentHost,
   claims: unitAttachmentHost,
 };
 
@@ -166,7 +93,10 @@ for (const type of recordIdentity.shape.type.options)
 const hostQuery = z.object({
   host: z.enum(Object.keys(HOSTS) as [string, ...string[]]),
   record: z.string().regex(/^[1-9]\d{0,14}$/),
-  participant: z.string().regex(/^[1-9]\d{0,14}$/).optional(),
+  participant: z
+    .string()
+    .regex(/^[1-9]\d{0,14}$/)
+    .optional(),
 });
 /** `?host&record` → the resolved host; anything malformed or unknown is a 400. */
 export function attachmentHost(q: URLSearchParams, mode: Mode) {
@@ -179,7 +109,11 @@ export function attachmentHost(q: URLSearchParams, mode: Mode) {
     throw new AppError("BAD_REQUEST", "Invalid attachments request.", 400);
   if (parsed.data.participant && parsed.data.host !== "ethics")
     throw new AppError("BAD_REQUEST", "Invalid participant request.", 400);
-  return HOSTS[parsed.data.host](parsed.data.record, mode, parsed.data.participant);
+  return HOSTS[parsed.data.host](
+    parsed.data.record,
+    mode,
+    parsed.data.participant,
+  );
 }
 
 /** One row per label: the canonical key (most hosts, Framework-Patterns backlog #1) and the fragment's fallback. */
@@ -240,6 +174,17 @@ const LABELS: Record<AttachmentLabel, [string, string, string]> = {
   addLink: ["button-labels", "add-link", "Add Link"],
   linkTitle: ["labels", "link-title", "Link Title"],
   linkUrl: ["labels", "link-url", "Link URL"],
+  // 8483: legacy attachmentMessage reads these from the record's module bundle.
+  deleteSuccess: [
+    "labels",
+    "attachment-delete-success",
+    "Record deleted successfully.",
+  ],
+  uploadSuccess: [
+    "warning-messages",
+    "file-upload-successfull",
+    "Attachment uploaded successfully",
+  ],
 };
 /** Keys a bundle names differently, or (null) a literal its host passes (the host page's `labels` object). */
 const BUNDLE_KEYS: Record<
@@ -341,7 +286,7 @@ export function attachmentLabels(rows: Resources, bundle: string) {
   ) as Record<AttachmentLabel, string>;
 }
 /** The bundle's gates: folders, links and the confidential choice show only on an explicit 'Y' row. */
-function gates(rows: Resources, bundle: string) {
+function gates(rows: Resources, { bundle, confidential }: AttachmentHost) {
   return {
     folders: serverFunctions.resources.resourceVisible(
       rows,
@@ -366,8 +311,7 @@ function gates(rows: Resources, bundle: string) {
       "attachment-links-header",
     ),
     allowConfidential:
-      bundle !== "ethics" &&
-      bundle !== "due_diligence" &&
+      confidential !== false &&
       serverFunctions.resources.resourceVisible(
         rows,
         bundle,
@@ -387,7 +331,8 @@ export async function attachmentsView(
     resources(),
     formGlobals(),
   ]);
-  const { folders, showLinks, allowConfidential } = gates(rows, host.bundle);
+  const { folders, showLinks, allowConfidential } = gates(rows, host);
+  const labels = attachmentLabels(rows, host.bundle);
   return {
     id,
     query: new URLSearchParams({
@@ -395,7 +340,13 @@ export async function attachmentsView(
       record: q.get("record") ?? "",
       ...(q.get("participant") ? { participant: q.get("participant")! } : {}),
     }).toString(),
-    labels: attachmentLabels(rows, host.bundle),
+    labels: {
+      ...labels,
+      fileShouldNotExceed: sizeNotice(
+        labels.fileShouldNotExceed,
+        globals.maxMb,
+      ),
+    },
     folders,
     canEdit: host.canEdit,
     storage: oicConnected(),
@@ -423,7 +374,7 @@ export async function listAttachments(
     resources(),
     displayFormat(),
   ]);
-  const { showLinks } = gates(rows, host.bundle);
+  const { showLinks } = gates(rows, host);
   const [items, links] = await Promise.all([
     readAttachments(host),
     showLinks ? readLinks(host) : null,
@@ -522,7 +473,7 @@ export async function uploadAttachment(
   return exclusiveLocation(stored, async () => {
     // Read under the hold, so an upload that just finished is seen.
     const [rows, items] = await Promise.all([labelRows, readAttachments(host)]);
-    const { folders, allowConfidential } = gates(rows, host.bundle);
+    const { folders, allowConfidential } = gates(rows, host);
     const tree = folderTree(
       folders,
       items.map((a) => ({ folder: a.sec_obj_ref_type })),
@@ -593,7 +544,7 @@ async function linksHost(q: URLSearchParams, mode: Mode) {
     attachmentHost(q, mode),
     resources(),
   ]);
-  const { showLinks, allowConfidential } = gates(rows, host.bundle);
+  const { showLinks, allowConfidential } = gates(rows, host);
   if (!showLinks)
     throw new AppError("FORBIDDEN", "Links are not enabled here.", 403);
   return { host, allowConfidential };

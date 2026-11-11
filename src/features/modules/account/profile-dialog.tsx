@@ -10,6 +10,9 @@ import { Icon } from "@/components/ui/icon";
 import { ActionDialog } from "@/components/dialog/action-dialog";
 import { DataTable } from "@/components/ui/data-table";
 import { Select } from "@/components/ui/select";
+import { MultiSelect } from "@/components/ui/multi-select";
+import { TabBar } from "@/components/ui/tab-bar";
+import { InsideField } from "@/components/ui/inside-field";
 import { useShell } from "@/components/layout/shell-context";
 import { saveFailure, saveSettings } from "./apply";
 import {
@@ -141,49 +144,19 @@ function Profile({
   );
   return (
     <>
+      <TabBar
+        id="profile"
+        label="Manage profile sections"
+        align="stretch"
+        tabs={tabs.map((key) => ({ key, name: tabName[key] }))}
+        selected={tab}
+        onSelect={setTab}
+      />
       <div
-        id="profile-tabs"
-        className={styles.tabs}
-        role="tablist"
-        aria-label="Manage profile sections"
-        onKeyDown={(event) => {
-          if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key))
-            return;
-          event.preventDefault();
-          const current = tabs.indexOf(tab);
-          const next =
-            event.key === "Home"
-              ? 0
-              : event.key === "End"
-                ? tabs.length - 1
-                : (current +
-                    (event.key === "ArrowRight" ? 1 : tabs.length - 1)) %
-                  tabs.length;
-          setTab(tabs[next]);
-          event.currentTarget
-            .querySelectorAll<HTMLButtonElement>('[role="tab"]')
-            [next]?.focus();
-        }}
-      >
-        {tabs.map((id) => (
-          <button
-            key={id}
-            id={`profile-tab-${id}`}
-            type="button"
-            role="tab"
-            aria-selected={tab === id}
-            tabIndex={tab === id ? 0 : -1}
-            onClick={() => setTab(id)}
-          >
-            {tabName[id]}
-          </button>
-        ))}
-      </div>
-      <div
-        id="profile-panel"
+        id={`profile-panel-${tab}`}
         className={styles.body}
         role="tabpanel"
-        aria-label={tabName[tab]}
+        aria-labelledby={`profile-tab-${tab}`}
       >
         <div className="enter-fade" key={tab}>
           {tab === "profile" && (
@@ -233,16 +206,28 @@ function Profile({
                     ],
                   ] as const
                 ).map(([key, id, name]) => (
-                  <ResearchSelection
-                    key={key}
-                    id={`profile-${id}`}
-                    label={name}
-                    options={initial.options[key] || []}
-                    values={research[key]}
-                    onChange={(next) =>
-                      setResearch((r) => ({ ...r, [key]: next }))
-                    }
-                  />
+                  // Live's oj-combobox-many: pick from the list or type a new value.
+                  <div key={key} className={styles.research}>
+                    <span id={`profile-${id}-label`}>{name}</span>
+                    <MultiSelect
+                      id={`profile-${id}`}
+                      label={name}
+                      variant="chips"
+                      allowCustom
+                      options={(initial.options[key] || []).map((v) => ({
+                        value: v,
+                        label: v,
+                      }))}
+                      value={research[key]}
+                      // A comma would split the stored list.
+                      onChange={(next) =>
+                        setResearch((r) => ({
+                          ...r,
+                          [key]: next.filter((v) => !v.includes(",")),
+                        }))
+                      }
+                    />
+                  </div>
                 ))}
               </div>
               {footer(
@@ -308,67 +293,6 @@ function Profile({
     </>
   );
 }
-function ResearchSelection({
-  id,
-  label,
-  options,
-  values,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  options: string[];
-  values: string[];
-  onChange: (v: string[]) => void;
-}) {
-  const [draft, setDraft] = useState("");
-  const list = `${id}-options`;
-  // Custom values are allowed, as the original's allowCustom multi-select; commas would split the stored list.
-  const add = () => {
-    const value = draft.trim();
-    if (value !== "" && !value.includes(","))
-      onChange([...new Set([...values, value])]);
-    setDraft("");
-  };
-  return (
-    <div id={id} className={styles.research}>
-      <label>
-        <span>{label}</span>
-        <input
-          id={`${id}-input`}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          list={list}
-          onKeyDown={(e) => {
-            if (e.key !== "Enter") return;
-            e.preventDefault();
-            add();
-          }}
-        />
-      </label>
-      <datalist id={list}>
-        {options.map((value) => (
-          <option key={value} value={value} />
-        ))}
-      </datalist>
-      <button id={`${id}-add`} type="button" onClick={add}>
-        Add
-      </button>
-      <div id={`${id}-chips`} className={styles.chips}>
-        {values.map((value) => (
-          <button
-            type="button"
-            key={value}
-            aria-label={`Remove ${value}`}
-            onClick={() => onChange(values.filter((v) => v !== value))}
-          >
-            {value} <Icon name="close" size={12} />
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 function StatusEditor({
   value,
   onChange,
@@ -390,126 +314,166 @@ function StatusEditor({
       : "";
   };
   const instant = (v: string) => (v ? new Date(v).toISOString() : "");
+  // Legacy manage-tab-panel (621): inside-label fields a quarter wide, the message 52%, the proxy table 70%.
   return (
-    <div id="profile-status" className={`${styles.form} ${styles.grid}`}>
-      <label>
-        <span>{labels.selectStatus}</span>
-        <Select
-          id="profile-status-select"
+    <div id="profile-status" className={styles.status}>
+      <div className={styles.quarter}>
+        <InsideField
+          htmlFor="profile-status-select-trigger"
           label={labels.selectStatus}
-          options={STATUSES}
-          value={value.status_code}
-          clearable={false}
-          onChange={(code) =>
-            onChange({ ...value, status_code: code as "ACTIVE" | "OOO" })
-          }
-        />
-      </label>
+          filled
+        >
+          <Select
+            id="profile-status-select"
+            label={labels.selectStatus}
+            options={STATUSES}
+            value={value.status_code}
+            clearable={false}
+            onChange={(code) =>
+              onChange({ ...value, status_code: code as "ACTIVE" | "OOO" })
+            }
+          />
+        </InsideField>
+      </div>
       {value.status_code === "OOO" && (
         <>
-          <label>
-            <span>{labels.startDatetime} *</span>
-            <input
-              id="profile-status-start"
-              type="datetime-local"
-              required
-              value={local(value.effective_start_date)}
-              onChange={(e) =>
-                onChange({
-                  ...value,
-                  effective_start_date: instant(e.target.value),
-                })
-              }
-            />
-          </label>
-          <label>
-            <span>{labels.endDatetime} *</span>
-            <input
-              id="profile-status-end"
-              type="datetime-local"
-              required
-              value={local(value.effective_end_date)}
-              onChange={(e) =>
-                onChange({
-                  ...value,
-                  effective_end_date: instant(e.target.value),
-                })
-              }
-            />
-          </label>
-          <label className={styles.wide}>
-            <span>{labels.statusMessage} *</span>
-            <textarea
-              id="profile-status-message"
-              rows={5}
-              required
-              value={value.status_msg}
-              onChange={(e) =>
-                onChange({ ...value, status_msg: e.target.value })
-              }
-            />
-          </label>
-          <label>
-            <span>{labels.selectOrg}</span>
-            <Select
-              id="profile-proxy-organization"
-              label={labels.selectOrg}
-              options={organizations.map((o) => ({
-                value: o.id,
-                label: o.name,
-              }))}
-              value={org}
-              onChange={setOrg}
-            />
-          </label>
-          {people.error ? (
-            <div id="profile-proxy-error" role="alert">
-              {people.error.message}
-              <button
-                id="profile-proxy-retry"
-                type="button"
-                onClick={people.retry}
+          <div className={styles.row}>
+            <div className={styles.quarter}>
+              {/* The browser always shows the date-time format, so the label stays up. */}
+              <InsideField
+                htmlFor="profile-status-start"
+                label={labels.startDatetime}
+                required
+                filled
               >
-                Retry
-              </button>
-            </div>
-          ) : org && !people.data ? (
-            <ListSkeleton label="Loading proxy directory" rows={1} />
-          ) : (
-            <label>
-              <span>{labels.selectProxy}</span>
-              <Select
-                id="profile-proxy-person"
-                label={labels.selectProxy}
-                options={(people.data ?? []).map((p) => ({
-                  value: p.id,
-                  label: p.name,
-                }))}
-                value=""
-                disabled={!people.data}
-                onChange={(pid) => {
-                  // Picking an org and a person adds the proxy at once, as the original (no Add button).
-                  if (
-                    pid &&
-                    !value.proxy_users.some(
-                      (p) => p.org_id === org && p.proxy_pid === pid,
-                    )
-                  )
+                <input
+                  id="profile-status-start"
+                  type="datetime-local"
+                  required
+                  value={local(value.effective_start_date)}
+                  onChange={(e) =>
                     onChange({
                       ...value,
-                      proxy_users: [
-                        ...value.proxy_users,
-                        { org_id: org, proxy_pid: pid },
-                      ],
-                    });
-                }}
+                      effective_start_date: instant(e.target.value),
+                    })
+                  }
+                />
+              </InsideField>
+            </div>
+            <div className={styles.quarter}>
+              <InsideField
+                htmlFor="profile-status-end"
+                label={labels.endDatetime}
+                required
+                filled
+              >
+                <input
+                  id="profile-status-end"
+                  type="datetime-local"
+                  required
+                  value={local(value.effective_end_date)}
+                  onChange={(e) =>
+                    onChange({
+                      ...value,
+                      effective_end_date: instant(e.target.value),
+                    })
+                  }
+                />
+              </InsideField>
+            </div>
+          </div>
+          <div className={styles.message}>
+            <InsideField
+              htmlFor="profile-status-message"
+              label={labels.statusMessage}
+              required
+              multiline
+              filled
+            >
+              <textarea
+                id="profile-status-message"
+                rows={5}
+                required
+                value={value.status_msg}
+                onChange={(e) =>
+                  onChange({ ...value, status_msg: e.target.value })
+                }
               />
-            </label>
-          )}
+            </InsideField>
+          </div>
+          <div className={styles.row}>
+            <div className={styles.quarter}>
+              <InsideField
+                htmlFor="profile-proxy-organization-trigger"
+                label={labels.selectOrg}
+                filled={org !== ""}
+              >
+                <Select
+                  id="profile-proxy-organization"
+                  label={labels.selectOrg}
+                  options={organizations.map((o) => ({
+                    value: o.id,
+                    label: o.name,
+                  }))}
+                  value={org}
+                  onChange={setOrg}
+                />
+              </InsideField>
+            </div>
+            <div className={styles.quarter}>
+              {people.error ? (
+                <div id="profile-proxy-error" role="alert">
+                  {people.error.message}
+                  <button
+                    id="profile-proxy-retry"
+                    type="button"
+                    onClick={people.retry}
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : org && !people.data ? (
+                <ListSkeleton label="Loading proxy directory" rows={1} />
+              ) : (
+                <InsideField
+                  htmlFor="profile-proxy-person-trigger"
+                  label={labels.selectProxy}
+                  filled={false}
+                >
+                  <Select
+                    id="profile-proxy-person"
+                    label={labels.selectProxy}
+                    options={(people.data ?? []).map((p) => ({
+                      value: p.id,
+                      label: p.name,
+                    }))}
+                    value=""
+                    disabled={!people.data}
+                    onChange={(pid) => {
+                      // Picking an org and a person adds the proxy at once, as the original (no Add button).
+                      if (
+                        pid &&
+                        !value.proxy_users.some(
+                          (p) => p.org_id === org && p.proxy_pid === pid,
+                        )
+                      )
+                        onChange({
+                          ...value,
+                          proxy_users: [
+                            ...value.proxy_users,
+                            { org_id: org, proxy_pid: pid },
+                          ],
+                        });
+                    }}
+                  />
+                </InsideField>
+              )}
+            </div>
+          </div>
           <DataTable
             id="profile-proxies"
             rowIds="profile-proxy"
-            className={styles.wide}
+            className={styles.proxies}
             columns={[
               {
                 id: "org",

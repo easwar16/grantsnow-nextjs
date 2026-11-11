@@ -82,10 +82,9 @@ export async function proposalContracts(
   const context = await proposalPage(type, id, "proposals-contracts");
   const offset = (page - 1) * 10;
   const [raw, orgs, createAllowed] = await Promise.all([
-    contracts.linkedToProposal({
+    contracts.list({
       reference: context.summary.reference,
-      offset,
-      limit: 10,
+      query: { p_offset: String(offset), p_limit: "10" },
     }),
     organizations(),
     canCreateContract().catch(() => false),

@@ -9,6 +9,7 @@ import {
   ObjectAttributes,
   type AttributesHandle,
 } from "@/features/record/attributes/object-attributes";
+import type { AttributeValues } from "@/features/record/attributes/model";
 import { canSaveApplication, formOf } from "@/shared/opportunities/eoi-record";
 import { useActionFailure } from "../../../../components/dialog/action-failure";
 import { RECORD_SAVE, useRecord } from "./record-context";
@@ -25,6 +26,7 @@ export function ApplicationTab({
   requestId,
   number,
   statusCode,
+  attributes: saved,
   lock,
   texts,
 }: {
@@ -32,6 +34,8 @@ export function ApplicationTab({
   requestId?: string;
   number?: string;
   statusCode?: string;
+  /** The saved application's `attribute_N` values. */
+  attributes?: AttributeValues;
   lock: PageLock;
   texts: Record<
     "create" | "save" | "created" | "updated" | "createdNoNumber",
@@ -44,6 +48,8 @@ export function ApplicationTab({
     form = useRef<DynamicFormHandle>(null),
     attributes = useRef<AttributesHandle>(null),
     [formReady, setFormReady] = useState(false),
+    // Cancel Edit remounts the attributes panel, so it shows the saved values again.
+    [attributesKey, setAttributesKey] = useState(0),
     // A request created whose answers then failed: a retry saves into it instead of inserting another one.
     created = useRef<{ requestId: string; number: string } | null>(null);
   const { setApplication, setGuard, setEditing, run, navigate } = record;
@@ -56,7 +62,11 @@ export function ApplicationTab({
       // Attributes before the form, as legacy saveAOI; both show their errors.
       const attributesOk = attributes.current?.check() ?? true;
       if (!f.check() || !attributesOk) return;
+      const values = attributes.current?.values() ?? {};
       if (!isNew) {
+        // Legacy 9284: the upsert with the attributes first, then the form's answers.
+        const result = await eoi.save(requestId, values);
+        if (!result.ok) return fail(result.error);
         if (!(await f.save())) return;
         attributes.current?.reload();
         setEditing(false);
@@ -64,7 +74,7 @@ export function ApplicationTab({
         return;
       }
       if (!created.current) {
-        const result = await eoi.create(Number(opportunityId));
+        const result = await eoi.create(Number(opportunityId), values);
         if (!result.ok) return fail(result.error);
         if (result.data.number === null) {
           // Saving files under an unknown folder is the legacy `/undefined/` defect: open the record instead.
@@ -88,6 +98,7 @@ export function ApplicationTab({
     }, RECORD_SAVE);
   const cancel = () => {
     setEditing(false);
+    setAttributesKey((k) => k + 1);
     void form.current?.reload();
   };
   useEffect(() => {
@@ -110,13 +121,15 @@ export function ApplicationTab({
   return (
     <div id="eoi-record-application" className={styles.tab}>
       <ObjectAttributes
+        key={attributesKey}
         ref={attributes}
         id="eoi-record-attributes"
         host="opportunities-eoi-application"
         parentId={opportunityId}
         objectId={requestId}
-        // Read-only: the EOI save has no attributes write (legacy saveAttributes only copies them), so edits were lost.
-        editable={false}
+        initial={saved}
+        // Saved with the request since legacy 9284 (insertRequest's body).
+        editable={editable}
       />
       <DynamicForm
         ref={form}

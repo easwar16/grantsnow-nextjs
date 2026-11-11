@@ -14,11 +14,38 @@ import {
   claimDetailsView,
   setActiveVersion,
 } from "@/server/modules/claims/units/record/activity";
+import {
+  activityEditSetup,
+  saveActivity,
+} from "@/server/modules/claims/units/record/activity-edit";
+import {
+  deleteEquipment,
+  equipmentView,
+  saveEquipment,
+} from "@/server/modules/claims/units/record/equipment";
+import {
+  deleteRoster,
+  rosterTitles,
+  rosterView,
+  saveRoster,
+} from "@/server/modules/claims/units/record/roster";
+import {
+  requirementsView,
+  saveRequirement,
+} from "@/server/modules/claims/units/record/requirements";
+import {
+  amendmentLinesView,
+  amendmentsView,
+  deleteAmendment,
+  includeActivities,
+  includeView,
+  saveAmendment,
+} from "@/server/modules/claims/units/record/amendments";
 
 type Context = { params: Promise<{ id: string }> };
-const json = async (request: Request) => {
+const json = async (request: Request, limit = 4096) => {
   try {
-    return JSON.parse(await readText(request, 4096)) as unknown;
+    return JSON.parse(await readText(request, limit)) as unknown;
   } catch {
     throw new AppError("BAD_REQUEST", "Invalid activity.", 400);
   }
@@ -41,6 +68,24 @@ export const GET = route<Context>(async (request, { params }) => {
     return fundSummaryView(id, q.get("fund"), q.get("period"));
   if (view === "list")
     return activityListView(id, q.get("fund"), q.get("status"));
+  if (view === "edit")
+    return activityEditSetup(id, {
+      fund: q.get("fund") ?? undefined,
+      activity: q.get("activity") ?? undefined,
+      version: q.get("version") ?? undefined,
+      amendment: q.get("amendment") ?? undefined,
+      reason: q.get("reason") ?? undefined,
+    });
+  if (view === "equipment") return equipmentView(id);
+  if (view === "roster") return rosterView(id);
+  if (view === "requirements") return requirementsView(id, q.get("fund"));
+  if (view === "roster-titles") return rosterTitles(id, q.get("fund"));
+  if (view === "amendments")
+    return amendmentsView(id, q.get("fund"), q.get("status"));
+  if (view === "amendment-lines")
+    return amendmentLinesView(id, q.get("fund"), q.get("amendment"));
+  if (view === "include")
+    return includeView(id, q.get("fund"), q.get("amendment"));
   if (view in DETAIL_VIEWS)
     return DETAIL_VIEWS[view as keyof typeof DETAIL_VIEWS](id, {
       fund: q.get("fund"),
@@ -49,15 +94,34 @@ export const GET = route<Context>(async (request, { params }) => {
     });
   return activitiesView(id, q.get("fund"));
 });
-/** WRITES: makes an activity version the active one. */
+/** WRITES: `?action=save` creates or updates an activity (its texts and lines need the larger body); else makes a version the active one. */
 export const POST = route<Context>(
-  async (request, { params }) =>
-    setActiveVersion((await params).id, await json(request)),
+  async (request, { params }) => {
+    const { id } = await params;
+    const action = searchOf(request).get("action");
+    if (action === "save") return saveActivity(id, await json(request, 65536));
+    if (action === "include")
+      return includeActivities(id, await json(request, 16384));
+    if (action === "save-amendment")
+      return saveAmendment(id, await json(request));
+    if (action === "save-equipment")
+      return saveEquipment(id, await json(request, 16384));
+    if (action === "save-roster") return saveRoster(id, await json(request));
+    if (action === "save-requirement")
+      return saveRequirement(id, await json(request));
+    return setActiveVersion(id, await json(request));
+  },
   { write: true },
 );
-/** WRITES: removes one activity version. */
+/** WRITES: removes one activity version; `?action=amendment` removes an amendment (or, with `version`, one line). */
 export const DELETE = route<Context>(
-  async (request, { params }) =>
-    deleteActivity((await params).id, await json(request)),
+  async (request, { params }) => {
+    const { id } = await params;
+    const action = searchOf(request).get("action");
+    if (action === "amendment") return deleteAmendment(id, await json(request));
+    if (action === "equipment") return deleteEquipment(id, await json(request));
+    if (action === "roster") return deleteRoster(id, await json(request));
+    return deleteActivity(id, await json(request));
+  },
   { write: true },
 );

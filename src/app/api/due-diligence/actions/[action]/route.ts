@@ -18,8 +18,12 @@ import {
   updateDueDiligence,
   restoreDueDiligence,
 } from "@/server/modules/due-diligence/actions";
-import { dueDiligenceReferenceItems, dueDiligenceReferenceTypes, linkDueDiligenceReferences } from "@/server/modules/due-diligence/references";
-import { autoSubmitDueDiligence } from "@/server/modules/due-diligence/submit";
+import {
+  dueDiligenceReferenceItems,
+  dueDiligenceReferenceTypes,
+  linkDueDiligenceReferences,
+} from "@/server/modules/due-diligence/record/references";
+import { autoSubmitDueDiligence } from "@/server/modules/due-diligence/record/submit";
 // The create form's text and a few ids.
 const MAX_BODY = 32768;
 const invalid = (e: unknown) =>
@@ -27,20 +31,38 @@ const invalid = (e: unknown) =>
     ? new AppError("BAD_REQUEST", "Invalid due diligence action.", 400)
     : e;
 const reads: Record<string, (q: URLSearchParams) => Promise<unknown>> = {
-  "reference-types": (q) => dueDiligenceReferenceTypes(q.get("id") ?? "", q.get("access") ?? ""),
-  "reference-items": (q) => dueDiligenceReferenceItems(q.get("id") ?? "", q.get("access") ?? "", q.get("type") ?? ""),
+  "reference-types": (q) =>
+    dueDiligenceReferenceTypes(q.get("id") ?? "", q.get("access") ?? ""),
+  "reference-items": (q) =>
+    dueDiligenceReferenceItems(
+      q.get("id") ?? "",
+      q.get("access") ?? "",
+      q.get("type") ?? "",
+    ),
   link: dueDiligenceLinkCandidates,
   "clone-options": (q) =>
     dueDiligenceCloneOptions(q.get("id") ?? "", q.get("access") ?? ""),
   create: () => dueDiligenceCreateSetup(),
-  edit: (q) => dueDiligenceEditSetup(q.get("id") ?? "", q.get("access") ?? undefined),
-  form: (q) => dueDiligenceCreateForm(q.get("formType") ?? "",
-    q.get("id") ?? undefined, q.get("access") ?? undefined),
+  edit: (q) =>
+    dueDiligenceEditSetup(q.get("id") ?? "", q.get("access") ?? undefined),
+  form: (q) =>
+    dueDiligenceCreateForm(
+      q.get("formType") ?? "",
+      q.get("id") ?? undefined,
+      q.get("access") ?? undefined,
+    ),
   recycle: () => deletedDueDiligence(),
-  people: (q) => dueDiligenceCreatePeople(q.get("org") ?? "",
-    q.get("id") ?? undefined, q.get("access") ?? undefined),
-  supervisors: (q) => dueDiligenceCreateSupervisors(
-    q.get("id") ?? undefined, q.get("access") ?? undefined),
+  people: (q) =>
+    dueDiligenceCreatePeople(
+      q.get("org") ?? "",
+      q.get("id") ?? undefined,
+      q.get("access") ?? undefined,
+    ),
+  supervisors: (q) =>
+    dueDiligenceCreateSupervisors(
+      q.get("id") ?? undefined,
+      q.get("access") ?? undefined,
+    ),
 };
 const writes: Record<string, (body: unknown) => Promise<unknown>> = {
   "reference-link": linkDueDiligenceReferences,

@@ -21,11 +21,6 @@ export const personStatus = read<void, Body>({
   ttl: serverConstants.ttl.config,
   parse: record,
 });
-/** The same status as Oracle holds it now, for the save that merges over it (never the held copy). */
-export const storedPersonStatus = read<void, Body>({
-  op: "getSharedPersonStatus",
-  parse: record,
-});
 /** The five profile links (legacy getSharedDigitalPresence2); `pid` is the session's person. */
 export const digitalPresence = read<{ personId: string }, Body>({
   op: "getSharedDigitalPresence",
