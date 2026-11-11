@@ -10,15 +10,17 @@ import { InsideField } from "@/components/ui/inside-field";
 import { DateInput } from "@/components/ui/date-input";
 import { Icon } from "@/components/ui/icon";
 import { TabBar } from "@/components/ui/tab-bar";
-import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
-import { RecordMetadata } from "@/components/ui/record-metadata";
+import { ApplicationCard } from "@/components/ui/application-card";
 import { useFormat } from "@/components/layout/shell-context";
 import { functions } from "@/lib/functions";
 import type { FormatSettings } from "@/lib/format";
 import { State } from "@/components/feedback/state";
 import { ActionDialog, useConfirm } from "@/components/dialog/action-dialog";
 import { ListSkeleton } from "@/components/feedback/skeleton";
-import { LinkedObjectsDialog } from "@/features/record/linked/linked-dialog";
+import { CloneApplicationDialog } from "@/components/dialog/clone-application-dialog";
+import { LinkedObjectsLoader } from "@/features/record/linked/linked-dialog";
+import { useInFlight } from "@/lib/hooks/use-in-flight";
+import { canDeleteEthics } from "@/shared/ethics/listing";
 import {
   parseEthicsFilters,
   serializeEthicsFilters,
@@ -29,7 +31,6 @@ import type {
   EthicsListView,
   EthicsRow,
 } from "@/server/modules/ethics/listing";
-import { canDeleteEthicsRow } from "./delete-rules";
 import styles from "./ethics-list.module.css";
 
 const EMPTY: SelectOption[] = [];
@@ -57,14 +58,12 @@ export function EthicsList({
   const [recycleOpen, setRecycleOpen] = useState(false);
   const [restoring, setRestoring] = useState<string | null>(null);
   const [restoreError, setRestoreError] = useState("");
-  const [cloneId, setCloneId] = useState<string | null>(null);
-  const [cloneSelected, setCloneSelected] = useState<string[] | null>(null);
-  const [cloneBusy, setCloneBusy] = useState(false);
-  const [deleteBusy, setDeleteBusy] = useState<string | null>(null);
-  const [actionError, setActionError] = useState("");
-  const [linkedId, setLinkedId] = useState<string | null>(null);
   const confirm = useConfirm("ethics-restore-confirm");
   const deleteConfirm = useConfirm("ethics-delete-confirm");
+  const [linkedId, setLinkedId] = useState<string | null>(null);
+  const [cloneId, setCloneId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState("");
+  const { run, isActive } = useInFlight();
   const key = search.toString();
   let filters = initialFilters;
   try {
@@ -100,34 +99,41 @@ export function EthicsList({
   };
   const list = usePagedApi(ethics.list, active);
   const deleted = useApi(ethics.deleted, recycleOpen ? undefined : null);
-  const cloneOptions = useApi(ethics.cloneOptions, cloneId ? { id: cloneId, access } : null);
-  const linked = useApi(ethics.links, linkedId ? { id: linkedId, access } : null);
-  const selectedObjects = cloneSelected ?? cloneOptions.data?.filter((option) => option.selected).map((option) => option.value) ?? [];
-  async function clone() {
-    if (!cloneId || cloneBusy) return;
-    setCloneBusy(true);
-    setActionError("");
-    const result = await ethics.clone(cloneId, access, selectedObjects);
-    setCloneBusy(false);
-    if (!result.ok) return setActionError(result.error.message);
-    setCloneId(null);
-    setCloneSelected(null);
-    list.reload();
-  }
-  async function remove(id: string, number: string) {
-    if (deleteBusy || !(await deleteConfirm.ask({
-      title: "Delete Ethics application",
-      message: `Delete ${number}?`,
-      confirm: "Delete",
-      cancel: "Cancel",
-    }))) return;
-    setDeleteBusy(id);
-    setActionError("");
-    const result = await ethics.remove(id, access);
-    setDeleteBusy(null);
-    if (!result.ok) return setActionError(result.error.message);
-    list.reload();
-  }
+  const linked = useApi(
+    ethics.links,
+    linkedId ? { id: linkedId, access } : null,
+  );
+  const cloneOptions = useApi(
+    ethics.cloneOptions,
+    cloneId ? { id: cloneId, access } : null,
+  );
+  const clone = (objects: string[]) =>
+    void run(async () => {
+      if (!cloneId) return;
+      setActionError("");
+      const result = await ethics.clone(cloneId, access, objects);
+      if (!result.ok) return setActionError(result.error.message);
+      setCloneId(null);
+      list.reload();
+    }, "clone");
+  const remove = (id: string, number: string) =>
+    void run(async () => {
+      if (
+        !(await deleteConfirm.ask({
+          title: view.labels.deleteTitle,
+          message: view.labels.deleteMessage,
+          detail: number,
+          confirm: view.labels.deleteConfirm,
+          cancel: view.labels.deleteCancel,
+          danger: true,
+        }))
+      )
+        return;
+      setActionError("");
+      const result = await ethics.remove(id, access);
+      if (!result.ok) return setActionError(result.error.message);
+      list.reload();
+    }, `delete-${id}`);
   async function restore(id: string, number: string) {
     if (
       !(await confirm.ask({
@@ -384,7 +390,7 @@ export function EthicsList({
         <TabBar
           id="ethics"
           label="Ethics access"
-          align="start"
+          align="stretch"
           tabs={view.tabs.map((tab) => ({
             key: tab.value.toLowerCase(),
             name: tab.label,
@@ -427,10 +433,13 @@ export function EthicsList({
               view={view}
               access={access}
               format={format}
-              onClone={() => { setCloneId(row.id); setCloneSelected(null); setActionError(""); }}
               onLinks={() => setLinkedId(row.id)}
+              onClone={() => {
+                setActionError("");
+                setCloneId(row.id);
+              }}
               onDelete={() => remove(row.id, row.number)}
-              busy={deleteBusy === row.id}
+              deleting={isActive(`delete-${row.id}`)}
             />
           ))}
         </div>
@@ -450,43 +459,6 @@ export function EthicsList({
           </div>
         )}
       </div>
-      {actionError && !cloneId && <p id="ethics-action-error" role="alert">{actionError}</p>}
-      {cloneId && (
-        <ActionDialog
-          id="ethics-clone-dialog"
-          title="Clone Ethics application"
-          busy={cloneBusy}
-          onClose={() => { setCloneId(null); setCloneSelected(null); }}
-        >
-          {cloneOptions.loading && <ListSkeleton />}
-          {cloneOptions.error && <State title="Clone options unavailable" message={cloneOptions.error.message} code={cloneOptions.error.code} retry={cloneOptions.retry} />}
-          {cloneOptions.data?.map((option) => (
-            <label key={option.value} htmlFor={`ethics-clone-option-${option.value}`}>
-              <input
-                id={`ethics-clone-option-${option.value}`}
-                type="checkbox"
-                checked={selectedObjects.includes(option.value)}
-                disabled={cloneBusy}
-                onChange={(event) => setCloneSelected(event.target.checked
-                  ? [...selectedObjects, option.value]
-                  : selectedObjects.filter((value) => value !== option.value))}
-              />
-              {option.label}
-            </label>
-          ))}
-          {actionError && <p id="ethics-clone-error" role="alert">{actionError}</p>}
-          {cloneOptions.data && <button id="ethics-clone-submit" type="button" disabled={cloneBusy} onClick={clone}>Clone</button>}
-        </ActionDialog>
-      )}
-      {linkedId && (linked.data ? (
-        <LinkedObjectsDialog id="ethics-linked-dialog" linked={linked.data} onClose={() => setLinkedId(null)}>
-          {!linked.data.groups.length && <p>{linked.data.texts.none}</p>}
-        </LinkedObjectsDialog>
-      ) : (
-        <ActionDialog id="ethics-linked-dialog" title="Linked Objects" onClose={() => setLinkedId(null)}>
-          {linked.error ? <State title="Linked records unavailable" message={linked.error.message} code={linked.error.code} retry={linked.retry} /> : <ListSkeleton />}
-        </ActionDialog>
-      ))}
       {recycleOpen && (
         <ActionDialog
           id="ethics-recycle-dialog"
@@ -534,6 +506,37 @@ export function EthicsList({
           </ul>
         </ActionDialog>
       )}
+      {actionError && !cloneId && (
+        <p id="ethics-action-error" role="alert">
+          {actionError}
+        </p>
+      )}
+      {cloneId && (
+        <CloneApplicationDialog
+          id="ethics-clone-dialog"
+          texts={{
+            title: view.labels.cloneTitle,
+            entire: view.labels.cloneEntire,
+            clone: view.labels.cloneSubmit,
+            cancel: view.labels.cancel,
+          }}
+          options={cloneOptions.data}
+          error={cloneOptions.error}
+          retry={cloneOptions.retry}
+          busy={isActive("clone")}
+          failure={actionError || undefined}
+          onClone={clone}
+          onClose={() => setCloneId(null)}
+        />
+      )}
+      {linkedId && (
+        <LinkedObjectsLoader
+          id="ethics-linked-dialog"
+          title={view.labels.linkTitle}
+          linked={linked}
+          onClose={() => setLinkedId(null)}
+        />
+      )}
       {confirm.element}
       {deleteConfirm.element}
     </FilterPanel>
@@ -545,38 +548,23 @@ function EthicsCard({
   view,
   access,
   format,
-  onClone,
   onLinks,
+  onClone,
   onDelete,
-  busy,
+  deleting,
 }: {
   row: EthicsRow;
   view: EthicsListView;
   access: string;
   format: FormatSettings | undefined;
-  onClone: () => void;
   onLinks: () => void;
+  onClone: () => void;
   onDelete: () => void;
-  busy: boolean;
+  deleting: boolean;
 }) {
-  const statusTone: StatusTone =
-    row.statusCode === "WIP"
-      ? "info"
-      : row.statusCode === "REWORK"
-        ? "warning"
-        : row.statusCode === "REJ"
-          ? "danger"
-          : row.statusCode === "DRFT"
-            ? "neutral"
-            : "success";
-  const riskTone: StatusTone =
-    row.riskCode === "HIGH" || row.riskCode === "CRITICAL"
-      ? "danger"
-      : row.riskCode === "MEDIUM"
-        ? "warning"
-        : row.riskCode === "LOW"
-          ? "success"
-          : "info";
+  // Legacy ethics-start-page card toolbar: Link (RB), Clone (grant, RB, administrator / respondent view), Delete
+  // (grant, RB, checkDeleteEthicsConditions).
+  const listed = access === "EA_ACCESS" || access === "RESPONDENT_ACCESS";
   const fields = [
     {
       label: view.texts.createdBy,
@@ -629,41 +617,66 @@ function EthicsCard({
     },
   ];
   return (
-    <article id={`ethics-application-${row.id}`} className={styles.card}>
-      <div className={styles.cardHead}>
-        <Link
-          id={`ethics-open-${row.id}`}
-          href={`/ethics/${row.id}?access=${access}`}
-        >
-          <Icon name="certification" size={18} /> {row.number}
-        </Link>
-        {view.actions.link && (
-          <button id={`ethics-links-${row.id}`} type="button" aria-label={`Linked records for ${row.number}`} onClick={onLinks}>
-            <Icon name="link" size={16} />
-          </button>
-        )}
-        {view.actions.clone && ["EA_ACCESS", "RESPONDENT_ACCESS"].includes(access) && (
-          <button id={`ethics-clone-${row.id}`} type="button" aria-label={`Clone ${row.number}`} onClick={onClone}>
-            <Icon name="copy" size={16} />
-          </button>
-        )}
-        {view.actions.delete && canDeleteEthicsRow(access, row.ethicsTypeCode, row.statusCode, row.responseStatusCode) && (
-          <button id={`ethics-delete-${row.id}`} type="button" aria-label={`Delete ${row.number}`} disabled={busy} onClick={onDelete}>
-            <Icon name="trash" size={16} />
-          </button>
-        )}
-        {row.status && (
-          <StatusBadge tone={statusTone}>{row.status}</StatusBadge>
-        )}
-        {row.risk && <StatusBadge tone={riskTone}>{row.risk}</StatusBadge>}
-        {access === "EA_ACCESS" && row.responseStatus && (
-          <span className={styles.response}>
-            {view.texts.responseStatus} : {row.responseStatus}
-          </span>
-        )}
-      </div>
-      <h2>{row.title || row.number}</h2>
-      <RecordMetadata id={`ethics-metadata-${row.id}`} fields={fields} />
-    </article>
+    <ApplicationCard
+      id={`ethics-application-${row.id}`}
+      openId={`ethics-open-${row.id}`}
+      metadataId={`ethics-metadata-${row.id}`}
+      href={`/ethics/${row.id}?access=${access}`}
+      icon="certification"
+      number={row.number}
+      title={row.title}
+      status={{ label: row.status, code: row.statusCode }}
+      risk={{ label: row.risk, code: row.riskCode }}
+      response={
+        access === "EA_ACCESS" && row.responseStatus
+          ? `${view.texts.responseStatus} : ${row.responseStatus}`
+          : undefined
+      }
+      fields={fields}
+      actions={
+        <>
+          {view.actions.link && (
+            <button
+              id={`ethics-links-${row.id}`}
+              type="button"
+              aria-label={`${view.labels.link} ${row.number}`}
+              title={view.labels.link}
+              onClick={onLinks}
+            >
+              <Icon name="link" size={16} />
+            </button>
+          )}
+          {view.actions.clone && listed && (
+            <button
+              id={`ethics-clone-${row.id}`}
+              type="button"
+              aria-label={`${view.labels.clone} ${row.number}`}
+              title={view.labels.clone}
+              onClick={onClone}
+            >
+              <Icon name="copy" size={16} />
+            </button>
+          )}
+          {view.actions.delete &&
+            canDeleteEthics(
+              access,
+              row.ethicsTypeCode,
+              row.statusCode,
+              row.responseStatusCode,
+            ) && (
+              <button
+                id={`ethics-delete-${row.id}`}
+                type="button"
+                aria-label={`${view.labels.delete} ${row.number}`}
+                title={view.labels.delete}
+                disabled={deleting}
+                onClick={onDelete}
+              >
+                <Icon name="trash" size={16} />
+              </button>
+            )}
+        </>
+      }
+    />
   );
 }

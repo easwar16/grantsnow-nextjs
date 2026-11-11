@@ -5,7 +5,7 @@ import { quickCostOptions } from "@/server/modules/proposals/quick-cost";
 import { State } from "@/components/feedback/state";
 import { CostingEditor } from "@/features/modules/proposals/record/budget/costing-editor";
 import { StaffEntry } from "@/features/modules/proposals/record/budget/staff-entry";
-import { staffEntryOptions } from "@/server/modules/proposals/staff-entry";
+import { staffEntryOptions } from "@/server/modules/proposals/record/staff-entry";
 
 const kinds = [
   "staff",
@@ -41,7 +41,14 @@ export default async function NewBudgetCost({
       options = await staffEntryOptions(type, id, kind);
     } catch (error) {
       const failure = functions.errors.publicError(error);
-      return <State title="Staff costing unavailable" message={failure.message} action={failure.action} code={failure.code} />;
+      return (
+        <State
+          title="Staff costing unavailable"
+          message={failure.message}
+          action={failure.action}
+          code={failure.code}
+        />
+      );
     }
     return <StaffEntry id={id} type={type} options={options} />;
   }

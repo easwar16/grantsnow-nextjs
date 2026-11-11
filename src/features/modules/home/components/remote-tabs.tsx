@@ -124,7 +124,13 @@ export function NotificationsPanel({ format }: { format?: FormatSettings }) {
   );
 }
 /** The dashboard's Featured Opportunities on the shared card, loading on scroll; Home's card has no More Info (GN-Angular). */
-export function FeaturedPanel({ format }: { format?: FormatSettings }) {
+export function FeaturedPanel({
+  format,
+  title,
+}: {
+  format?: FormatSettings;
+  title: string;
+}) {
   const { pages, failure, loading, retry, onScroll } = useScrollPages(
     home.featuredPages,
     60,
@@ -133,7 +139,7 @@ export function FeaturedPanel({ format }: { format?: FormatSettings }) {
   return (
     <article id="featured-panel" className="widget featured-panel">
       <div className="widget-heading">
-        <h3>Featured Opportunities</h3>
+        <h3>{title}</h3>
       </div>
       <ul
         id="featured-list"
@@ -405,13 +411,14 @@ function RemoteChart({
 }
 export function DynamicChartsPanel({
   charts,
+  modules,
   organization,
 }: {
   charts: { id: string; name: string; module: string }[];
+  modules: string[];
   organization?: string;
 }) {
-  const modules = [...new Set(charts.map((c) => c.module))],
-    [module, setModule] = useState(modules[0]);
+  const [module, setModule] = useState(modules[0]);
   return (
     <>
       <div

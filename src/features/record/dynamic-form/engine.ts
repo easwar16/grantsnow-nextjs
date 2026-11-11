@@ -460,7 +460,7 @@ export interface PayloadForm {
  * stale answer.
  */
 export function toPayload(forms: DynForm[], src: PayloadSource): PayloadForm[] {
-  return forms
+  const payload = forms
     .map((form) => ({
       form_id: String(form.formId),
       sections: form.sections
@@ -495,6 +495,12 @@ export function toPayload(forms: DynForm[], src: PayloadSource): PayloadForm[] {
         .filter((section) => section.fields.length > 0),
     }))
     .filter((form) => form.sections.length > 0);
+  // A form with no sections at all: legacy still names it; an empty list makes ORDS reply with broken JSON.
+  return payload.length > 0 ||
+    forms.length === 0 ||
+    forms.some((f) => f.sections.length > 0)
+    ? payload
+    : [{ form_id: String(forms[0].formId), sections: [] }];
 }
 /** A FILE value is `fileName~~attachmentId`; just the name while the file waits to be uploaded. */
 export const fileNameOf = (value: FieldValue): string =>

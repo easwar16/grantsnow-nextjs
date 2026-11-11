@@ -3,7 +3,13 @@ import { cache } from "react";
 import { z } from "zod";
 import uniqBy from "lodash/uniqBy";
 import { authenticate } from "@/server/identity/session/service";
-import { attributes, awards, lookups, people } from "@/server/oracle/api";
+import {
+  attributes,
+  awards,
+  contracts,
+  lookups,
+  people,
+} from "@/server/oracle/api";
 import {
   resources,
   type Resources,
@@ -177,7 +183,9 @@ const currencyRows = items(
 /** The dialog's lists: proposals open for an award, everyone (legacy app-level getPersonList), funders, currencies. */
 const createLists = cache(async () => {
   const [proposals, persons, sponsors, currencies] = await Promise.all([
-    awards.proposals().then((raw) => proposalRows.parse(raw).items),
+    contracts
+      .relationItems({ objectType: "PROPOSAL", status: "AWARD" })
+      .then((raw) => proposalRows.parse(raw).items),
     people.inOrg({}).then((raw) => personRows.parse(raw).items),
     lookups.sponsors().then((raw) => sponsorRows.parse(raw).items),
     lookups

@@ -4,12 +4,13 @@ import type { IconName } from "@/components/ui/icon";
 export const UNIT_MODULE = "CLAIMS";
 
 /**
- * Legacy claims-unit-inquiry-info-page getTabs, in order, as far as they are built: Claims joins when it lands (only implemented tabs appear).
+ * Legacy claims-unit-inquiry-info-page getTabs, in order.
  */
 export const unitTabs = [
   "summary",
   "goals",
   "activities",
+  "claims",
   "attachments",
 ] as const;
 export type UnitTab = (typeof unitTabs)[number];
@@ -24,6 +25,7 @@ export const UNIT_TAB_DEFS: Record<
     name: "Activities",
     icon: "deposits",
   },
+  claims: { key: "unit-claims", name: "Claims", icon: "due-diligence" },
   attachments: {
     key: "unit-attachments",
     name: "Attachments",
@@ -37,10 +39,14 @@ export const pageOf = (tab: UnitTab) => `claims-${UNIT_TAB_DEFS[tab].key}`;
 export const signOffViews = ["stakeholders", "meetings", "documents"] as const;
 export type SignOffView = (typeof signOffViews)[number];
 
-/** The Activities tab's own tabs (legacy activityTabs), as far as they are built. */
+/** The Claims tab's own tabs (legacy claimsTabs); a claim and its adjustments open in a side panel. */
+export const claimViews = ["claims-summary", "claims-list"] as const;
+export type ClaimView = (typeof claimViews)[number];
+
+/** The Activities tab's own tabs (legacy activityTabs), as far as they are built; an activity opens in a side panel. */
 export const activityViews = [
   "fund-summary",
   "activities-list",
-  "activity-details",
+  "amendments",
 ] as const;
 export type ActivityView = (typeof activityViews)[number];

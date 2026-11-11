@@ -137,6 +137,7 @@ export async function RecordTabContent({
           requestId={context.id}
           number={r.request_number}
           statusCode={r.status_code ?? undefined}
+          attributes={context.attributes}
           lock={lock}
           texts={await applicationTexts()}
         />

@@ -38,7 +38,6 @@ const GET_WRITES = [
   "getApproval_setupGenerate_stages",
   "getApproval_setupGenerate_stages_dynForm",
   "getContractsConvertContract",
-  "getDynamicFormsInsertRequest",
   // GenerateAward is declared GET but creates the award (legacy createAward).
   "postPost_awardsGenerateAward",
 ];
@@ -56,4 +55,17 @@ it("uses only allowlisted operations in the hand-written API modules", () => {
       ),
     );
   expect(used.filter((op) => !allowlist[op])).toEqual([]);
+});
+it("defines each backend operation once, app-wide (guide §5)", () => {
+  const ops = readdirSync(api)
+    .filter((f) => f.endsWith(".ts"))
+    .flatMap((f) =>
+      [...readFileSync(join(api, f), "utf8").matchAll(/\bop: "([^"]+)"/g)].map(
+        (m) => `${m[1]} (${f})`,
+      ),
+    );
+  const name = (o: string) => o.split(" ")[0];
+  expect(
+    ops.filter((o, i) => ops.findIndex((x) => name(x) === name(o)) !== i),
+  ).toEqual([]);
 });

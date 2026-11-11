@@ -52,6 +52,7 @@ import { attachmentsView } from "@/server/record/attachments/attachments";
 import {
   folderTree,
   safeLinkUrl,
+  sizeNotice,
   withExtension,
 } from "@/features/record/attachments/model";
 
@@ -229,8 +230,20 @@ describe("GET /api/files?host&record", () => {
 });
 
 describe("the panel view", () => {
+  it("9549: the size note names the configured limit", () => {
+    expect(sizeNotice("File should not exceed 4 MB.", 10)).toBe(
+      "File should not exceed 10MB.",
+    );
+    expect(sizeNotice("Allowed size only.", 2)).toBe(
+      "Allowed size only. (2MB)",
+    );
+  });
   it("takes folders, links and the EOI labels from the bundle; edit needs the page right and an open lock", async () => {
-    state.rows = [FOLDERS, row("labels", "attachment-file-type", "Kind")];
+    state.rows = [
+      FOLDERS,
+      row("labels", "attachment-file-type", "Kind"),
+      row("labels", "attachment-delete-success", "Gone."),
+    ];
     const q = new URLSearchParams(HOST);
     let view = await attachmentsView(q, "eoi-attachments");
     expect(view.folders).toEqual([
@@ -247,6 +260,12 @@ describe("the panel view", () => {
     expect(view.labels.fileType).toBe("Kind");
     // EOI passes literals for these (opportunities-eoi-attachments-start-page.html).
     expect(view.labels.fileName).toBe("File Name");
+    // 8483: toasts from the bundle, else legacy's fallback.
+    expect(view.labels.deleteSuccess).toBe("Gone.");
+    expect(view.labels.uploadSuccess).toBe("Attachment uploaded successfully");
+    expect(view.labels.fileShouldNotExceed).toBe(
+      "File should not exceed the allowed size. (1MB)",
+    );
     edit = "N";
     forget("");
     view = await attachmentsView(q, "eoi-attachments");

@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { authenticate } from "@/server/identity/session/service";
-import { dueDiligence, lookups, people } from "@/server/oracle/api";
+import { applications, lookups, people } from "@/server/oracle/api";
 import { resources } from "@/server/platform/configuration/resources";
 import {
   dashboardRoles,
@@ -99,7 +99,8 @@ const fieldKeys = {
   dueDiligenceType: "list-due-diligence-type",
   formType: "list-form-type",
   org: "list-org-unit",
-  reviewer: "list-supervisor-name",
+  // Legacy duediligence-start-page card: list-reviewer (Ethics uses list-supervisor-name).
+  reviewer: "list-reviewer",
 } as const;
 const label = (
   rows: Awaited<ReturnType<typeof resources>>,
@@ -195,6 +196,44 @@ export async function dueDiligenceListView() {
       ),
       clear: label(bundle, "button-labels", "listing-clear", "Clear"),
       total: label(bundle, "labels", "total-count", "Total"),
+      // Legacy duediligence-start-page card actions and dialogs.
+      link: label(bundle, "button-labels", "list-link", "Linked Objects"),
+      linkTitle: label(
+        bundle,
+        "dialog-titles",
+        "linked-objects",
+        "Linked Objects",
+      ),
+      clone: label(bundle, "button-labels", "list-clone", "Clone"),
+      delete: label(bundle, "button-labels", "list-delete", "Delete"),
+      cloneTitle: label(
+        bundle,
+        "dialog-titles",
+        "clone-dd",
+        "Clone Due Diligence",
+      ),
+      cloneEntire: label(
+        bundle,
+        "option-keys",
+        "entire-dd",
+        "Entire Due Diligence",
+      ),
+      cloneSubmit: label(bundle, "button-labels", "clone", "Clone"),
+      cancel: label(bundle, "button-labels", "cancel", "Cancel"),
+      deleteTitle: label(
+        bundle,
+        "dialog-titles",
+        "listing-delete-warning",
+        "Warning",
+      ),
+      deleteMessage: label(
+        bundle,
+        "warning-messages",
+        "listing-permanent-delete",
+        "Are you sure you want to delete this record?",
+      ),
+      deleteConfirm: label(bundle, "button-labels", "listing-delete", "Delete"),
+      deleteCancel: label(bundle, "button-labels", "listing-cancel", "Cancel"),
     },
   };
 }
@@ -265,8 +304,9 @@ export async function listDueDiligence(
       400,
     );
   const clause = dueDiligenceWhereClause(f, view.gates);
-  const raw = await dueDiligence.applications(
+  const raw = await applications.list(
     {
+      objectType: "DUE_DILIGENCE",
       accessType: access,
       query: {
         p_offset: String(f.offset),

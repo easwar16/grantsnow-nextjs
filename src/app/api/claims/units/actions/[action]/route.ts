@@ -2,13 +2,14 @@ import { ZodError, z } from "zod";
 import { readText } from "@/server/http/body";
 import {
   cloneUnit,
+  exportRequest,
   saveUnit,
   unitCloneSetup,
   unitDialogSetup,
   unitFundTypes,
   unitGrants,
 } from "@/server/modules/claims/units/actions";
-import { route, searchOf } from "@/server/http/route";
+import { fileRoute, route, searchOf } from "@/server/http/route";
 import { AppError } from "@/lib/errors";
 // A unit, its year and up to 100 funds.
 const MAX_BODY = 65536;
@@ -42,8 +43,21 @@ export const GET = route<Context>(
   },
   { onError: invalid },
 );
+/** WRITES (generate-report): the listing's or one application's report, answered as a file. */
+const exportFile = fileRoute<Context>(
+  async (request) => {
+    let body: unknown;
+    try {
+      body = JSON.parse(await readText(request, 4096));
+    } catch {
+      throw new AppError("BAD_REQUEST", "Invalid export request.", 400);
+    }
+    return exportRequest(body);
+  },
+  { write: true },
+);
 /** WRITES: create or update a unit application, or clone one. */
-export const POST = route<Context>(
+const write = route<Context>(
   async (request, { params }) => {
     const { action } = await params;
     const write = Object.hasOwn(writes, action) ? writes[action] : undefined;
@@ -59,3 +73,8 @@ export const POST = route<Context>(
   },
   { write: true, onError: invalid },
 );
+/** WRITES: `export` answers a file; every other action answers JSON. */
+export const POST = async (request: Request, context: Context) =>
+  (await context.params).action === "export"
+    ? exportFile(request, context)
+    : write(request, context);

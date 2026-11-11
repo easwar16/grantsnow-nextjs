@@ -9,7 +9,7 @@ import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/data-table";
 import { ActionDialog } from "@/components/dialog/action-dialog";
 import { proposals } from "@/lib/api";
-import type { staffEntryOptions } from "@/server/modules/proposals/staff-entry";
+import type { staffEntryOptions } from "@/server/modules/proposals/record/staff-entry";
 import styles from "../proposal-record.module.css";
 
 type Options = Awaited<ReturnType<typeof staffEntryOptions>>;
@@ -368,8 +368,12 @@ export function StaffEntry({
         <h2>
           {names[kind]} <span title="Staff costing information">ⓘ</span>
         </h2>
-        <nav aria-label="Costing types">
+        <nav
+          id={`proposal-${id}-staff-costing-types`}
+          aria-label="Costing types"
+        >
           <Link
+            id={`proposal-${id}-staff-add-staff`}
             href={`${budget}/new/staff`}
             prefetch={false}
             onClick={(event) => {
@@ -381,6 +385,7 @@ export function StaffEntry({
             Add New Staff Cost
           </Link>
           <Link
+            id={`proposal-${id}-staff-add-student`}
             href={`${budget}/new/student`}
             prefetch={false}
             onClick={(event) => {
@@ -392,6 +397,7 @@ export function StaffEntry({
             Add New Student Cost
           </Link>
           <Link
+            id={`proposal-${id}-staff-add-pool-tech`}
             href={`${budget}/new/pool-tech`}
             prefetch={false}
             onClick={(event) => {
@@ -402,10 +408,14 @@ export function StaffEntry({
           >
             Add New Pool-Tech Cost
           </Link>
-          <Link href={`${budget}/new/non-staff`} prefetch={false}>
+          <Link
+            id={`proposal-${id}-staff-add-non-staff`}
+            href={`${budget}/new/non-staff`}
+            prefetch={false}
+          >
             Add New Non-Staff Cost
           </Link>
-          <Link href={budget} prefetch={false}>
+          <Link id={`proposal-${id}-staff-back`} href={budget} prefetch={false}>
             ← Back
           </Link>
         </nav>
@@ -438,6 +448,7 @@ export function StaffEntry({
               autoComplete="off"
             />
             <button
+              id={`proposal-${id}-staff-availability-open`}
               className={styles.staffAvailabilityButton}
               type="button"
               aria-label="Staff Availability"
@@ -452,6 +463,7 @@ export function StaffEntry({
                 {filtered.map((item) => (
                   <li key={item.value} role="option" aria-selected="false">
                     <button
+                      id={`proposal-${id}-staff-option-${item.value}`}
                       type="button"
                       onClick={() => void selectPerson(Number(item.value))}
                     >
@@ -474,6 +486,7 @@ export function StaffEntry({
                 Full Name <b aria-hidden="true">*</b>
               </span>
               <input
+                id={`proposal-${id}-staff-name`}
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 disabled={
@@ -486,13 +499,18 @@ export function StaffEntry({
             {kind === "staff" && (
               <label>
                 Employee number
-                <input value={person?.employeeNumber ?? ""} readOnly />
+                <input
+                  id={`proposal-${id}-staff-employee-number`}
+                  value={person?.employeeNumber ?? ""}
+                  readOnly
+                />
               </label>
             )}
             {kind === "student" && (
               <label>
                 Student number
                 <input
+                  id={`proposal-${id}-staff-student-number`}
                   value={studentNumber}
                   onChange={(event) => setStudentNumber(event.target.value)}
                   disabled={busy}
@@ -513,6 +531,7 @@ export function StaffEntry({
             <label>
               Faculty / School
               <input
+                id={`proposal-${id}-staff-faculty`}
                 value={
                   options.orgUnits.find(
                     (item) => item.value === String(orgUnitId),
@@ -551,6 +570,7 @@ export function StaffEntry({
                   <label>
                     First Increment
                     <input
+                      id={`proposal-${id}-staff-first-increment`}
                       value={firstIncrement}
                       onChange={(event) =>
                         setFirstIncrement(event.target.value)
@@ -602,6 +622,7 @@ export function StaffEntry({
                 />
               ) : (
                 <input
+                  id={`proposal-${id}-staff-salary`}
                   aria-label="Salary Model"
                   value={
                     options.salaryModels.find(
@@ -617,13 +638,18 @@ export function StaffEntry({
                 <span>
                   HR FTE <b aria-hidden="true">*</b>
                 </span>
-                <input value={hrFte} readOnly />
+                <input
+                  id={`proposal-${id}-staff-hr-fte`}
+                  value={hrFte}
+                  readOnly
+                />
               </label>
             )}
             <fieldset>
               <legend>Override Inflation</legend>
               <label>
                 <input
+                  id={`proposal-${id}-staff-inflation-override-yes`}
                   type="radio"
                   checked={overrideInflation}
                   onChange={() => setOverrideInflation(true)}
@@ -632,6 +658,7 @@ export function StaffEntry({
               </label>
               <label>
                 <input
+                  id={`proposal-${id}-staff-inflation-override-no`}
                   type="radio"
                   checked={!overrideInflation}
                   onChange={() => setOverrideInflation(false)}
@@ -643,6 +670,7 @@ export function StaffEntry({
               <label>
                 Inflation
                 <input
+                  id={`proposal-${id}-staff-inflation`}
                   type="number"
                   min="0"
                   step="any"
@@ -697,10 +725,16 @@ export function StaffEntry({
         )}
         {ready && !cost && (
           <div className={styles.staffEntryControls}>
-            <button type="button" onClick={reset} disabled={busy}>
+            <button
+              id={`proposal-${id}-staff-reset`}
+              type="button"
+              onClick={reset}
+              disabled={busy}
+            >
               Reset to Default
             </button>
             <button
+              id={`proposal-${id}-staff-get-lines`}
               type="button"
               onClick={() => void getLines()}
               disabled={busy}
@@ -887,11 +921,19 @@ function StaffAvailabilityTimeline({ data }: { data: Availability }) {
       <div className={styles.staffAvailabilityDates}>
         <label>
           Start Date
-          <input value={`${data.startDate}T00:00:00`} readOnly />
+          <input
+            id="proposal-staff-availability-start"
+            value={`${data.startDate}T00:00:00`}
+            readOnly
+          />
         </label>
         <label>
           End Date
-          <input value={`${data.endDate}T00:00:00`} readOnly />
+          <input
+            id="proposal-staff-availability-end"
+            value={`${data.endDate}T00:00:00`}
+            readOnly
+          />
         </label>
       </div>
       <div className={styles.staffAvailabilityScroll}>

@@ -147,7 +147,7 @@ describe("object attributes (EOI Application tab)", () => {
     const view = await response.json();
     expect(calls("getSharedGetObjectAttributes")[0][1]).toEqual({
       token: "server-token",
-      p_obj_type: "OPPORTUNIES-EOI",
+      p_obj_type: "OPPORTUNITIES-EOI",
       p_obj_id: "3934",
     });
     expect(view.visible).toBe(true);
@@ -198,7 +198,7 @@ describe("object attributes (EOI Application tab)", () => {
     for (const rows of [
       [],
       [rb("OPPORTUNITIES-EOI", "labels", "show-attributes", "N")],
-      // A visible entry under the misspelt legacy bundle does not count.
+      // A visible entry under the old misspelt type does not count.
       [rb("OPPORTUNIES-EOI", "labels", "show-attributes")],
     ]) {
       state.rb = rows;

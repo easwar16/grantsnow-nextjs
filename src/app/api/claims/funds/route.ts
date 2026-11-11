@@ -1,5 +1,5 @@
 import { listFunds } from "@/server/modules/claims/funds/listing";
-import { parseFundFilters } from "@/features/modules/claims/funds/schema";
+import { parseFundFilters } from "@/features/modules/claims/funds/listing/schema";
 import { route, searchOf } from "@/server/http/route";
 import { AppError } from "@/lib/errors";
 /** One page of the Funds Inquiry listing from structured filters. */

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
 import {
   eoi,
+  locks as lockApi,
   people as peopleApi,
   roles as recordRoles,
 } from "@/server/oracle/api";
@@ -37,6 +38,11 @@ import type { AttachmentHost } from "@/server/record/attachments/attachments";
 import { orNull, recordId, recordRoleRows } from "@/server/record/shared";
 import { functions } from "@/lib/functions";
 import { serverFunctions } from "@/server/functions";
+import { authorizeForm } from "@/server/record/dynamic-form/access";
+import {
+  attributeInput,
+  recordAttributeValues,
+} from "@/server/record/attributes/values";
 export { eoiTabs, type EoiTab };
 export const eoiRecordIdentity = z.object({
   id: recordId,
@@ -45,18 +51,21 @@ export const eoiRecordIdentity = z.object({
 const text = z.string().nullish();
 const detailsSchema = z.object({
   items: z.array(
-    z.object({
-      request_id: z.number().int().positive(),
-      request_number: z.string(),
-      request_type: z.literal("OPPORTUNITIES-EOI"),
-      status: text,
-      status_code: text,
-      created_by: z.union([z.string(), z.number()]).nullish(),
-      creation_date: text,
-      last_update_date: text,
-      ref_object_type: text,
-      ref_object_id: z.number().int().positive().nullish(),
-    }),
+    z
+      .object({
+        request_id: z.number().int().positive(),
+        request_number: z.string(),
+        request_type: z.literal("OPPORTUNITIES-EOI"),
+        status: text,
+        status_code: text,
+        created_by: z.union([z.string(), z.number()]).nullish(),
+        creation_date: text,
+        last_update_date: text,
+        ref_object_type: text,
+        ref_object_id: z.number().int().positive().nullish(),
+      })
+      // The `attribute_N` columns travel on (legacy getAttributeValues); only `recordAttributeValues` reads them.
+      .passthrough(),
   ),
 });
 async function requestDetails(id: string) {
@@ -109,14 +118,14 @@ export const eoiRecordContext = cache(async (id: string) => {
     }),
     // request_type is always OPPORTUNITIES-EOI (the details schema's literal).
     orNull(
-      eoi
+      lockApi
         .finalizablePages({ objectType: EOI_MODULE, objectId: id })
         .then((raw) =>
           pageNames.parse(raw).items.map((p) => p.page_name.toLowerCase()),
         ),
     ),
     orNull(
-      eoi
+      lockApi
         .lockedModules({ module: EOI_MODULE, recordId: id })
         .then((raw) => lockRows.parse(raw).items),
     ),
@@ -132,6 +141,8 @@ export const eoiRecordContext = cache(async (id: string) => {
     id,
     access,
     request,
+    // The Application tab's attributes start from these (legacy reloadAOIData → getAttributeValues).
+    attributes: recordAttributeValues(request),
     opportunity,
     createdBy:
       staff?.find((p) => String(p.person_id) === String(request.created_by))
@@ -163,7 +174,11 @@ const lockSchema = z.object({
 });
 async function lockStatus(id: string, page: number) {
   const b = lockSchema.parse(
-    await eoi.lockStatus({ recordId: id, pageId: page, module: EOI_MODULE }),
+    await lockApi.lockStatus({
+      recordId: id,
+      pageId: page,
+      module: EOI_MODULE,
+    }),
   );
   return { locked: b.status !== "UNLOCK", lockId: b.lock_module_id ?? null };
 }
@@ -251,8 +266,8 @@ export async function eoiSetFinalized(id: string, raw: unknown) {
   };
   if (fixtureMode()) {
     (await import("@/test-support/eoi-writes")).fixtureModuleLock(body);
-    await invalidate(eoi.setLock.invalidates);
-  } else await eoi.setLock({ body });
+    await invalidate(lockApi.setLock.invalidates);
+  } else await lockApi.setLock({ body });
   return { finalized: input.finalize };
 }
 /** The header's converts: an approved application and the record role for the kind; its opportunity id. */
@@ -371,15 +386,16 @@ export async function opportunityDetail(opportunityId: string) {
 export const createInput = z
   .object({
     opportunityId: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+    attributes: attributeInput,
   })
   .strict();
 /**
- * WRITES: creates the application (insertRequest, a GET that inserts) once its form has validated, and reads its
+ * WRITES: creates the application with its attributes (insertRequest) once its form has validated, and reads its
  * number for the answers' file folder. A number that cannot be read comes back null, so the caller never saves
  * files under an unknown folder (legacy wrote `/undefined/`).
  */
 export async function createEoiApplication(raw: unknown) {
-  const { opportunityId } = createInput.parse(raw);
+  const { opportunityId, attributes } = createInput.parse(raw);
   await newApplicationContext(String(opportunityId));
   const created = z
     .object({ request_id: z.coerce.number().int().positive().optional() })
@@ -388,9 +404,11 @@ export async function createEoiApplication(raw: unknown) {
       fixtureMode()
         ? (await import("@/test-support/eoi-writes")).fixtureInsertRequest()
         : await eoi.insertRequest({
+            requestId: null,
             refObjectId: opportunityId,
             refObjectType: "OPPORTUNITIES",
             requestType: EOI_MODULE,
+            attributes,
           }),
     );
   if (fixtureMode()) await invalidate(eoi.insertRequest.invalidates);
@@ -399,4 +417,33 @@ export async function createEoiApplication(raw: unknown) {
   const requestId = String(created.request_id);
   const details = await orNull(requestDetails(requestId));
   return { requestId, number: details?.request_number ?? null };
+}
+export const saveInput = z.object({ attributes: attributeInput }).strict();
+/**
+ * WRITES: a saved application's Save (legacy 9284 saveButtonActionChain): insertRequest as an upsert with the
+ * request id and the attributes, before the form's answers. The form's edit rules decide (right, draft, open lock).
+ */
+export async function saveEoiApplication(id: string, raw: unknown) {
+  const { attributes } = saveInput.parse(raw);
+  const context = await eoiRecordContext(id);
+  const opportunityId = context.request.ref_object_id;
+  if (opportunityId === null || opportunityId === undefined)
+    throw new AppError("CONTRACT", "The application has no opportunity.");
+  await authorizeForm(
+    {
+      objectType: "OPPORTUNITIES",
+      slot: "OPPORTUNITIES-EOI-APPLICATION",
+      parentId: String(opportunityId),
+      objectId: id,
+    },
+    "edit",
+  );
+  await eoi.insertRequest({
+    requestId: Number(id),
+    refObjectId: opportunityId,
+    refObjectType: "OPPORTUNITIES",
+    requestType: EOI_MODULE,
+    attributes,
+  });
+  return { saved: true };
 }

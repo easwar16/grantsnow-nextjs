@@ -25,9 +25,9 @@ it("keeps reads and writes on separate paths", async () => {
   await expect(
     oracle("postSharedBookmarkOpp", { token: "t", p_opp_id: "1" }),
   ).rejects.toMatchObject({ code: "BAD_REQUEST" });
-  // insertRequest is a GET that inserts, so it counts as a write.
+  // GenerateAward is declared GET but creates the award, so it counts as a write.
   await expect(
-    oracle("getDynamicFormsInsertRequest", { token: "t" }),
+    oracle("postPost_awardsGenerateAward", { token: "t" }),
   ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   await expect(
     oracleWrite("getSharedAnnouncements", { token: "t" }),

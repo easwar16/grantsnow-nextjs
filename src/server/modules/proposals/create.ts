@@ -61,18 +61,41 @@ const inputSchema = z
     opportunityTitle: z.string().max(500),
     opportunityUrl: z.string().max(2048),
     collaboratorFlag: z.enum(["Y", "N"]).optional(),
-    collaborators: z.array(z.object({
-      relationId: z.null(), collaboratorId: z.number().int().positive(),
-      roleCode: z.union([z.literal(""), z.string().regex(/^[A-Z0-9_]{1,30}$/)]),
-      description: z.string().max(1000), costingEnabled: z.boolean(),
-    })).max(100).optional(),
+    collaborators: z
+      .array(
+        z.object({
+          relationId: z.null(),
+          collaboratorId: z.number().int().positive(),
+          roleCode: z.union([
+            z.literal(""),
+            z.string().regex(/^[A-Z0-9_]{1,30}$/),
+          ]),
+          description: z.string().max(1000),
+          costingEnabled: z.boolean(),
+        }),
+      )
+      .max(100)
+      .optional(),
     subprojectFlag: z.enum(["Y", "N"]).optional(),
-    subprojects: z.array(z.object({
-      relationId: z.null(), personId: z.number().int().positive(),
-      employeeNumber: z.string().max(50), orgUnitId: z.number().int().positive(),
-      typeCode: z.string().regex(/^[A-Z0-9_]{1,30}$/), excludePricing: z.boolean(),
-    })).max(100).optional(),
-    attributes: z.record(z.string().regex(/^attribute_(?:[1-9]|1\d|20)$/), z.union([z.string(), z.number(), z.array(z.string()), z.null()])).optional(),
+    subprojects: z
+      .array(
+        z.object({
+          relationId: z.null(),
+          personId: z.number().int().positive(),
+          employeeNumber: z.string().max(50),
+          orgUnitId: z.number().int().positive(),
+          typeCode: z.string().regex(/^[A-Z0-9_]{1,30}$/),
+          excludePricing: z.boolean(),
+        }),
+      )
+      .max(100)
+      .optional(),
+    attributes: z
+      .record(
+        z.string().regex(/^attribute_(?:[1-9]|1\d|20)$/),
+        z.union([z.string(), z.number(), z.array(z.string()), z.null()]),
+      )
+      .optional(),
     sourceRequestId: z.number().int().positive().optional(),
   })
   .strict();
@@ -339,18 +362,56 @@ export async function proposalCreateChoices(type: string) {
     currentPersonId: user.personId,
     canChangePi: user.canChangePi,
     createButtonLabel: serverFunctions.resources.label(
-      rb, bundle, "button-labels",
+      rb,
+      bundle,
+      "button-labels",
       valid === "PROPOSAL" ? "create-new-proposal" : "create-outline-proposal",
       valid === "PROPOSAL" ? "Create new Grant App" : "Create Outline Proposal",
     ),
     successMessage: serverFunctions.resources.label(
-      rb, bundle, "success-msg", "created",
-      valid === "PROPOSAL" ? "Proposal created successfully" : "OP created successfully",
+      rb,
+      bundle,
+      "success-msg",
+      "created",
+      valid === "PROPOSAL"
+        ? "Proposal created successfully"
+        : "OP created successfully",
     ),
-    subproposalTypes: choices("SUB_PROPOSAL_TYPE").filter((row) => row.value !== "RES_PARTNER"),
+    subproposalTypes: choices("SUB_PROPOSAL_TYPE").filter(
+      (row) => row.value !== "RES_PARTNER",
+    ),
     collaboratorRoles: choices("COLLABORATOR_ROLE_TYPE_FLAG"),
-    collaborators: z.object({ items: z.array(z.object({ id: z.number().int().positive(), collaborator_name: z.string(), country_code: z.string().nullish(), vat_code: z.string().nullish() })) }).parse(collaboratorsRaw).items.map((row) => ({ id: row.id, name: row.collaborator_name, countryCode: row.country_code ?? "", vatCode: row.vat_code ?? "" })),
-    subprojectPeople: allPeople.flatMap((row) => row.full_name && row.org_unit_id ? [{ personId: row.person_id, employeeNumber: String(row.employee_number ?? ""), name: row.full_name, orgUnitId: row.org_unit_id, orgUnitName: row.org_unit_name ?? "" }] : []),
+    collaborators: z
+      .object({
+        items: z.array(
+          z.object({
+            id: z.number().int().positive(),
+            collaborator_name: z.string(),
+            country_code: z.string().nullish(),
+            vat_code: z.string().nullish(),
+          }),
+        ),
+      })
+      .parse(collaboratorsRaw)
+      .items.map((row) => ({
+        id: row.id,
+        name: row.collaborator_name,
+        countryCode: row.country_code ?? "",
+        vatCode: row.vat_code ?? "",
+      })),
+    subprojectPeople: allPeople.flatMap((row) =>
+      row.full_name && row.org_unit_id
+        ? [
+            {
+              personId: row.person_id,
+              employeeNumber: String(row.employee_number ?? ""),
+              name: row.full_name,
+              orgUnitId: row.org_unit_id,
+              orgUnitName: row.org_unit_name ?? "",
+            },
+          ]
+        : [],
+    ),
   };
 }
 
@@ -412,22 +473,57 @@ export async function createProposal(raw: unknown) {
   const collaborators = input.collaborators ?? [];
   const subprojects = input.subprojects ?? [];
   if (
-    (input.collaboratorFlag === "Y") !== (collaborators.length > 0) ||
-    (input.subprojectFlag === "Y") !== (subprojects.length > 0) ||
-    new Set(collaborators.map((row) => row.collaboratorId)).size !== collaborators.length ||
-    new Set(subprojects.map((row) => `${row.personId}:${row.orgUnitId}`)).size !== subprojects.length ||
-    collaborators.some((row) => !choices.collaborators.some((candidate) => candidate.id === row.collaboratorId) || (row.roleCode !== "" && !choices.collaboratorRoles.some((role) => role.value === row.roleCode))) ||
-    subprojects.some((row) => row.personId === pi.person_id || !choices.subprojectPeople.some((person) => person.personId === row.personId && person.orgUnitId === row.orgUnitId && person.employeeNumber === row.employeeNumber) || !choices.subproposalTypes.some((option) => option.value === row.typeCode))
-  ) throw new AppError("BAD_REQUEST", "Invalid Proposal partner details.", 400);
+    (input.collaboratorFlag === "Y") !== collaborators.length > 0 ||
+    (input.subprojectFlag === "Y") !== subprojects.length > 0 ||
+    new Set(collaborators.map((row) => row.collaboratorId)).size !==
+      collaborators.length ||
+    new Set(subprojects.map((row) => `${row.personId}:${row.orgUnitId}`))
+      .size !== subprojects.length ||
+    collaborators.some(
+      (row) =>
+        !choices.collaborators.some(
+          (candidate) => candidate.id === row.collaboratorId,
+        ) ||
+        (row.roleCode !== "" &&
+          !choices.collaboratorRoles.some(
+            (role) => role.value === row.roleCode,
+          )),
+    ) ||
+    subprojects.some(
+      (row) =>
+        row.personId === pi.person_id ||
+        !choices.subprojectPeople.some(
+          (person) =>
+            person.personId === row.personId &&
+            person.orgUnitId === row.orgUnitId &&
+            person.employeeNumber === row.employeeNumber,
+        ) ||
+        !choices.subproposalTypes.some(
+          (option) => option.value === row.typeCode,
+        ),
+    )
+  )
+    throw new AppError("BAD_REQUEST", "Invalid Proposal partner details.", 400);
   if (input.attributes) {
-    const { loadAttributes } = await import("@/server/record/attributes/service");
-    const { attributeErrors } = await import("@/features/record/attributes/model");
+    const { loadAttributes } =
+      await import("@/server/record/attributes/service");
+    const { attributeErrors } =
+      await import("@/features/record/attributes/model");
     const view = await loadAttributes({ host: "proposals-summary" });
     if (!view.visible && Object.keys(input.attributes).length > 0)
       throw new AppError("BAD_REQUEST", "Attributes are unavailable.", 400);
     if (view.visible) {
       const fields = view.fields;
-      if (Object.entries(input.attributes).some(([key, value]) => !fields.some((field) => field.name === key && (!field.readOnly || value === null))) || Object.keys(attributeErrors(fields, input.attributes, true)).length > 0)
+      if (
+        Object.entries(input.attributes).some(
+          ([key, value]) =>
+            !fields.some(
+              (field) =>
+                field.name === key && (!field.readOnly || value === null),
+            ),
+        ) ||
+        Object.keys(attributeErrors(fields, input.attributes, true)).length > 0
+      )
         throw new AppError("BAD_REQUEST", "Invalid attribute values.", 400);
     }
   }
@@ -452,7 +548,8 @@ export async function createProposal(raw: unknown) {
       proposal_title: input.title,
       proposal_description: input.description,
       collaborators: collaborators.map((row) => ({
-        prop_collab_rltn_id: null, collaborator_id: row.collaboratorId,
+        prop_collab_rltn_id: null,
+        collaborator_id: row.collaboratorId,
         collab_type_flag_lkp_code: row.roleCode || null,
         prop_collab_rltn_descr: row.description,
         costing_enabled: row.costingEnabled ? "Y" : "N",
@@ -475,13 +572,19 @@ export async function createProposal(raw: unknown) {
           version_retain_costing: null,
         },
         ...subprojects.map((row) => ({
-          collaborator_id: null, collaborator_name: null,
+          collaborator_id: null,
+          collaborator_name: null,
           exclude_pricing: row.excludePricing ? "Y" : "N",
-          sub_proposal_type: row.typeCode, sub_proposal_id: null,
-          person_id: row.personId, employee_number: row.employeeNumber,
-          prop_deptmt_rltn_id: null, org_unit_id: row.orgUnitId,
-          investigator_type: "SCO-I", version_id: null,
-          version_number: null, version_description: null,
+          sub_proposal_type: row.typeCode,
+          sub_proposal_id: null,
+          person_id: row.personId,
+          employee_number: row.employeeNumber,
+          prop_deptmt_rltn_id: null,
+          org_unit_id: row.orgUnitId,
+          investigator_type: "SCO-I",
+          version_id: null,
+          version_number: null,
+          version_description: null,
           version_retain_costing: null,
         })),
       ],
@@ -534,6 +637,6 @@ export async function createProposal(raw: unknown) {
   };
   const result = z
     .object({ proposal: z.number().int().positive() })
-    .parse(await proposals.saveSummary({ body }));
+    .parse(await proposals.save({ body }));
   return { id: result.proposal, type: input.type };
 }

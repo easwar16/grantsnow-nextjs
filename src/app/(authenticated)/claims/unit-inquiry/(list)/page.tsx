@@ -1,7 +1,7 @@
 import { pageIdentity } from "@/server/identity/auth/page";
 import { listUnits, unitListView } from "@/server/modules/claims/units/listing";
-import { clearedUnitFilters } from "@/features/modules/claims/units/schema";
-import { UnitList } from "@/features/modules/claims/units/unit-list";
+import { clearedUnitFilters } from "@/features/modules/claims/units/listing/schema";
+import { UnitList } from "@/features/modules/claims/units/listing/unit-list";
 import { State } from "@/components/feedback/state";
 import { functions } from "@/lib/functions";
 import { serverFunctions } from "@/server/functions";

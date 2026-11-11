@@ -175,6 +175,7 @@ it("verified org and statistics filter propagation never substitutes browser ide
       };
     if (op === "getPre_awardGetLkpOrgUnitType")
       return { items: [{ org_unit_id: 202, org_unit_name: "Example" }] };
+    if (op === "getSharedLabels") return [];
     return { items: [] };
   });
   await loadWidget("pByYearChart", {

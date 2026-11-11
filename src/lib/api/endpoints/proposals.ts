@@ -158,9 +158,11 @@ export type ApprovedAoiPage = {
   hasMore: boolean;
 };
 export const approvedAois = (offset = 0, signal?: AbortSignal) =>
-  get<ApprovedAoiPage>("/proposals/approved-aoi", { offset }, signal);
+  get<ApprovedAoiPage>("/proposals/actions/approved-aois", { offset }, signal);
 export const approvedAoiSource = (id: string) =>
-  get<{ opportunityId: string }>("/proposals/approved-aoi", { id });
+  get<{ opportunityId: string }>("/proposals/actions/approved-aoi-source", {
+    id,
+  });
 export const setSummaryFinalized = (
   type: string,
   id: string,

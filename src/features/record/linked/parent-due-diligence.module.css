@@ -1,0 +1,32 @@
+/* Legacy: a row (oj-sm-margin-5x-vertical, padding-3x-horizontal) whose Create item grows, so Create sits at the
+   start and Link (flex-initial, padding-3x-start) at the end; measured on 621 at 1920px (the tab's 16px gap
+   stands for the bottom margin). */
+.actions {
+  display: flex;
+  align-items: center;
+  margin: 15px 0 0;
+  padding: 0 9px;
+}
+.create {
+  flex: 1;
+}
+.link {
+  padding-left: 9px;
+}
+/* oj-form-layout max-columns 2, labels inside. */
+.filters {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+/* lvLinkDueDiligence: at most 22rem, scrolling. */
+.results {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  max-height: 22rem;
+  overflow-y: auto;
+}
+.secondary {
+  color: var(--gn-text-secondary);
+}

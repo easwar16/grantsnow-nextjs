@@ -3,7 +3,7 @@ import { fundRecordContext } from "@/server/modules/claims/funds/record";
 import { fundShell } from "@/server/modules/claims/funds/record/shell";
 import { resources } from "@/server/platform/configuration/resources";
 import { State } from "@/components/feedback/state";
-import { DeniedRedirect } from "@/features/modules/opportunities/eoi/denied-redirect";
+import { DeniedRedirect } from "@/features/record/shell/denied-redirect";
 import { FundRecordShell } from "@/features/modules/claims/funds/record/record-shell";
 import { functions } from "@/lib/functions";
 

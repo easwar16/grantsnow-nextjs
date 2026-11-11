@@ -193,10 +193,13 @@ export function ApprovalWorkflow({
   id,
   api,
   view,
+  onChanged,
 }: {
   id: string;
   api: string;
   view: WorkflowView;
+  /** After a write, for a host read in the browser (a server page re-renders through the router). */
+  onChanged?: () => void;
 }) {
   const { texts, stages, gates } = view;
   const router = useRouter(),
@@ -227,9 +230,10 @@ export function ApprovalWorkflow({
         store.forget(approvals.stageUsersKeys(api));
         store.forget(approvals.history.key(api));
         startTransition(() => router.refresh());
+        onChanged?.();
         return true;
       }, key)) === true,
-    [api, fail, router, run, store, toast],
+    [api, fail, onChanged, router, run, store, toast],
   );
   const onAct = useCallback(
     async (action: ApprovalAction, stage?: ApprovalStage) => {

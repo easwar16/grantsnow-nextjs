@@ -48,3 +48,9 @@ export const groupsAndRoles = read<{ shareTo: string }>({
   ttl: serverConstants.ttl.session,
   headers: (p) => ({ p_share_to: p.shareTo }),
 });
+/** The costing funding sections (getFundingHdr), for one cost model or all; configuration, held like it. */
+export const fundingSections = read<{ costModel?: string } | void>({
+  op: "getPre_awards_costingGetFundingHdr",
+  ttl: serverConstants.ttl.config,
+  headers: (p) => (p?.costModel ? { cost_model: p.costModel } : {}),
+});

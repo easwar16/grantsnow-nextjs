@@ -45,7 +45,15 @@ export async function loadKpis(organization?: string) {
     });
     const reports = new Set(enabled.map((id) => id.toLowerCase()));
     return {
-      items: schema.parse(raw).filter((r) => reports.has(r.id.toLowerCase())),
+      items: schema
+        .parse(raw)
+        .filter((r) => reports.has(r.id.toLowerCase()))
+        // Legacy 9568: the Submitted Applications Value KPI shows whole pounds.
+        .map((r) =>
+          r.id === "academic_year_vs_cost" && typeof r.metric === "string"
+            ? { ...r, metric: functions.format.wholeAmount(r.metric) }
+            : r,
+        ),
     };
   } catch (e) {
     return {

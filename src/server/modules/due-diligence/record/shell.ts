@@ -28,7 +28,8 @@ export function dueDiligenceShell(r: DueDiligenceRecord, rows: Resources) {
     id: r.id,
     access: r.access,
     statusCode: r.statusCode,
-    canEditSetup: r.rights["duediligence-general-overview"]?.edit === true &&
+    canEditSetup:
+      r.rights["duediligence-general-overview"]?.edit === true &&
       (r.statusCode === "DRFT" ||
         (r.rights["due-diligence-change-setup"]?.edit === true &&
           r.respondents.every((row) => row.statusCode === "DRFT"))),
@@ -86,11 +87,39 @@ export function dueDiligenceShell(r: DueDiligenceRecord, rows: Resources) {
       list: t("button-labels", "list", "List"),
       overview: t("page-name", "duediligence-general-overview", "Setup"),
       comments: t("button-labels", "comments", "Comments"),
-      audit: serverFunctions.resources.resourceVisible(rows, BUNDLE, "button-labels", "openAuditTrail")
-        ? t("button-labels", "openAuditTrail", "Audit Trail") : null,
+      audit: serverFunctions.resources.resourceVisible(
+        rows,
+        BUNDLE,
+        "button-labels",
+        "openAuditTrail",
+      )
+        ? t("button-labels", "openAuditTrail", "Audit Trail")
+        : null,
       auditTitle: t("header-labels", "audit-trail", "Audit Trail"),
       close: t("button-labels", "dd-detail-close", "Close"),
-      tabs: "Due Diligence pages",
+      tabs: t("labels", "dd-pages", "Due Diligence pages"),
+      print: t("button-labels", "print", "Print"),
+      editSetup: t("button-labels", "edit-setup", "Edit setup"),
+      submit: t("button-labels", "submit-for-approval", "Submit for Approval"),
+      finalize: t("labels", "finalize", "Finalize"),
+      finalized: t("labels", "finalized", "Finalized"),
+    },
+    referenceLink: {
+      link: t("button-labels", "dd-detail-link", "Link"),
+      title: t("dialog-titles", "reference-link-to", "Link to reference"),
+      type: t("labels", "reference-type", "Reference type"),
+      number: t("labels", "reference-id", "Reference number"),
+      cancel: t("button-labels", "cancel", "Cancel"),
+      submit: t("button-labels", "submit", "Submit"),
+    },
+    responses: {
+      title: t("page-name", "duediligence-responses", "Responses"),
+      participants: t("labels", "participants", "Participants"),
+      version: t("labels", "responses-version", "Version"),
+      edit: t("button-labels", "responses-edit", "Edit response"),
+      cancel: t("button-labels", "responses-cancel", "Cancel"),
+      save: t("button-labels", "responses-save", "Save response"),
+      saved: t("messages", "responses-saved", "Response saved."),
     },
   };
 }

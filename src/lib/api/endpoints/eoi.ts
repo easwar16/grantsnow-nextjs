@@ -9,6 +9,7 @@ import type {
   EoiListRow,
 } from "@/features/modules/opportunities/eoi-list/types";
 import type { CreatorCard } from "@/features/record/shell/creator-types";
+import type { AttributeValues } from "@/features/record/attributes/model";
 import { post } from "../http";
 import { endpoint, pagedEndpoint } from "../hooks";
 import { constants } from "@/lib/constants";
@@ -26,15 +27,18 @@ export const list = pagedEndpoint<EoiFilters, EoiListRow, EoiListPage>(
 );
 /** The drawer's funder options (a held reference list), read once the page shows. */
 export const funders = endpoint<void, EoiFunders>(
-  () => ({ path: "/opportunities/eoi/funders" }),
+  () => ({ path: "/opportunities/eoi/choices", query: { list: "funders" } }),
   { ttl: constants.ttl.session },
 );
-/** WRITES: creates the application once its form has validated; the browser sends only the opportunity id. */
-export const create = (opportunityId: number) =>
+/** WRITES: creates the application with its attributes once its form has validated. */
+export const create = (opportunityId: number, attributes: AttributeValues) =>
   post<{ requestId: string; number: string | null }>(
-    "/opportunities/eoi/create",
-    { opportunityId },
+    "/opportunities/eoi/actions/create",
+    { opportunityId, attributes },
   );
+/** WRITES: a saved application's Save: its attributes (legacy 9284's upsert), before the form's answers. */
+export const save = (requestId: string, attributes: AttributeValues) =>
+  post(`/opportunities/eoi/${requestId}/application`, { attributes });
 /** WRITES: finalizes or unlocks one tab's page of a saved application. */
 export const setFinalized = (
   requestId: string,

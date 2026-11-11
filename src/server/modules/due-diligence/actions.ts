@@ -5,17 +5,22 @@ import { dueDiligenceRecord } from "./record";
 import { proposalPage } from "@/server/modules/proposals/record";
 import { recordIdentity } from "@/features/modules/proposals/record";
 import { awardRecordRead } from "@/server/modules/awards/record";
-import { listDueDiligence } from "./listing";
+import { dueDiligenceListView, listDueDiligence } from "./listing";
 import { defaultDueDiligenceFilters } from "@/features/modules/due-diligence/listing/schema";
 import { authenticate } from "@/server/identity/session/service";
-import { configuration, dueDiligence, lookups, people } from "@/server/oracle/api";
+import {
+  applications,
+  configuration,
+  dynamicForm,
+  lookups,
+  people,
+} from "@/server/oracle/api";
 import {
   dashboardRoles,
   organizations,
 } from "@/server/platform/configuration/service";
 import { serverFunctions } from "@/server/functions";
 import { resources } from "@/server/platform/configuration/resources";
-import { dueDiligenceListView } from "./listing";
 
 const copyRows = z.object({
   items: z.array(
@@ -61,7 +66,9 @@ async function allowed(raw: unknown, action: "clone" | "delete") {
 
 export async function dueDiligenceCloneOptions(id: string, access: string) {
   await allowed({ id, access, objects: [] }, "clone");
-  const rows = copyRows.parse(await dueDiligence.copyOptions()).items;
+  const rows = copyRows.parse(
+    await applications.copyOptions({ objectType: "DUE_DILIGENCE" }),
+  ).items;
   return rows.map((row) => ({
     value: row.r,
     label: row.d || row.r,
@@ -71,7 +78,9 @@ export async function dueDiligenceCloneOptions(id: string, access: string) {
 export async function cloneDueDiligence(raw: unknown) {
   const { input } = await allowed(raw, "clone");
   const selected = body.parse(input);
-  const available = copyRows.parse(await dueDiligence.copyOptions()).items;
+  const available = copyRows.parse(
+    await applications.copyOptions({ objectType: "DUE_DILIGENCE" }),
+  ).items;
   const names = new Set(available.map((row) => row.r));
   if (selected.objects.some((name) => !names.has(name)))
     throw new AppError(
@@ -79,7 +88,8 @@ export async function cloneDueDiligence(raw: unknown) {
       "Invalid Due Diligence clone selection.",
       400,
     );
-  await dueDiligence.copy({
+  await applications.copy({
+    objectType: "DUE_DILIGENCE",
     id: selected.id,
     access: selected.access,
     objects: [...new Set(selected.objects)].map((object_name) => ({
@@ -92,7 +102,7 @@ export async function cloneDueDiligence(raw: unknown) {
 export async function deleteDueDiligence(raw: unknown) {
   const { input } = await allowed(raw, "delete");
   const selected = target.parse(input);
-  await dueDiligence.remove({ id: selected.id });
+  await applications.remove({ id: selected.id });
   return { deleted: true };
 }
 const input = z
@@ -108,11 +118,14 @@ const input = z
       .array(z.string().regex(/^[1-9]\d{0,14}:[1-9]\d{0,14}$/))
       .max(100)
       .default([]),
-    parent: z.object({
-      type: z.enum(["PROPOSAL", "AWARD"]),
-      id: z.string().regex(/^[1-9]\d{0,14}$/),
-      proposalType: recordIdentity.shape.type.optional(),
-    }).strict().optional(),
+    parent: z
+      .object({
+        type: z.enum(["PROPOSAL", "AWARD"]),
+        id: z.string().regex(/^[1-9]\d{0,14}$/),
+        proposalType: recordIdentity.shape.type.optional(),
+      })
+      .strict()
+      .optional(),
     supervisor: z
       .string()
       .regex(/^(-?[0-9]\d{0,14}:[0-9]\d{0,14})?$/)
@@ -133,10 +146,14 @@ const definition = z.array(
 );
 const saved = z.object({
   setup_flow_id: z.coerce.number().int().positive(),
-  stakeholders: z.array(z.object({
-    id: z.coerce.number().int().positive(),
-    p_id: z.coerce.number().int().positive(),
-  })).optional(),
+  stakeholders: z
+    .array(
+      z.object({
+        id: z.coerce.number().int().positive(),
+        p_id: z.coerce.number().int().positive(),
+      }),
+    )
+    .optional(),
 });
 const personRows = z.object({
   items: z.array(
@@ -148,18 +165,24 @@ const personRows = z.object({
     }),
   ),
 });
-const supervisorRows = z.object({ items: z.array(z.object({
-  person_id: z.coerce.number().int(),
-  org_unit_id: z.coerce.number().int().nonnegative().optional(),
-  full_name: z.string().nullish(),
-  org_unit_name: z.string().nullish(),
-})) });
+const supervisorRows = z.object({
+  items: z.array(
+    z.object({
+      person_id: z.coerce.number().int(),
+      org_unit_id: z.coerce.number().int().nonnegative().optional(),
+      full_name: z.string().nullish(),
+      org_unit_name: z.string().nullish(),
+    }),
+  ),
+});
 function selectableSupervisors(raw: unknown) {
-  return supervisorRows.parse(raw).items.flatMap((person) =>
-    person.person_id > 0 && person.org_unit_id !== undefined
-      ? [{ ...person, org_unit_id: person.org_unit_id }]
-      : [],
-  );
+  return supervisorRows
+    .parse(raw)
+    .items.flatMap((person) =>
+      person.person_id > 0 && person.org_unit_id !== undefined
+        ? [{ ...person, org_unit_id: person.org_unit_id }]
+        : [],
+    );
 }
 const keyOf = (person: z.infer<typeof personRows>["items"][number]) =>
   `${person.person_id}:${person.org_unit_id}`;
@@ -185,14 +208,23 @@ async function requireSetup(id?: string, access?: string) {
   if (!/^[1-9]\d{0,14}$/.test(id))
     throw new AppError("BAD_REQUEST", "Invalid Due Diligence record.", 400);
   const [record, { user }] = await Promise.all([
-    dueDiligenceRecord(id, access), authenticate(),
+    dueDiligenceRecord(id, access),
+    authenticate(),
   ]);
   const overview = "duediligence-general-overview";
-  const forceEdit = record.rights["due-diligence-change-setup"]?.edit === true &&
+  const forceEdit =
+    record.rights["due-diligence-change-setup"]?.edit === true &&
     record.respondents.every((row) => row.statusCode === "DRFT");
-  if (!record.tabs.includes(overview) || !record.rights[overview]?.edit ||
-      (record.statusCode !== "DRFT" && !forceEdit))
-    throw new AppError("FORBIDDEN", "Due Diligence setup editing is unavailable.", 403);
+  if (
+    !record.tabs.includes(overview) ||
+    !record.rights[overview]?.edit ||
+    (record.statusCode !== "DRFT" && !forceEdit)
+  )
+    throw new AppError(
+      "FORBIDDEN",
+      "Due Diligence setup editing is unavailable.",
+      403,
+    );
   return { user, record };
 }
 async function options(type: string) {
@@ -219,7 +251,10 @@ export async function dueDiligenceCreateSetup(id?: string, access?: string) {
     );
   return {
     currentPersonId: String(user.personId),
-    adminAnswer: globals.some((row) => row.var_key === "DUE_DILIGENCE_ADMIN_ANSWER" && row.var_value === "Y"),
+    adminAnswer: globals.some(
+      (row) =>
+        row.var_key === "DUE_DILIGENCE_ADMIN_ANSWER" && row.var_value === "Y",
+    ),
     orgs: orgs.map((org) => ({ value: String(org.id), label: org.name })),
     types,
     formTypes,
@@ -227,7 +262,9 @@ export async function dueDiligenceCreateSetup(id?: string, access?: string) {
       heading: t(
         "button-labels",
         "new-due-diligence-application",
-        record ? "Edit Due Diligence Application" : "New Due Diligence Application",
+        record
+          ? "Edit Due Diligence Application"
+          : "New Due Diligence Application",
       ),
       save: t("button-labels", "save", "Save draft"),
       submit: t("button-labels", "submit", "Submit"),
@@ -245,7 +282,11 @@ export async function dueDiligenceCreateSetup(id?: string, access?: string) {
     },
   };
 }
-export async function dueDiligenceCreatePeople(org: string, id?: string, access?: string) {
+export async function dueDiligenceCreatePeople(
+  org: string,
+  id?: string,
+  access?: string,
+) {
   await requireSetup(id, access);
   if (!/^[1-9]\d{0,14}$/.test(org))
     throw new AppError("BAD_REQUEST", "Invalid Org Unit.", 400);
@@ -257,19 +298,33 @@ export async function dueDiligenceCreatePeople(org: string, id?: string, access?
     detail: person.org_unit_name ?? "",
   }));
 }
-export async function dueDiligenceCreateSupervisors(id?: string, access?: string) {
+export async function dueDiligenceCreateSupervisors(
+  id?: string,
+  access?: string,
+) {
   await requireSetup(id, access);
-  const rows = selectableSupervisors(await dueDiligence.supervisors());
+  const rows = selectableSupervisors(await applications.approvers());
   return rows.map((person) => ({
     value: keyOf(person),
     label: person.full_name ?? String(person.person_id),
   }));
 }
-export async function dueDiligenceCreateForm(formType: string, id?: string, access?: string) {
+export async function dueDiligenceCreateForm(
+  formType: string,
+  id?: string,
+  access?: string,
+) {
   const setup = await dueDiligenceCreateSetup(id, access);
   if (!setup.formTypes.some((option) => option.value === formType))
     throw new AppError("BAD_REQUEST", "Unknown Due Diligence form type.", 400);
-  const forms = definition.safeParse(await dueDiligence.form({ formType }));
+  const forms = definition.safeParse(
+    await dynamicForm.forms({
+      objectId: "",
+      objectType: "DUE_DILIGENCE",
+      slot: "DUE_DILIGENCE",
+      tag: { type: "DUE_DILIGENCE_TYPE", value: formType },
+    }),
+  );
   if (!forms.success || !forms.data.length || !forms.data[0].sections.length)
     throw new AppError(
       "CONTRACT",
@@ -316,16 +371,20 @@ export async function createDueDiligence(raw: unknown) {
   )
     throw new AppError("BAD_REQUEST", "Unknown Due Diligence type.", 400);
   if (action === "submit" && (!participants.length || !supervisor))
-    throw new AppError("BAD_REQUEST",
-      !participants.length ? "Select at least one participant before submitting." :
-      "Select a supervisor before submitting.", 400);
+    throw new AppError(
+      "BAD_REQUEST",
+      !participants.length
+        ? "Select at least one participant before submitting."
+        : "Select a supervisor before submitting.",
+      400,
+    );
   const form = await dueDiligenceCreateForm(formType);
   const [availablePeople, availableSupervisors] = await Promise.all([
     participants.length
       ? personRows.parse(await people.inOrg({ orgId: org })).items
       : Promise.resolve([]),
     supervisor
-      ? selectableSupervisors(await dueDiligence.supervisors())
+      ? selectableSupervisors(await applications.approvers())
       : Promise.resolve([]),
   ]);
   const personByKey = new Map(
@@ -355,7 +414,8 @@ export async function createDueDiligence(raw: unknown) {
     .filter((section) => section.enabled)
     .map((section) => ({
       section_id: Number(section.id),
-      enabled_by: "DUE_DILIGENCE_ADMIN",
+      // Legacy newReference: a referenced create enables its sections as PROPOSAL.
+      enabled_by: parent ? "PROPOSAL" : "DUE_DILIGENCE_ADMIN",
       setup_id: null,
     }));
   if (!sections.length)
@@ -365,7 +425,7 @@ export async function createDueDiligence(raw: unknown) {
       400,
     );
   const result = saved.safeParse(
-    await dueDiligence.save({
+    await applications.save({
       body: {
         setup_description: title,
         application_number: null,
@@ -402,9 +462,15 @@ export async function createDueDiligence(raw: unknown) {
             org_unit_id: person.org_unit_id,
           };
         }),
-        reference_objects: parent ? [{
-          obj_ref_id: Number(parent.id), obj_ref_type: parent.type, reln_id: null,
-        }] : [],
+        reference_objects: parent
+          ? [
+              {
+                obj_ref_id: Number(parent.id),
+                obj_ref_type: parent.type,
+                reln_id: null,
+              },
+            ]
+          : [],
         ethics_form_type: formType,
       },
     }),
@@ -417,9 +483,10 @@ export async function createDueDiligence(raw: unknown) {
   const creator = await authenticate();
   return {
     id: String(result.data.setup_flow_id),
-    respondentId: result.data.stakeholders?.find(
-      (row) => String(row.p_id) === String(creator.user.personId),
-    )?.id.toString() ?? null,
+    respondentId:
+      result.data.stakeholders
+        ?.find((row) => String(row.p_id) === String(creator.user.personId))
+        ?.id.toString() ?? null,
   };
 }
 
@@ -448,7 +515,7 @@ async function access() {
 export async function deletedDueDiligence() {
   await access();
   const [body, orgs] = await Promise.all([
-    dueDiligence.deleted(),
+    applications.deleted({ objectType: "DUE_DILIGENCE" }),
     organizations(),
   ]);
   const allowed = new Set(orgs.map((org) => String(org.id)));
@@ -476,7 +543,7 @@ export async function restoreDueDiligence(raw: unknown) {
       "Due Diligence application not found or access denied.",
       403,
     );
-  await dueDiligence.restore({ id: String(recordId) });
+  await applications.restore({ id: String(recordId) });
   return { restored: true };
 }
 
@@ -492,46 +559,73 @@ const existingSetup = z.object({
   expiry_date: z.string().nullish(),
   obj_ref_id: z.coerce.number().int().positive().nullish(),
   obj_ref_type: z.string().nullish(),
-  sections: z.array(z.object({
-    section_id: z.coerce.number().int().positive(),
-    setup_id: z.coerce.number().int().positive().nullish(),
-  })).default([]),
-  stakeholders: z.array(z.object({
-    id: z.coerce.number().int().positive(),
-    p_id: z.coerce.number().int().positive(),
-    org_unit_id: z.coerce.number().int().nonnegative().nullish(),
-    org_unit_name: z.string().nullish(),
-  })).default([]),
-  reviewer: z.array(z.object({
-    id: z.coerce.number().int().positive(),
-    org_unit_id: z.coerce.number().int().nonnegative().nullish(),
-  })).nullish(),
-  reference_objects: z.array(z.object({
-    obj_ref_id: z.coerce.number().int().positive(),
-    obj_ref_type: z.string().regex(/^[A-Z_]{1,40}$/),
-    reln_id: z.coerce.number().int().positive().nullish(),
-  })).default([]),
+  sections: z
+    .array(
+      z.object({
+        section_id: z.coerce.number().int().positive(),
+        setup_id: z.coerce.number().int().positive().nullish(),
+      }),
+    )
+    .default([]),
+  stakeholders: z
+    .array(
+      z.object({
+        id: z.coerce.number().int().positive(),
+        p_id: z.coerce.number().int().positive(),
+        org_unit_id: z.coerce.number().int().nonnegative().nullish(),
+        org_unit_name: z.string().nullish(),
+      }),
+    )
+    .default([]),
+  reviewer: z
+    .array(
+      z.object({
+        id: z.coerce.number().int().positive(),
+        org_unit_id: z.coerce.number().int().nonnegative().nullish(),
+      }),
+    )
+    .nullish(),
+  reference_objects: z
+    .array(
+      z.object({
+        obj_ref_id: z.coerce.number().int().positive(),
+        obj_ref_type: z.string().regex(/^[A-Z_]{1,40}$/),
+        reln_id: z.coerce.number().int().positive().nullish(),
+      }),
+    )
+    .default([]),
 });
-const editInput = input.extend({
-  id: z.string().regex(/^[1-9]\d{0,14}$/),
-  access: z.enum(["DDA_ACCESS", "RESPONDENT_ACCESS"]),
-}).strict();
-const choiceValue = (choices: { value: string; label: string }[], raw: string) =>
-  choices.find((choice) => choice.value === raw || choice.label === raw)?.value ?? "";
-const dateOnly = (value: string | null | undefined) => value?.slice(0, 10) ?? "";
+const editInput = input
+  .extend({
+    id: z.string().regex(/^[1-9]\d{0,14}$/),
+    access: z.enum(["DDA_ACCESS", "RESPONDENT_ACCESS"]),
+  })
+  .strict();
+const choiceValue = (
+  choices: { value: string; label: string }[],
+  raw: string,
+) =>
+  choices.find((choice) => choice.value === raw || choice.label === raw)
+    ?.value ?? "";
+const dateOnly = (value: string | null | undefined) =>
+  value?.slice(0, 10) ?? "";
 
 /** Current setup values and validated choices for the record's Edit / Edit Setup flow. */
 export async function dueDiligenceEditSetup(id: string, access?: string) {
   const [auth, setup] = await Promise.all([
-    requireSetup(id, access), dueDiligenceCreateSetup(id, access),
+    requireSetup(id, access),
+    dueDiligenceCreateSetup(id, access),
   ]);
   const record = auth.record!;
-  const raw = existingSetup.parse(await dueDiligence.setup({ id }));
+  const raw = existingSetup.parse(await applications.setup({ id }));
   if (String(raw.setup_flow_id) !== id)
-    throw new AppError("CONTRACT", "Oracle returned another Due Diligence setup.");
+    throw new AppError(
+      "CONTRACT",
+      "Oracle returned another Due Diligence setup.",
+    );
   const [peopleRows, supervisors] = await Promise.all([
     people.inOrg({ orgId: String(raw.org_unit_id) }),
-    dueDiligence.supervisors(),
+    applications.approvers(),
   ]);
   const availablePeople = personRows.parse(peopleRows).items;
   const availableSupervisors = selectableSupervisors(supervisors);
@@ -545,12 +639,19 @@ export async function dueDiligenceEditSetup(id: string, access?: string) {
     initial: {
       title: raw.setup_description ?? "",
       org: String(raw.org_unit_id),
-      formType: choiceValue(setup.formTypes, raw.ethics_form_type ?? record.formType),
-      dueDiligenceType: choiceValue(setup.types,
-        raw.ethics_type_lkp_code ?? raw.ethics_type ?? record.dueDiligenceType),
+      formType: choiceValue(
+        setup.formTypes,
+        raw.ethics_form_type ?? record.formType,
+      ),
+      dueDiligenceType: choiceValue(
+        setup.types,
+        raw.ethics_type_lkp_code ?? raw.ethics_type ?? record.dueDiligenceType,
+      ),
       deadline: dateOnly(raw.deadline_date),
       expiry: dateOnly(raw.expiry_date),
-      participants: availablePeople.filter((row) => participantIds.has(row.person_id)).map(keyOf),
+      participants: availablePeople
+        .filter((row) => participantIds.has(row.person_id))
+        .map(keyOf),
       supervisor: supervisor ? keyOf(supervisor) : "",
     },
   };
@@ -564,112 +665,212 @@ export async function updateDueDiligence(raw: unknown) {
   const value = parsed.data;
   const { record } = await requireSetup(value.id, value.access);
   const setup = await dueDiligenceCreateSetup(value.id, value.access);
-  if (!setup.orgs.some((row) => row.value === value.org) ||
-      !setup.types.some((row) => row.value === value.dueDiligenceType) ||
-      !setup.formTypes.some((row) => row.value === value.formType))
-    throw new AppError("BAD_REQUEST", "Invalid Due Diligence setup choice.", 400);
-  if (value.action === "submit" && (!value.participants.length || !value.supervisor))
-    throw new AppError("BAD_REQUEST", "Submit needs a participant and supervisor.", 400);
-  const previous = existingSetup.parse(await dueDiligence.setup({ id: value.id }));
+  if (
+    !setup.orgs.some((row) => row.value === value.org) ||
+    !setup.types.some((row) => row.value === value.dueDiligenceType) ||
+    !setup.formTypes.some((row) => row.value === value.formType)
+  )
+    throw new AppError(
+      "BAD_REQUEST",
+      "Invalid Due Diligence setup choice.",
+      400,
+    );
+  if (
+    value.action === "submit" &&
+    (!value.participants.length || !value.supervisor)
+  )
+    throw new AppError(
+      "BAD_REQUEST",
+      "Submit needs a participant and supervisor.",
+      400,
+    );
+  const previous = existingSetup.parse(
+    await applications.setup({ id: value.id }),
+  );
   if (String(previous.setup_flow_id) !== value.id)
-    throw new AppError("CONTRACT", "Oracle returned another Due Diligence setup.");
-  const form = await dueDiligenceCreateForm(value.formType, value.id, value.access);
+    throw new AppError(
+      "CONTRACT",
+      "Oracle returned another Due Diligence setup.",
+    );
+  const form = await dueDiligenceCreateForm(
+    value.formType,
+    value.id,
+    value.access,
+  );
   const [peopleData, supervisorData] = await Promise.all([
-    people.inOrg({ orgId: value.org }), dueDiligence.supervisors(),
+    people.inOrg({ orgId: value.org }),
+    applications.approvers(),
   ]);
-  const chosenPeople = new Map(personRows.parse(peopleData).items.map((row) => [keyOf(row), row]));
-  const chosenSupervisors = new Map(selectableSupervisors(supervisorData).map((row) => [keyOf(row), row]));
-  if (value.participants.some((key) => !chosenPeople.has(key)) ||
-      (value.supervisor && !chosenSupervisors.has(value.supervisor)))
-    throw new AppError("BAD_REQUEST", "Selected participant or supervisor is unavailable.", 400);
-  const existingByPerson = new Map(previous.stakeholders.map((row) => [row.p_id, row]));
-  const sections = form.sections.filter((section) => section.enabled).map((section) => ({
-    section_id: Number(section.id),
-    setup_id: previous.sections.find((row) => row.section_id === Number(section.id))?.setup_id ?? null,
-    enabled_by: "DUE_DILIGENCE_ADMIN",
-  }));
+  const chosenPeople = new Map(
+    personRows.parse(peopleData).items.map((row) => [keyOf(row), row]),
+  );
+  const chosenSupervisors = new Map(
+    selectableSupervisors(supervisorData).map((row) => [keyOf(row), row]),
+  );
+  if (
+    value.participants.some((key) => !chosenPeople.has(key)) ||
+    (value.supervisor && !chosenSupervisors.has(value.supervisor))
+  )
+    throw new AppError(
+      "BAD_REQUEST",
+      "Selected participant or supervisor is unavailable.",
+      400,
+    );
+  const existingByPerson = new Map(
+    previous.stakeholders.map((row) => [row.p_id, row]),
+  );
+  const sections = form.sections
+    .filter((section) => section.enabled)
+    .map((section) => ({
+      section_id: Number(section.id),
+      setup_id:
+        previous.sections.find((row) => row.section_id === Number(section.id))
+          ?.setup_id ?? null,
+      enabled_by: "DUE_DILIGENCE_ADMIN",
+    }));
   if (!sections.length)
-    throw new AppError("BAD_REQUEST", "No Due Diligence form section is enabled.", 400);
-  const reviewer = value.supervisor ? chosenSupervisors.get(value.supervisor)! : null;
-  const savedSetup = saved.parse(await dueDiligence.save({ body: {
-    setup_description: value.title,
-    application_number: previous.application_number,
-    action_type: value.action === "submit" ? "SUBMIT" : "SAVE",
-    approver: null,
-    enabled_by: "DUE_DILIGENCE_ADMIN",
-    form_id: form.formId,
-    obj_ref_id: previous.obj_ref_id ?? null,
-    obj_ref_type: previous.obj_ref_type ?? null,
-    org_unit_id: Number(value.org),
-    expiry_date: value.expiry || null,
-    deadline_date: value.deadline || null,
-    ethics_type: value.dueDiligenceType,
-    reviewer: reviewer ? [{
-      id: reviewer.person_id, type: "INDIVIDUAL", org_unit_id: reviewer.org_unit_id,
-    }] : null,
-    sections,
-    object_type: "DUE_DILIGENCE",
-    setup_flow_id: Number(value.id),
-    stakeholders: value.participants.map((key) => {
-      const person = chosenPeople.get(key)!;
-      const old = existingByPerson.get(person.person_id);
-      return {
-        ...(old ? { id: old.id } : {}),
+    throw new AppError(
+      "BAD_REQUEST",
+      "No Due Diligence form section is enabled.",
+      400,
+    );
+  const reviewer = value.supervisor
+    ? chosenSupervisors.get(value.supervisor)!
+    : null;
+  const savedSetup = saved.parse(
+    await applications.save({
+      body: {
+        setup_description: value.title,
+        application_number: previous.application_number,
+        action_type: value.action === "submit" ? "SUBMIT" : "SAVE",
+        approver: null,
+        enabled_by: "DUE_DILIGENCE_ADMIN",
         form_id: form.formId,
         obj_ref_id: previous.obj_ref_id ?? null,
         obj_ref_type: previous.obj_ref_type ?? null,
-        p_id: person.person_id,
-        org_unit_id: person.org_unit_id,
-        org_unit_name: person.org_unit_name,
-      };
+        org_unit_id: Number(value.org),
+        expiry_date: value.expiry || null,
+        deadline_date: value.deadline || null,
+        ethics_type: value.dueDiligenceType,
+        reviewer: reviewer
+          ? [
+              {
+                id: reviewer.person_id,
+                type: "INDIVIDUAL",
+                org_unit_id: reviewer.org_unit_id,
+              },
+            ]
+          : null,
+        sections,
+        object_type: "DUE_DILIGENCE",
+        setup_flow_id: Number(value.id),
+        stakeholders: value.participants.map((key) => {
+          const person = chosenPeople.get(key)!;
+          const old = existingByPerson.get(person.person_id);
+          return {
+            ...(old ? { id: old.id } : {}),
+            form_id: form.formId,
+            obj_ref_id: previous.obj_ref_id ?? null,
+            obj_ref_type: previous.obj_ref_type ?? null,
+            p_id: person.person_id,
+            org_unit_id: person.org_unit_id,
+            org_unit_name: person.org_unit_name,
+          };
+        }),
+        reference_objects: previous.reference_objects.map((ref) => ({
+          obj_ref_id: ref.obj_ref_id,
+          obj_ref_type: ref.obj_ref_type,
+          reln_id: ref.reln_id ?? null,
+        })),
+        ethics_form_type: value.formType,
+      },
     }),
-    reference_objects: previous.reference_objects.map((ref) => ({
-      obj_ref_id: ref.obj_ref_id,
-      obj_ref_type: ref.obj_ref_type,
-      reln_id: ref.reln_id ?? null,
-    })),
-    ethics_form_type: value.formType,
-  } }));
+  );
   if (String(savedSetup.setup_flow_id) !== value.id || !record)
-    throw new AppError("CONTRACT", "Oracle returned another Due Diligence setup.");
+    throw new AppError(
+      "CONTRACT",
+      "Oracle returned another Due Diligence setup.",
+    );
   return { id: value.id };
 }
 
-const parentInput = z.object({
-  type: z.enum(["PROPOSAL", "AWARD"]),
-  id: z.string().regex(/^[1-9]\d{0,14}$/),
-  proposalType: recordIdentity.shape.type.optional(),
-}).strict();
+const parentInput = z
+  .object({
+    type: z.enum(["PROPOSAL", "AWARD"]),
+    id: z.string().regex(/^[1-9]\d{0,14}$/),
+    proposalType: recordIdentity.shape.type.optional(),
+  })
+  .strict();
 type Parent = z.infer<typeof parentInput>;
 async function requireParent(parent: Parent, action: "create" | "link") {
   if (parent.type === "PROPOSAL") {
     if (!parent.proposalType)
       throw new AppError("BAD_REQUEST", "Proposal type is required.", 400);
-    const context = await proposalPage(parent.proposalType, parent.id, "proposals-due-diligence");
+    const context = await proposalPage(
+      parent.proposalType,
+      parent.id,
+      "proposals-due-diligence",
+    );
     const key = context.access.get("proposals-link-due-diligence");
     if (action === "link" ? key?.edit !== true : context.rights.edit !== true)
-      throw new AppError("FORBIDDEN", "Proposal Due Diligence access has not been granted.", 403);
+      throw new AppError(
+        "FORBIDDEN",
+        "Proposal Due Diligence access has not been granted.",
+        403,
+      );
   } else {
     if (parent.proposalType)
       throw new AppError("BAD_REQUEST", "Invalid Award reference.", 400);
     const context = await awardRecordRead(parent.id, "due-diligence");
     const key = context.access.roles.get("awards-link-due-diligence");
-    if (action === "link" ? key?.edit !== true :
-        context.access.roles.get("awards-due-diligence")?.edit !== true)
-      throw new AppError("FORBIDDEN", "Award Due Diligence access has not been granted.", 403);
+    if (
+      action === "link"
+        ? key?.edit !== true
+        : context.access.roles.get("awards-due-diligence")?.edit !== true
+    )
+      throw new AppError(
+        "FORBIDDEN",
+        "Award Due Diligence access has not been granted.",
+        403,
+      );
   }
 }
-const linkedInput = z.object({
-  parent: parentInput,
-  id: z.string().regex(/^[1-9]\d{0,14}$/),
-}).strict();
+/** The New page's parent (a Proposal's or Award's Create), checked against the parent's create grant. */
+export async function dueDiligenceCreateParent(query: {
+  parentType?: string;
+  parentId?: string;
+  proposalType?: string;
+}): Promise<Parent | undefined> {
+  if (!query.parentType && !query.parentId && !query.proposalType)
+    return undefined;
+  const parent = parentInput.safeParse({
+    type: query.parentType,
+    id: query.parentId,
+    proposalType:
+      query.parentType === "PROPOSAL"
+        ? (query.proposalType ?? "PROPOSAL")
+        : query.proposalType,
+  });
+  if (!parent.success)
+    throw new AppError("BAD_REQUEST", "Invalid Due Diligence parent.", 400);
+  await requireParent(parent.data, "create");
+  return parent.data;
+}
+const linkedInput = z
+  .object({
+    parent: parentInput,
+    id: z.string().regex(/^[1-9]\d{0,14}$/),
+  })
+  .strict();
 /** Available DD records for a parent Link dialog; each page is the user's normal access-scoped listing. */
 export async function dueDiligenceLinkCandidates(raw: URLSearchParams) {
   const parent = parentInput.safeParse({
-    type: raw.get("type"), id: raw.get("id"),
+    type: raw.get("type"),
+    id: raw.get("id"),
     proposalType: raw.get("proposalType") ?? undefined,
   });
-  if (!parent.success) throw new AppError("BAD_REQUEST", "Invalid linked record request.", 400);
+  if (!parent.success)
+    throw new AppError("BAD_REQUEST", "Invalid linked record request.", 400);
   await requireParent(parent.data, "link");
   const view = await dueDiligenceListView();
   const page = Number(raw.get("offset") ?? "0");
@@ -687,26 +888,48 @@ export async function dueDiligenceLinkCandidates(raw: URLSearchParams) {
 /** LINK replaces the reference set; re-read and preserve every existing relation id before writing. */
 export async function linkDueDiligence(raw: unknown) {
   const parsed = linkedInput.safeParse(raw);
-  if (!parsed.success) throw new AppError("BAD_REQUEST", "Invalid Due Diligence link.", 400);
+  if (!parsed.success)
+    throw new AppError("BAD_REQUEST", "Invalid Due Diligence link.", 400);
   const { parent, id } = parsed.data;
   await requireParent(parent, "link");
   await dueDiligenceRecord(id);
-  const setup = existingSetup.parse(await dueDiligence.setup({ id }));
+  const setup = existingSetup.parse(await applications.setup({ id }));
   if (String(setup.setup_flow_id) !== id)
-    throw new AppError("CONTRACT", "Oracle returned another Due Diligence setup.");
-  if (setup.reference_objects.some((row) =>
-      String(row.obj_ref_id) === parent.id && row.obj_ref_type === parent.type))
+    throw new AppError(
+      "CONTRACT",
+      "Oracle returned another Due Diligence setup.",
+    );
+  if (
+    setup.reference_objects.some(
+      (row) =>
+        String(row.obj_ref_id) === parent.id &&
+        row.obj_ref_type === parent.type,
+    )
+  )
     return { linked: false, alreadyLinked: true };
   const refs = setup.reference_objects.map((row) => ({
     obj_ref_id: row.obj_ref_id,
     obj_ref_type: row.obj_ref_type,
     reln_id: row.reln_id ?? null,
   }));
-  refs.push({ obj_ref_id: Number(parent.id), obj_ref_type: parent.type, reln_id: null });
-  const result = saved.parse(await dueDiligence.save({
-    body: { action_type: "LINK", setup_flow_id: Number(id), reference_objects: refs },
-  }));
+  refs.push({
+    obj_ref_id: Number(parent.id),
+    obj_ref_type: parent.type,
+    reln_id: null,
+  });
+  const result = saved.parse(
+    await applications.save({
+      body: {
+        action_type: "LINK",
+        setup_flow_id: Number(id),
+        reference_objects: refs,
+      },
+    }),
+  );
   if (String(result.setup_flow_id) !== id)
-    throw new AppError("CONTRACT", "Oracle linked another Due Diligence setup.");
+    throw new AppError(
+      "CONTRACT",
+      "Oracle linked another Due Diligence setup.",
+    );
   return { linked: true, alreadyLinked: false };
 }

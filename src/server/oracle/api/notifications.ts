@@ -1,16 +1,16 @@
 import "server-only";
-import { read, write, type PageParams } from "../client";
+import { read, write } from "../client";
 import { serverConstants } from "@/server/constants";
 
-/** The user's notifications as legacy loads them for the bell (no paging parameters), held briefly. */
-export const latest = read<void, unknown>({
+/**
+ * The user's notifications: without a page as legacy loads them for the bell (held briefly), or one page of the
+ * dashboard's Notifications tab (`p_offset` / `p_limit`, read with `{ fresh: true }` so a page is never the held copy).
+ */
+export const latest = read<{ offset: number; limit: number } | void, unknown>({
   op: "getNotificationsNotifications",
   ttl: serverConstants.ttl.access,
-});
-/** One page of the dashboard's Notifications tab (`p_offset` / `p_limit`). */
-export const page = read<PageParams, unknown>({
-  op: "getNotificationsNotifications",
-  pages: "page",
+  query: (p) =>
+    p ? { p_offset: String(p.offset), p_limit: String(p.limit) } : {},
 });
 /** WRITES: marks the given notifications read (legacy header, on closing the bell). */
 export const markRead = write<{ ids: number[] }>({

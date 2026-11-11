@@ -179,7 +179,7 @@ async function ownComment(host: PanelHost, commentId: number) {
 /** WRITES: a new comment on the page's thread (legacy addComment). */
 export async function addComment(q: URLSearchParams, raw: unknown) {
   const host = await panelHost(q, "write");
-  await comments.add({
+  await comments.save({
     page: host.page,
     objectId: host.objectId,
     comments: await checkedComment(host, raw),
@@ -197,7 +197,7 @@ export async function updateComment(
     checkedComment(host, raw),
     ownComment(host, commentId),
   ]);
-  await comments.update({
+  await comments.save({
     page: row.module || host.page,
     objectId: host.objectId,
     commentId: row.comment_id,

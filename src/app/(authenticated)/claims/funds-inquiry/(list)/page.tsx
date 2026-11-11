@@ -1,8 +1,8 @@
 import { pageIdentity } from "@/server/identity/auth/page";
 import { displayFormat } from "@/server/platform/configuration/formatting";
 import { fundListView, listFunds } from "@/server/modules/claims/funds/listing";
-import { clearedFundFilters } from "@/features/modules/claims/funds/schema";
-import { FundList } from "@/features/modules/claims/funds/fund-list";
+import { clearedFundFilters } from "@/features/modules/claims/funds/listing/schema";
+import { FundList } from "@/features/modules/claims/funds/listing/fund-list";
 import { State } from "@/components/feedback/state";
 import { functions } from "@/lib/functions";
 import { serverFunctions } from "@/server/functions";

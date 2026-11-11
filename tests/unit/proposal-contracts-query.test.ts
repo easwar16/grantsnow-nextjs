@@ -8,10 +8,9 @@ import { contracts } from "@/server/oracle/api";
 
 it("reads a Proposal's linked Contracts with legacy's object_ref_id clause, quotes escaped", async () => {
   state.read.mockResolvedValue({ items: [] });
-  await contracts.linkedToProposal({
+  await contracts.list({
     reference: "P_67'43",
-    offset: 10,
-    limit: 10,
+    query: { p_offset: "10", p_limit: "10" },
   });
   const [op, headers, query] = state.read.mock.calls[0];
   expect(op).toBe("getGetAllContracts");

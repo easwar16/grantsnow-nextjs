@@ -9,7 +9,7 @@ const dependencies = vi.hoisted(() => ({
   saveResearchPartnerHeaders: vi.fn(),
   deleteResearchPartnerLine: vi.fn(),
   codes: vi.fn(),
-  costItemsForCategory: vi.fn(),
+  costItems: vi.fn(),
 }));
 vi.mock("@/server/modules/proposals/record", () => ({
   proposalPage: dependencies.proposalPage,
@@ -22,7 +22,7 @@ import {
   addResearchPartnerCost,
   removeResearchPartnerCost,
   saveResearchPartnerCost,
-} from "@/server/modules/proposals/research-partner-costs";
+} from "@/server/modules/proposals/record/research-partner-costs";
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -73,7 +73,7 @@ beforeEach(() => {
       },
     ],
   });
-  dependencies.costItemsForCategory.mockResolvedValue({
+  dependencies.costItems.mockResolvedValue({
     items: [
       {
         cost_item_lkp_code: "SCANNER",

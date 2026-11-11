@@ -11,7 +11,7 @@ import { summaryEditable } from "./sign-off";
 import { statusConfig, type StatusConfig } from "./status";
 
 /** Legacy requirementType: the columns a requirement has, and so what its save sends back. */
-const requirementRow = z.object({
+export const requirementRow = z.object({
   app_requirement_id: numberish,
   app_id: numberish,
   app_fund_id: numberish,

@@ -2,8 +2,8 @@ import "server-only";
 import { z } from "zod";
 import { claims } from "@/server/oracle/api";
 import { AppError } from "@/lib/errors";
-import { clearedFundFilters } from "@/features/modules/claims/funds/schema";
-import type { FundSummary } from "@/features/modules/claims/funds/types";
+import { clearedFundFilters } from "@/features/modules/claims/funds/listing/schema";
+import type { FundSummary } from "@/features/modules/claims/funds/listing/types";
 import { constants } from "@/lib/constants";
 
 import { actor, fundPage, fundQuery } from "./listing";

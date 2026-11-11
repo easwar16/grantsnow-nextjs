@@ -5,7 +5,7 @@ import { resources } from "@/server/platform/configuration/resources";
 import type {
   FundClaimLineRow,
   FundTableView,
-} from "@/features/modules/claims/funds/types";
+} from "@/features/modules/claims/funds/listing/types";
 import type { FundRecordFilters } from "@/shared/claims/fund-record";
 import { label, numberish, optionalText, str } from "../listing";
 import { fundRecordRead, resolvedFilters } from "../record";

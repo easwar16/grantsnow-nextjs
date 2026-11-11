@@ -2,7 +2,7 @@ import { serverFunctions } from "@/server/functions";
 import "server-only";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
-import { proposals, lookups, people } from "@/server/oracle/api";
+import { proposals, locks, lookups, people } from "@/server/oracle/api";
 import { resources } from "@/server/platform/configuration/resources";
 import { recordIdentity } from "@/features/modules/proposals/record";
 import { proposalPage } from "./record";
@@ -217,7 +217,11 @@ export async function proposalEditContext(type: string, id: string) {
   const lock = z
     .object({ user_id: z.union([z.number(), z.string()]).nullish() })
     .parse(
-      await proposals.lockStatus({ type: record.type, id: record.id, pageId }),
+      await locks.lockStatus({
+        module: record.type,
+        recordId: record.id,
+        pageId,
+      }),
     );
   return lock.user_id ? null : context;
 }
@@ -1093,7 +1097,7 @@ export async function saveProposalEdit(
   }
   const response = z
     .object({ proposal: z.number().int().positive() })
-    .parse(await proposals.saveSummary({ body }));
+    .parse(await proposals.save({ body }));
   if (String(response.proposal) !== id)
     throw new AppError(
       "CONTRACT",

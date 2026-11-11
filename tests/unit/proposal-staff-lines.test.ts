@@ -22,11 +22,11 @@ vi.mock("@/server/record/dynamic-form/forms", () => ({
 }));
 vi.mock("@/server/oracle/api", () => ({
   proposals: dependencies,
-  dynamicForm: { costForms: dependencies.costForms },
+  dynamicForm: { forms: dependencies.costForms },
   lookups: { orgUnits: dependencies.orgUnits, codes: dependencies.codes },
 }));
 
-import { saveStaffCostLines } from "@/server/modules/proposals/staff-entry";
+import { saveStaffCostLines } from "@/server/modules/proposals/record/staff-entry";
 
 const input = {
   kind: "staff",

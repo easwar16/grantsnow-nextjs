@@ -4,14 +4,17 @@ import { claims, lookups, reports } from "@/server/oracle/api";
 import type { Resources } from "@/server/platform/configuration/resources";
 import { AppError } from "@/lib/errors";
 import { serverFunctions } from "@/server/functions";
-import type { UnitFilters } from "@/features/modules/claims/units/schema";
+import {
+  parseUnitFilters,
+  type UnitFilters,
+} from "@/features/modules/claims/units/listing/schema";
 import type {
   FundTypeOption,
   GrantChoices,
   UnitCloneSetup,
   UnitDialogField,
   UnitDialogSetup,
-} from "@/features/modules/claims/units/types";
+} from "@/features/modules/claims/units/listing/types";
 
 import {
   BUNDLE,
@@ -451,6 +454,22 @@ export async function cloneUnit(raw: unknown) {
 // ── Export ──────────────────────────────────────────────────────────────────
 
 /** The listing's report for the drawer's filters (legacy exportReport `report-vbcs-app-unit-listing`). */
+/** WRITES (generate-report): one application (`{ appId, unitId, fiscalYear }`) or the listing for `{ filters }`. */
+export async function exportRequest(raw: unknown) {
+  const body = (raw ?? {}) as { appId?: unknown; filters?: unknown };
+  if (body.appId !== undefined) return exportUnit(body);
+  let filters: UnitFilters;
+  try {
+    filters = parseUnitFilters(
+      new URLSearchParams(
+        z.record(z.string(), z.string()).parse(body.filters ?? {}),
+      ),
+    );
+  } catch {
+    throw new AppError("BAD_REQUEST", "Invalid unit filters.", 400);
+  }
+  return exportUnits(filters);
+}
 export async function exportUnits(filters: UnitFilters) {
   const { user, rows, actions } = await actor();
   requireGate(actions.export);

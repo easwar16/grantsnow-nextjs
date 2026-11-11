@@ -62,7 +62,15 @@ beforeEach(() => {
 });
 it("hides charts without their module permission", async () => {
   state.modules.PROPOSALS = false;
-  expect((await dashboardTabs()).charts).toEqual([]);
+  const tabs = await dashboardTabs();
+  expect(tabs.charts).toEqual([]);
+  expect(tabs.chartModules).toEqual([]);
+});
+it("keeps a module's selector when none of its charts is visible (legacy getDynamicTabs)", async () => {
+  state.config.dynamicCharts["Proposal status"].isVisible = false;
+  const tabs = await dashboardTabs();
+  expect(tabs.charts).toEqual([]);
+  expect(tabs.chartModules).toEqual(["PROPOSAL"]);
 });
 it("denies arbitrary and disabled report IDs before Oracle calls", async () => {
   await expect(dynamicChart("999", "202")).rejects.toMatchObject({

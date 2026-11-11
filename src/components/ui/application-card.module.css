@@ -1,0 +1,69 @@
+/* Legacy Ethics / Due Diligence listing card (621): 1px card, the row actions centred at its right edge. */
+.card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  padding: 8px 8px 10px;
+}
+.body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.head a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.head a:hover {
+  text-decoration: underline;
+}
+.response {
+  display: inline-flex;
+  border-radius: 99px;
+  background: #008b8b;
+  color: #fff;
+  padding: 2px 10px;
+  line-height: 18px;
+  font-size: 12px;
+}
+.card h2 {
+  font-size: 17px;
+  margin: 7px 0 18px;
+}
+.card :global(.record-metadata) {
+  font-size: 13px;
+  line-height: 1.16;
+}
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+.actions button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.actions button:hover {
+  background: var(--hover, rgba(0, 0, 0, 0.05));
+}

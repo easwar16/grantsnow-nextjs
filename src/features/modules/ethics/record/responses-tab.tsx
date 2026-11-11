@@ -1,8 +1,13 @@
 "use client";
 import { useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { DynamicForm, type DynamicFormHandle } from "@/features/record/dynamic-form/dynamic-form";
+import {
+  DynamicForm,
+  type DynamicFormHandle,
+} from "@/features/record/dynamic-form/dynamic-form";
 import { useToast } from "@/components/feedback/toast";
+import { Select } from "@/components/ui/select";
+import type { EthicsShellModel } from "@/server/modules/ethics/record/shell";
 import styles from "@/features/record/shell/record-tab.module.css";
 
 /** The shared dynamic form reads and writes the selected stakeholder through the protected form host. */
@@ -10,7 +15,7 @@ export function ResponsesTab({
   setupId,
   stakeholderId,
   editable,
-  saveLabel,
+  texts: t,
   versions,
   selectedVersion,
   historicalVersion,
@@ -18,7 +23,15 @@ export function ResponsesTab({
   setupId: string;
   stakeholderId: string;
   editable: boolean;
-  saveLabel: string;
+  texts: Pick<
+    EthicsShellModel["labels"],
+    | "responseTitle"
+    | "responseVersion"
+    | "responseEdit"
+    | "responseCancel"
+    | "responseSave"
+    | "responseSaved"
+  >;
   versions: { value: number; label: string }[];
   selectedVersion?: number;
   historicalVersion?: number;
@@ -34,7 +47,7 @@ export function ResponsesTab({
     setSaving(true);
     try {
       if (await form.current?.save()) {
-        toast.show("success", "Response saved.");
+        toast.show("success", t.responseSaved);
         setEditing(false);
         router.refresh();
       }
@@ -43,18 +56,28 @@ export function ResponsesTab({
     }
   };
   return (
-    <section id="ethics-responses" className={styles.tab} aria-label="Responses">
-      {versions.length > 0 && <label htmlFor="ethics-response-version">Version
-        <select id="ethics-response-version" className="gn-control"
-          value={selectedVersion ?? versions[0].value}
-          onChange={(event) => {
+    <section
+      id="ethics-responses"
+      className={styles.tab}
+      aria-label={t.responseTitle}
+    >
+      {versions.length > 0 && (
+        <Select
+          id="ethics-response-version"
+          label={t.responseVersion}
+          clearable={false}
+          options={versions.map((row) => ({
+            value: String(row.value),
+            label: row.label,
+          }))}
+          value={String(selectedVersion ?? versions[0].value)}
+          onChange={(value) => {
             const next = new URLSearchParams(query.toString());
-            next.set("version", event.target.value);
+            next.set("version", value);
             router.replace(`?${next.toString()}`, { scroll: false });
-          }}>
-          {versions.map((row) => <option key={row.value} value={row.value}>{row.label}</option>)}
-        </select>
-      </label>}
+          }}
+        />
+      )}
       <DynamicForm
         key={`${stakeholderId}:${historicalVersion ?? "latest"}`}
         ref={form}
@@ -66,16 +89,43 @@ export function ResponsesTab({
         editable={editable && editing}
         version={historicalVersion}
       />
-      {editable && !editing && <div className={styles.formActions}>
-        <button type="button" className="gn-btn gn-btn--outlined" id="ethics-response-edit"
-          onClick={() => setEditing(true)}>Edit</button>
-      </div>}
-      {editable && editing && <div className={styles.formActions}>
-        <button type="button" className="gn-btn gn-btn--outlined" id="ethics-response-cancel"
-          disabled={saving} onClick={() => { void form.current?.reload(); setEditing(false); }}>Cancel</button>
-        <button type="button" className="gn-btn gn-btn--primary" id="ethics-response-save"
-          disabled={saving} onClick={() => void save()}>{saveLabel}</button>
-      </div>}
+      {editable && !editing && (
+        <div className={styles.formActions}>
+          <button
+            type="button"
+            className="gn-btn gn-btn--outlined"
+            id="ethics-response-edit"
+            onClick={() => setEditing(true)}
+          >
+            {t.responseEdit}
+          </button>
+        </div>
+      )}
+      {editable && editing && (
+        <div className={styles.formActions}>
+          <button
+            type="button"
+            className="gn-btn gn-btn--outlined"
+            id="ethics-response-cancel"
+            disabled={saving}
+            onClick={() => {
+              void form.current?.reload();
+              setEditing(false);
+            }}
+          >
+            {t.responseCancel}
+          </button>
+          <button
+            type="button"
+            className="gn-btn gn-btn--primary"
+            id="ethics-response-save"
+            disabled={saving}
+            onClick={() => void save()}
+          >
+            {t.responseSave}
+          </button>
+        </div>
+      )}
     </section>
   );
 }

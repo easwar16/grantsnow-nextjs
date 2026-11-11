@@ -1,6 +1,0 @@
-.actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 22px 0 0 10px; }
-.filters { display: flex; align-items: end; gap: 8px; flex-wrap: wrap; padding: 12px; }
-.filters label { display: grid; gap: 4px; min-width: 160px; }
-.results { list-style: none; padding: 8px 12px; margin: 0; max-height: 320px; overflow: auto; }
-.results li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
-.paging { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 12px; }

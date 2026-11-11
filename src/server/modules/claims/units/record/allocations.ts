@@ -4,7 +4,7 @@ import { claims, lookups } from "@/server/oracle/api";
 import { resources } from "@/server/platform/configuration/resources";
 import { AppError } from "@/lib/errors";
 import { serverFunctions } from "@/server/functions";
-import type { UnitAllocationsView } from "@/features/modules/claims/units/types";
+import type { UnitAllocationsView } from "@/features/modules/claims/units/listing/types";
 import { BUNDLE, label, numberish, optionalText } from "../listing";
 import { unitRecordRead, type UnitRecordContext } from "../record";
 import { statusConfig, type StatusConfig } from "./status";

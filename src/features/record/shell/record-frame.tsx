@@ -1,6 +1,7 @@
 "use client";
 import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import { createContext, useContext, useMemo, useState } from "react";
+import { ActionDialog } from "@/components/dialog/action-dialog";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { useSearchParams } from "next/navigation";
@@ -25,6 +26,45 @@ export interface AuditTarget {
 const AuditContext = createContext<(target: AuditTarget) => void>(() => {});
 /** Opens the record's audit drawer on a page or part of the record (legacy application:updateAuditObject). */
 export const useRecordAudit = () => useContext(AuditContext);
+/**
+ * Audits opened inside a modal side panel: the frame's drawer sits behind the modal, so they open in a dialog above
+ * it (legacy: the audit drawer opens over the record drawer).
+ */
+export function PanelAudit({
+  id,
+  objectType,
+  objectId,
+  children,
+}: {
+  id: string;
+  objectType: string;
+  objectId: string;
+  children: React.ReactNode;
+}) {
+  const [target, setTarget] = useState<AuditTarget | null>(null);
+  return (
+    <AuditContext.Provider value={setTarget}>
+      {children}
+      {target && (
+        <ActionDialog
+          id={id}
+          title={target.title ?? ""}
+          side
+          onClose={() => setTarget(null)}
+        >
+          <ObjectAudit
+            key={`${target.page}:${target.sec ?? ""}`}
+            id={`${id}-panel`}
+            objectType={objectType}
+            objectId={objectId}
+            page={target.page}
+            sec={target.sec}
+          />
+        </ActionDialog>
+      )}
+    </AuditContext.Provider>
+  );
+}
 
 export interface FrameTab {
   key: string;
@@ -228,7 +268,11 @@ export function RecordFrame<P>({
                         params={creator.params}
                       />
                     ) : cell.href ? (
-                      <Link href={cell.href} prefetch={false}>
+                      <Link
+                        id={`${prefix}-panel-${cell.key}-link`}
+                        href={cell.href}
+                        prefetch={false}
+                      >
                         {cell.value}
                       </Link>
                     ) : (

@@ -70,10 +70,6 @@ export const costSummary = read<{ proposalId: string; versionId?: number }>({
   op: "getPre_awards_costingGetCostSummary",
   query: (p) => ({ pid: p.proposalId, prop_version_id: p.versionId }),
 });
-export const fundingSections = read<{ costModel: string }>({
-  op: "getPre_awards_costingGetFundingHdr",
-  headers: (p) => ({ cost_model: p.costModel }),
-});
 export const projectRoles = read<{ costType: string }>({
   op: "getPre_awardGetProjectRoles",
   headers: (p) => ({ cost_type: p.costType }),
@@ -107,10 +103,10 @@ export const staffTimeReport = read<{
     in_end_date: p.endDate,
   }),
 });
-export const costItems = read<void>({ op: "getPre_awards_costingGetCostItem" });
-export const costItemsForCategory = read<{ category: string }>({
+/** Cost items: every item (quick cost), or one category's (research partner costs). */
+export const costItems = read<{ category?: string } | void>({
   op: "getPre_awards_costingGetCostItem",
-  query: (p) => ({ cost_cat_type: p.category }),
+  query: (p) => (p?.category ? { cost_cat_type: p.category } : {}),
 });
 export const insertCostingBulk = write<{ rows: unknown[] }>({
   op: "postInsertCostingBulk",
@@ -171,31 +167,13 @@ export const defaultPricing = read<{
     update_data: "N",
   }),
 });
-export const savePricingLines = write<{ rows: unknown[] }>({
+/** WRITES: pricing lines; with `funderId`, one funder's lines (the funder header). */
+export const savePricingLines = write<{ funderId?: number; rows: unknown[] }>({
   op: "postPre_awards_costingInsertPricingLines",
   identity: ["legal_id", "org_id"],
+  headers: (p) => (p.funderId === undefined ? {} : { funder_id: p.funderId }),
   body: (p) => p.rows,
   invalidates: ["getPre_awards_costingGetPricingDetails"],
-});
-export const savePricingFunder = write<{ funderId: number; rows: unknown[] }>({
-  op: "postPre_awards_costingInsertPricingLines",
-  identity: ["legal_id", "org_id"],
-  headers: (p) => ({ funder_id: p.funderId }),
-  body: (p) => p.rows,
-  invalidates: ["getPre_awards_costingGetPricingDetails"],
-});
-export const contactDetails = read<{
-  recordType: string;
-  personId: string;
-  departmentId: string;
-}>({
-  op: "getProposalContactDtls",
-  tokenHeader: "p_token",
-  headers: (p) => ({
-    p_record_type: p.recordType,
-    p_person_id: p.personId,
-    p_dept_id: p.departmentId,
-  }),
 });
 export const creditAllocation = read<{ versionId: number }>({
   op: "getCreditAllocation",
@@ -262,34 +240,20 @@ export const deleteInKindLine = write<{ lineId: number }>({
   headers: (p) => ({ id: p.lineId }),
   invalidates: ["getPre_awardPropinkindcostline"],
 });
-export const linkedApplications = read<{ kind: string; proposalId: string }>({
-  op: "getProposalGetApplicationList",
-  headers: (p) => ({ p_obj_type: p.kind, p_obj_ref_id: p.proposalId }),
-});
-export const finalizablePages = read<{ type: string; id: string }>({
-  op: "getSharedFinalizablePages",
-  headers: (p) => ({ p_obj_type: p.type, p_obj_id: p.id }),
-});
-export const lockStatus = read<{ type: string; id: string; pageId: number }>({
-  op: "getProposalGetLockStatus",
-  headers: (p) => ({
-    module_name: p.type,
-    prop_id: p.id,
-    lock_level: p.pageId,
-  }),
-});
-export const setLock = write<{ body: unknown }>({
-  op: "postProposalInsertModuleLock",
-  identity: ["legal_id", "org_id"],
-  body: (p) => p.body,
-  invalidates: ["getProposalGetLockStatus", "getProposalGetLockedModules"],
-});
-/** VBCS Summary Save: POST /Proposal/proposal with an explicit nested payload. */
-export const saveSummary = write<{ body: unknown }>({
+/**
+ * WRITES: a proposal (POST /Proposal/proposal): the Summary save, a new proposal, and an opportunity or EOI convert,
+ * each with an explicit payload. A convert moves the EOI on, so its held details go too.
+ */
+export const save = write<{ body: unknown }>({
   op: "postProposalProposal",
   identity: ["legal_id", "org_id"],
   body: (p) => p.body,
-  invalidates: ["getProposalProposal_id", "getPre_awardGetProposalsList"],
+  invalidates: [
+    "getProposalProposal_id",
+    "getPre_awardGetProposalsList",
+    "getSharedGetOpportunities",
+    "getDynamicFormsGetRequestDetails",
+  ],
 });
 export const deleteCollaborator = write<{ relationId: number }>({
   op: "deletePre_awardDeleteCollaboratorProp_collab_rltn_id",

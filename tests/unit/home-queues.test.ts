@@ -198,3 +198,18 @@ it("draws KPI trend gaps for missing values instead of zeros", () => {
   expect(segments[1].points).toBe("40,8 60,4");
   expect(sparklineSegments([null, null])).toEqual([]);
 });
+it("9548: year charts keep only the selected years; other charts and no selection keep all", () => {
+  const raw = {
+    items: [
+      { label: "2024", code: "SUB", status_code: "SUB", value: 3 },
+      { label: "2025", code: "SUB", status_code: "SUB", value: 5 },
+    ],
+  };
+  const labels = (id: string, year?: string) =>
+    mapWidget(raw, widget(id), { year, offset: 0 }).statistics.map(
+      (r) => r.label,
+    );
+  expect(labels("pByYearChart", "2025")).toEqual(["2025"]);
+  expect(labels("pByYearChart")).toEqual(["2024", "2025"]);
+  expect(labels("pByYearChart", "2024,2025")).toEqual(["2024", "2025"]);
+});

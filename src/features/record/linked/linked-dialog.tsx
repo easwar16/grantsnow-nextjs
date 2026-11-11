@@ -5,6 +5,8 @@ import { Icon } from "@/components/ui/icon";
 import { Collapsible } from "@/components/ui/collapsible";
 import { RecordMetadata } from "@/components/ui/record-metadata";
 import { ActionDialog } from "@/components/dialog/action-dialog";
+import { State } from "@/components/feedback/state";
+import { ListSkeleton } from "@/components/feedback/skeleton";
 import { type FormatSettings } from "@/lib/format";
 import type { LinkedObjects } from "./model";
 import styles from "./linked.module.css";
@@ -88,6 +90,47 @@ export function LinkedObjectsDialog({
           </Collapsible>
         ))}
       </div>
+    </ActionDialog>
+  );
+}
+
+/** A listing's Link action: the record's links once read (none → the bundle's "no linked data"), a skeleton or the error. */
+export function LinkedObjectsLoader({
+  id,
+  title,
+  linked,
+  onClose,
+}: {
+  id: string;
+  title: string;
+  linked: {
+    data?: LinkedObjects;
+    error?: { message: string; code?: string };
+    retry: () => void;
+  };
+  onClose: () => void;
+}) {
+  if (linked.data)
+    return (
+      <LinkedObjectsDialog id={id} linked={linked.data} onClose={onClose}>
+        {!linked.data.groups.length && (
+          <p id={`${id}-none`}>{linked.data.texts.none}</p>
+        )}
+      </LinkedObjectsDialog>
+    );
+  return (
+    <ActionDialog id={id} title={title} onClose={onClose}>
+      {linked.error ? (
+        <State
+          id={`${id}-error`}
+          title={title}
+          message={linked.error.message}
+          code={linked.error.code}
+          retry={linked.retry}
+        />
+      ) : (
+        <ListSkeleton />
+      )}
     </ActionDialog>
   );
 }

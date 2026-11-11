@@ -3,7 +3,6 @@ import { vi } from "vitest";
 const dependencies = vi.hoisted(() => ({
   proposalPage: vi.fn(),
   pricingDetails: vi.fn(),
-  savePricingFunder: vi.fn(),
   summary: vi.fn(),
   defaultPricing: vi.fn(),
   savePricingLines: vi.fn(),
@@ -434,8 +433,8 @@ it("saves a global funder with Proposal scope and fresh role, resource and data 
       }),
     ],
   });
-  dependencies.savePricingFunder.mockClear();
-  dependencies.savePricingFunder.mockResolvedValue({});
+  dependencies.savePricingLines.mockClear();
+  dependencies.savePricingLines.mockResolvedValue({});
   await expect(
     saveGlobalPricingFunder("PROPOSAL", "123", {
       funderId: 3,
@@ -443,7 +442,7 @@ it("saves a global funder with Proposal scope and fresh role, resource and data 
       ruleApplied: "UNINDEXED",
     }),
   ).resolves.toMatchObject({ saved: true, funders: [{ id: 3 }] });
-  expect(dependencies.savePricingFunder).toHaveBeenCalledWith({
+  expect(dependencies.savePricingLines).toHaveBeenCalledWith({
     funderId: 3,
     rows: [
       expect.objectContaining({
@@ -464,7 +463,7 @@ it("saves a global funder with Proposal scope and fresh role, resource and data 
       }),
     ],
   });
-  dependencies.savePricingFunder.mockClear();
+  dependencies.savePricingLines.mockClear();
   dependencies.proposalPage.mockResolvedValueOnce({
     rights: { edit: true },
     summary: { statusCode: "DRFT", lockedPageIds: [] },
@@ -539,7 +538,7 @@ it("saves a global funder with Proposal scope and fresh role, resource and data 
       ruleApplied: "",
     }),
   ).rejects.toThrow(/cannot be edited/);
-  expect(dependencies.savePricingFunder).not.toHaveBeenCalled();
+  expect(dependencies.savePricingLines).not.toHaveBeenCalled();
 });
 
 it("saves one scoped funder line with the VBCS indexed contribution envelope", async () => {
@@ -561,7 +560,7 @@ it("saves one scoped funder line with the VBCS indexed contribution envelope", a
       }),
     ],
   });
-  dependencies.savePricingFunder.mockResolvedValue({});
+  dependencies.savePricingLines.mockResolvedValue({});
   await expect(
     savePricingFunder("PROPOSAL", "123", {
       lineId: 8,
@@ -570,7 +569,7 @@ it("saves one scoped funder line with the VBCS indexed contribution envelope", a
       ruleApplied: "UNINDEXED",
     }),
   ).resolves.toEqual({ saved: true });
-  expect(dependencies.savePricingFunder).toHaveBeenCalledWith({
+  expect(dependencies.savePricingLines).toHaveBeenCalledWith({
     funderId: 3,
     rows: [
       {
@@ -607,7 +606,7 @@ it("saves one scoped funder line with the VBCS indexed contribution envelope", a
       ruleApplied: "INDEXED",
     }),
   ).rejects.toThrow(/outside this Pricing line/);
-  expect(dependencies.savePricingFunder).toHaveBeenCalledTimes(1);
+  expect(dependencies.savePricingLines).toHaveBeenCalledTimes(1);
 });
 
 it("saves a parent pricing line when an attached subproposal has masked rows", async () => {
@@ -639,8 +638,8 @@ it("saves a parent pricing line when an attached subproposal has masked rows", a
       }),
     ],
   });
-  dependencies.savePricingFunder.mockClear();
-  dependencies.savePricingFunder.mockResolvedValue({});
+  dependencies.savePricingLines.mockClear();
+  dependencies.savePricingLines.mockResolvedValue({});
   await expect(
     savePricingFunder("PROPOSAL", "123", {
       lineId: 8,
@@ -649,7 +648,7 @@ it("saves a parent pricing line when an attached subproposal has masked rows", a
       ruleApplied: "INDEXED",
     }),
   ).resolves.toEqual({ saved: true });
-  expect(dependencies.savePricingFunder).toHaveBeenCalledWith({
+  expect(dependencies.savePricingLines).toHaveBeenCalledWith({
     funderId: 3,
     rows: [
       expect.objectContaining({ OBJECT_TYPE: "COSTING_LINE_ID", OBJECT_ID: 8 }),
@@ -658,7 +657,7 @@ it("saves a parent pricing line when an attached subproposal has masked rows", a
 });
 
 it("saves a scoped category only after re-reading every line and funder", async () => {
-  dependencies.savePricingFunder.mockClear();
+  dependencies.savePricingLines.mockClear();
   dependencies.proposalPage.mockResolvedValue({
     rights: { edit: true },
     summary: { statusCode: "DRFT", lockedPageIds: [] },
@@ -688,7 +687,7 @@ it("saves a scoped category only after re-reading every line and funder", async 
       ruleApplied: "INDEXED",
     }),
   ).resolves.toEqual({ saved: true });
-  expect(dependencies.savePricingFunder).toHaveBeenCalledWith({
+  expect(dependencies.savePricingLines).toHaveBeenCalledWith({
     funderId: 3,
     rows: [
       expect.objectContaining({
@@ -706,7 +705,7 @@ it("saves a scoped category only after re-reading every line and funder", async 
       }),
     ],
   });
-  dependencies.savePricingFunder.mockClear();
+  dependencies.savePricingLines.mockClear();
   dependencies.pricingDetails.mockResolvedValue({
     items: [
       staff(8, 100, 20),
@@ -725,7 +724,7 @@ it("saves a scoped category only after re-reading every line and funder", async 
       ruleApplied: "INDEXED",
     }),
   ).rejects.toThrow(/Pricing group or funder access/);
-  expect(dependencies.savePricingFunder).not.toHaveBeenCalled();
+  expect(dependencies.savePricingLines).not.toHaveBeenCalled();
 });
 
 it("writes a combined category against the parent using verified parent and subproposal totals", async () => {
@@ -761,7 +760,7 @@ it("writes a combined category against the parent using verified parent and subp
   dependencies.pricingDetails.mockResolvedValue({
     items: [staff(123, "P_1", 8, 100), staff(456, "SP_99", 9, 50)],
   });
-  dependencies.savePricingFunder.mockClear();
+  dependencies.savePricingLines.mockClear();
   await expect(
     savePricingFunder("PROPOSAL", "123", {
       lineId: 8,
@@ -771,7 +770,7 @@ it("writes a combined category against the parent using verified parent and subp
       ruleApplied: "INDEXED",
     }),
   ).resolves.toEqual({ saved: true });
-  expect(dependencies.savePricingFunder).toHaveBeenCalledWith({
+  expect(dependencies.savePricingLines).toHaveBeenCalledWith({
     funderId: 3,
     rows: [
       expect.objectContaining({
@@ -789,7 +788,7 @@ it("writes a combined category against the parent using verified parent and subp
       }),
     ],
   });
-  dependencies.savePricingFunder.mockClear();
+  dependencies.savePricingLines.mockClear();
   dependencies.pricingDetails.mockResolvedValue({
     items: [
       staff(123, "P_1", 8, 100),
@@ -805,7 +804,7 @@ it("writes a combined category against the parent using verified parent and subp
       ruleApplied: "INDEXED",
     }),
   ).rejects.toThrow(/research partners/);
-  expect(dependencies.savePricingFunder).not.toHaveBeenCalled();
+  expect(dependencies.savePricingLines).not.toHaveBeenCalled();
   dependencies.pricingDetails.mockResolvedValue({
     items: [
       staff(123, "P_1", 8, 100),
@@ -822,7 +821,7 @@ it("writes a combined category against the parent using verified parent and subp
       ruleApplied: "INDEXED",
     }),
   ).rejects.toThrow(/research partners/);
-  expect(dependencies.savePricingFunder).not.toHaveBeenCalled();
+  expect(dependencies.savePricingLines).not.toHaveBeenCalled();
 });
 
 it.each([
@@ -857,7 +856,7 @@ it.each([
 ])(
   "rejects a Funder Rules write with $label",
   async ({ edit, statusCode, lockedPageIds, sensitive }) => {
-    dependencies.savePricingFunder.mockClear();
+    dependencies.savePricingLines.mockClear();
     dependencies.proposalPage.mockResolvedValue({
       rights: { edit },
       summary: { statusCode, lockedPageIds },
@@ -881,6 +880,6 @@ it.each([
         ruleApplied: "INDEXED",
       }),
     ).rejects.toThrow();
-    expect(dependencies.savePricingFunder).not.toHaveBeenCalled();
+    expect(dependencies.savePricingLines).not.toHaveBeenCalled();
   },
 );

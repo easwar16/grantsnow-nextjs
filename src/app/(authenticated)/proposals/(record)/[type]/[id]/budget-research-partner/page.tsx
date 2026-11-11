@@ -1,6 +1,6 @@
 import { pageIdentity } from "@/server/identity/auth/page";
 import { recordIdentity } from "@/features/modules/proposals/record";
-import { proposalResearchPartnerCosts } from "@/server/modules/proposals/research-partner-costs";
+import { proposalResearchPartnerCosts } from "@/server/modules/proposals/record/research-partner-costs";
 import { resources } from "@/server/platform/configuration/resources";
 import { displayFormat } from "@/server/platform/configuration/formatting";
 import { serverFunctions } from "@/server/functions";

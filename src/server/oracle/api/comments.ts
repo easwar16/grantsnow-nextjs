@@ -28,23 +28,15 @@ export const thread = read<Thread, CommentRow[]>({
   parse: (b) => rows.parse(b).items,
 });
 const identity = ["legal_id", "org_id", "user_id"] as const;
-/** WRITES: a new comment on the thread (legacy addComment). */
-export const add = write<Thread & { comments: string }>({
+/**
+ * WRITES: a new comment (legacy addComment), or with `commentId` new text for that comment (legacy updateComment;
+ * `page` is then the row's own thread key).
+ */
+export const save = write<Thread & { commentId?: number; comments: string }>({
   op: "postProposalComments",
   identity,
   body: (p) => ({
-    module: p.page,
-    comments: p.comments,
-    object_id: Number(p.objectId),
-  }),
-  invalidates: ["getProposalComments"],
-});
-/** WRITES: new text for a comment (legacy updateComment); `page` is the row's own thread key. */
-export const update = write<Thread & { commentId: number; comments: string }>({
-  op: "postProposalComments",
-  identity,
-  body: (p) => ({
-    comment_id: p.commentId,
+    ...(p.commentId === undefined ? {} : { comment_id: p.commentId }),
     comments: p.comments,
     module: p.page,
     object_id: Number(p.objectId),

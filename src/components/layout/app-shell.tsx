@@ -171,7 +171,9 @@ export function AppShell({
                   path.startsWith("/opportunities") ||
                   path.startsWith("/contracts") ||
                   path.startsWith("/awards") ||
-                  path.startsWith("/claims")
+                  path.startsWith("/claims") ||
+                  path.startsWith("/ethics") ||
+                  path.startsWith("/due-diligence")
                     ? "proposal-workspace"
                     : "home-workspace"
                 }

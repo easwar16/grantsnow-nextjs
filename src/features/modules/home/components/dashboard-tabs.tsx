@@ -23,16 +23,18 @@ export function DashboardTabs({
     opportunities: boolean;
     notifications: boolean;
     charts: { id: string; name: string; module: string }[];
+    chartModules: string[];
   };
   organization?: string;
   format?: FormatSettings;
-  /** RB `button-labels.*` tab names. */
+  /** RB `button-labels.*` tab names; `featured` is `header-labels.featured-opportunities`. */
   labels: Record<
     | "needAttention"
     | "insights"
     | "opportunities"
     | "notifications"
-    | "dynamicCharts",
+    | "dynamicCharts"
+    | "featured",
     string
   >;
 }) {
@@ -73,7 +75,7 @@ export function DashboardTabs({
             label: labels.opportunities,
             icon: "money" as const,
             tone: "success",
-            content: <FeaturedPanel format={format} />,
+            content: <FeaturedPanel format={format} title={labels.featured} />,
           },
         ]
       : []),
@@ -98,6 +100,7 @@ export function DashboardTabs({
             content: (
               <DynamicChartsPanel
                 charts={additional.charts}
+                modules={additional.chartModules}
                 organization={organization}
               />
             ),

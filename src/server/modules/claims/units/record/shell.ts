@@ -3,7 +3,7 @@ import { z } from "zod";
 import { claims } from "@/server/oracle/api";
 import { AppError } from "@/lib/errors";
 import type { Resources } from "@/server/platform/configuration/resources";
-import type { UnitShellModel } from "@/features/modules/claims/units/types";
+import type { UnitShellModel } from "@/features/modules/claims/units/listing/types";
 import { UNIT_TAB_DEFS, type UnitTab } from "@/shared/claims/unit-record";
 import { label, numberish, optionalText } from "../listing";
 import type { UnitRecordContext } from "../record";

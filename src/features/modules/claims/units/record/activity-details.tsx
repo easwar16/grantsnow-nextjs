@@ -1,5 +1,4 @@
 "use client";
-import { useState } from "react";
 import { useActionFailure } from "@/components/dialog/action-failure";
 import { State } from "@/components/feedback/state";
 import { DetailSkeleton, TableSkeleton } from "@/components/feedback/skeleton";
@@ -9,18 +8,20 @@ import { Icon } from "@/components/ui/icon";
 import { InsideField } from "@/components/ui/inside-field";
 import { ReadonlyField } from "@/components/ui/readonly-field";
 import { Select } from "@/components/ui/select";
-import { TabBar } from "@/components/ui/tab-bar";
+import { SectionNav } from "@/components/ui/section-nav";
 import { claims, useApi } from "@/lib/api";
 import type { FormatSettings } from "@/lib/format";
 import { functions } from "@/lib/functions";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
 import type {
   UnitActivity,
-  UnitActivitySubTab,
   UnitActivityTable,
   UnitActivityView,
   UnitCostItem,
-} from "../types";
+} from "../listing/types";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { claimStatusTone } from "@/shared/claims/status";
+import { ApprovalSection } from "./approval-section";
 import styles from "./summary.module.css";
 
 type Format = FormatSettings & { currency?: string };
@@ -47,6 +48,7 @@ export function ActivityDetails({
   money,
   onVersion,
   onChanged,
+  onEdit,
 }: {
   appId: string;
   fund: string;
@@ -56,10 +58,10 @@ export function ActivityDetails({
   money: Money;
   onVersion: (version: string) => void;
   onChanged: () => void;
+  onEdit: () => void;
 }) {
   const key = { appId, fund, activity, version };
   const read = useApi(claims.activity, key);
-  const [tab, setTab] = useState<UnitActivitySubTab>("general-details");
   const fail = useActionFailure(),
     { run, isActive } = useInFlight();
   const view = read.data;
@@ -86,7 +88,10 @@ export function ActivityDetails({
       read.retry();
       onChanged();
     }, "activate");
-  const current = view.tabs.some((t) => t.id === tab) ? tab : "general-details";
+  // Position details only for a position; the rest in legacy's tab order.
+  const sections = view.tabs.filter(
+    (t) => t.id !== "position-details" || a.position,
+  );
   const headerCount = [
     !!a.number,
     !!a.version,
@@ -96,6 +101,20 @@ export function ActivityDetails({
   ].filter(Boolean).length;
   return (
     <div id={ID} className={styles.activity}>
+      {view.edit && (
+        <div className={styles.editorBar}>
+          <span />
+          <button
+            type="button"
+            id={`${ID}-edit`}
+            className="gn-btn gn-btn--outlined"
+            onClick={onEdit}
+          >
+            <Icon name="edit" size={14} />
+            {view.edit}
+          </button>
+        </div>
+      )}
       <div className={styles.pair}>
         {/* Legacy's header form runs down its two columns (number, version, fund; then status, homeless). */}
         <div
@@ -168,7 +187,11 @@ export function ActivityDetails({
             <ReadonlyField
               id={`${ID}-status`}
               label={l.status}
-              value={a.status}
+              value={
+                <StatusBadge dot tone={claimStatusTone(a.status) ?? "neutral"}>
+                  {a.status}
+                </StatusBadge>
+              }
             />
           )}
           {view.homeless && (
@@ -210,35 +233,53 @@ export function ActivityDetails({
           ]}
         />
       </div>
-      <TabBar
-        align="start"
-        id={`${ID}-tabs`}
+      {/* The Claims prototype's panel: one page with jump links instead of nested tabs; each section reads itself. */}
+      <SectionNav
+        id={`${ID}-sections`}
         label={view.texts.back}
-        tabs={view.tabs.map((t) => ({ key: t.id, name: t.label }))}
-        selected={current}
-        onSelect={setTab}
+        sections={sections.map((t) => ({
+          key: t.id,
+          name: t.label,
+          target: `${ID}-section-${t.id}`,
+        }))}
       />
-      <div
-        id={`${ID}-tabs-panel-${current}`}
-        role="tabpanel"
-        aria-labelledby={`${ID}-tabs-tab-${current}`}
-      >
-        {current === "general-details" ? (
-          <General view={view} money={money} />
-        ) : current === "position-details" && a.position ? (
-          <Position view={view} a={a} money={money} format={format} />
-        ) : current === "claimable-amount-details" ? (
-          <Claimable query={key} view={view} money={money} />
-        ) : (
-          <LinesTable
-            query={key}
-            which={current === "claim-details" ? "claim-details" : "history"}
-            view={view}
-            money={money}
-            format={format}
-          />
-        )}
-      </div>
+      {sections.map((t) => (
+        <section
+          key={t.id}
+          id={`${ID}-section-${t.id}`}
+          className={styles.panelSection}
+          aria-labelledby={`${ID}-section-${t.id}-title`}
+        >
+          <h3 id={`${ID}-section-${t.id}-title`} className={styles.subheading}>
+            {t.label}
+          </h3>
+          {t.id === "general-details" ? (
+            <General view={view} money={money} />
+          ) : t.id === "position-details" ? (
+            <Position view={view} a={a} money={money} format={format} />
+          ) : t.id === "claimable-amount-details" ? (
+            <Claimable query={key} view={view} money={money} />
+          ) : t.id === "activity-approvals" ? (
+            <ApprovalSection
+              id={`${ID}-approval`}
+              appId={appId}
+              doc={`activity-${fund}-${activity}-${version}`}
+              onChanged={() => {
+                read.retry();
+                onChanged();
+              }}
+            />
+          ) : (
+            <LinesTable
+              query={key}
+              which={t.id === "claim-details" ? "claim-details" : "history"}
+              view={view}
+              money={money}
+              format={format}
+            />
+          )}
+        </section>
+      ))}
     </div>
   );
 }
@@ -547,5 +588,47 @@ function LinesTable({
         },
       }))}
     />
+  );
+}
+
+/**
+ * A claim line's activity (legacy viewClaimableAmounts): its salary, benefit and purchase-service details and the
+ * claimable amounts, as the activity panel shows them.
+ */
+export function ClaimableSections({
+  appId,
+  fund,
+  activity,
+  version,
+  format,
+  money,
+}: {
+  appId: string;
+  fund: string;
+  activity: string;
+  version: string;
+  format?: Format;
+  money: Money;
+}) {
+  const key = { appId, fund, activity, version };
+  const read = useApi(claims.activity, key);
+  const view = read.data;
+  if (read.error)
+    return (
+      <State
+        id={`${ID}-claimable-sections-error`}
+        title="Couldn't load the activity"
+        message={read.error.message}
+        retry={read.retry}
+      />
+    );
+  if (!view) return <DetailSkeleton />;
+  return (
+    <div className={styles.editor}>
+      {view.activity.position && (
+        <Position view={view} a={view.activity} money={money} format={format} />
+      )}
+      <Claimable query={key} view={view} money={money} />
+    </div>
   );
 }
