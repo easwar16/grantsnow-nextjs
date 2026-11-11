@@ -23,6 +23,12 @@ export function BudgetVersionControl({
     segment === "budget"
       ? (query.get("version") ?? String(activeId))
       : String(activeId);
+  if (segment !== "budget")
+    return (
+      <span>
+        {options.find((option) => option.id === activeId)?.label ?? "—"}
+      </span>
+    );
   return (
     <Select
       id="proposal-active-budget-version"
@@ -33,7 +39,6 @@ export function BudgetVersionControl({
       }))}
       value={selected}
       clearable={false}
-      disabled={segment !== "budget"}
       onChange={(next) =>
         router.push(`${path}?version=${encodeURIComponent(next)}`)
       }

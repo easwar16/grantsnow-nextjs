@@ -344,6 +344,11 @@ export function StaffEntry({
       setError("Enter valid units between 0 and 1000.");
       return;
     }
+    const previous = cost.lines.find((line) => line.id === editLine.id);
+    if (previous && previous.baseline !== editLine.baseline)
+      setBaselineEdited((ids) =>
+        ids.includes(editLine.id) ? ids : [...ids, editLine.id],
+      );
     setCost({
       ...cost,
       lines: cost.lines.map((line) =>
@@ -741,19 +746,14 @@ export function StaffEntry({
                   header: "Total Cost",
                   cell: (line) => line.total,
                 },
+              ]}
+              actions={[
                 {
                   id: "edit",
-                  header: "",
-                  cell: (line) => (
-                    <button
-                      id={`proposal-${id}-staff-line-${line.id}-edit`}
-                      type="button"
-                      onClick={() => setEditLine(line)}
-                      disabled={busy}
-                    >
-                      Edit
-                    </button>
-                  ),
+                  icon: "edit",
+                  label: (line) => `Edit cost line ${line.id}`,
+                  onClick: (line) => setEditLine(line),
+                  disabled: () => busy,
                 },
               ]}
             />
@@ -817,11 +817,6 @@ export function StaffEntry({
                           ...editLine,
                           baseline: event.target.value,
                         });
-                        setBaselineEdited((ids) =>
-                          ids.includes(editLine.id)
-                            ? ids
-                            : [...ids, editLine.id],
-                        );
                       }}
                       disabled={busy}
                     />

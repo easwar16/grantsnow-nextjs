@@ -10,12 +10,16 @@ export interface FormTarget {
   slot: string;
   parentId?: string;
   objectId?: string;
+  formType?: string;
+  version?: number;
 }
 const target = (t: FormTarget) => ({
   objectType: t.objectType,
   slot: t.slot,
   parentId: t.parentId,
   objectId: t.objectId,
+  formType: t.formType,
+  version: t.version,
 });
 /** The form and its answers; the form supersedes its own reads, so this takes their abort signal. */
 export const form = (t: FormTarget, signal?: AbortSignal) =>

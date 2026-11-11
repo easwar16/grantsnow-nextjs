@@ -187,5 +187,5 @@ export const saveCredit = write<{ periodVersionId: number; body: unknown }>({
   op: "postProposalCreditAllocation",
   headers: (p) => ({ p_prop_period_version_id: p.periodVersionId }),
   body: (p) => p.body,
-  invalidates: ["getPost_awardsAwardDetails"],
+  invalidates: ["getPost_awardsAwardDetails", "getCreditAllocation"],
 });

@@ -152,12 +152,6 @@ export function AttachmentsPanel({ view }: { view: AttachmentsView }) {
 
   return (
     <div id={id} className={styles.panel}>
-      {!storage && (
-        <p id={`${id}-storage-off`} className={styles.notice} role="status">
-          File storage is not connected here, so documents cannot be opened or
-          changed.
-        </p>
-      )}
       <div className={styles.main}>
         <div className={styles.treeBox}>
           {data === undefined ? (
@@ -187,7 +181,8 @@ export function AttachmentsPanel({ view }: { view: AttachmentsView }) {
                   id={id}
                   node={node}
                   labels={labels}
-                  canAdd={canEdit && storage}
+                  canAdd={canEdit}
+                  storage={storage}
                   selectedId={selectedId}
                   onSelect={choose}
                   onOpen={download}
@@ -223,6 +218,11 @@ export function AttachmentsPanel({ view }: { view: AttachmentsView }) {
           <p className={styles.previewHint}>{labels.documentPreview}</p>
         )}
       </div>
+      {!storage && (
+        <p id={`${id}-storage-off`} className={styles.notice} role="status">
+          File storage is not connected here, so documents cannot be opened or changed.
+        </p>
+      )}
       {target && (
         <AddDocumentDialog
           id={`${id}-add-dialog`}
@@ -242,6 +242,7 @@ const FolderBranch = memo(function FolderBranch({
   node,
   labels,
   canAdd,
+  storage,
   selectedId,
   onSelect,
   onOpen,
@@ -251,6 +252,7 @@ const FolderBranch = memo(function FolderBranch({
   node: FolderNode;
   labels: Labels;
   canAdd: boolean;
+  storage: boolean;
   selectedId: number | null;
   onSelect: (item: AttachmentItem) => void;
   onOpen: (item: AttachmentItem) => void;
@@ -285,6 +287,7 @@ const FolderBranch = memo(function FolderBranch({
             className="gn-btn gn-btn--borderless gn-btn--icon"
             title={labels.addDocument}
             aria-label={`${labels.addDocument}: ${node.label}`}
+            disabled={!storage}
             onClick={() => onAdd(node)}
           >
             <Icon name="plus" size={14} />
@@ -305,6 +308,7 @@ const FolderBranch = memo(function FolderBranch({
               node={child}
               labels={labels}
               canAdd={canAdd}
+              storage={storage}
               selectedId={selectedId}
               onSelect={onSelect}
               onOpen={onOpen}

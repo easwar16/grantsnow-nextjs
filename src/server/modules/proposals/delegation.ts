@@ -8,6 +8,9 @@ export async function proposalDelegationHost(
   id: string,
 ): Promise<DelegationHost> {
   const context = await proposalPage(type, id, "proposals-delegation");
+  const pageId = context.pageIds.get("proposals-delegation");
+  const editable = context.summary.statusCode === "DRFT" &&
+    pageId != null && !context.summary.lockedPageIds.includes(pageId);
   return {
     token: context.session.token,
     user: context.user,
@@ -15,6 +18,9 @@ export async function proposalDelegationHost(
     objectId: id,
     bundle: context.bundle,
     defaultPage: "proposals-summary",
-    rights: { edit: false, delete: false },
+    rights: {
+      edit: editable && context.rights.edit === true,
+      delete: editable && context.rights.delete === true,
+    },
   };
 }

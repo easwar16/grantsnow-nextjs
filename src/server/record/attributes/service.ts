@@ -5,6 +5,8 @@ import { resources } from "@/server/platform/configuration/resources";
 import { authorizeForm } from "@/server/record/dynamic-form/access";
 import { proposalPage } from "@/server/modules/proposals/record";
 import { proposalCreateAccess } from "@/server/modules/proposals/create";
+import { ethicsRecord } from "@/server/modules/ethics/record";
+import { ethicsCreateSetup } from "@/server/modules/ethics/actions";
 import { formGlobals } from "@/server/record/dynamic-form/globals";
 import { AppError } from "@/lib/errors";
 import {
@@ -34,6 +36,17 @@ interface Host {
   authorize: (q: Query) => Promise<unknown>;
 }
 const HOSTS: Record<AttributeHost, Host> = {
+  "ethics-general-overview": {
+    objectType: "ETHICS",
+    bundle: "ethics",
+    authorize: async (q) => {
+      if (q.objectId) {
+        const record = await ethicsRecord(q.objectId);
+        if (!record.tabs.includes("ethics-general-overview"))
+          throw new AppError("FORBIDDEN", "Ethics Overview access has not been granted.", 403);
+      } else await ethicsCreateSetup();
+    },
+  },
   "proposals-summary": {
     objectType: "PROPOSAL",
     bundle: "proposal",

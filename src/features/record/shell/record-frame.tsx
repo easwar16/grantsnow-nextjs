@@ -77,6 +77,7 @@ export function RecordFrame<P>({
   editing = false,
   objectType,
   objectId,
+  panelSec,
   page,
   labels,
   creator,
@@ -103,6 +104,8 @@ export function RecordFrame<P>({
   editing?: boolean;
   objectType: string;
   objectId?: string;
+  /** Selected part of the record for shared comments and audit hosts. */
+  panelSec?: string;
   /** The current tab's page name: the drawer's comments and audit are per page. */
   page: string;
   labels: FrameLabels;
@@ -302,6 +305,7 @@ export function RecordFrame<P>({
                 objectType={objectType}
                 objectId={objectId}
                 page={page}
+                sec={panelSec}
               />
             ) : (
               <ObjectAudit
@@ -310,7 +314,7 @@ export function RecordFrame<P>({
                 objectType={objectType}
                 objectId={objectId}
                 page={auditTarget?.page ?? page}
-                sec={auditTarget?.sec}
+                sec={auditTarget?.sec ?? panelSec}
               />
             )}
           </motion.aside>

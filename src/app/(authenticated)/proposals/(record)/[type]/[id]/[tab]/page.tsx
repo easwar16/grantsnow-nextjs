@@ -1,12 +1,16 @@
 import { functions } from "@/lib/functions";
 import { pageIdentity } from "@/server/identity/auth/page";
 import { recordIdentity } from "@/features/modules/proposals/record";
-import { proposalPage } from "@/server/modules/proposals/record";
-import { DynamicForm } from "@/features/record/dynamic-form/dynamic-form";
+import {
+  proposalDynamicFormEditable,
+  proposalPage,
+} from "@/server/modules/proposals/record";
+import { ProposalDynamicForm } from "@/features/modules/proposals/record/proposal-dynamic-form";
 import { State } from "@/components/feedback/state";
-import styles from "@/features/modules/proposals/record/proposal-record.module.css";
+import { resources } from "@/server/platform/configuration/resources";
+import { serverFunctions } from "@/server/functions";
 
-export default async function ProposalDynamicForm({
+export default async function ProposalDynamicFormPage({
   params,
 }: {
   params: Promise<{ type: string; id: string; tab: string }>;
@@ -18,15 +22,14 @@ export default async function ProposalDynamicForm({
   const { type, id } = identity.data;
   await pageIdentity(`/proposals/${type}/${id}/${paramsValue.tab}`);
   const page = `proposals-${paramsValue.tab}`;
-  let summary: Awaited<ReturnType<typeof proposalPage>>["summary"] | null =
-    null;
+  let context: Awaited<ReturnType<typeof proposalPage>> | null = null;
   let failure: ReturnType<typeof functions.errors.publicError> | null = null;
   try {
-    summary = (await proposalPage(type, id, page)).summary;
+    context = await proposalPage(type, id, page);
   } catch (error) {
     failure = functions.errors.publicError(error);
   }
-  if (!summary || failure)
+  if (!context || failure)
     return (
       <State
         title={
@@ -40,15 +43,19 @@ export default async function ProposalDynamicForm({
       />
     );
   return (
-    <section id={`proposal-${id}-${paramsValue.tab}`} className={styles.form}>
-      <DynamicForm
-        objectType={type}
-        slot={page.toUpperCase()}
-        parentId={id}
-        objectId={id}
-        objectNumber={summary.reference}
-        editable={false}
-      />
-    </section>
+    <ProposalDynamicForm
+      type={type}
+      id={id}
+      reference={context.summary.reference}
+      page={page}
+      editable={proposalDynamicFormEditable(context, page)}
+      submitLabel={serverFunctions.resources.label(
+        await resources(),
+        context.bundle,
+        "button-labels",
+        "submit",
+        "Submit",
+      )}
+    />
   );
 }

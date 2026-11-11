@@ -118,6 +118,7 @@ const icons = {
   copy: { ux: "copy", material: "content_copy" },
   "smart-filter": { ux: "smart-filter", material: "filter_list" },
   "new-application": { ux: "new-application", material: "note_add" },
+  "inbox-add": { ux: "inbox-add", material: "create_new_folder" },
   "grid-view": { ux: "grid-view-small", material: "grid_view" },
   "collapse-menu": { ux: "collapse-menu", material: "left_panel_close" },
   "document-attachment": {

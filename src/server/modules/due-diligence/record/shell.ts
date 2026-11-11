@@ -28,6 +28,10 @@ export function dueDiligenceShell(r: DueDiligenceRecord, rows: Resources) {
     id: r.id,
     access: r.access,
     statusCode: r.statusCode,
+    canEditSetup: r.rights["duediligence-general-overview"]?.edit === true &&
+      (r.statusCode === "DRFT" ||
+        (r.rights["due-diligence-change-setup"]?.edit === true &&
+          r.respondents.every((row) => row.statusCode === "DRFT"))),
     tabs: r.tabs.map((key) => ({
       key,
       name: t(
@@ -81,6 +85,11 @@ export function dueDiligenceShell(r: DueDiligenceRecord, rows: Resources) {
     labels: {
       list: t("button-labels", "list", "List"),
       overview: t("page-name", "duediligence-general-overview", "Setup"),
+      comments: t("button-labels", "comments", "Comments"),
+      audit: serverFunctions.resources.resourceVisible(rows, BUNDLE, "button-labels", "openAuditTrail")
+        ? t("button-labels", "openAuditTrail", "Audit Trail") : null,
+      auditTitle: t("header-labels", "audit-trail", "Audit Trail"),
+      close: t("button-labels", "dd-detail-close", "Close"),
       tabs: "Due Diligence pages",
     },
   };

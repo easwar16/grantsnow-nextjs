@@ -999,6 +999,9 @@ test("Proposal record keeps its header while shared read tabs load", async ({
   const title = await heading.getByRole("heading").textContent();
   await page.getByRole("link", { name: "Proposal Detail" }).click();
   await expect(page).toHaveURL(/\/dynamic-form-1$/);
+  await expect(
+    page.locator("#proposal-1001-proposals-dynamic-form-1-submit"),
+  ).toHaveCount(0);
   await expect(heading.getByRole("heading")).toHaveText(title ?? "");
   await page.getByRole("link", { name: "Approvals" }).click();
   await expect(page.locator("#proposal-1001-workflow")).toBeVisible();
@@ -1023,6 +1026,676 @@ test("Proposal record keeps its header while shared read tabs load", async ({
   await expect(page.locator("#proposal-1001-delegation-panel")).toBeVisible();
   await page.getByRole("button", { name: "Comments" }).click();
   await expect(page.getByRole("dialog", { name: "Comments" })).toBeVisible();
+});
+
+test("draft Proposal dynamic form submits under its object edit grant", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/proposals/OUTLINE_PROPOSAL/1000/dynamic-form-1");
+  const [backBox, actionBox] = await Promise.all([
+    page.getByRole("link", { name: "← List" }).boundingBox(),
+    page.getByRole("button", { name: /AI Summary/ }).boundingBox(),
+  ]);
+  expect(backBox).not.toBeNull();
+  expect(actionBox).not.toBeNull();
+  expect(Math.abs(backBox!.y - actionBox!.y)).toBeLessThan(3);
+  const submit = page.locator("#proposal-1000-proposals-dynamic-form-1-submit");
+  await expect(submit).toBeVisible();
+  const [formBox, submitBox] = await Promise.all([
+    page.locator("#proposal-1000-proposals-dynamic-form-1").boundingBox(),
+    submit.boundingBox(),
+  ]);
+  expect(formBox).not.toBeNull();
+  expect(submitBox).not.toBeNull();
+  expect(
+    Math.abs(
+      submitBox!.x + submitBox!.width / 2 - (formBox!.x + formBox!.width / 2),
+    ),
+  ).toBeLessThan(3);
+  const [firstChoice, secondChoice] = await Promise.all([
+    page.getByRole("checkbox", { name: "Health" }).boundingBox(),
+    page.getByRole("checkbox", { name: "Climate" }).boundingBox(),
+  ]);
+  expect(firstChoice).not.toBeNull();
+  expect(secondChoice).not.toBeNull();
+  expect(Math.abs(firstChoice!.x - secondChoice!.x)).toBeLessThan(3);
+  expect(secondChoice!.y).toBeGreaterThan(firstChoice!.y + firstChoice!.height);
+  const [firstRadio, secondRadio] = await Promise.all([
+    page.getByRole("radio", { name: "Yes" }).boundingBox(),
+    page.getByRole("radio", { name: "No" }).boundingBox(),
+  ]);
+  expect(firstRadio).not.toBeNull();
+  expect(secondRadio).not.toBeNull();
+  expect(Math.abs(firstRadio!.y - secondRadio!.y)).toBeLessThan(3);
+  expect(secondRadio!.x).toBeGreaterThan(firstRadio!.x);
+  const request = page.waitForRequest(
+    (item) =>
+      item.method() === "POST" && item.url().endsWith("/api/dynamic-form"),
+  );
+  await submit.click();
+  expect((await request).postDataJSON().target).toMatchObject({
+    objectType: "OUTLINE_PROPOSAL",
+    slot: "PROPOSALS-DYNAMIC-FORM-1",
+    objectId: "1000",
+  });
+  await expect(submit).toBeEnabled();
+});
+
+test("empty Proposal commentary form has no placeholder or Submit", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/proposals/OUTLINE_PROPOSAL/1000/dynamic-form-2");
+  const content = page.locator("#proposal-1000-content");
+  await expect(
+    page.locator("#proposal-1000-proposals-dynamic-form-2"),
+  ).toBeVisible();
+  await expect(
+    content.getByRole("status", { name: "Loading form" }),
+  ).toHaveCount(0);
+  await expect(content).not.toContainText("No data to display.");
+  await expect(
+    page.locator("#proposal-1000-proposals-dynamic-form-2-submit"),
+  ).toHaveCount(0);
+  await expect(
+    page.locator("#proposal-1000-detail-active-budget-version"),
+  ).toContainText("Version 1");
+  await expect(page.locator("#proposal-active-budget-version")).toHaveCount(0);
+  await expect(page.locator("#proposal-1000-finalize")).toHaveCount(0);
+});
+
+test("Proposal Credit Allocation edits, rejects a failed save, and retries", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/proposals/OUTLINE_PROPOSAL/1000/allocation-for-credit");
+  await expect(
+    page.locator("#proposal-1000-credit-allocation-table"),
+  ).toBeVisible();
+  const allocationRows = page.locator(
+    "#proposal-1000-credit-allocation-table tbody tr",
+  );
+  await page.getByRole("button", { name: "Sort by Name" }).click();
+  await page.getByRole("button", { name: "Sort by Name" }).click();
+  await expect(allocationRows.first()).toContainText("Example Researcher");
+  await page
+    .getByRole("button", { name: "Edit Credit Allocation for Example PI" })
+    .click();
+  const editingRow = page.locator("#proposal-1000-credit-allocation-31");
+  await expect(
+    editingRow.locator("#proposal-1000-credit-allocation-effort"),
+  ).toBeVisible();
+  await expect(
+    editingRow.locator("#proposal-1000-credit-allocation-credit"),
+  ).toBeVisible();
+  await expect(
+    editingRow.getByRole("button", {
+      name: "Save Credit Allocation for Example PI",
+    }),
+  ).toBeVisible();
+  await expect(editingRow).toHaveCSS("opacity", "1");
+  await page.screenshot({
+    path: "test-results/proposal-credit-allocation-inline-edit.png",
+    fullPage: true,
+  });
+  await page.locator("#proposal-1000-credit-allocation-credit").fill("60");
+  let attempts = 0;
+  await page.route(
+    "**/api/proposals/OUTLINE_PROPOSAL/1000/allocation-for-credit",
+    async (route) => {
+      attempts += 1;
+      const request = route.request();
+      expect(request.method()).toBe("PUT");
+      expect(request.postDataJSON()).toMatchObject({ versionId: 12113 });
+      await route.fulfill(
+        attempts === 1
+          ? {
+              status: 503,
+              contentType: "application/json",
+              body: JSON.stringify({ message: "Synthetic save failure" }),
+            }
+          : {
+              status: 200,
+              contentType: "application/json",
+              body: JSON.stringify({ saved: true }),
+            },
+      );
+    },
+  );
+  await page.locator("#proposal-1000-credit-allocation-save").click();
+  await expect(
+    page.locator("#proposal-1000-credit-allocation-error"),
+  ).toBeVisible();
+  await expect(
+    editingRow.locator("#proposal-1000-credit-allocation-credit"),
+  ).toHaveValue("60");
+  expect(attempts).toBe(1);
+  await page.locator("#proposal-1000-credit-allocation-credit").fill("50");
+  await page.locator("#proposal-1000-credit-allocation-save").click();
+  await expect(
+    page.locator("#proposal-1000-credit-allocation-editor"),
+  ).toHaveCount(0);
+  expect(attempts).toBe(2);
+  await page
+    .getByRole("button", { name: "Edit Credit Allocation for Example PI" })
+    .click();
+  await page.locator("#proposal-1000-credit-allocation-credit").press("Escape");
+  await expect(
+    page.locator("#proposal-1000-credit-allocation-editor"),
+  ).toHaveCount(0);
+});
+
+test("Proposal Credit Allocation headers do not overlap at a narrow viewport", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 900, height: 987 });
+  await login(page);
+  await page.goto("/proposals/OUTLINE_PROPOSAL/1000/allocation-for-credit");
+  await expect(
+    page.locator("#proposal-1000-credit-allocation-table tbody tr"),
+  ).toHaveCount(2);
+  const headerLabels = await page
+    .locator(
+      "#proposal-1000-credit-allocation-table thead button > span:first-child",
+    )
+    .evaluateAll((labels) =>
+      labels.map((label) => {
+        const { left, right } = label.getBoundingClientRect();
+        return { left, right };
+      }),
+    );
+  expect(headerLabels).toHaveLength(6);
+  for (let index = 1; index < headerLabels.length; index += 1) {
+    expect(headerLabels[index].left).toBeGreaterThanOrEqual(
+      headerLabels[index - 1].right,
+    );
+  }
+});
+
+test("Proposal Ethics shows New Ethics and scopes the creation link", async ({ page }) => {
+  await login(page);
+  await page.goto("/proposals/OUTLINE_PROPOSAL/1000/ethics");
+  const create = page.locator("#proposal-1000-ethics-create");
+  await expect(create).toBeVisible();
+  await expect(page.locator("#proposal-1000-ethics")).toContainText("No data to display.");
+  await create.click();
+  await expect(page).toHaveURL(/\/ethics\/new\?parentType=PROPOSAL&parentId=1000&proposalType=OUTLINE_PROPOSAL/);
+  await expect(page.locator("#ethics-new-form")).toBeVisible();
+  await expect(page.locator("#ethics-new-back")).toHaveAttribute(
+    "href", "/proposals/OUTLINE_PROPOSAL/1000/ethics",
+  );
+  await expect(page.locator("#ethics-new-cancel")).toHaveAttribute(
+    "href", "/proposals/OUTLINE_PROPOSAL/1000/ethics",
+  );
+  await expect(page.getByText("Invalid ethics action.")).toHaveCount(0);
+  const draft = {
+    title: "Linked fixture Ethics", org: "203", formType: "STANDARD",
+    ethicsType: "INDIVIDUAL", parent: {
+      type: "PROPOSAL", id: "1000", proposalType: "OUTLINE_PROPOSAL",
+    },
+  };
+  const origin = new URL(page.url()).origin;
+  const created = await page.request.post("/api/ethics/actions/create", {
+    data: draft, headers: { Origin: origin },
+  });
+  expect(created.status(), await created.text()).toBe(200);
+  expect(await created.json()).toMatchObject({ id: "941" });
+  const invalid = await page.request.post("/api/ethics/actions/create", {
+    headers: { Origin: origin },
+    data: {
+      ...draft, parent: { ...draft.parent, id: "1001" },
+    },
+  });
+  expect(invalid.status()).toBe(403);
+});
+
+test("Proposal linked tabs show VBCS actions and shared panels", async ({ page }) => {
+  await login(page);
+  await page.goto("/proposals/OUTLINE_PROPOSAL/1000/due-diligence");
+  await expect(page.locator("#parent-due-diligence-create")).toHaveText(/New Duediligence Application/);
+  await expect(page.locator("#proposal-1000-due-diligence")).toContainText("No data to display.");
+  await page.goto("/proposals/OUTLINE_PROPOSAL/1000/contracts");
+  const contract = page.locator("#proposal-1000-new-contract");
+  await expect(contract).toBeVisible();
+  await expect(page.locator("#proposal-1000-contracts")).toContainText("No data to display.");
+  await contract.click();
+  await expect(page).toHaveURL(/\/contracts\/new\?parentType=OUTLINE_PROPOSAL&parentId=1000/);
+  await expect(page.locator("#contract-new-back")).toHaveAttribute("href", "/proposals/OUTLINE_PROPOSAL/1000/contracts");
+  await page.goto("/proposals/OUTLINE_PROPOSAL/1000/attachments");
+  await expect(page.locator("#proposal-1000-attachments-panel")).toBeVisible();
+  await page.goto("/proposals/OUTLINE_PROPOSAL/1000/delegation");
+  await expect(page.locator("#proposal-1000-delegation-panel-add")).toBeVisible();
+  await page.goto("/proposals/PROPOSAL/1001/contracts");
+  await expect(page.locator("#proposal-1001-contracts")).toBeVisible();
+  await expect(page.locator("#proposal-1001-new-contract")).toHaveCount(0);
+  await page.goto("/proposals/PROPOSAL/1001/delegation");
+  await expect(page.locator("#proposal-1001-delegation-panel")).toBeVisible();
+  await expect(page.locator("#proposal-1001-delegation-panel-add")).toHaveCount(0);
+});
+
+test("Proposal In-kind Contribution reads sponsors and saves a line after failure", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/proposals/OUTLINE_PROPOSAL/1000/in-kind-contribution");
+  await expect(
+    page.locator("#proposal-1000-in-kind-sponsor-301"),
+  ).toContainText("Research Council");
+  await expect(page.locator("#proposal-1000-in-kind-lines-301")).toContainText(
+    "Equipment access",
+  );
+  await page.getByRole("button", { name: "Edit Equipment access" }).click();
+  await page.locator("#proposal-1000-in-kind-line-amount-5").fill("80");
+  let attempts = 0;
+  await page.route(
+    "**/api/proposals/OUTLINE_PROPOSAL/1000/in-kind-contribution",
+    async (route) => {
+      attempts += 1;
+      expect(route.request().method()).toBe("PUT");
+      expect(route.request().postDataJSON()).toMatchObject({
+        action: "line",
+        data: { id: 5, amount: 80 },
+      });
+      await route.fulfill(
+        attempts === 1
+          ? {
+              status: 503,
+              contentType: "application/json",
+              body: JSON.stringify({ message: "Synthetic save failure" }),
+            }
+          : {
+              status: 200,
+              contentType: "application/json",
+              body: JSON.stringify({ saved: true }),
+            },
+      );
+    },
+  );
+  await page.locator("#proposal-1000-in-kind-line-save-5").click();
+  await expect(page.locator("#proposal-1000-in-kind-error")).toBeVisible();
+  await page.locator("#proposal-1000-in-kind-line-save-5").click();
+  await expect(
+    page.locator("#proposal-1000-in-kind-line-editor-5"),
+  ).toHaveCount(0);
+  expect(attempts).toBe(2);
+});
+
+test("Proposal In-kind Contribution validates and adds an active-version line", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/proposals/OUTLINE_PROPOSAL/1000/in-kind-contribution");
+  await page.locator("#proposal-1000-in-kind-add-301").click();
+  await page.locator("#proposal-1000-in-kind-add-save").click();
+  await expect(page.locator("#proposal-1000-in-kind-error")).toContainText(
+    "Select a cost item",
+  );
+  await page.locator("#proposal-1000-in-kind-cost-item-trigger").click();
+  await page.getByRole("option", { name: "Equipment access" }).click();
+  await page.locator("#proposal-1000-in-kind-new-amount").fill("40");
+  let payload: unknown;
+  await page.route(
+    "**/api/proposals/OUTLINE_PROPOSAL/1000/in-kind-contribution",
+    async (route) => {
+      payload = route.request().postDataJSON();
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ saved: true }),
+      });
+    },
+  );
+  await page.locator("#proposal-1000-in-kind-add-save").click();
+  await expect(page.locator("#proposal-1000-in-kind-add-dialog")).toHaveCount(
+    0,
+  );
+  expect(payload).toMatchObject({
+    action: "add",
+    data: { sponsorId: 301, costItemCode: "EQUIP", amount: 40 },
+  });
+});
+
+test("Proposal Research Partner Costs opens and retries a scoped line edit", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/proposals/OUTLINE_PROPOSAL/1000/budget-research-partner");
+  await expect(page.locator("#proposal-1000-partner-cost-900")).toContainText(
+    "Example Partner",
+  );
+  await page.getByRole("button", { name: "Edit Shared scanner" }).click();
+  await page.locator("#proposal-1000-partner-cost-amount").fill("60");
+  let attempts = 0;
+  await page.route(
+    "**/api/proposals/OUTLINE_PROPOSAL/1000/budget-research-partner",
+    async (route) => {
+      attempts += 1;
+      expect(route.request().postDataJSON()).toMatchObject({
+        id: 21,
+        cost: 60,
+      });
+      await route.fulfill(
+        attempts === 1
+          ? {
+              status: 503,
+              contentType: "application/json",
+              body: JSON.stringify({ message: "Synthetic save failure" }),
+            }
+          : {
+              status: 200,
+              contentType: "application/json",
+              body: JSON.stringify({ saved: true }),
+            },
+      );
+    },
+  );
+  await page.locator("#proposal-1000-partner-cost-save").click();
+  await expect(
+    page.locator("#proposal-1000-research-partner-cost-error"),
+  ).toBeVisible();
+  await page.locator("#proposal-1000-partner-cost-save").click();
+  await expect(
+    page.locator("#proposal-1000-partner-cost-edit-dialog"),
+  ).toHaveCount(0);
+  expect(attempts).toBe(2);
+});
+
+test("Proposal Funder Rules shows the pricing tree and retries a line edit", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/proposals/OUTLINE_PROPOSAL/1000/pricing");
+  await expect(
+    page.getByRole("row", { name: /Alex Morgan Principal Investigator/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", {
+      name: "Research Council - Eligible Cost",
+    }),
+  ).toBeVisible();
+  await page.locator("#proposal-1000-pricing-currency-trigger").click();
+  await page.getByRole("option", { name: "Euro | 1.2" }).click();
+  await expect(
+    page.getByRole("row", { name: /Alex Morgan Principal Investigator/ }),
+  ).toContainText("€120.00");
+  await page.locator("#proposal-1000-pricing-edit-81").click();
+  await expect(
+    page.locator("#proposal-1000-pricing-edit-dialog"),
+  ).toBeVisible();
+  await page
+    .locator("#proposal-1000-pricing-funder-details")
+    .getByRole("button", { name: /Edit Research Council/ })
+    .click();
+  await page.locator("#proposal-1000-pricing-edit-contribution").fill("60");
+  let attempts = 0;
+  await page.route(
+    "**/api/proposals/OUTLINE_PROPOSAL/1000/pricing",
+    async (route) => {
+      attempts += 1;
+      expect(route.request().postDataJSON()).toEqual({
+        lineId: 81,
+        funderId: 301,
+        contribution: 50,
+        ruleApplied: "INDEXED",
+      });
+      await route.fulfill(
+        attempts === 1
+          ? {
+              status: 503,
+              contentType: "application/json",
+              body: JSON.stringify({ message: "Synthetic save failure" }),
+            }
+          : {
+              status: 200,
+              contentType: "application/json",
+              body: JSON.stringify({ saved: true }),
+            },
+      );
+    },
+  );
+  await page.locator("#proposal-1000-pricing-edit-save").click();
+  await expect(
+    page.locator("#proposal-1000-pricing-edit-dialog [role='alert']"),
+  ).toBeVisible();
+  await page.locator("#proposal-1000-pricing-edit-save").click();
+  await expect(page.locator("#proposal-1000-pricing-edit-dialog")).toHaveCount(
+    0,
+  );
+  expect(attempts).toBe(2);
+});
+
+test("Proposal Funder Rules group pencil includes aggregated funder rows", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/proposals/OUTLINE_PROPOSAL/1000/pricing");
+  const group = page.getByRole("button", { name: "P_1000 : Primary" });
+  await group.click();
+  await expect(group).toHaveAttribute("aria-expanded", "false");
+  await expect(
+    page.locator("#proposal-1000-pricing-table-1000-primary"),
+  ).toHaveCount(0);
+  await group.click();
+  await expect(group).toHaveAttribute("aria-expanded", "true");
+  const edit = page.locator("#proposal-1000-pricing-edit-category-STAFF-DA");
+  await expect(edit).toBeEnabled();
+  await edit.click();
+  await expect(page.locator("#proposal-1000-pricing-edit-field-0")).toHaveValue(
+    "Staff",
+  );
+  await expect(page.locator("#proposal-1000-pricing-edit-field-4")).toHaveValue(
+    "20.00%",
+  );
+  await expect(page.locator("#proposal-1000-pricing-edit-field-5")).toHaveValue(
+    "20.00",
+  );
+  await expect(
+    page.getByRole("table", { name: "Funder pricing details" }),
+  ).toContainText("Research Council");
+  await expect(
+    page
+      .locator("#proposal-1000-pricing-funder-details")
+      .getByRole("button", { name: "Edit Research Council" }),
+  ).toBeEnabled();
+  await page.locator("#proposal-1000-pricing-edit-dialog-close").click();
+  await expect(page.locator("#proposal-1000-pricing-edit-dialog")).toHaveCount(
+    0,
+  );
+});
+
+test("Proposal Funder Rules previews default values, cancels, and retries Save", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/proposals/OUTLINE_PROPOSAL/1000/pricing");
+  const funder = page.locator(
+    "#proposal-1000-pricing-field-funder-contribution",
+  );
+  await expect(funder).toContainText("£80.00");
+  await page.getByRole("button", { name: "Reset to default" }).click();
+  await expect(
+    page.getByRole("button", { name: "Save", exact: true }),
+  ).toBeVisible();
+  const saveButton = page.getByRole("button", { name: "Save", exact: true });
+  const cancelButton = page.getByRole("button", {
+    name: "Cancel",
+    exact: true,
+  });
+  const saveBox = await saveButton.boundingBox();
+  const cancelBox = await cancelButton.boundingBox();
+  expect(saveBox).not.toBeNull();
+  expect(cancelBox).not.toBeNull();
+  expect(saveBox!.x + saveBox!.width).toBeLessThan(cancelBox!.x);
+  expect(Math.abs(saveBox!.width - cancelBox!.width)).toBeLessThan(5);
+  await expect(funder).toContainText("£60.00");
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(funder).toContainText("£80.00");
+  await page.getByRole("button", { name: "Reset to default" }).click();
+  await expect(funder).toContainText("£60.00");
+  let attempts = 0;
+  await page.route(
+    "**/api/proposals/OUTLINE_PROPOSAL/1000/pricing/reset",
+    async (route) => {
+      if (route.request().method() !== "POST") return route.continue();
+      attempts += 1;
+      if (attempts === 1)
+        return route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({
+            error: { code: "UPSTREAM", message: "Synthetic reset failure" },
+          }),
+        });
+      return route.continue();
+    },
+  );
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(
+    page.locator("#proposal-1000-pricing [role='alert']"),
+  ).toContainText("Synthetic reset failure");
+  await expect(funder).toContainText("£60.00");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Reset to default" }),
+  ).toBeVisible();
+  expect(attempts).toBe(2);
+});
+
+test("Proposal Global Funder Values edits a sponsor across the Proposal and retries a failed save", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/proposals/OUTLINE_PROPOSAL/1000/pricing");
+  await page.getByRole("button", { name: "Edit Global Funder Values" }).click();
+  const dialog = page.getByRole("dialog", { name: "Funder Contribution" });
+  await expect(dialog).toBeVisible();
+  await expect(
+    dialog.getByRole("table", { name: "Global Funder Values" }),
+  ).toContainText("Research Council");
+  await dialog.getByRole("button", { name: "Edit Research Council" }).click();
+  await dialog
+    .getByRole("spinbutton", { name: "Funder Un-Indexed Contribution" })
+    .fill("45");
+  await expect(
+    dialog.getByRole("spinbutton", { name: "Funder Percentage" }),
+  ).toHaveValue("50");
+  let attempts = 0;
+  let payload: Record<string, unknown> | null = null;
+  await page.route(
+    "**/api/proposals/OUTLINE_PROPOSAL/1000/pricing/global",
+    async (route) => {
+      attempts += 1;
+      payload = route.request().postDataJSON() as Record<string, unknown>;
+      if (attempts === 1)
+        return route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({
+            error: { code: "UPSTREAM", message: "Synthetic global failure" },
+          }),
+        });
+      return route.continue();
+    },
+  );
+  await dialog.getByRole("button", { name: "Save Research Council" }).click();
+  await expect(dialog.getByRole("alert")).toContainText(
+    "Synthetic global failure",
+  );
+  await expect(
+    dialog.getByRole("spinbutton", { name: "Funder Un-Indexed Contribution" }),
+  ).toHaveValue("45");
+  await dialog.getByRole("button", { name: "Save Research Council" }).click();
+  await expect(
+    dialog.getByRole("button", { name: "Edit Research Council" }),
+  ).toBeVisible();
+  expect(payload).toEqual({
+    funderId: 301,
+    contribution: 50,
+    ruleApplied: "UNINDEXED",
+  });
+  expect(attempts).toBe(2);
+});
+
+test("Proposal Funder Rules keeps VBCS-width columns and frozen identity cells while scrolling", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 900, height: 900 });
+  await login(page);
+  await page.goto("/proposals/OUTLINE_PROPOSAL/1000/pricing");
+  const table = page.locator("#proposal-1000-pricing-table-1000-primary");
+  await expect(
+    table.getByRole("row", { name: /Alex Morgan Principal Investigator/ }),
+  ).toBeVisible();
+  const geometry = await table.evaluate((element) => {
+    const scroller = element.parentElement!;
+    scroller.scrollLeft = scroller.scrollWidth;
+    const headers = [...element.querySelectorAll("thead th")];
+    return {
+      overflow: scroller.scrollWidth - scroller.clientWidth,
+      widths: headers
+        .slice(0, 3)
+        .map((cell) => cell.getBoundingClientRect().width),
+      left: scroller.getBoundingClientRect().left,
+      positions: headers
+        .slice(0, 3)
+        .map((cell) => cell.getBoundingClientRect().left),
+      actionRight: headers.at(-1)!.getBoundingClientRect().right,
+      scrollerRight: scroller.getBoundingClientRect().right,
+    };
+  });
+  expect(geometry.overflow).toBeGreaterThan(300);
+  expect(geometry.widths).toEqual([120, 120, 120]);
+  expect(Math.abs(geometry.positions[0] - geometry.left)).toBeLessThanOrEqual(
+    2,
+  );
+  expect(
+    Math.abs(geometry.positions[1] - geometry.left - 120),
+  ).toBeLessThanOrEqual(2);
+  expect(geometry.positions[2]).toBeLessThan(geometry.left);
+  expect(geometry.actionRight).toBeLessThanOrEqual(geometry.scrollerRight);
+});
+
+test("Proposal Research Partner Costs selects an item and adds a line", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/proposals/OUTLINE_PROPOSAL/1000/budget-research-partner");
+  await page.locator("#proposal-1000-partner-cost-add-900").click();
+  await page.locator("#proposal-1000-partner-cost-category-trigger").click();
+  await page.getByRole("option", { name: "Equipment", exact: true }).click();
+  await page.locator("#proposal-1000-partner-cost-item-trigger").click();
+  await page.getByRole("option", { name: "Equipment", exact: true }).click();
+  await page
+    .locator("#proposal-1000-partner-cost-new-start")
+    .fill("01-May-2027");
+  await page.locator("#proposal-1000-partner-cost-new-end").fill("31-May-2027");
+  await page.locator("#proposal-1000-partner-cost-new-amount").fill("75");
+  let payload: unknown;
+  await page.route(
+    "**/api/proposals/OUTLINE_PROPOSAL/1000/budget-research-partner",
+    async (route) => {
+      payload = route.request().postDataJSON();
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ saved: true }),
+      });
+    },
+  );
+  await page.locator("#proposal-1000-partner-cost-add-save").click();
+  await expect(
+    page.locator("#proposal-1000-partner-cost-add-dialog"),
+  ).toHaveCount(0);
+  expect(payload).toMatchObject({
+    action: "add",
+    data: {
+      relationId: 900,
+      category: "EQUIP",
+      itemCode: "EQUIPMENT",
+      cost: 75,
+    },
+  });
 });
 
 test("Proposal FEC Summary generates a filterable report and chart from the analysis response", async ({
@@ -1205,7 +1878,39 @@ test("Proposal Budget opens the VBCS staff and nonstaff costing flows", async ({
     .click();
   await staff.getByRole("button", { name: "Get Cost Lines" }).click();
   await expect(staff.getByText("Cost Summary")).toBeVisible();
+  await staff.getByRole("button", { name: "Edit cost line 80002" }).click();
+  await staff.locator("#proposal-1000-staff-line-units").fill("0.75");
+  await staff.getByRole("button", { name: "Apply" }).click();
+  await expect(staff.getByRole("cell", { name: "0.75" })).toBeVisible();
+  await page.route(
+    "**/api/proposals/OUTLINE_PROPOSAL/1000/budget/staff-entry",
+    async (route) => {
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({
+          error: { code: "UPSTREAM", message: "Calculation unavailable" },
+        }),
+      });
+    },
+    { times: 1 },
+  );
   await staff.getByRole("button", { name: "Save Cost Lines" }).click();
+  await expect(staff.getByRole("alert")).toContainText(
+    "Calculation unavailable",
+  );
+  await expect(
+    staff.getByRole("button", { name: "Save Cost Lines" }),
+  ).toBeEnabled();
+  const saved = page.waitForRequest(
+    (request) =>
+      request.method() === "PUT" &&
+      request
+        .url()
+        .endsWith("/api/proposals/OUTLINE_PROPOSAL/1000/budget/staff-entry"),
+  );
+  await staff.getByRole("button", { name: "Save Cost Lines" }).click();
+  expect((await saved).postDataJSON().lines[0].units).toBe(0.75);
   await expect(page).toHaveURL(/\/budget$/);
   await actions.getByRole("link", { name: "Add Non Staff Cost" }).click();
   await expect(page).toHaveURL(/\/budget\/new\/non-staff$/);

@@ -265,6 +265,7 @@ export async function ProposalHeader({
                   id={id}
                   checked={context.finalize.checked}
                   editable={context.finalize.editable}
+                  visiblePages={context.finalize.visiblePages}
                 />
               )}
             </div>

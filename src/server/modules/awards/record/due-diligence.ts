@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { AppError } from "@/lib/errors";
 import { awards } from "@/server/oracle/api";
 import { resources } from "@/server/platform/configuration/resources";
 import type { DueDiligenceView } from "@/features/modules/awards/record/due-diligence-model";
@@ -10,6 +11,8 @@ const BUNDLE = "award";
 const text = z.union([z.string(), z.number()]).nullish();
 const rowSchema = z.object({
   setup_flow_id: z.union([z.string(), z.number()]),
+  obj_ref_id: z.coerce.number().int().positive().nullish(),
+  obj_ref_type: z.string().nullish(),
   application_number: text,
   status: text,
   status_lkp_code: text,
@@ -59,20 +62,24 @@ const FIELDS = [
 
 /**
  * The Due Diligence tab (legacy awards-due-diligence): the due-diligence records linked to the award. Legacy's
- * Create, View and Link open or change the Due Diligence module's own records, which is not rebuilt yet.
+ * Create, View and Link open or change the Due Diligence module's own scoped records.
  */
 export async function dueDiligenceView(id: string): Promise<DueDiligenceView> {
-  await awardRecordRead(id, "due-diligence");
+  const context = await awardRecordRead(id, "due-diligence");
   const [raw, rows] = await Promise.all([
     awards.dueDiligence({ awardId: id }),
     resources(),
   ]);
   const items =
     z.object({ items: z.array(rowSchema).nullish() }).parse(raw).items ?? [];
+  assertAwardDueDiligenceScope(items, id);
   const shown = FIELDS.filter(([, , key]) =>
     serverFunctions.resources.resourceVisible(rows, BUNDLE, "labels", key),
   );
   return {
+    parentId: id,
+    canCreate: context.access.roles.get("awards-due-diligence")?.edit === true,
+    canLink: context.access.roles.get("awards-link-due-diligence")?.edit === true,
     records: items.map((r) => {
       const code = String(r.status_lkp_code ?? "");
       return {
@@ -113,4 +120,14 @@ export async function dueDiligenceView(id: string): Promise<DueDiligenceView> {
       ),
     },
   };
+}
+
+/** Validate the Oracle result before any linked record is shown or opened. */
+export function assertAwardDueDiligenceScope(
+  items: { obj_ref_id?: number | null; obj_ref_type?: string | null }[],
+  id: string,
+) {
+  if (items.some((row) => String(row.obj_ref_id ?? "") !== id ||
+      row.obj_ref_type !== "AWARD"))
+    throw new AppError("FORBIDDEN", "Due Diligence record is outside this Award.", 403);
 }

@@ -28,6 +28,10 @@ it.each([
     "/ethics/1694?access=EA_ACCESS",
   ],
   [
+    "?access_type=RESPONDENT_ACCESS&setup_flow_id=1694&object-id=101&comment-id=72&page=shell&shell=ethics&ethics=ethics-detail",
+    "/ethics/1694?access=RESPONDENT_ACCESS&tab=ethics-responses&person=101&comment-id=72",
+  ],
+  [
     "?page=shell&shell=claims&claims=claims-unit-inquiry-info",
     "/claims/unit-inquiry",
   ],

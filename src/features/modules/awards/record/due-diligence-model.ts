@@ -9,5 +9,8 @@ export interface DueDiligenceRecord {
 }
 export interface DueDiligenceView {
   records: DueDiligenceRecord[];
+  parentId: string;
+  canCreate: boolean;
+  canLink: boolean;
   texts: { empty: string };
 }

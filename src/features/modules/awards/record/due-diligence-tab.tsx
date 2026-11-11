@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { DueDiligenceParentActions } from "@/features/modules/due-diligence/parent-actions";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Icon } from "@/components/ui/icon";
 import { RecordMetadata } from "@/components/ui/record-metadata";
@@ -17,6 +19,8 @@ export function DueDiligenceTab({
 }) {
   return (
     <div id="award-record-due-diligence" className={styles.tab}>
+      <DueDiligenceParentActions parent={{ type: "AWARD", id: view.parentId }}
+        canCreate={view.canCreate} canLink={view.canLink} />
       {view.records.length === 0 ? (
         <p id="award-dd-empty" className={styles.empty}>
           {view.texts.empty}
@@ -32,7 +36,7 @@ export function DueDiligenceTab({
               <div className={listing.body}>
                 <div className={listing.overline}>
                   <Icon name="due-diligence" size={14} />
-                  <span className={listing.number}>{r.number}</span>
+                  <Link href={`/due-diligence/${r.id}`} className={listing.number}>{r.number}</Link>
                   {r.status && (
                     <StatusBadge className={listing.status} tone={r.tone}>
                       {r.status}

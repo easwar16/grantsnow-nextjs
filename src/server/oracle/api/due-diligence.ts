@@ -20,6 +20,14 @@ export const setup = read<{ id: string }>({
   op: "getDynamicFormsApplicationSetup",
   query: (p) => ({ setup_flow_id: p.id }),
 });
+export const versions = read<{ id: string }>({
+  op: "getDynamicFormsApplSetupVersionList2",
+  headers: (p) => ({ setup_flow_id: p.id }),
+});
+export const setupVersion = read<{ id: string; version: number }>({
+  op: "getDynamicFormsApplicationSetupVersion",
+  headers: (p) => ({ setup_flow_id: p.id, version: p.version }),
+});
 export const supervisors = read<void>({
   op: "getDynamicFormsGetApplicationApprover",
 });

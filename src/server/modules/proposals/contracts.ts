@@ -5,6 +5,7 @@ import { organizations } from "@/server/platform/configuration/service";
 import { AppError } from "@/lib/errors";
 import type { RecordIdentity } from "@/features/modules/proposals/record";
 import { proposalPage } from "./record";
+import { canCreateContract } from "@/server/modules/contracts/service";
 
 const contract = z.object({
   contract_id: z.number().int().positive(),
@@ -80,13 +81,14 @@ export async function proposalContracts(
     throw new AppError("BAD_REQUEST", "Invalid Contracts page.", 400);
   const context = await proposalPage(type, id, "proposals-contracts");
   const offset = (page - 1) * 10;
-  const [raw, orgs] = await Promise.all([
+  const [raw, orgs, createAllowed] = await Promise.all([
     contracts.linkedToProposal({
       reference: context.summary.reference,
       offset,
       limit: 10,
     }),
     organizations(),
+    canCreateContract().catch(() => false),
   ]);
   const pageData = mapProposalContracts(
     raw,
@@ -98,5 +100,6 @@ export async function proposalContracts(
     ...pageData,
     bundle: context.bundle,
     canOpen: context.user.modules.CONTRACTS === true,
+    canCreate: context.rights.edit === true && createAllowed,
   };
 }

@@ -19,15 +19,32 @@ import { DynamicFields } from "@/features/modules/contracts/new/dynamic-fields";
 import { DeadlineFields } from "@/features/modules/contracts/new/deadline-fields";
 import { functions } from "@/lib/functions";
 import { serverFunctions } from "@/server/functions";
+import { recordIdentity } from "@/features/modules/proposals/record";
+import { proposalPage } from "@/server/modules/proposals/record";
 
 export const metadata = { title: "New Contract" };
 
-export default async function NewContract() {
+export default async function NewContract({ searchParams }: {
+  searchParams: Promise<{ parentType?: string; parentId?: string }>;
+}) {
   await pageIdentity("/contracts/new");
+  const query = await searchParams;
+  let back = "/contracts";
+  if (query.parentType || query.parentId) {
+    const parent = recordIdentity.safeParse({ type: query.parentType, id: query.parentId });
+    if (!parent.success) return <State title="Invalid Contract parent" code="BAD_REQUEST" />;
+    let allowed = false;
+    try {
+      const context = await proposalPage(parent.data.type, parent.data.id, "proposals-contracts");
+      allowed = context.rights.edit === true;
+    } catch {}
+    if (!allowed) return <State title="Contract creation unavailable" code="FORBIDDEN" />;
+    back = `/proposals/${parent.data.type}/${parent.data.id}/contracts`;
+  }
   return (
     <main className={styles.createPage}>
       <div className={styles.createTop}>
-        <Link id="contract-new-back" href="/contracts" prefetch={false}>
+        <Link id="contract-new-back" href={back} prefetch={false}>
           List
         </Link>
         <h1>Contract Detail</h1>

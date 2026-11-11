@@ -148,6 +148,8 @@ export function ObjectDelegations({
               <li key={d.personId} id={key} className="enter-rise">
                 <details className={`gn-collapsible ${styles.delegate}`}>
                   <summary className={styles.person}>
+                    <span className={styles.disclosure} aria-hidden="true"><Icon name="chevron-right" size={14} /></span>
+                    <span className={styles.avatar} aria-hidden="true"><Icon name="proposal-delegation" size={14} /></span>
                     <span id={`${key}-name`} className={styles.name}>
                       {d.name}
                     </span>

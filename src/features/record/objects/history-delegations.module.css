@@ -84,9 +84,14 @@
   padding: 8px 0;
   cursor: pointer;
 }
+.person::marker { content: ""; }
+.person::-webkit-details-marker { display: none; }
+.disclosure { display: inline-flex; width: 20px; justify-content: center; }
+.delegate[open] .disclosure { transform: rotate(90deg); }
+.avatar { display: inline-flex; width: 24px; height: 24px; align-items: center; justify-content: center; border-radius: 3px; background: #54504c; color: white; }
 .name {
-  flex: 1;
-  min-width: 160px;
+  flex: 0 1 auto;
+  min-width: 90px;
   font-weight: 600;
 }
 .dates {

@@ -108,6 +108,10 @@ export const staffTimeReport = read<{
   }),
 });
 export const costItems = read<void>({ op: "getPre_awards_costingGetCostItem" });
+export const costItemsForCategory = read<{ category: string }>({
+  op: "getPre_awards_costingGetCostItem",
+  query: (p) => ({ cost_cat_type: p.category }),
+});
 export const insertCostingBulk = write<{ rows: unknown[] }>({
   op: "postInsertCostingBulk",
   body: (p) => p.rows,
@@ -139,7 +143,10 @@ export const calculateStaffLine = write<{ row: Record<string, unknown> }>({
   op: "postPre_awards_costingGetTotFecCostLineN",
   identity: ["legal_id", "org_id"],
   body: (p) => ({ costing_line_json: [p.row] }),
-  invalidates: ["getPre_awards_costingGetCostingLines", "getPre_awards_costingGetCostSummary"],
+  invalidates: [
+    "getPre_awards_costingGetCostingLines",
+    "getPre_awards_costingGetCostSummary",
+  ],
 });
 export const costHeaderDetails = read<{ costHeaderId: string }>({
   op: "getPre_awards_costingGetCostHeaderDetails",
@@ -152,6 +159,30 @@ export const costingLines = read<{ costHeaderId: string }>({
 export const pricingDetails = read<{ proposalId: string }>({
   op: "getPre_awards_costingGetPricingDetails",
   query: (p) => ({ proposal_id: p.proposalId }),
+});
+export const defaultPricing = read<{
+  proposalId: string;
+  sponsorPartyId: number;
+}>({
+  op: "getPre_awards_costingGetDefaultPricing",
+  query: (p) => ({
+    proposal_id: p.proposalId,
+    p_sponsor_party_id: p.sponsorPartyId,
+    update_data: "N",
+  }),
+});
+export const savePricingLines = write<{ rows: unknown[] }>({
+  op: "postPre_awards_costingInsertPricingLines",
+  identity: ["legal_id", "org_id"],
+  body: (p) => p.rows,
+  invalidates: ["getPre_awards_costingGetPricingDetails"],
+});
+export const savePricingFunder = write<{ funderId: number; rows: unknown[] }>({
+  op: "postPre_awards_costingInsertPricingLines",
+  identity: ["legal_id", "org_id"],
+  headers: (p) => ({ funder_id: p.funderId }),
+  body: (p) => p.rows,
+  invalidates: ["getPre_awards_costingGetPricingDetails"],
 });
 export const contactDetails = read<{
   recordType: string;
@@ -169,6 +200,67 @@ export const contactDetails = read<{
 export const creditAllocation = read<{ versionId: number }>({
   op: "getCreditAllocation",
   headers: (p) => ({ p_prop_period_version_id: p.versionId }),
+});
+export const inKindSponsors = read<{ proposalId: string }>({
+  op: "getPre_awardPropinkind",
+  headers: (p) => ({ proposal_id: p.proposalId }),
+});
+export const inKindCostItems = read<{ proposalId: string }>({
+  op: "getPre_awardInkindCostItems",
+  headers: (p) => ({ proposal_id: p.proposalId }),
+});
+export const researchPartnerHeaders = read<{ proposalId: string }>({
+  op: "getPre_awardResearchPartnerHeader",
+  query: (p) => ({ proposal_id: p.proposalId }),
+});
+export const researchPartnerLines = read<{ proposalId: string }>({
+  op: "getPre_awardResearchPartnerLine",
+  query: (p) => ({ proposal_id: p.proposalId }),
+});
+export const saveResearchPartnerHeaders = write<{ rows: unknown[] }>({
+  op: "postPre_awardResearchPartnerHeader",
+  body: (p) => ({ researchPartnerHeader: p.rows }),
+  invalidates: ["getPre_awardResearchPartnerHeader"],
+});
+export const saveResearchPartnerLines = write<{ rows: unknown[] }>({
+  op: "postPre_awardResearchPartnerLine",
+  body: (p) => ({ researchPartnerLine: p.rows }),
+  invalidates: [
+    "getPre_awardResearchPartnerLine",
+    "getPre_awardResearchPartnerHeader",
+  ],
+});
+export const deleteResearchPartnerLine = write<{ lineId: number }>({
+  op: "deletePre_awardResearchPartnerLine",
+  query: (p) => ({ id: p.lineId }),
+  invalidates: [
+    "getPre_awardResearchPartnerLine",
+    "getPre_awardResearchPartnerHeader",
+  ],
+});
+export const inKindLines = read<{ proposalId: string }>({
+  op: "getPre_awardPropinkindcostline",
+  headers: (p) => ({ proposal_id: p.proposalId }),
+});
+export const saveInKindSponsors = write<{
+  proposalId: string;
+  rows: unknown[];
+}>({
+  op: "postPre_awardPropinkind",
+  headers: (p) => ({ proposal_id: p.proposalId }),
+  body: (p) => ({ INKIND_CONTRIBUTION: p.rows }),
+  invalidates: ["getPre_awardPropinkind"],
+});
+export const saveInKindLines = write<{ proposalId: string; rows: unknown[] }>({
+  op: "postPre_awardPropinkindcostline",
+  headers: (p) => ({ proposal_id: p.proposalId }),
+  body: (p) => ({ INKIND_ARRAY: p.rows }),
+  invalidates: ["getPre_awardPropinkindcostline"],
+});
+export const deleteInKindLine = write<{ lineId: number }>({
+  op: "deletePre_awardPropinkindcostline",
+  headers: (p) => ({ id: p.lineId }),
+  invalidates: ["getPre_awardPropinkindcostline"],
 });
 export const linkedApplications = read<{ kind: string; proposalId: string }>({
   op: "getProposalGetApplicationList",

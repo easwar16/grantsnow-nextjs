@@ -29,7 +29,8 @@ import { fundAttachmentHost } from "@/server/modules/claims/funds/record";
 import { unitAttachmentHost } from "@/server/modules/claims/units/record";
 import { proposalAttachmentHost } from "@/server/modules/proposals/attachments";
 import { recordIdentity } from "@/features/modules/proposals/record";
-import { ethicsRecord } from "@/server/modules/ethics/record";
+import { ethicsRecord, ethicsStakeholder } from "@/server/modules/ethics/record";
+import { dueDiligenceRecord } from "@/server/modules/due-diligence/record";
 import { authenticate } from "@/server/identity/session/service";
 import { fileProblem } from "@/features/record/dynamic-form/engine";
 import {
@@ -74,12 +75,12 @@ export interface AttachmentHost {
 type Mode = "read" | "view" | "edit";
 const HOSTS: Record<
   string,
-  (id: string, mode: Mode) => Promise<AttachmentHost>
+  (id: string, mode: Mode, participant?: string) => Promise<AttachmentHost>
 > = {
   eoi: eoiAttachmentHost,
   award: awardAttachmentHost,
   "claim-funds": fundAttachmentHost,
-  ethics: async (id, mode) => {
+  ethics: async (id, mode, participant) => {
     const [record, { session, user }] = await Promise.all([
       ethicsRecord(id),
       authenticate(),
@@ -90,7 +91,7 @@ const HOSTS: Record<
         "Ethics Attachments access has not been granted.",
         403,
       );
-    const person = record.respondents[0];
+    const person = ethicsStakeholder(record, user.personId, participant);
     if (!person)
       throw new AppError(
         "CONTRACT",
@@ -116,6 +117,46 @@ const HOSTS: Record<
       canEdit,
     };
   },
+  "due-diligence": async (id, mode) => {
+    const [record, { session, user }] = await Promise.all([
+      dueDiligenceRecord(id),
+      authenticate(),
+    ]);
+    if (!record.tabs.includes("duediligence-attachments"))
+      throw new AppError(
+        "FORBIDDEN",
+        "Due Diligence Attachments access has not been granted.",
+        403,
+      );
+    const person = record.access === "DDA_ACCESS"
+      ? record.respondents[0]
+      : record.respondents.find((item) => item.personId === user.personId);
+    if (!person)
+      throw new AppError(
+        "FORBIDDEN",
+        "Due Diligence stakeholder access has not been granted.",
+        403,
+      );
+    const canEdit =
+      record.rights["duediligence-attachments"]?.edit === true &&
+      person.statusCode === "DRFT";
+    if (mode === "edit" && !canEdit)
+      throw new AppError(
+        "FORBIDDEN",
+        "Due Diligence Attachments cannot be changed.",
+        403,
+      );
+    return {
+      objectType: "DUE_DILIGENCE",
+      objectId: person.id,
+      objectNumber: person.id,
+      pathSegment: "DUE_DILIGENCE",
+      bundle: "due_diligence",
+      token: session.token,
+      user,
+      canEdit,
+    };
+  },
   claims: unitAttachmentHost,
 };
 
@@ -125,16 +166,20 @@ for (const type of recordIdentity.shape.type.options)
 const hostQuery = z.object({
   host: z.enum(Object.keys(HOSTS) as [string, ...string[]]),
   record: z.string().regex(/^[1-9]\d{0,14}$/),
+  participant: z.string().regex(/^[1-9]\d{0,14}$/).optional(),
 });
 /** `?host&record` → the resolved host; anything malformed or unknown is a 400. */
 export function attachmentHost(q: URLSearchParams, mode: Mode) {
   const parsed = hostQuery.safeParse({
     host: q.get("host"),
     record: q.get("record"),
+    participant: q.get("participant") ?? undefined,
   });
   if (!parsed.success)
     throw new AppError("BAD_REQUEST", "Invalid attachments request.", 400);
-  return HOSTS[parsed.data.host](parsed.data.record, mode);
+  if (parsed.data.participant && parsed.data.host !== "ethics")
+    throw new AppError("BAD_REQUEST", "Invalid participant request.", 400);
+  return HOSTS[parsed.data.host](parsed.data.record, mode, parsed.data.participant);
 }
 
 /** One row per label: the canonical key (most hosts, Framework-Patterns backlog #1) and the fragment's fallback. */
@@ -247,6 +292,22 @@ const BUNDLE_KEYS: Record<
     noData: ["helper-texts", "attachment-no-data"],
     treeAriaLabel: ["aria-labels", "list-with-static-data"],
   },
+  due_diligence: {
+    addDocument: ["button-labels", "attachments-add-document"],
+    description: ["labels", "description"],
+    fileName: ["labels", "attachment-file-name"],
+    fileSize: null,
+    fileType: null,
+    uploadedBy: null,
+    lastUpdatedDate: null,
+    add: ["button-labels", "add"],
+    confirmDelete: ["button-labels", "delete"],
+    addNewDocumentTitle: ["dialog-titles", "attachment-add-new-document"],
+    deleteWarningTitle: ["dialog-titles", "warning"],
+    deleteWarningText: ["helper-texts", "this-operation-will"],
+    pleaseNote: ["header-labels", "please-note"],
+    fileShouldNotExceed: ["labels", "file-should-not-exceed"],
+  },
   ethics: {
     addDocument: ["button-labels", "attachments-add-document"],
     newFolderName: null,
@@ -306,6 +367,7 @@ function gates(rows: Resources, bundle: string) {
     ),
     allowConfidential:
       bundle !== "ethics" &&
+      bundle !== "due_diligence" &&
       serverFunctions.resources.resourceVisible(
         rows,
         bundle,
@@ -331,6 +393,7 @@ export async function attachmentsView(
     query: new URLSearchParams({
       host: q.get("host") ?? "",
       record: q.get("record") ?? "",
+      ...(q.get("participant") ? { participant: q.get("participant")! } : {}),
     }).toString(),
     labels: attachmentLabels(rows, host.bundle),
     folders,

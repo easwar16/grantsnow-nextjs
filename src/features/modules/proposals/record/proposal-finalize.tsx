@@ -1,6 +1,10 @@
 "use client";
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import {
+  useRouter,
+  useSearchParams,
+  useSelectedLayoutSegment,
+} from "next/navigation";
 import { proposals } from "@/lib/api";
 import styles from "./proposal-record.module.css";
 
@@ -9,11 +13,13 @@ export function ProposalFinalize({
   id,
   checked: initial,
   editable,
+  visiblePages,
 }: {
   type: string;
   id: string;
   checked: boolean;
   editable: boolean;
+  visiblePages: string[];
 }) {
   const [updated, setUpdated] = useState<{
     initial: boolean;
@@ -23,6 +29,8 @@ export function ProposalFinalize({
   const [error, setError] = useState("");
   const router = useRouter();
   const editing = useSearchParams().get("mode") === "edit";
+  const segment = useSelectedLayoutSegment();
+  const currentPage = segment ? `proposals-${segment}` : "proposals-summary";
   const checked = updated?.initial === initial ? updated.value : initial;
   const update = async (next: boolean) => {
     setPending(true);
@@ -35,7 +43,7 @@ export function ProposalFinalize({
     setPending(false);
   };
   // Hidden in edit mode, as on every record (owner, 2026-11-02).
-  if (editing) return null;
+  if (editing || !visiblePages.includes(currentPage)) return null;
   return (
     <div id={`proposal-${id}-finalize`} className={styles.finalize}>
       <label htmlFor={`proposal-${id}-finalize-toggle`}>Finalize</label>

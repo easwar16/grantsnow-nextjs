@@ -64,10 +64,10 @@ it("isolates fixture applications by object type", async () => {
     { access_type: "EA_ACCESS", object_type: "ETHICS" },
     query,
   )) as { items: { application_number: string }[] };
-  expect(dueDiligence.items.map((row) => row.application_number)).toEqual([
-    "DD_808",
-  ]);
-  expect(ethics.items.map((row) => row.application_number)).toEqual([
-    "ETH_808",
-  ]);
+  const ddNumbers = dueDiligence.items.map((row) => row.application_number);
+  const ethicsNumbers = ethics.items.map((row) => row.application_number);
+  expect(ddNumbers).toContain("DD_808");
+  expect(ddNumbers.every((number) => number.startsWith("DD_"))).toBe(true);
+  expect(ethicsNumbers).toContain("ETH_808");
+  expect(ethicsNumbers.every((number) => number.startsWith("ETH_"))).toBe(true);
 });

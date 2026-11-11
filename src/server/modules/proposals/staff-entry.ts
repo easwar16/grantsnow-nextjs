@@ -1,4 +1,5 @@
 import "server-only";
+import moment from "moment";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { proposals, dynamicForm, lookups } from "@/server/oracle/api";
@@ -12,8 +13,12 @@ const items = z.object({ items: z.array(z.record(z.string(), z.unknown())) });
 const value = (x: unknown) =>
   typeof x === "string" || typeof x === "number" ? String(x) : "";
 const isoDate = (x: unknown) => {
-  const text = value(x);
-  return /^\d{4}-\d{2}-\d{2}(?:T|$)/.test(text) ? text.slice(0, 10) : "";
+  const date = moment(
+    value(x),
+    [moment.ISO_8601, "DD-MMM-YYYY", "DD-MM-YYYY", "MM-DD-YYYY"],
+    true,
+  );
+  return date.isValid() ? date.format("YYYY-MM-DD") : "";
 };
 const option = (row: Record<string, unknown>, code: string, label: string) => ({
   value: value(row[code]),
@@ -31,26 +36,27 @@ export async function staffEntryOptions(
     quickCostOptions(type, id, selected),
   ]);
   const costModel = String(data.cost_model);
-  const [salaryRaw, defaultSectionRaw, formsRaw, orgRaw, unitRaw] = await Promise.all([
-    proposals.salaryModels({
-      costModel,
-      costType:
-        selected === "staff"
-          ? "STAFF"
-          : selected === "student"
-            ? "STUD"
-            : "POOL_TECH",
-    }),
-    selected === "staff"
-      ? Promise.resolve(null)
-      : proposals.roleFundingSection({
-          costModel,
-          role: selected === "student" ? "STUD" : "POOL_TECH",
-        }),
-    dynamicForm.costForms({ proposalId: id, proposalType: type }),
-    lookups.orgUnits({}),
-    lookups.codes({ types: "STAFF_UNIT_TYPE" }),
-  ]);
+  const [salaryRaw, defaultSectionRaw, formsRaw, orgRaw, unitRaw] =
+    await Promise.all([
+      proposals.salaryModels({
+        costModel,
+        costType:
+          selected === "staff"
+            ? "STAFF"
+            : selected === "student"
+              ? "STUD"
+              : "POOL_TECH",
+      }),
+      selected === "staff"
+        ? Promise.resolve(null)
+        : proposals.roleFundingSection({
+            costModel,
+            role: selected === "student" ? "STUD" : "POOL_TECH",
+          }),
+      dynamicForm.costForms({ proposalId: id, proposalType: type }),
+      lookups.orgUnits({}),
+      lookups.codes({ types: "STAFF_UNIT_TYPE" }),
+    ]);
   const salaries = items
     .parse(salaryRaw)
     .items.map((row) => option(row, "lookup_code", "lookup_code_descr"))
@@ -75,13 +81,14 @@ export async function staffEntryOptions(
       context.summary.detailColumns
         .flat()
         .find((field) => field.key === "detail-cost-model")?.value || costModel,
-    proposalStartDate: value(data.proposal_start_date),
-    proposalEndDate: value(data.proposal_end_date),
+    proposalStartDate: isoDate(data.proposal_start_date),
+    proposalEndDate: isoDate(data.proposal_end_date),
     salaryModels: salaries,
     canEditBaseline:
       context.access.get("prop-staff-hdr-sal-data")?.edit === true,
-    unitTypes: items.parse(unitRaw).items
-      .map((row) => option(row, "lookup_code", "lookup_code_descr"))
+    unitTypes: items
+      .parse(unitRaw)
+      .items.map((row) => option(row, "lookup_code", "lookup_code_descr"))
       .filter((item) => item.value),
     orgUnits: normalizedOrgUnits.map((row) => ({
       value: row.id,
@@ -267,31 +274,89 @@ const saveInput = z.object({
   costHeaderId: z.number().int().positive(),
   lines: z.array(lineInput).min(1).max(100),
 });
+const savedHeader = z.object({
+  cost_header: z.object({
+    costing_header_id: z.coerce.number().int().positive(),
+    proposal_id: z.coerce.number().int().positive(),
+    proposal_period_version_id: z.coerce.number().int().positive(),
+    cost_category_lkp_code: z.string(),
+    cost_category_item_lkp_code: z.string(),
+  }),
+});
 
-export async function saveStaffCostLines(type: string, id: string, input: unknown) {
+export async function saveStaffCostLines(
+  type: string,
+  id: string,
+  input: unknown,
+) {
   const body = saveInput.parse(input);
   const options = await staffEntryOptions(type, id, body.kind);
+  if (!options.proposalStartDate || !options.proposalEndDate)
+    throw new AppError("CONTRACT", "Proposal dates are unavailable.");
   if (options.versionId !== body.versionId)
-    throw new AppError("BAD_REQUEST", "The active budget version changed. Reload this page.", 400);
-  const raw = await proposals.costingLines({ costHeaderId: String(body.costHeaderId) });
-  const rows = items.parse(raw).items;
-  if (rows.length !== body.lines.length || rows.some((row) =>
-    Number(row.costing_header_id) !== body.costHeaderId ||
-    Number(row.proposal_id) !== Number(id) ||
-    !body.lines.some((line) => line.id === Number(row.costing_line_id))
-  ))
-    throw new AppError("FORBIDDEN", "Staff cost lines are outside this Proposal or have changed. Reload this page.", 403);
+    throw new AppError(
+      "BAD_REQUEST",
+      "The active budget version changed. Reload this page.",
+      400,
+    );
+  const [headerRaw, linesRaw] = await Promise.all([
+    proposals.costHeaderDetails({ costHeaderId: String(body.costHeaderId) }),
+    proposals.costingLines({ costHeaderId: String(body.costHeaderId) }),
+  ]);
+  const header = savedHeader.parse(headerRaw).cost_header;
+  if (
+    header.costing_header_id !== body.costHeaderId ||
+    header.proposal_id !== Number(id) ||
+    header.proposal_period_version_id !== body.versionId ||
+    header.cost_category_lkp_code !== "STAFF" ||
+    (body.kind === "student" &&
+      header.cost_category_item_lkp_code !== "STUD") ||
+    (body.kind === "pool-tech" &&
+      header.cost_category_item_lkp_code !== "POOL_TECH") ||
+    (body.kind === "staff" &&
+      ["STUD", "POOL_TECH"].includes(header.cost_category_item_lkp_code))
+  )
+    throw new AppError(
+      "FORBIDDEN",
+      "Staff cost is outside the active Proposal Budget.",
+      403,
+    );
+  const rows = items.parse(linesRaw).items;
+  if (
+    rows.length !== body.lines.length ||
+    rows.some(
+      (row) =>
+        Number(row.costing_header_id) !== body.costHeaderId ||
+        Number(row.proposal_id) !== Number(id) ||
+        !body.lines.some((line) => line.id === Number(row.costing_line_id)),
+    )
+  )
+    throw new AppError(
+      "FORBIDDEN",
+      "Staff cost lines are outside this Proposal or have changed. Reload this page.",
+      403,
+    );
   const allowedUnits = new Set(options.unitTypes.map((item) => item.value));
   const proposed = body.lines.map((line) => {
-    const original = rows.find((row) => Number(row.costing_line_id) === line.id)!;
-    if (line.startDate > line.endDate ||
-      (options.proposalStartDate && line.startDate < options.proposalStartDate.slice(0, 10)) ||
-      (options.proposalEndDate && line.endDate > options.proposalEndDate.slice(0, 10)))
-      throw new AppError("BAD_REQUEST", "Cost line dates must be within the Proposal period.", 400);
+    const original = rows.find(
+      (row) => Number(row.costing_line_id) === line.id,
+    )!;
+    if (
+      line.startDate > line.endDate ||
+      line.startDate < options.proposalStartDate ||
+      line.endDate > options.proposalEndDate
+    )
+      throw new AppError(
+        "BAD_REQUEST",
+        "Cost line dates must be within the Proposal period.",
+        400,
+      );
     if (line.unitType && !allowedUnits.has(line.unitType))
       throw new AppError("BAD_REQUEST", "Select a valid Staff unit.", 400);
-    if (line.baseline !== null &&
-      (!options.canEditBaseline || original.salary_model !== "F"))
+    if (
+      line.baseline !== null &&
+      (!options.canEditBaseline || original.salary_model !== "F")
+    )
       throw new AppError("FORBIDDEN", "Baseline cost cannot be edited.", 403);
     return {
       costing_line_id: line.id,
@@ -305,8 +370,8 @@ export async function saveStaffCostLines(type: string, id: string, input: unknow
       cost_category_item: original.cost_category_item,
       currency_code: original.currency_code,
       exchange_rate: original.exchange_rate,
-      proposal_start_date: options.proposalStartDate.slice(0, 10),
-      proposal_end_date: options.proposalEndDate.slice(0, 10),
+      proposal_start_date: options.proposalStartDate,
+      proposal_end_date: options.proposalEndDate,
       start_date: line.startDate,
       end_date: line.endDate,
       fte: original.fte,
@@ -320,18 +385,32 @@ export async function saveStaffCostLines(type: string, id: string, input: unknow
     };
   });
   const calculation = z.object({
-    cost_summary: z.array(z.object({
-      line_id: z.coerce.number().int().positive(),
-      fec_total: z.coerce.number().nonnegative(),
-      unindex_cost: z.coerce.number().nonnegative(),
-    })),
+    cost_summary: z.array(
+      z.object({
+        line_id: z.coerce.number().int().positive(),
+        fec_total: z.coerce.number().nonnegative(),
+        unindex_cost: z.coerce.number().nonnegative(),
+      }),
+    ),
   });
   const calculated = [];
   for (const row of proposed) {
-    const result = calculation.parse(await proposals.calculateStaffLine({ row }));
-    const total = result.cost_summary.find((item) => item.line_id === row.costing_line_id);
-    if (!total) throw new AppError("CONTRACT", "Oracle returned no calculation for a Staff cost line.");
-    calculated.push({ ...row, fec_total: total.fec_total, unindex_cost: total.unindex_cost });
+    const result = calculation.parse(
+      await proposals.calculateStaffLine({ row }),
+    );
+    const total = result.cost_summary.find(
+      (item) => item.line_id === row.costing_line_id,
+    );
+    if (!total)
+      throw new AppError(
+        "CONTRACT",
+        "Oracle returned no calculation for a Staff cost line.",
+      );
+    calculated.push({
+      ...row,
+      fec_total: total.fec_total,
+      unindex_cost: total.unindex_cost,
+    });
   }
   await proposals.saveCostingLines({ rows: calculated });
   return { saved: true };

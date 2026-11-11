@@ -1,5 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { DynamicForm, type DynamicFormHandle } from "@/features/record/dynamic-form/dynamic-form";
+import { useConfirm } from "@/components/dialog/action-dialog";
 import { functions } from "@/lib/functions";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,9 +16,17 @@ import type {
 } from "@/lib/api/endpoints/due-diligence";
 import styles from "./new-due-diligence.module.css";
 
-export function NewDueDiligence({ setup }: { setup: CreateSetup }) {
+export function NewDueDiligence({
+  setup, existing, parent,
+}: {
+  setup: CreateSetup;
+  parent?: CreateDueDiligence["parent"];
+  existing?: { id: string; access: string; initial: CreateDueDiligence };
+}) {
   const router = useRouter();
-  const [value, setValue] = useState<CreateDueDiligence>({
+  const answerForm = useRef<DynamicFormHandle>(null);
+  const created = useRef<{ id: string; respondentId: string | null } | null>(null);
+  const [value, setValue] = useState<CreateDueDiligence>(existing?.initial ?? {
     title: "",
     org: "",
     formType: "",
@@ -28,28 +38,81 @@ export function NewDueDiligence({ setup }: { setup: CreateSetup }) {
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const form = useApi(dueDiligence.createForm, value.formType || null);
-  const participants = useApi(dueDiligence.createPeople, value.org || null);
-  const supervisors = useApi(dueDiligence.createSupervisors, undefined);
+  const creatorConfirm = useConfirm("due-diligence-creator-warning");
+  const scope = existing ? { id: existing.id, access: existing.access } : {};
+  const form = useApi(dueDiligence.createForm,
+    value.formType ? { ...scope, formType: value.formType } : null);
+  const participants = useApi(dueDiligence.createPeople,
+    value.org ? { ...scope, org: value.org } : null);
+  const supervisors = useApi(dueDiligence.createSupervisors, scope);
   const set = (key: keyof CreateDueDiligence, next: string) =>
     setValue((old) => ({ ...old, [key]: next }));
   async function save(event: React.FormEvent) {
     event.preventDefault();
     if (busy || !form.data?.sections.some((section) => section.enabled)) return;
+    const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+    const action = submitter?.value === "submit" ? "submit" : "draft";
+    if (action === "submit" && (!value.participants?.length || !value.supervisor)) {
+      setError(!value.participants?.length
+        ? "Select at least one participant before submitting."
+        : "Select a supervisor before submitting.");
+      return;
+    }
+    if (!existing && !(value.participants ?? []).some((key) => key.startsWith(`${setup.currentPersonId}:`))) {
+      const confirmed = await creatorConfirm.ask({
+        title: "Creator is not a participant",
+        message: "You are not in the participant list and may lose access to this application after saving.",
+        confirm: action === "submit" ? "Submit anyway" : "Save anyway",
+        cancel: "Cancel",
+      });
+      if (!confirmed) return;
+    }
+    const isParticipant = (value.participants ?? []).some((key) =>
+      key.startsWith(`${setup.currentPersonId}:`));
+    if (setup.adminAnswer && isParticipant && !answerForm.current?.check()) return;
     setBusy(true);
     setError("");
-    const result = await dueDiligence.create(value);
-    if (result.ok)
-      router.push(`/due-diligence/${result.data.id}?access=DDA_ACCESS`);
-    else {
-      setError(result.error.message);
-      setBusy(false);
+    if (existing) {
+      const result = await dueDiligence.update({ ...value, action, id: existing.id, access: existing.access });
+      if (!result.ok) {
+        setError(result.error.message);
+        setBusy(false);
+        return;
+      }
+      router.push(`/due-diligence/${existing.id}?access=${existing.access}&tab=duediligence-general-overview`);
+      router.refresh();
+      return;
     }
+    if (!created.current) {
+      const result = await dueDiligence.create({ ...value, action, parent });
+      if (!result.ok) {
+        setError(result.error.message);
+        setBusy(false);
+        return;
+      }
+      created.current = result.data;
+    }
+    const saved = created.current;
+    if (setup.adminAnswer && isParticipant) {
+      if (!saved.respondentId) {
+        setError("Application saved, but Oracle did not return your response record. Open the record to continue.");
+        setBusy(false);
+        return;
+      }
+      if (!(await answerForm.current?.save(saved.respondentId, saved.respondentId, saved.id))) {
+        setError("Application saved. The response still needs to be saved.");
+        setBusy(false);
+        return;
+      }
+    }
+    router.push(`/due-diligence/${saved.id}?access=DDA_ACCESS`);
   }
   return (
     <main id="due-diligence-new" className={styles.page}>
       <div className={styles.toolbar}>
-        <Link id="due-diligence-new-back" href="/due-diligence">
+        <Link id="due-diligence-new-back" href={existing
+          ? `/due-diligence/${existing.id}?access=${existing.access}&tab=duediligence-general-overview`
+          : "/due-diligence"}>
           {setup.labels.list}
         </Link>
       </div>
@@ -181,6 +244,18 @@ export function NewDueDiligence({ setup }: { setup: CreateSetup }) {
             ) : null}
           </section>
         )}
+        {!existing && setup.adminAnswer && value.formType && (
+          <section id="due-diligence-new-response" className={styles.section} aria-label="Response form">
+            <DynamicForm
+              ref={answerForm}
+              objectType="DUE_DILIGENCE"
+              slot="DUE_DILIGENCE"
+              formType={value.formType}
+              editable={(value.participants ?? []).some((key) =>
+                key.startsWith(`${setup.currentPersonId}:`))}
+            />
+          </section>
+        )}
         {error && (
           <p id="due-diligence-new-error" role="alert">
             {error}
@@ -190,17 +265,29 @@ export function NewDueDiligence({ setup }: { setup: CreateSetup }) {
           <button
             id="due-diligence-new-save"
             type="submit"
+            value="draft"
             disabled={
               busy || !form.data?.sections.some((section) => section.enabled)
             }
           >
             {setup.labels.save}
           </button>
-          <Link id="due-diligence-new-cancel" href="/due-diligence">
+          <button
+            id="due-diligence-new-submit"
+            type="submit"
+            value="submit"
+            disabled={busy || !form.data?.sections.some((section) => section.enabled)}
+          >
+            {setup.labels.submit}
+          </button>
+          <Link id="due-diligence-new-cancel" href={existing
+            ? `/due-diligence/${existing.id}?access=${existing.access}&tab=duediligence-general-overview`
+            : "/due-diligence"}>
             {setup.labels.cancel}
           </Link>
         </div>
       </form>
+      {creatorConfirm.element}
     </main>
   );
 }

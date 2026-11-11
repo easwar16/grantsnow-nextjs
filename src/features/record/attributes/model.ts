@@ -44,6 +44,7 @@ export const ATTRIBUTE_HOSTS = [
   "opportunities-eoi-application",
   "award-header",
   "proposals-summary",
+  "ethics-general-overview",
 ] as const;
 export type AttributeHost = (typeof ATTRIBUTE_HOSTS)[number];
 /** A dependent LOV's choices follow its parent attribute's current value. */

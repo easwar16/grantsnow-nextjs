@@ -38,5 +38,5 @@ export default async function PricingPage({
     );
   }
   const [rb, format] = await Promise.all([resources(), displayFormat()]);
-  return <ProposalPricing id={id} pricing={pricing} rb={rb} format={format} />;
+  return <ProposalPricing id={id} type={type} pricing={pricing} rb={rb} format={format} />;
 }

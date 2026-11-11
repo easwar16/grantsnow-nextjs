@@ -11,6 +11,7 @@ it("keeps only linked application card fields", () => {
           application_number: "ETH_20",
           setup_description: "Review",
           status: "Draft",
+          access_type: "RESPONDENT_ACCESS",
           private_note: "SECRET",
         },
       ],
@@ -21,6 +22,7 @@ it("keeps only linked application card fields", () => {
     id: 20,
     reference: "ETH_20",
     title: "Review",
+    accessType: "RESPONDENT_ACCESS",
   });
   expect(JSON.stringify(rows)).not.toContain("SECRET");
 });

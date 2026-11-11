@@ -319,6 +319,7 @@ export async function mockOracle(
         ["BIL", "Billing Provider"],
         ["INK", "In-Kind"],
       ],
+      TYPE_OF_INKIND: [["SERVICE", "Service"]],
       DEADLINE_TYPE: [
         ["FUNDER", "Funder deadline"],
         ["INST", "Institutional deadline"],
@@ -446,6 +447,7 @@ export async function mockOracle(
   if (op === "getDynamicFormsGetApplicationApprover")
     return {
       items: [
+        { person_id: -1, full_name: "Not Applicable" },
         {
           person_id: 101,
           full_name: "Alex Morgan",
@@ -625,6 +627,9 @@ export async function mockOracle(
         { var_key: "INSTANCE", var_value: "dev" },
         { var_key: "DEFAULT_SIZE_FORMAT", var_value: "4" },
         { var_key: "ALLOWED_EXTENSIONS", var_value: "pdf,docx,txt,png,jpg" },
+        { var_key: "EDITABLE_STATUS", var_value: "DRFT" },
+        { var_key: "ETHICS_ADMIN_ANSWER", var_value: "Y" },
+        { var_key: "DUE_DILIGENCE_AUTO_SUBMIT", var_value: "Y" },
         // The finder's deadline warning (8203): opportunity 3 closes inside it.
         { var_key: "OPP_DEADLINE_WARNING_ENABLED", var_value: "Y" },
         { var_key: "OPP_DEADLINE_WARNING_DAYS", var_value: "7" },
@@ -795,12 +800,24 @@ export async function mockOracle(
           })),
         ),
     };
-  // The EOI record's finalize state: nothing to finalize, nothing locked.
-  // Finalize state lives in the labelled EOI writes store; only its created record has a finalizable page.
+  // Finalizable pages for the Proposal empty-form fixture and the EOI record.
+  // EOI finalize state lives in the labelled writes store.
   if (op === "getSharedFinalizablePages")
-    return (await import("./eoi-writes")).fixtureFinalizablePages(
-      headers.p_obj_id,
-    );
+    return headers.p_obj_type === "OUTLINE_PROPOSAL" &&
+      headers.p_obj_id === "1000"
+      ? { items: [{ page_name: "proposals-summary" }] }
+      : headers.p_obj_type === "ETHICS" && headers.p_obj_id === "1940"
+        ? {
+            items: [
+              { page_name: "ethics-responses" },
+              { page_name: "ethics-approvals" },
+            ],
+          }
+        : headers.p_obj_type === "DUE_DILIGENCE" && headers.p_obj_id === "1951"
+          ? { items: [{ page_name: "duediligence-responses" }] }
+          : (await import("./eoi-writes")).fixtureFinalizablePages(
+              headers.p_obj_id,
+            );
   if (op === "getProposalGetLockedModules")
     return (await import("./eoi-writes")).fixtureLockedModules(
       query?.get("prop_id"),
@@ -1135,6 +1152,7 @@ export async function mockOracle(
   // Dynamic forms (shapes as GN-Angular's specs and GrantsNow-Dynamic-Forms.md): conditions, dependent fields and
   // LOVs, every field type, an optional section, a GRID and a FILE field.
   if (op === "getProposalEthical_dynFormsP_ref_module") {
+    if (headers.p_ref_module === "PROPOSALS-DYNAMIC-FORM-2") return [];
     if (headers.p_ref_module === "PROPOSALS-BUDGET-STAFF")
       return [
         {
@@ -1174,7 +1192,15 @@ export async function mockOracle(
               enabled: "true",
               isVisible: "Y",
               isMandatory: "N",
-              fields: [],
+              fields: [
+                {
+                  fieldId: 8401,
+                  description: "Assessment note",
+                  fieldType: "TEXTBOX",
+                  isVisible: "Y",
+                  isRequired: "N",
+                },
+              ],
             },
           ],
         },
@@ -1193,7 +1219,15 @@ export async function mockOracle(
               enabled: "true",
               isVisible: "Y",
               isMandatory: "N",
-              fields: [],
+              fields: [
+                {
+                  fieldId: 8301,
+                  description: "Research purpose",
+                  fieldType: "TEXTFIELD",
+                  isRequired: "N",
+                  isVisible: "Y",
+                },
+              ],
             },
           ],
         },
@@ -1353,6 +1387,111 @@ export async function mockOracle(
         ],
       },
     ];
+  if (
+    op === "getProposalEthicaldynFormResponse" &&
+    headers.P_REF_MODULE === "ETHICS"
+  )
+    return [
+      {
+        form_id: 83,
+        sections: [
+          {
+            section_id: 501,
+            fields: [
+              {
+                field_id: 8301,
+                value:
+                  headers.P_REF_OBJ_ID === "1941"
+                    ? "Participant two response"
+                    : "Participant one response",
+              },
+            ],
+          },
+        ],
+      },
+    ];
+  if (
+    op === "getDynamicFormsApplSetupVersionList2" &&
+    headers.setup_flow_id === "939"
+  )
+    return {
+      items: [
+        { setup_flow_id: 939, version: 2, version_desc: "Version 2" },
+        { setup_flow_id: 939, version: 1, version_desc: "Version 1" },
+      ],
+    };
+  if (
+    op === "getDynamicFormsApplicationSetupVersion" &&
+    headers.setup_flow_id === "939"
+  )
+    return [
+      {
+        setup_flow_id: 939,
+        version: Number(headers.version),
+        sections: [{ section_id: 501 }],
+      },
+    ];
+  if (
+    op === "getDynamicFormsDynFormRespVersions" &&
+    headers.p_ref_module === "ETHICS"
+  )
+    return [
+      {
+        form_id: 83,
+        sections: [
+          {
+            section_id: 501,
+            fields: [
+              {
+                field_id: 8301,
+                value: `Historical participant ${headers.p_ref_obj_id} response`,
+              },
+            ],
+          },
+        ],
+      },
+    ];
+  if (
+    op === "getDynamicFormsApplSetupVersionList2" &&
+    headers.setup_flow_id === "950"
+  )
+    return {
+      items: [
+        { setup_flow_id: 950, version: 2, version_desc: "Version 2" },
+        { setup_flow_id: 950, version: 1, version_desc: "Version 1" },
+      ],
+    };
+  if (
+    op === "getDynamicFormsApplicationSetupVersion" &&
+    headers.setup_flow_id === "950"
+  )
+    return [
+      {
+        setup_flow_id: 950,
+        version: Number(headers.version),
+        sections: [{ section_id: 502 }],
+      },
+    ];
+  if (
+    op === "getDynamicFormsDynFormRespVersions" &&
+    headers.p_ref_module === "DUE_DILIGENCE"
+  )
+    return [
+      {
+        form_id: 84,
+        sections: [
+          {
+            section_id: 502,
+            fields: [
+              {
+                field_id: 8401,
+                value: `Historical due diligence version ${headers.p_version}`,
+              },
+            ],
+          },
+        ],
+      },
+    ];
   if (op === "getProposalEthicaldynFormResponse")
     return [
       {
@@ -1394,10 +1533,21 @@ export async function mockOracle(
         { page_name: "create-ethics-application", read_access: "Y" },
         { page_name: "ethics-recycle-bin", read_access: "Y" },
         { page_name: "ethics-recycle-restore", read_access: "Y" },
+        { page_name: "ethics-clone", read_access: "Y" },
+        { page_name: "ethics-link", read_access: "Y" },
+        { page_name: "ethics-unlink", read_access: "Y" },
+        { page_name: "ethics-print-button", read_access: "Y" },
+        {
+          page_name: "ethics-listing-delete",
+          read_access: "Y",
+          delete_access: "Y",
+        },
         { page_name: "due-diligence-administration", read_access: "Y" },
         { page_name: "due-diligence-participent-view", read_access: "Y" },
         { page_name: "create-due-diligence-application", read_access: "Y" },
         { page_name: "due-diligence-recycle-bin", read_access: "Y" },
+        { page_name: "due-diligence-link", read_access: "Y" },
+        { page_name: "due-diligence-print-button", read_access: "Y" },
         { page_name: "dd-clone", read_access: "Y" },
         { page_name: "proposal-clone", read_access: "Y" },
         {
@@ -1430,6 +1580,29 @@ export async function mockOracle(
           ? [{ value: "RESEARCH_OFFICER", description: "Research Officer" }]
           : [{ value: "GRANTS_TEAM", description: "Grants Team" }],
     };
+  if (
+    op === "getReportsGetObjectRef" &&
+    headers.p_object_type === "DUE_DILIGENCE"
+  )
+    return {
+      items: [
+        {
+          page_name: "due-diligence-response",
+          page_desc: "Due Diligence Response",
+          show_item: "Y",
+        },
+      ],
+    };
+  if (op === "getReportsGetObjectRef" && headers.p_object_type === "ETHICS")
+    return {
+      items: [
+        {
+          page_name: "ethics-response",
+          page_desc: "Ethics Response",
+          show_item: "Y",
+        },
+      ],
+    };
   if (op === "getReportsGetObjectRef")
     return {
       items: [
@@ -1438,6 +1611,14 @@ export async function mockOracle(
           page_desc: "Proposal Summary",
           show_item: "Y",
         },
+      ],
+    };
+  if (op === "getSharedGetCurrencyRate")
+    return {
+      rates: { GBP: 1, EUR: 1.2 },
+      currencies: [
+        { currrency_code: "GBP", currency_value: "Pounds Sterling" },
+        { currrency_code: "EUR", currency_value: "Euro" },
       ],
     };
   if (op === "getReportsShareReport") {
@@ -1512,16 +1693,44 @@ export async function mockOracle(
         },
         ...[
           "proposals-dynamic-form-1",
+          "proposals-dynamic-form-2",
+          "proposals-allocation-for-credit",
+          "proposals-inkind-contribution",
+          "proposals-budget-research-partner",
           "proposals-approvals",
           "proposals-history",
           "proposals-attachments",
           "proposals-delegation",
           "proposals-contracts",
+          "proposals-ethics",
+          "proposals-due-diligence",
+          "proposals-link-due-diligence",
         ].map((page_name, i) => ({
           page_id: 50 + i,
           page_name,
           read_access: "Y",
-          edit_access: "N",
+          edit_access:
+            (page_name === "proposals-dynamic-form-1" ||
+              page_name === "proposals-dynamic-form-2" ||
+              page_name === "proposals-allocation-for-credit" ||
+              page_name === "proposals-inkind-contribution" ||
+              page_name === "proposals-budget-research-partner" ||
+              page_name === "proposals-ethics" ||
+              page_name === "proposals-due-diligence" ||
+              page_name === "proposals-contracts" ||
+              page_name === "proposals-attachments" ||
+              page_name === "proposals-delegation" ||
+              page_name === "proposals-link-due-diligence") &&
+            headers.p_obj_id === "1000"
+              ? "Y"
+              : "N",
+          delete_access:
+            (page_name === "proposals-inkind-contribution" ||
+              page_name === "proposals-budget-research-partner" ||
+              page_name === "proposals-delegation") &&
+            headers.p_obj_id === "1000"
+              ? "Y"
+              : "N",
         })),
         ...[
           "proposals-budget",
@@ -1534,6 +1743,14 @@ export async function mockOracle(
           read_access: "Y",
           edit_access: "Y",
         })),
+        ...["prop-staff-sensitive-data", "prop-non-staff-sensitive-data"].map(
+          (page_name, i) => ({
+            page_id: 70 + i,
+            page_name,
+            read_access: headers.p_obj_id === "1000" ? "Y" : "N",
+            edit_access: "N",
+          }),
+        ),
         ...[
           "proposals-budget-staff",
           "proposals-budget-student",
@@ -1550,6 +1767,82 @@ export async function mockOracle(
       ],
     };
   // FX rates of any proposal version (shape as legacy fx-rates-fragment.json fxRatesData).
+  if (op === "getPre_awards_costingGetPricingDetails")
+    return {
+      items:
+        query?.get("proposal_id") === "1000"
+          ? [
+              {
+                proposal_id: 1000,
+                proposal_number: "P_1000",
+                costing_header_id: 80,
+                costing_line_id: 81,
+                funding_section_header_lkp_code: "DA",
+                funding_section_header: "Directly Allocated",
+                cost_category_lkp_code: "STAFF",
+                cost_category: "Staff",
+                cost_category_item_lkp_code: "PI",
+                cost_category_item: "Principal Investigator",
+                staff_name: "Alex Morgan",
+                fec_cost: 100,
+                unindex_cost: 90,
+                cost_to_funder: 100,
+                funder_cost: 80,
+                institution_cost: 20,
+                funder_percent: 80,
+                party_name: "Research Council",
+                funder_details: [
+                  {
+                    funder_id: 301,
+                    funder_name: "Research Council",
+                    funder_contribution: 80,
+                    cost_to_funder: 100,
+                  },
+                ],
+              },
+            ]
+          : [],
+    };
+  if (op === "getPre_awards_costingGetDefaultPricing") {
+    if (
+      query?.get("proposal_id") !== "1000" ||
+      query.get("p_sponsor_party_id") !== "301" ||
+      query.get("update_data") !== "N"
+    )
+      throw new Error("Unexpected default pricing scope.");
+    return {
+      items: [
+        {
+          proposal_id: 1000,
+          proposal_number: "P_1000",
+          costing_header_id: 80,
+          costing_line_id: 81,
+          funding_section_header_lkp_code: "DA",
+          funding_section_header: "Directly Allocated",
+          cost_category_lkp_code: "STAFF",
+          cost_category: "Staff",
+          cost_category_item_lkp_code: "PI",
+          cost_category_item: "Principal Investigator",
+          staff_name: "Alex Morgan",
+          fec_cost: 100,
+          unindex_cost: 90,
+          cost_to_funder: 100,
+          funder_cost: 60,
+          institution_cost: 40,
+          funder_percent: 60,
+          party_name: "Research Council",
+          funder_details: [
+            {
+              funder_id: 301,
+              funder_name: "Research Council",
+              funder_contribution: 60,
+              cost_to_funder: 100,
+            },
+          ],
+        },
+      ],
+    };
+  }
   if (op === "getProposalFxRates")
     return {
       can_edit: "Y",
@@ -1677,6 +1970,22 @@ export async function mockOracle(
       cost_summary: [],
     };
   if (op === "getPre_awards_costingGetCostingLines")
+    if (query?.get("cid") === "57993")
+      return {
+        items: [
+          {
+            costing_header_id: 57993,
+            costing_line_id: 57994,
+            start_date: "2027-01-01",
+            end_date: "2028-12-31",
+            fte: 0.5,
+            units: 1,
+            unit_cost: 100,
+            fec_total: 120,
+          },
+        ],
+      };
+  if (op === "getPre_awards_costingGetCostingLines")
     return {
       items: [
         {
@@ -1699,6 +2008,27 @@ export async function mockOracle(
           unindex_cost: 0,
         },
       ],
+    };
+  if (op === "getPre_awards_costingGetCostHeaderDetails")
+    if (query?.get("cid") === "57993")
+      return {
+        cost_header: {
+          costing_header_id: 57993,
+          item_description: "Alex Morgan",
+          org_unit_name: "Faculty of Health",
+          employee_number: "EMP102",
+          salary_model_lkp_code: "PB",
+        },
+      };
+  if (op === "getPre_awards_costingGetCostHeaderDetails")
+    return {
+      cost_header: {
+        costing_header_id: 80001,
+        proposal_id: 1000,
+        proposal_period_version_id: 12113,
+        cost_category_lkp_code: "STAFF",
+        cost_category_item_lkp_code: "PI",
+      },
     };
   if (op === "postPre_awards_costingGetTotFecCostLineN")
     return {
@@ -1815,6 +2145,13 @@ export async function mockOracle(
   if (op === "getSecurityUser_roles" && headers.p_obj_type === "ETHICS")
     return {
       items: [
+        { page_name: "ethics-link", read_access: "Y", edit_access: "Y" },
+        { page_name: "ethics-unlink", read_access: "Y", edit_access: "Y" },
+        {
+          page_name: "ethics-change-setup",
+          read_access: "Y",
+          edit_access: "Y",
+        },
         {
           page_name: "ethics-general-overview",
           read_access: "Y",
@@ -1822,6 +2159,18 @@ export async function mockOracle(
         },
         { page_name: "ethics-history", read_access: "Y", edit_access: "N" },
         { page_name: "ethics-attachments", read_access: "Y", edit_access: "Y" },
+        {
+          page_id: 23,
+          page_name: "ethics-responses",
+          read_access: "Y",
+          edit_access: "Y",
+        },
+        {
+          page_id: 24,
+          page_name: "ethics-approvals",
+          read_access: "Y",
+          edit_access: "Y",
+        },
       ],
     };
   if (op === "getSecurityUser_roles" && headers.p_obj_type === "DUE_DILIGENCE")
@@ -1834,6 +2183,22 @@ export async function mockOracle(
         },
         {
           page_name: "duediligence-history",
+          read_access: "Y",
+          edit_access: "N",
+        },
+        {
+          page_name: "duediligence-attachments",
+          read_access: "Y",
+          edit_access: "Y",
+        },
+        {
+          page_id: 22,
+          page_name: "duediligence-responses",
+          read_access: "Y",
+          edit_access: "Y",
+        },
+        {
+          page_name: "duediligence-approvals",
           read_access: "Y",
           edit_access: "N",
         },
@@ -1916,6 +2281,92 @@ export async function mockOracle(
       ],
     };
   }
+  if (op === "getCreditAllocation")
+    return {
+      items: [
+        {
+          credit_alloc_id: 31,
+          full_name: "Example PI",
+          proposal_number: "P_1000",
+          project_role_name: "PI",
+          org_unit_name: "Example Department",
+          prj_effort: 0.5,
+          credit_pct: 0.5,
+        },
+        {
+          credit_alloc_id: 32,
+          full_name: "Example Researcher",
+          proposal_number: "P_1000",
+          project_role_name: "Co-I",
+          org_unit_name: "Example Department",
+          prj_effort: 0.2,
+          credit_pct: 0.5,
+        },
+      ],
+    };
+  if (op === "getPre_awardPropinkind")
+    return {
+      INKIND_CONTRIBUTION: [
+        {
+          SPONSOR_PARTY_ID: 301,
+          INKIND_CONTRIBUTOR: "Research Council",
+          INKIND_AMOUNT: 100,
+        },
+      ],
+    };
+  if (op === "getPre_awardInkindCostItems")
+    return {
+      items: [
+        {
+          cost_item_lkp_code: "EQUIP",
+          cost_item_desc: "Equipment access",
+          costing_line_id: 44,
+        },
+      ],
+    };
+  if (op === "getPre_awardResearchPartnerHeader")
+    return {
+      items: [
+        {
+          id: 11,
+          prop_collab_rltn_id: 900,
+          collaborator_name: "Example Partner",
+          total_cost: 50,
+        },
+      ],
+    };
+  if (op === "getPre_awardResearchPartnerLine")
+    return {
+      items: [
+        {
+          id: 21,
+          prop_collab_rltn_id: 900,
+          cost_category_item_lkp_code: "EQUIP",
+          cost_category_item: "Equipment",
+          cost_category_type: "Equipment",
+          cost_category_type_desc: "Equipment",
+          item_description: "Shared scanner",
+          cost: 50,
+          start_date: "2027-04-01",
+          end_date: "2027-04-30",
+        },
+      ],
+    };
+  if (op === "getPre_awardPropinkindcostline")
+    return {
+      items: [
+        {
+          id: 5,
+          proposal_period_version_id: 12113,
+          costing_line_id: 44,
+          sponsor_party_id: 301,
+          inkind_amt: 30,
+          item_description: "Equipment access",
+          type_of_inkind: "SERVICE",
+          description: "Equipment",
+        },
+      ],
+    };
   if (op === "getContractsContract_id") {
     const record = contracts.find(
       (r) => String(r.contract_id) === pathParams?.contract_id,
@@ -2089,6 +2540,7 @@ export async function mockOracle(
           "ethics-detail-ethics-type",
           "ethics-detail-org-unit",
           "ethics-detail-deadline-date",
+          "ethics-detail-ethics-version",
           "setup-project-title",
           "application-type",
           "form-type",
@@ -2191,6 +2643,58 @@ export async function mockOracle(
         org_unit_id: 203,
         reviewer_name: "Mitchell Carole",
       },
+      {
+        setup_flow_id: 940,
+        application_number: "ETH_810",
+        setup_description: "Ethics setup in progress",
+        access_type: "EA_ACCESS",
+        status_lkp_code: "WIP",
+        status: "In Progress",
+        response_status: "Draft",
+        response_status_lkp_code: "DRFT",
+        risk_code: "NONE",
+        risk_desc: "No Risk",
+        created_by: "Alex Morgan",
+        last_updated_by: "Alex Morgan",
+        person_id: 101,
+        creation_date: "2026-10-20T00:00:00Z",
+        last_update_date: "2026-10-21T00:00:00Z",
+        deadline_date: "2026-12-20T00:00:00Z",
+        expiry_date: "2027-10-20T00:00:00Z",
+        ethics_type: "Individual",
+        ethics_type_code: "INDIVIDUAL",
+        ethics_form_type: "Standard Ethics Form",
+        ethics_form_type_code: "STANDARD",
+        org_unit_name: "Faculty of Science",
+        org_unit_id: 203,
+        reviewer_name: "Mitchell Carole",
+      },
+      {
+        setup_flow_id: 942,
+        application_number: "ETH_811",
+        setup_description: "Completed ethics application",
+        access_type: "EA_ACCESS",
+        status_lkp_code: "COMPLETED",
+        status: "Completed",
+        response_status: "Completed",
+        response_status_lkp_code: "COMPLETED",
+        risk_code: "NONE",
+        risk_desc: "No Risk",
+        created_by: "Alex Morgan",
+        last_updated_by: "Alex Morgan",
+        person_id: 101,
+        creation_date: "2026-10-20T00:00:00Z",
+        last_update_date: "2026-10-21T00:00:00Z",
+        deadline_date: "2026-12-20T00:00:00Z",
+        expiry_date: "2027-10-20T00:00:00Z",
+        ethics_type: "Individual",
+        ethics_type_code: "INDIVIDUAL",
+        ethics_form_type: "Standard Ethics Form",
+        ethics_form_type_code: "STANDARD",
+        org_unit_name: "Faculty of Science",
+        org_unit_id: 203,
+        reviewer_name: "Mitchell Carole",
+      },
     ];
     const where = query?.get("p_where_clause"),
       offset = Number(query?.get("p_offset") || 0),
@@ -2207,10 +2711,24 @@ export async function mockOracle(
         ethics_form_type: "Standard Due Diligence Form",
         ethics_form_type_code: "STANDARD",
       },
+      {
+        ...ethicsRows[0],
+        setup_flow_id: 950,
+        application_number: "DD_809",
+        setup_description: "Completed due diligence application",
+        access_type: "DDA_ACCESS",
+        status_lkp_code: "COMPLETED",
+        status: "Completed",
+        has_rework: "N",
+        ethics_type: "Standard",
+        ethics_type_code: "STANDARD",
+        ethics_form_type: "Standard Due Diligence Form",
+        ethics_form_type_code: "STANDARD",
+      },
     ];
     const isDueDiligence = headers.object_type === "DUE_DILIGENCE";
     const source =
-      isDueDiligence && headers.access_type !== "DDA_ACCESS"
+      isDueDiligence && headers.access_type === "APPROVER_ACCESS"
         ? []
         : isDueDiligence
           ? where?.includes('"setup_flow_id"=951')
@@ -2225,6 +2743,7 @@ export async function mockOracle(
       hasMore: offset + limit < rows.length,
     };
   }
+  if (op === "getProposalGetApplicationList") return { items: [] };
   if (op === "getDynamicFormsApplicationSetup") {
     if (query?.get("setup_flow_id") === "951")
       return {
@@ -2247,7 +2766,31 @@ export async function mockOracle(
             p_id: 101,
             org_unit_name: "Faculty of Science",
             resp_status: "Draft",
+            resp_status_code: "DRFT",
             answered: "N",
+          },
+        ],
+        reference_objects: [],
+      };
+    if (query?.get("setup_flow_id") === "950")
+      return {
+        ...createdDueDiligence,
+        setup_flow_id: 950,
+        application_number: "DD_809",
+        setup_description: "Completed due diligence application",
+        created_by: 101,
+        status_lkp_code: "COMPLETED",
+        status: "Completed",
+        has_rework: "N",
+        sections: [{ setup_id: 3002, section_id: 502 }],
+        stakeholders: [
+          {
+            id: 1951,
+            p_id: 101,
+            org_unit_name: "Faculty of Science",
+            resp_status: "Draft",
+            resp_status_code: "DRFT",
+            answered: "Y",
           },
         ],
         reference_objects: [],
@@ -2256,9 +2799,67 @@ export async function mockOracle(
       return {
         ...createdEthics,
         sections: [],
-        stakeholders: [],
+        stakeholders: [
+          {
+            id: 1942,
+            p_id: 101,
+            org_unit_id: 202,
+            org_unit_name: "Example Research University",
+            resp_status: "Draft",
+            resp_status_code: "DRFT",
+            answered: "N",
+          },
+        ],
         reference_objects: [],
       };
+    if (
+      query?.get("setup_flow_id") === "940" ||
+      query?.get("setup_flow_id") === "942"
+    ) {
+      const complete = query.get("setup_flow_id") === "942";
+      return {
+        setup_flow_id: complete ? 942 : 940,
+        form_id: 83,
+        created_by: 101,
+        application_number: complete ? "ETH_811" : "ETH_810",
+        setup_description: complete
+          ? "Completed ethics application"
+          : "Ethics setup in progress",
+        status: complete ? "Completed" : "In Progress",
+        status_lkp_code: complete ? "COMPLETED" : "WIP",
+        org_unit_id: 203,
+        org_unit_name: "Faculty of Science",
+        ethics_type: "Individual",
+        ethics_type_lkp_code: "INDIVIDUAL",
+        ethics_form_type: "Standard Ethics Form",
+        risk_desc: "No Risk",
+        deadline_date: "2026-12-20T00:00:00Z",
+        expiry_date: "2027-10-20T00:00:00Z",
+        sections: [{ setup_id: 501, section_id: 501 }],
+        reviewer: [{ id: 102, org_unit_id: 203 }],
+        stakeholders: [
+          {
+            id: 1940,
+            p_id: 101,
+            org_unit_id: 202,
+            org_unit_name: "Example Research University",
+            resp_status: complete ? "Completed" : "Draft",
+            resp_status_code: complete ? "COMPLETED" : "DRFT",
+            answered: "Y",
+          },
+        ],
+        reference_objects: complete
+          ? [
+              {
+                obj_ref_id: 6718,
+                obj_ref_type: "PROPOSAL",
+                obj_reference_number: "P_6718",
+                reln_id: 77,
+              },
+            ]
+          : [],
+      };
+    }
     if (query?.get("setup_flow_id") !== "939")
       throw new Error("Fixture ethics application not found.");
     return {
@@ -2272,21 +2873,38 @@ export async function mockOracle(
       org_unit_id: 203,
       org_unit_name: "Faculty of Science",
       ethics_type: "Individual",
+      ethics_type_lkp_code: "INDIVIDUAL",
       ethics_form_type: "Standard Ethics Form",
       risk_code: "NONE",
       risk_desc: "No Risk",
       deadline_date: "2026-12-20T00:00:00Z",
       expiry_date: "2027-10-20T00:00:00Z",
       sections: [],
+      reviewer: [{ id: 102 }],
       stakeholders: [
         {
           id: 1940,
+          p_id: 101,
+          resp_status: "Draft",
+          resp_status_code: "DRFT",
+          answered: "N",
+        },
+        {
+          id: 1941,
+          p_id: 102,
           resp_status: "Draft",
           resp_status_code: "DRFT",
           answered: "N",
         },
       ],
-      reference_objects: [],
+      reference_objects: [
+        {
+          obj_ref_id: 1000,
+          obj_ref_type: "PROPOSAL",
+          obj_reference_number: "PRO_1000",
+          reln_id: 31,
+        },
+      ],
     };
   }
   if (op === "getDynamicFormsGetDeletedApplicationList")
@@ -2320,10 +2938,22 @@ export async function mockOracle(
       status: "Draft",
     };
   if (op === "postDynamicFormsApplicationSetup") {
-    const payload = body as { object_type?: string } | undefined;
+    const payload = body as
+      | { object_type?: string; action_type?: string; setup_flow_id?: number }
+      | undefined;
+    if (payload?.action_type === "LINK")
+      return { setup_flow_id: payload.setup_flow_id };
     return payload?.object_type === "DUE_DILIGENCE"
-      ? createdDueDiligence
-      : createdEthics;
+      ? {
+          ...createdDueDiligence,
+          setup_flow_id:
+            (payload as { setup_flow_id?: number }).setup_flow_id ?? 951,
+        }
+      : {
+          ...createdEthics,
+          setup_flow_id: payload?.setup_flow_id ?? 941,
+          stakeholders: [{ id: 1942, p_id: 101 }],
+        };
   }
   if (
     op === "getPre_awardGetProposalsList" ||
@@ -2542,20 +3172,32 @@ export async function mockOracle(
         { r: "RESPONSES", d: "Responses", default_value: false },
       ],
     };
+  if (
+    op === "getProposalCopyApplicationObjList" &&
+    headers.obj_type === "ETHICS"
+  )
+    return {
+      items: [
+        { r: "SETUP", d: "Setup", default_value: true },
+        { r: "RESPONSES", d: "Responses", default_value: false },
+      ],
+    };
   if (op === "postDynamicFormsCopyApplication") {
     const payload = body as {
       object_type?: string;
       objects?: { object_name: string; object_val: boolean }[];
     };
     if (
-      payload?.object_type !== "DUE_DILIGENCE" ||
+      !["DUE_DILIGENCE", "ETHICS"].includes(payload?.object_type ?? "") ||
       !Array.isArray(payload.objects)
     )
-      throw new Error("Invalid Due Diligence clone fixture payload.");
+      throw new Error("Invalid dynamic form clone fixture payload.");
     return { response_msg: "Due Diligence Cloned Successfully!" };
   }
   if (op === "deleteDynamicFormsApplicationSetup")
     return { response: "Due Diligence Deleted Successfully!" };
+  if (op === "deleteDynamicFormsReferenceObject")
+    return { response: "SUCCESS" };
   if (op === "getSharedObjectLinked2")
     return {
       ObjectLinks:

@@ -46,7 +46,11 @@ export interface DynamicFormHandle {
    * Saves: pending file deletes → uploads → answers, stopping at the first failure. `objectId` / `objectNumber`
    * override the props for a record created just before the save (EOI Create). Resolves true on success.
    */
-  save(objectId?: string, objectNumber?: string): Promise<boolean>;
+  save(
+    objectId?: string,
+    objectNumber?: string,
+    parentId?: string,
+  ): Promise<boolean>;
   /** Re-reads forms and answers from the server, dropping local edits. */
   reload(): Promise<void>;
   /** Whether the would-be payload differs from the loaded answers (unsaved-changes guard). */
@@ -66,14 +70,22 @@ export interface DynamicFormProps {
   objectId?: string;
   /** The saved object's number (e.g. AOI_513), used for the file folder (the server reads it again; never trusted). */
   objectNumber?: string;
+  /** Tagged Ethics or Due Diligence form type, resolved against configured choices on creation. */
+  formType?: string;
+  /** Historical Ethics response version. Read-only when supplied. */
+  version?: number;
   /** Editable when true; read-only otherwise (locked, finalized or not in edit mode). */
   editable: boolean;
   /** Embedded in a host page (the award header): no sections renders nothing, as the legacy fragment does. */
   hideEmpty?: boolean;
+  /** Proposal Detail renders GRID sections across the full form row in VBCS. */
+  fullWidthGrid?: boolean;
   /** Called whenever the dirty state changes, for the host's unsaved-changes guard. */
   onDirtyChange?: (dirty: boolean) => void;
   /** Called when the form becomes ready or stops being ready, so the host can hold its save until then. */
   onReadyChange?: (ready: boolean) => void;
+  /** Whether the loaded definition contains a section the host can submit. */
+  onContentChange?: (hasContent: boolean) => void;
   ref?: React.Ref<DynamicFormHandle>;
 }
 /** What was loaded, for which target (`key`); another key means the current target is still loading. */
@@ -90,9 +102,14 @@ const INVALID = [
   '[role="radiogroup"][aria-invalid="true"] input',
   '[role="group"][aria-invalid="true"] input',
 ].join(",");
-const withRecord = (key: string, recordId: string): FormTargetQuery => ({
+const withRecord = (
+  key: string,
+  recordId: string,
+  parentId?: string,
+): FormTargetQuery => ({
   ...(JSON.parse(key) as FormTargetQuery),
   objectId: recordId,
+  ...(parentId ? { parentId } : {}),
 });
 const failure = (e: unknown) =>
   e instanceof RequestFailed
@@ -126,10 +143,14 @@ export function DynamicForm({
   slot,
   parentId,
   objectId,
+  formType,
+  version,
   editable,
   hideEmpty,
+  fullWidthGrid = false,
   onDirtyChange,
   onReadyChange,
+  onContentChange,
   ref,
 }: DynamicFormProps) {
   const toast = useToast(),
@@ -139,18 +160,22 @@ export function DynamicForm({
     [state, setLoaded] = useState<Loaded>({ key: "", status: "loading" }),
     // The record saved by this form before the host's props catch up (EOI Create), so reloads read it.
     [savedId, setSavedId] = useState<string | undefined>(undefined),
+    [savedParentId, setSavedParentId] = useState<string | undefined>(undefined),
     request = useRef<AbortController | null>(null),
     editableRef = useRef(editable),
     dirtyRef = useRef(false),
     onDirty = useRef(onDirtyChange),
-    onReady = useRef(onReadyChange);
+    onReady = useRef(onReadyChange),
+    onContent = useRef(onContentChange);
   const id = objectId ?? savedId;
   // The target's identity as a string, so effects and callbacks follow its values, not a new object per render.
   const targetKey = JSON.stringify({
     objectType,
     slot,
-    parentId,
+    parentId: parentId ?? savedParentId,
     objectId: id,
+    ...(formType ? { formType } : {}),
+    ...(version ? { version } : {}),
   });
   const loaded: Loaded =
     state.key === targetKey ? state : { key: targetKey, status: "loading" };
@@ -195,9 +220,14 @@ export function DynamicForm({
   useEffect(() => {
     onDirty.current = onDirtyChange;
     onReady.current = onReadyChange;
-  }, [onDirtyChange, onReadyChange]);
+    onContent.current = onContentChange;
+  }, [onDirtyChange, onReadyChange, onContentChange]);
   const ready = loaded.status === "ready";
   useEffect(() => onReady.current?.(ready), [ready]);
+  const hasContent =
+    loaded.status === "ready" &&
+    loaded.model.forms.some((form) => form.sections.length > 0);
+  useEffect(() => onContent.current?.(hasContent), [hasContent]);
   const dirty = model?.hasChanges() ?? false;
   useEffect(() => {
     if (dirtyRef.current === dirty) return;
@@ -244,7 +274,11 @@ export function DynamicForm({
     [loaded.status, model, texts, toast],
   );
   const save = useCallback(
-    async (overrideId?: string): Promise<boolean> => {
+    async (
+      overrideId?: string,
+      _objectNumber?: string,
+      overrideParentId?: string,
+    ): Promise<boolean> => {
       if (loaded.status === "failed") {
         toast.show(
           "error",
@@ -261,7 +295,7 @@ export function DynamicForm({
         toast.show("error", "Save the application first.");
         return false;
       }
-      const t = withRecord(targetKey, recordId);
+      const t = withRecord(targetKey, recordId, overrideParentId);
       const done = await run(async () => {
         try {
           // One at a time; a failure stops the save (deleteOrder keeps answers off deleted files).
@@ -288,7 +322,10 @@ export function DynamicForm({
         }
         // A new record id changes the target, and its effect reloads; otherwise reload here.
         if (JSON.stringify(t) === targetKey) await reload(targetKey);
-        else setSavedId(recordId);
+        else {
+          if (overrideParentId) setSavedParentId(overrideParentId);
+          setSavedId(recordId);
+        }
         return true;
       }, "save");
       return done ?? false;
@@ -299,7 +336,11 @@ export function DynamicForm({
     ref,
     () => ({
       check,
-      save: (overrideId?: string) => save(overrideId),
+      save: (
+        overrideId?: string,
+        objectNumber?: string,
+        overrideParentId?: string,
+      ) => save(overrideId, objectNumber, overrideParentId),
       reload: () => reload(targetKey),
       hasChanges: () => model?.hasChanges() ?? false,
     }),
@@ -308,7 +349,7 @@ export function DynamicForm({
   if (loaded.status === "loading")
     return <Skeleton kind="lines" count={6} label="Loading form" />;
   const data = loaded.status === "ready" ? loaded.data : null;
-  if (!model || !data || !model.forms.some((f) => f.sections.length > 0))
+  if (!model || !data || !hasContent)
     // The backend can send a form with no sections for a record (seen on dev for AOI_476).
     return hideEmpty && loaded.status === "ready" ? null : (
       <p id={`${prefix}-empty`} className={styles.empty}>
@@ -380,7 +421,12 @@ export function DynamicForm({
                 key={`${form.formId}/${section.sectionId}`}
                 id={sectionDomId}
                 className={`${styles.section} enter-fade`}
-                style={{ flexBasis: sectionWidth(section.colspan) }}
+                style={{
+                  flexBasis:
+                    fullWidthGrid && section.sectionType === "GRID"
+                      ? "100%"
+                      : sectionWidth(section.colspan),
+                }}
                 aria-labelledby={`${sectionDomId}-title`}
               >
                 <header className={styles.sectionHead}>

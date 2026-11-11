@@ -50,6 +50,18 @@ const tabs: ProposalTab[] = [
     icon: "proposal-credit",
   },
   {
+    segment: "in-kind-contribution",
+    page: "proposals-inkind-contribution",
+    label: "In-kind Contribution",
+    icon: "proposal-budget",
+  },
+  {
+    segment: "budget-research-partner",
+    page: "proposals-budget-research-partner",
+    label: "Proposal Research Partner Costs",
+    icon: "proposal-budget",
+  },
+  {
     segment: "fec-summary",
     page: "proposals-fec-summary",
     label: "FEC Summary",

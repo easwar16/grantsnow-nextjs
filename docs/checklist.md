@@ -110,44 +110,53 @@ then what waits on the backend, then Claims again.
 
 ## Proposals (Easwar's module)
 
-| Item                                                          | Status | Evidence / note                                                   |
-| ------------------------------------------------------------- | ------ | ----------------------------------------------------------------- |
-| Listing (cards, statuses, filters, scroll paging)             | ✅     | Fixture browser journey; native date inputs remain (self-check)   |
-| Listing: Create / Copy (8563 cascade) / Recycle / Share       | 🟡     | Easwar 2026-11-02, fixtures; Advanced Query too; no live write    |
-| Record shell on `RecordFrame`                                 | 🟡     | Shared tab host used; full module parity still pending            |
-| Summary view and edit (sponsors, PI, partners, deadlines)     | 🟡     | Easwar 2026-10-27                                                 |
-| Budget (versions, staff), FEC summary, quick cost             | 🟡     | Staff/nonstaff fixture save journey; 9305 expansion not carried   |
-| Pricing (9382 combined per partner, 9410 fixed layout)        | 🟡     | 9305 `PROPOSAL_PRICING_EXPAND_LEVEL`, 9382 follow-ups not carried |
-| Allocation for credit, contracts (where-clause fixed), linked | 🟡     |                                                                   |
-| Print (`report_code` = page name, fixed)                      | ✅     | 2026-10-30                                                        |
-| Approvals, attachments, history, delegation (shared hosts)    | 🟡     | Host adapters still flat in the server folder                     |
-| Ethics / Due Diligence tabs                                   | 🟡     | Modules started 2026-11-03 (listing, draft, overview); see below  |
+| Item                                                          | Status | Evidence / note                                                                                                                                                                                                                             |
+| ------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Listing (cards, statuses, filters, scroll paging)             | ✅     | Fixture browser journey; native date inputs remain (self-check)                                                                                                                                                                             |
+| Listing: Create / Copy (8563 cascade) / Recycle / Share       | 🟡     | Easwar 2026-11-02, fixtures; Advanced Query too; no live write                                                                                                                                                                              |
+| Record shell on `RecordFrame`                                 | 🟡     | Shared tab host used; full module parity still pending                                                                                                                                                                                      |
+| Summary view and edit (sponsors, PI, partners, deadlines)     | 🟡     | Easwar 2026-10-27                                                                                                                                                                                                                           |
+| Budget (versions, staff), FEC summary, quick cost             | 🟡     | Staff/nonstaff fixture save journey; 9305 expansion not carried                                                                                                                                                                             |
+| Generated Staff/Student/Pool Tech line edit and save          | 🟡     | 2026-11-10: scoped header/version/category, calculation and explicit save; four unit cases and fixture browser failure/retry. Salary/indirect fields and live write remain.                                                                 |
+| Proposal Dynamic Forms 1–5 guarded Submit                     | 🟡     | 2026-11-10 P_6455 Detail and empty Commentary compared from live screenshots. Detail checkbox choices now stack vertically; GRID spans the VBCS full row, Submit is centered and desktop toolbar shares List's row. Empty Commentary hides both placeholder and Submit, uses read-only budget-version text and page-specific Finalize visibility. Fixture browser checked populated POST and empty display. Post-correction live comparison, other variants, files and live write remain. |
+| Pricing (9382 combined per partner, 9410 fixed layout)        | 🟡     | 2026-11-10 live P_6455 split/combined and EUR compared; Proposal Number column, currency control, tab underline, collapsible groups and partner-free Combined edits implemented. Next DEV zero-value Combined Staff Save and fresh read passed. Global Save, institution editing and combined research-partner grouping still lack live acceptance. |
+| Allocation for credit, contracts (where-clause fixed), linked | 🟡     | 2026-11-10 Credit Allocation row Edit/Save checks active version, rows, role, lock and 100% total. P_6455 screenshot exposed a detached editor; it now edits inline in the shared table, with sort controls, pinned cells, failed-save retry and Escape cancel. Focused fixture browser passed. Post-change live view and persisted Oracle write/read remain. |
+| In-kind Contribution                                          | 🟡     | 2026-11-10 route, sponsor total and existing line Edit/Save/Delete use scoped reads and exact ORDS envelopes; three unit cases and fixture browser failure/retry pass. Add needs the missing cost-item line ID from a live source response. |
+| Print (`report_code` = page name, fixed)                      | ✅     | 2026-10-30                                                                                                                                                                                                                                  |
+| Approvals, attachments, history, delegation (shared hosts)    | 🟡     | Host adapters still flat in the server folder                                                                                                                                                                                               |
+| Ethics / Due Diligence tabs                                   | 🟡     | Modules started 2026-11-03 (listing, draft, overview); see below                                                                                                                                                                            |
 
 ## Awards
 
-| Item                                                           | Status | Evidence / note                                                       |
-| -------------------------------------------------------------- | ------ | --------------------------------------------------------------------- |
-| Listing (status tabs, drawer filters, cards/list)              | ✅     | Live 2026-10-26                                                       |
-| Listing actions: Link, Generate Award                          | ✅     | Live 2026-10-30                                                       |
-| Header (panel, dynamic form, Save Header)                      | ✅     | Live 1176; Save Header 2026-11-02                                     |
-| Header: Created by = `created_by` (9412)                       | ✅     | Live 2026-11-03: award 1190 (PI Titiksh) shows Brock Philips, as 621  |
-| Header dates and back-to-proposal after refresh (9326)         | ✅     | Rebuild reads periods and `proposal_id` on every load                 |
-| Budget periods, Projects (add/edit), Project Costs             | ✅     | Live 1176                                                             |
-| Project Costs tree start depth (9305)                          | ⬜     | Next up 3                                                             |
-| Credit allocation, Installments, Milestones, Report            | ✅     | Live 1176                                                             |
-| Dynamic forms 1–5, Attachments, Approvals, History, Delegation | ✅     | Shared hosts                                                          |
-| Due Diligence tab (list), Create Governance                    | 🟡     | Opens the DD module; its listing and overview are built, fixture only |
-| Send to ERP                                                    | ⛔     | Skipped by the owner                                                  |
+| Item                                                           | Status | Evidence / note                                                                                      |
+| -------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------- |
+| Listing (status tabs, drawer filters, cards/list)              | ✅     | Live 2026-10-26                                                                                      |
+| Listing actions: Link, Generate Award                          | ✅     | Live 2026-10-30                                                                                      |
+| Header (panel, dynamic form, Save Header)                      | ✅     | Live 1176; Save Header 2026-11-02                                                                    |
+| Header: Created by = `created_by` (9412)                       | ✅     | Live 2026-11-03: award 1190 (PI Titiksh) shows Brock Philips, as 621                                 |
+| Header dates and back-to-proposal after refresh (9326)         | ✅     | Rebuild reads periods and `proposal_id` on every load                                                |
+| Budget periods, Projects (add/edit), Project Costs             | ✅     | Live 1176                                                                                            |
+| Project Costs tree start depth (9305)                          | ⬜     | Next up 3                                                                                            |
+| Credit allocation, Installments, Milestones, Report            | ✅     | Live 1176                                                                                            |
+| Dynamic forms 1–5, Attachments, Approvals, History, Delegation | ✅     | Shared hosts                                                                                         |
+| Due Diligence tab (list), Create Governance                    | 🟢     | Parent Proposal/Award links and DD create actions built; fixture only, Award link journey still open |
+| Send to ERP                                                    | ⛔     | Skipped by the owner                                                                                 |
 
 ## Ethics and Due Diligence (Easwar's modules)
 
+Supervisor lookup correction, 2026-11-11 (fixture only): `Not Applicable` sentinel rows lacking Org Unit are excluded from Due Diligence supervisor choices and both modules’ setup edit validation. Four previously failing fixture Chromium journeys passed after the fix; live Oracle acceptance remains open. See `docs/changes/2026-11-11-easwar-supervisor-sentinel.md`.
+
 | Item                                                  | Status | Evidence / note                                                            |
 | ----------------------------------------------------- | ------ | -------------------------------------------------------------------------- |
-| Listing (access views, filters, paging, recycle)      | 🟢     | `118d553`, fixtures; no live read                                          |
-| New (general overview setup draft)                    | 🟡     | No dynamic form yet; no live write                                         |
-| Record overview                                       | 🟡     | On `RecordFrame`, RB labels 2026-11-04; other tabs not built               |
+| Listing (access views, filters, paging, recycle)      | 🟢     | DD clone/delete/linked records added; fixtures only, no live read          |
+| New (general overview setup draft)                    | 🟡     | DD dynamic form, submit and edit built; live write unverified              |
+| Record overview                                       | 🟡     | DD child tabs now route on `RecordFrame`; version preview remains open     |
 | §4 structure, `TabBar`, own DD CSS                    | 🟢     | 2026-11-04 (owner), fixtures                                               |
-| Responses, reviewers, approvals, attachments, history | 🟡     | History and Ethics attachments built; remaining tabs pending, fixture only |
+| Responses, reviewers, approvals, attachments, history | 🟡     | DD child hosts built, fixture only; historical response preview still open |
+
+Due Diligence 2026-11-10 update (fixture only): scoped listing, clone/delete/recycle, configured create/submit/edit, response Edit/Save/Cancel and historical versions, Documents, Approvals, History, comments/audit, Proposal/Award and detail reference links, print and finalize paths are built. Twelve focused Playwright journeys passed, including both parent types, as did 958 unit/integration tests, typecheck, lint and isolated build. Keep the module 🟡: browser-history edit guard and live DEV contract/visual checks remain open. See `docs/changes/2026-11-10-due-diligence-module.md`.
+
+Ethics 2026-11-10 update (fixture only): participant-scoped tabs and deep links, setup create/submit/draft and guarded force edit, configured attributes, admin answer on creation, dynamic Responses with Edit/Cancel and historical read-only preview, Documents, Approvals and automatic submission gate, History, comments/audit, clone/delete, linked records, reference link/unlink, print and finalize paths are implemented. 958 unit/integration tests, typecheck, lint, isolated build and 17 Ethics fixture browser journeys pass. Keep the module 🟡 pending live DEV contract reads and role/record-type visual acceptance. See `docs/changes/2026-11-10-ethics-module.md` and `docs/ethics-source-inventory.md`.
 
 ## Contracts (Easwar's module)
 
@@ -190,8 +199,8 @@ New tickets from the KB catch-ups, and what each means for the rebuild.
 | 9412   | Award "Created by" is `created_by`, not the PI                 | 🟢 2026-11-03 (`awards/record.ts`, `shell.ts`, `creator.ts`)   |
 | 9326   | Award header dates and parent proposal after a refresh         | — already so                                                   |
 | 9305   | Costing trees open to a configured depth (3 global variables)  | ⬜ Awards (next up 3); Proposals Budget/Pricing (Easwar)       |
-| 9382   | Combined Pricing per research partner, read-only with partners | ⬜ Proposals (Easwar)                                          |
-| 9410   | Pricing table fixed layout                                     | ⬜ Proposals (Easwar)                                          |
+| 9382   | Combined Pricing per research partner, read-only with partners | 🟡 Combined parent/subproposal live; research-partner grouping not accepted |
+| 9410   | Pricing table fixed layout                                     | 🟡 P_6741 and P_6455 live table comparisons                   |
 | 8563   | Copy Proposal dialog parent/child cascade                      | ⬜ with Copy Proposal                                          |
 | 9554   | Insights: three grant-category charts take Year/Quarter/Month  | ⬜ check `widgets.ts` sends the filter for all three           |
 | 9555   | "Proposals by Year" → "Submitted vs Awarded…", legend by code  | ⬜ title is RB (`proposals-by-year`); legend SUB/AWARD to do   |

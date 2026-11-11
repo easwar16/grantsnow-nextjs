@@ -4,6 +4,7 @@ import { functions } from "@/lib/functions";
 import type { FormatSettings } from "@/lib/format";
 import type { Resources } from "@/server/platform/configuration/resources";
 import type { proposalContracts } from "@/server/modules/proposals/contracts";
+import { Icon } from "@/components/ui/icon";
 import styles from "./proposal-record.module.css";
 
 /** The proposal's linked Contracts as cards, a page at a time; labels and fields are RB-gated. */
@@ -24,8 +25,14 @@ export function ProposalContracts({
 }) {
   const base = `/proposals/${type}/${id}/contracts`;
   return (
-    <section id={`proposal-${id}-contracts`} className={styles.form}>
-      {result.rows.length === 0 && <p>No data to display.</p>}
+    <section id={`proposal-${id}-contracts`} className={styles.proposalContracts}>
+      {result.canCreate && <Link id={`proposal-${id}-new-contract`}
+        className={`gn-btn gn-btn--primary ${styles.linkedContractCreate}`}
+        href={`/contracts/new?parentType=${encodeURIComponent(type)}&parentId=${encodeURIComponent(id)}`}>
+        <Icon name="inbox-add" size={16} />
+        {serverFunctions.resources.label(rb, result.bundle, "button-labels", "new-contract", "New Contract")}
+      </Link>}
+      {result.rows.length === 0 && <p className={styles.linkedContractEmpty}>{serverFunctions.resources.label(rb, result.bundle, "helper-texts", "proposal-contract-no-data", "No data to display.")}</p>}
       {result.rows.map((row) => (
         <article
           id={`proposal-${id}-contract-${row.contract_id}`}

@@ -127,6 +127,21 @@
     "path": "/dynamicForms/applicationSetup",
     "headers": ["token"]
   },
+  "getDynamicFormsApplSetupVersionList2": {
+    "service": "apps",
+    "path": "/dynamicForms/applSetupVersionList",
+    "headers": ["token", "setup_flow_id"]
+  },
+  "getDynamicFormsApplicationSetupVersion": {
+    "service": "apps",
+    "path": "/dynamicForms/applicationSetupVersion",
+    "headers": ["token", "setup_flow_id", "version"]
+  },
+  "getDynamicFormsDynFormRespVersions": {
+    "service": "apps",
+    "path": "/dynamicForms/dynFormRespVersions",
+    "headers": ["p_token", "p_ref_obj_id", "p_ref_module", "p_version"]
+  },
   "getDynamicFormsGetApplicationApprover": {
     "service": "apps",
     "path": "/dynamicForms/getApplicationApprover",
@@ -160,6 +175,13 @@
     "service": "apps",
     "path": "/dynamicForms/applicationSetup",
     "headers": ["token"],
+    "method": "DELETE",
+    "write": true
+  },
+  "deleteDynamicFormsReferenceObject": {
+    "service": "apps",
+    "path": "/dynamicForms/referenceObject",
+    "headers": ["token", "setup_flow_id", "reln_id", "page_name"],
     "method": "DELETE",
     "write": true
   },
@@ -534,6 +556,73 @@
     "method": "POST",
     "path": "/Proposal/creditAllocation",
     "headers": ["token", "p_prop_period_version_id"],
+    "write": true
+  },
+  "getPre_awardPropinkind": {
+    "service": "apps",
+    "path": "/pre_award/propinkind",
+    "headers": ["token", "proposal_id"]
+  },
+  "getPre_awardInkindCostItems": {
+    "service": "apps",
+    "path": "/pre_award/inkindCostItems",
+    "headers": ["token", "proposal_id"]
+  },
+  "getPre_awardResearchPartnerHeader": {
+    "service": "apps",
+    "path": "/pre_award/researchPartnerHeader",
+    "headers": ["token"]
+  },
+  "getPre_awardResearchPartnerLine": {
+    "service": "apps",
+    "path": "/pre_award/researchPartnerLine",
+    "headers": ["token"]
+  },
+  "postPre_awardResearchPartnerHeader": {
+    "service": "apps",
+    "method": "POST",
+    "path": "/pre_award/researchPartnerHeader",
+    "headers": ["token"],
+    "write": true
+  },
+  "postPre_awardResearchPartnerLine": {
+    "service": "apps",
+    "method": "POST",
+    "path": "/pre_award/researchPartnerLine",
+    "headers": ["token"],
+    "write": true
+  },
+  "deletePre_awardResearchPartnerLine": {
+    "service": "apps",
+    "method": "DELETE",
+    "path": "/pre_award/researchPartnerLine",
+    "headers": ["token"],
+    "write": true
+  },
+  "postPre_awardPropinkind": {
+    "service": "apps",
+    "method": "POST",
+    "path": "/pre_award/propinkind",
+    "headers": ["token", "proposal_id"],
+    "write": true
+  },
+  "getPre_awardPropinkindcostline": {
+    "service": "apps",
+    "path": "/pre_award/propinkindcostline",
+    "headers": ["token", "proposal_id"]
+  },
+  "postPre_awardPropinkindcostline": {
+    "service": "apps",
+    "method": "POST",
+    "path": "/pre_award/propinkindcostline",
+    "headers": ["token", "proposal_id"],
+    "write": true
+  },
+  "deletePre_awardPropinkindcostline": {
+    "service": "apps",
+    "method": "DELETE",
+    "path": "/pre_award/propinkindcostline",
+    "headers": ["token", "id"],
     "write": true
   },
   "getPre_awardGetPersonListAll": {
@@ -1035,6 +1124,18 @@
     "service": "apps",
     "path": "/pre_awards_costing/getPricingDetails/",
     "headers": ["token"]
+  },
+  "getPre_awards_costingGetDefaultPricing": {
+    "service": "apps",
+    "path": "/pre_awards_costing/getDefaultPricing/",
+    "headers": ["token"]
+  },
+  "postPre_awards_costingInsertPricingLines": {
+    "service": "apps",
+    "method": "POST",
+    "path": "/pre_awards_costing/insertPricingLines/",
+    "headers": ["token", "legal_id", "org_id", "funder_id"],
+    "write": true
   },
   "getCreditAllocation": {
     "service": "apps",

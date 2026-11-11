@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 const config: NextConfig = {
+  allowedDevOrigins: ["127.0.0.1"],
   turbopack: { root: process.env.GRANTSNOW_SOURCE_ROOT || process.cwd() },
   // Fixture journeys must not replace the live development server's output.
   distDir:

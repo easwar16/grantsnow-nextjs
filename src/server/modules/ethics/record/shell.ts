@@ -26,6 +26,7 @@ export function ethicsShell(r: EthicsRecord, rows: Resources) {
       }));
   return {
     id: r.id,
+    selectedParticipant: null as string | null,
     access: r.access,
     statusCode: r.statusCode,
     tabs: r.tabs.map((key) => ({
@@ -64,8 +65,23 @@ export function ethicsShell(r: EthicsRecord, rows: Resources) {
     labels: {
       list: t("button-labels", "list", "List"),
       overview: t("page-name", "ethics-general-overview", "General Overview"),
+      participants: t("labels", "participants", "Participants"),
+      responseParticipants: t("labels", "responses-participants", "Participants"),
+      historyParticipants: t("header-labels", "history-participants", "Participants"),
+      supervisor: t("labels", "supervisor", "Supervisor"),
+      references: t("labels", "setup-referenced-by", "Referenced by"),
+      noData: t("helper-texts", "no-data", "No data to display."),
+      responseNoData: t("helper-texts", "responses-no-data", "No responses available."),
+      responseSave: t("button-labels", "responses-save", "Save"),
+      comments: t("button-labels", "comments", "Comments"),
+      audit: serverFunctions.resources.resourceVisible(rows, BUNDLE, "button-labels", "openAuditTrail")
+        ? t("button-labels", "openAuditTrail", "Audit Trail") : null,
+      auditTitle: t("dialog-titles", "audit-trail", "Audit Trail"),
+      close: t("button-labels", "close", "Close"),
       tabs: "Ethics pages",
     },
+    showReferences: shown("setup-referenced-by"),
+    showVersion: shown("ethics-detail-ethics-version"),
   };
 }
 export type EthicsShellModel = ReturnType<typeof ethicsShell>;

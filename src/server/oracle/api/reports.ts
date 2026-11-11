@@ -6,6 +6,14 @@ export const forObject = read<{ id: string }>({
   op: "getReportsGetObjectRef",
   headers: (p) => ({ p_object_id: p.id, p_object_type: "PROPOSAL" }),
 });
+export const forDueDiligence = read<{ id: string }>({
+  op: "getReportsGetObjectRef",
+  headers: (p) => ({ p_object_id: p.id, p_object_type: "DUE_DILIGENCE" }),
+});
+export const forEthics = read<{ id: string }>({
+  op: "getReportsGetObjectRef",
+  headers: (p) => ({ p_object_id: p.id, p_object_type: "ETHICS" }),
+});
 export const share = write<{
   id: string;
   emails: string[];

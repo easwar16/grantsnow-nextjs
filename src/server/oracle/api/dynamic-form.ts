@@ -8,7 +8,7 @@ import { serverConstants } from "@/server/constants";
  * A record's dynamic forms (dynForms) and their answers (dynFormResponse). Bodies come back as read: the form service
  * maps them to its allowlisted display model. Record data, so nothing is held past the request.
  */
-type Slot = { objectId: string; objectType: string; slot: string };
+type Slot = { objectId: string; objectType: string; slot: string; tagType?: string; tagValue?: string };
 /** The definitions for a slot; `p_id` / `p_obj_id` are the record, empty for a new application (as the original). */
 export const forms = read<Slot>({
   op: "getProposalEthical_dynFormsP_ref_module",
@@ -18,6 +18,7 @@ export const forms = read<Slot>({
     p_obj_id: p.objectId,
     p_obj_type: p.objectType,
     p_ref_module: p.slot,
+    ...(p.tagType ? { p_tag_type: p.tagType, p_tag_value: p.tagValue ?? "" } : {}),
   }),
 });
 /** Staff costing uses the new cost header id as p_id, while p_obj_id remains the proposal. */
@@ -31,10 +32,15 @@ export const costForms = read<{ proposalId: string; proposalType: string; header
   }),
 });
 /** The saved answers; this operation takes the session token only as `P_TOKEN`. */
-export const answers = read<{ objectId: string; slot: string }>({
+export const answers = read<{ objectId: string; slot: string; personId?: string }>({
   op: "getProposalEthicaldynFormResponse",
   tokenHeader: "P_TOKEN",
-  headers: (p) => ({ P_REF_OBJ_ID: p.objectId, P_REF_MODULE: p.slot }),
+  headers: (p) => ({ P_REF_OBJ_ID: p.objectId, P_REF_MODULE: p.slot, ...(p.personId ? { P_PERSON_ID: p.personId } : {}) }),
+});
+export const answerVersion = read<{ objectId: string; version: number; slot: "ETHICS" | "DUE_DILIGENCE" }>({
+  op: "getDynamicFormsDynFormRespVersions",
+  tokenHeader: "p_token",
+  headers: (p) => ({ p_ref_obj_id: p.objectId, p_ref_module: p.slot, p_version: p.version }),
 });
 type Save = { formId: number; objectId: string; slot: string; body: unknown };
 const response = write<Save & { sessionToken: string }>({

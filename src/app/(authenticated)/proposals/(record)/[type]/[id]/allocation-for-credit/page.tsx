@@ -66,8 +66,34 @@ export default async function CreditAllocationPage({
   );
   return (
     <CreditAllocation
+      type={type}
       id={id}
       rows={allocation.rows}
+      versionId={allocation.versionId}
+      canEdit={allocation.canEdit}
+      labels={{
+        edit: serverFunctions.resources.label(
+          rb,
+          allocation.bundle,
+          "button-labels",
+          "edit",
+          "Edit",
+        ),
+        save: serverFunctions.resources.label(
+          rb,
+          allocation.bundle,
+          "button-labels",
+          "save",
+          "Save",
+        ),
+        cancel: serverFunctions.resources.label(
+          rb,
+          allocation.bundle,
+          "button-labels",
+          "cancel",
+          "Cancel",
+        ),
+      }}
       columns={visible.map(([key, fallback, field]) => ({
         key,
         field,

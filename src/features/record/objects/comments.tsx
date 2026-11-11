@@ -32,6 +32,7 @@ export function ObjectComments(props: ObjectPanelProps) {
     objectType: props.objectType,
     objectId: props.objectId,
     page: props.page,
+    ...(props.sec ? { sec: props.sec } : {}),
   };
   const { data, error, retry } = useApi<typeof record, CommentsView>(
     objects.comments,

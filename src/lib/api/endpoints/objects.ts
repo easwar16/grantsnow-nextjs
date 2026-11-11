@@ -49,8 +49,9 @@ export const audit = endpoint<PanelRecord & { event: AuditEvent }, AuditView>(
 export interface ObjectHost {
   host: string;
   record: string;
+  participant?: string;
 }
-const host = (h: ObjectHost) => ({ host: h.host, record: h.record });
+const host = (h: ObjectHost) => ({ host: h.host, record: h.record, ...(h.participant ? { participant: h.participant } : {}) });
 /** The statuses Add Status may set now; read when the dialog opens. */
 export const nextStatuses = endpoint<ObjectHost, { statuses: Choice[] }>(
   (h) => ({ path: "/objects/history", query: host(h) }),

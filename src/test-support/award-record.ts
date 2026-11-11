@@ -11,6 +11,7 @@ const TABS = [
   "projects",
   "attachments",
   "history",
+  "due-diligence",
 ] as const;
 const line = (over: Record<string, unknown>) => ({
   project_id: 31,
@@ -49,6 +50,13 @@ export function awardRecordFixture(
             read_access: "Y",
           }),
         ),
+        {
+          page_id: 73,
+          page_name: "awards-link-due-diligence",
+          component_type: "BUTTON",
+          read_access: "Y",
+          edit_access: "Y",
+        },
       ],
     };
   const index = Number(headers.award_id ?? headers.p_award_id) - 5000;

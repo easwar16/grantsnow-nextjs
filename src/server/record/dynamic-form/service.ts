@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { dynamicForm } from "@/server/oracle/api";
+import { dynamicForm, ethics } from "@/server/oracle/api";
 import { resources } from "@/server/platform/configuration/resources";
 import { oicConnected } from "@/server/oic/connection";
 import { AppError } from "@/lib/errors";
@@ -14,9 +14,14 @@ import { formGlobals } from "./globals";
 import { serverFunctions } from "@/server/functions";
 import { recordIdentity } from "@/features/modules/proposals/record";
 import { proposalBundle } from "@/server/modules/proposals/record";
+import { dueDiligence } from "@/server/oracle/api";
 /** The fragment's translationsModule defaults to its host object's bundle. */
 const bundleOf = (t: FormTarget) =>
-  t.objectType === "AWARD"
+  t.objectType === "ETHICS"
+    ? "ethics"
+    : t.objectType === "DUE_DILIGENCE"
+    ? "due_diligence"
+    : t.objectType === "AWARD"
     ? "award"
     : t.objectType === "CONTRACT"
       ? "contract"
@@ -66,12 +71,13 @@ async function formTexts(t: FormTarget) {
   ) as Record<DynamicFormText, string>;
 }
 /** dynForms for the target; `p_id` / `p_obj_id` are the record (empty for a new application), as the original sends. */
-async function definitions(t: FormTarget, objectId: string) {
+async function definitions(t: FormTarget, objectId: string, formType?: string) {
   return mapForms(
     await dynamicForm.forms({
       objectId,
       objectType: t.objectType,
       slot: t.slot,
+      ...(formType ? { tagType: t.objectType === "ETHICS" ? "ETHICS_TYPE" : "DUE_DILIGENCE_TYPE", tagValue: formType } : {}),
     }),
   );
 }
@@ -82,24 +88,49 @@ export async function loadForm(t: FormTarget): Promise<DynamicFormData> {
   // Settings and labels are not the record's; they load while access is checked.
   const settings = serverFunctions.async.early(formGlobals()),
     labels = serverFunctions.async.early(formTexts(t));
-  await authorizeForm(t, "read");
-  const objectId = t.objectId ?? "";
+  const access = await authorizeForm(t, "read");
+  let historicalSections: Set<number> | undefined;
+  if ((t.objectType === "ETHICS" || t.objectType === "DUE_DILIGENCE") && t.version !== undefined) {
+    const [versionsRaw, setupRaw] = await Promise.all([
+      t.objectType === "ETHICS" ? ethics.versions({ id: t.parentId! }) : dueDiligence.versions({ id: t.parentId! }),
+      t.objectType === "ETHICS" ? ethics.setupVersion({ id: t.parentId!, version: t.version })
+        : dueDiligence.setupVersion({ id: t.parentId!, version: t.version }),
+    ]);
+    const versions = z.object({ items: z.array(z.object({ version: z.coerce.number().int().positive() })) }).parse(versionsRaw);
+    if (!versions.items.some((row) => row.version === t.version))
+      throw new AppError("FORBIDDEN", "Response version is unavailable.", 403);
+    const setup = z.array(z.object({
+      setup_flow_id: z.coerce.number().int().positive(),
+      sections: z.array(z.object({ section_id: z.coerce.number().int().positive() })),
+    })).parse(setupRaw).find((row) => String(row.setup_flow_id) === t.parentId);
+    if (!setup) throw new AppError("CONTRACT", "Oracle returned another response version.");
+    historicalSections = new Set(setup.sections.map((row) => row.section_id));
+  }
+  const respondent = t.objectType === "DUE_DILIGENCE" || t.objectType === "ETHICS";
+  const objectId = respondent ? (t.parentId ?? "") : (t.objectId ?? "");
   const [forms, rawAnswers, globals, texts] = await Promise.all([
-    definitions(t, objectId),
+    definitions(t, objectId, respondent && "formType" in access ? access.formType : undefined),
     t.objectId === undefined
       ? Promise.resolve([])
-      : dynamicForm.answers({ objectId: t.objectId, slot: t.slot }),
+      : respondent && t.version !== undefined
+        ? dynamicForm.answerVersion({ objectId: t.objectId, version: t.version,
+            slot: t.objectType as "ETHICS" | "DUE_DILIGENCE" })
+        : dynamicForm.answers({ objectId: t.objectId, slot: t.slot,
+          ...(respondent && "personId" in access ? { personId: access.personId } : {}) }),
     settings,
     labels,
   ]);
+  const shownForms = historicalSections
+    ? forms.map((form) => ({ ...form, sections: form.sections.filter((section) => historicalSections.has(section.sectionId)) }))
+    : forms;
   return {
-    forms,
-    answers: mapAnswers(rawAnswers, forms),
+    forms: shownForms,
+    answers: mapAnswers(rawAnswers, shownForms),
     settings: {
       decimals: globals.decimals,
       maxMb: globals.maxMb,
       accept: globals.accept,
-      storage: oicConnected() && globals.instance !== null,
+      storage: t.version === undefined && oicConnected() && globals.instance !== null,
     },
     texts,
   };
@@ -117,11 +148,14 @@ export async function saveForm(raw: unknown) {
   if (!parsed.success)
     throw new AppError("BAD_REQUEST", "Invalid form request.", 400);
   const t = parsed.data.target;
-  const { record } = await authorizeForm(t, "edit");
+  const access = await authorizeForm(t, "edit");
+  const { record } = access;
   if (record === null)
     throw new AppError("BAD_REQUEST", "Save the application first.", 400);
-  let forms = await definitions(t, record.id);
-  if (!hasSections(forms)) forms = await definitions(t, "");
+  const respondent = t.objectType === "DUE_DILIGENCE" || t.objectType === "ETHICS";
+  let forms = await definitions(t, respondent ? t.parentId! : record.id,
+    "formType" in access ? access.formType : undefined);
+  if (!hasSections(forms) && !respondent) forms = await definitions(t, "");
   if (forms.length === 0)
     throw new AppError("BAD_REQUEST", "There is no form to save.", 400);
   const answers = checkAnswers(forms, parsed.data.answers);

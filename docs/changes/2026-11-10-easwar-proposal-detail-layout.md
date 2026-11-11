@@ -1,0 +1,15 @@
+# Proposal Detail dynamic form layout
+
+- **Date / scope:** 2026-11-10, active Next.js checkout. VBCS `origin/development` and the signed-in P_6455 DEV preview were read-only references.
+- **Comparison:** The VBCS and Next.js Proposal Detail tabs show the same five configured sections on P_6455: Test Form, Testing, AT test, TEST GRID and Check box. Opening Test Form in each showed the same Test 1 checkboxes and three required radio groups. The Next.js TEST GRID region measured 652.5px inside an 870px form (its configured 75% flex basis); the VBCS region occupied approximately the full 875px content width. The VBCS Submit button is centered while Next.js placed it at the left edge. The VBCS List and toolbar actions share a row; Next.js wrapped them onto two rows despite ample horizontal space.
+- **Changed:** Proposal Dynamic Forms now request full-width GRID sections from the shared form engine without changing other module hosts. The Proposal host centers its Submit control. The shared record toolbar stays on one row at desktop widths. VBCS's `dynamic-form-fragment.html` confirms a full row wrapper and a centered Submit container. The shared engine continues to load, validate, save and re-read configured fields through its existing path.
+- **Verification:** The existing fixture browser journey checks Proposal Dynamic Form 1 Submit and its scoped POST. It now also checks centering. Typecheck, isolated production build, and five focused fixture Chromium journeys (one Proposal Detail, four Funder Rules) passed; lint had one existing TanStack Virtual warning. No live Oracle form mutation was made. The comparison Chrome debugger detached before a post-change live screenshot; the width observation and source screenshot preceded that detach.
+- **Open:** This change establishes the visible P_6455 form layout and existing fixture Submit path; it does not establish every dynamic field, GRID row edit, upload or the five Proposal form variants under live DEV roles.
+
+## Checkbox alignment follow-up
+
+- **Evidence:** The owner's signed-in P_6455 comparison shows VBCS `Test 1` choices Y, N, X and Z stacked vertically, while Next.js renders those four choices on one horizontal row. The radio choices below remain horizontal in VBCS.
+- **Changed:** The Proposal Detail host now stacks checkbox choice groups with left-aligned options and vertical spacing. Radio groups and other dynamic-form hosts retain their current layout.
+- **Replaces / overrides:** The horizontal checkbox rendering inherited from the shared `.choices` rule for this host only. No shared form behavior or data path changes.
+- **Rules touched:** Visual parity; the screenshot is the live-preview evidence for this layout correction.
+- **Checks:** Typecheck passed; lint passed with one existing TanStack Virtual warning; 109 unit/integration files and 983 tests passed; isolated production build passed; the focused fixture Chromium Proposal Detail journey passed with geometry assertions for vertical checkboxes and horizontal radios. No live Oracle write or post-change live-preview comparison was performed.

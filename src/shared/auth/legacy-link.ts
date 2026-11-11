@@ -77,8 +77,18 @@ export function legacyDeepLink(search: string): string | null {
   if (flow === "ethics") {
     const id = params.get("setup_flow_id") ?? "";
     const access = params.get("access_type") ?? "";
+    const person = params.get("object-id") ?? "";
+    const comment = params.get("comment-id") ?? "";
+    const query = new URLSearchParams();
+    if (["EA_ACCESS", "RESPONDENT_ACCESS", "APPROVER_ACCESS"].includes(access))
+      query.set("access", access);
+    if (recordId.test(person)) {
+      query.set("tab", "ethics-responses");
+      query.set("person", person);
+    }
+    if (recordId.test(comment)) query.set("comment-id", comment);
     return page === "ethics-detail" && recordId.test(id)
-      ? `/ethics/${id}${["EA_ACCESS", "RESPONDENT_ACCESS", "APPROVER_ACCESS"].includes(access) ? `?access=${access}` : ""}`
+      ? `/ethics/${id}${query.size ? `?${query}` : ""}`
       : "/ethics";
   }
   // A page id names the drawer child; otherwise the flow names the module.

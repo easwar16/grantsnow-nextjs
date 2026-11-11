@@ -25,6 +25,7 @@ const roleEnvelope = z.object({
       page_name: z.string(),
       read_access: z.string().nullable(),
       edit_access: z.string().nullish(),
+      page_id: z.coerce.number().int().positive().nullish(),
     }),
   ),
 });
@@ -34,6 +35,7 @@ const setup = z.object({
   setup_description: z.string().nullish(),
   status: z.string().nullish(),
   status_lkp_code: z.string().nullish(),
+  has_rework: z.string().nullish(),
   org_unit_id: z.coerce.number().int().positive(),
   org_unit_name: z.string().nullish(),
   ethics_type: z.string().nullish(),
@@ -52,6 +54,7 @@ const setup = z.object({
       z.object({
         id: z.coerce.number(),
         resp_status: z.string().nullish(),
+        resp_status_code: z.string().nullish(),
         answered: z.string().nullish(),
         p_id: z.coerce.number().int().positive().nullish(),
         org_unit_name: z.string().nullish(),
@@ -157,6 +160,7 @@ export async function dueDiligenceRecord(id: string, requestedAccess?: string) {
     title: data.setup_description ?? "",
     status: data.status ?? "",
     statusCode: data.status_lkp_code ?? "",
+    hasRework: data.has_rework ?? "",
     org: data.org_unit_name ?? "",
     dueDiligenceType: data.ethics_type ?? "",
     formType: data.ethics_form_type ?? "",
@@ -169,6 +173,8 @@ export async function dueDiligenceRecord(id: string, requestedAccess?: string) {
     })),
     respondents: data.stakeholders.map((person) => ({
       id: String(person.id),
+      personId: person.p_id === null || person.p_id === undefined ? "" : String(person.p_id),
+      statusCode: person.resp_status_code ?? "",
       name:
         peopleRows.find((candidate) => candidate.person_id === person.p_id)
           ?.full_name ?? (person.p_id ? String(person.p_id) : ""),
@@ -183,7 +189,7 @@ export async function dueDiligenceRecord(id: string, requestedAccess?: string) {
     rights: Object.fromEntries(
       rights.map((row) => [
         row.page_name,
-        { read: row.read_access === "Y", edit: row.edit_access === "Y" },
+        { read: row.read_access === "Y", edit: row.edit_access === "Y", pageId: row.page_id ?? null },
       ]),
     ),
   };

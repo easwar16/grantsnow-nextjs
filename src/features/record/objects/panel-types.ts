@@ -7,7 +7,7 @@ export interface ObjectPanelProps {
   objectId: string;
   /** The record page the user is on; comments and audits are kept per page. */
   page: string;
-  /** The audit's secondary object id (a fund on a Claims application), when the host scopes the trail. */
+  /** A selected subrecord, such as a Claims fund or Ethics stakeholder. */
   sec?: string;
 }
 /** The panels' route query: the record and the page, never identity or scope. */

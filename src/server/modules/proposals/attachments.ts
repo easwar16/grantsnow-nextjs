@@ -10,7 +10,10 @@ export async function proposalAttachmentHost(
   mode: "read" | "view" | "edit",
 ): Promise<AttachmentHost> {
   const context = await proposalPage(type, id, "proposals-attachments");
-  if (mode === "edit")
+  const pageId = context.pageIds.get("proposals-attachments");
+  const canEdit = context.rights.edit === true && context.summary.statusCode === "DRFT" &&
+    pageId != null && !context.summary.lockedPageIds.includes(pageId);
+  if (mode === "edit" && !canEdit)
     throw new AppError(
       "FORBIDDEN",
       "Proposal attachment editing is unavailable.",
@@ -24,6 +27,6 @@ export async function proposalAttachmentHost(
     bundle: context.bundle,
     token: context.session.token,
     user: context.user,
-    canEdit: false,
+    canEdit,
   };
 }

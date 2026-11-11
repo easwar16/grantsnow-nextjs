@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { DueDiligenceParentActions } from "@/features/modules/due-diligence/parent-actions";
 import { serverFunctions } from "@/server/functions";
 import { functions } from "@/lib/functions";
 import { pageIdentity } from "@/server/identity/auth/page";
@@ -9,6 +11,7 @@ import {
 import { resources } from "@/server/platform/configuration/resources";
 import { displayFormat } from "@/server/platform/configuration/formatting";
 import { State } from "@/components/feedback/state";
+import { Icon } from "@/components/ui/icon";
 import styles from "./proposal-record.module.css";
 
 export async function LinkedApplications({
@@ -45,6 +48,9 @@ export async function LinkedApplications({
   }
   const [rb, format] = await Promise.all([resources(), displayFormat()]);
   const prefix = isEthics ? "ethics" : "dd";
+  const createUrl = new URLSearchParams({
+    parentType: "PROPOSAL", parentId: id, proposalType: type,
+  });
   const fields = [
     ["created-by", "Created by", "createdBy"],
     ["reviewer", "Reviewer", "reviewer"],
@@ -60,8 +66,23 @@ export async function LinkedApplications({
       id={`proposal-${id}-${segment}`}
       className={styles.linkedApplications}
     >
+      {isEthics && applications.canCreate && (
+        <Link id={`proposal-${id}-ethics-create`}
+          className={`gn-btn gn-btn--primary ${styles.linkedEthicsCreate}`}
+          href={`/ethics/new?${createUrl}`}>
+          <Icon name="inbox-add" size={16} />
+          {serverFunctions.resources.label(rb, applications.bundle,
+            "button-labels", "new-ethics-application", "New Ethics")}
+        </Link>
+      )}
+      {!isEthics && <DueDiligenceParentActions
+        parent={{ type: "PROPOSAL", id, proposalType: type }}
+        canCreate={applications.canCreate}
+        canLink={applications.canLink}
+        createLabel={serverFunctions.resources.label(rb, applications.bundle,
+          "button-labels", "new-duediligence-application", "New DueDiligence Application")} />}
       {applications.rows.length === 0 ? (
-        <p>No data to display.</p>
+        <p className={styles.linkedEthicsEmpty}>No data to display.</p>
       ) : (
         applications.rows.map((row) => (
           <article
@@ -70,10 +91,12 @@ export async function LinkedApplications({
             key={row.id}
           >
             <div className={styles.linkedApplicationHeading}>
-              <strong>{row.reference}</strong>
+              {isEthics ? <Link href={`/ethics/${row.id}${row.accessType ? `?access=${row.accessType}` : ""}`}>{row.reference}</Link> : (
+                <Link href={`/due-diligence/${row.id}`}>{row.reference}</Link>
+              )}
               {row.status && <span>{row.status}</span>}
             </div>
-            <h2>{row.title}</h2>
+            <h2>{isEthics ? <Link href={`/ethics/${row.id}${row.accessType ? `?access=${row.accessType}` : ""}`}>{row.title}</Link> : row.title}</h2>
             <dl>
               {fields.map(([key, fallback, field]) =>
                 row[field] &&

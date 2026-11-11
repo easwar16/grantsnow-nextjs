@@ -19,7 +19,7 @@ import type { DelegationHost } from "./delegations";
 import { ethicsHistoryHost } from "@/server/modules/ethics/record";
 import { dueDiligenceHistoryHost } from "@/server/modules/due-diligence/record";
 /** The modules hosting the shared History and Delegation panels; a request names only its host and record. */
-const HISTORY: Record<string, (id: string) => Promise<HistoryHost>> = {
+const HISTORY: Record<string, (id: string, participant?: string) => Promise<HistoryHost>> = {
   eoi: eoiHistoryHost,
   award: awardHistoryHost,
   contract: contractHistoryHost,
@@ -33,14 +33,17 @@ const DELEGATIONS: Record<string, (id: string) => Promise<DelegationHost>> = {
 };
 const record = z.string().regex(/^[1-9]\d{0,14}$/);
 function resolve<T>(
-  hosts: Record<string, (id: string) => Promise<T>>,
+  hosts: Record<string, (id: string, participant?: string) => Promise<T>>,
   q: URLSearchParams,
 ) {
   const host = q.get("host") ?? "",
     id = record.safeParse(q.get("record"));
   if (!Object.hasOwn(hosts, host) || !id.success)
     throw new AppError("BAD_REQUEST", "Invalid record request.", 400);
-  return hosts[host](id.data);
+  const participant = q.get("participant");
+  if (participant !== null && (host !== "ethics" || !record.safeParse(participant).success))
+    throw new AppError("BAD_REQUEST", "Invalid participant request.", 400);
+  return hosts[host](id.data, participant ?? undefined);
 }
 /** `?host&record` → the resolved history host; anything malformed or unknown is a 400. */
 export const historyHost = (q: URLSearchParams) => resolve(HISTORY, q);

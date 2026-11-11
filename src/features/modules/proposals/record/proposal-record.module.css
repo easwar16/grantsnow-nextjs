@@ -3,6 +3,11 @@
   background: var(--bg);
 }
 .actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   min-height: 46px;
   padding: 6px 14px;
   background: var(--surface);
@@ -24,8 +29,7 @@
 }
 .actions > .actionGroup {
   flex-wrap: wrap;
-  justify-content: flex-start;
-  margin-top: 4px;
+  justify-content: flex-end;
 }
 .actions > .actionGroup > div:has(> button[id$="-comments"]) {
   display: contents;
@@ -279,6 +283,15 @@
 }
 .form {
   padding: 14px;
+}
+.proposalDynamicForm > :global(.gn-btn) {
+  display: block;
+  margin: 7px auto 0;
+}
+.proposalDynamicForm [role="group"]:has(input[type="checkbox"]) {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
 }
 .summarySections {
   display: grid;
@@ -1334,15 +1347,106 @@
   color: white;
 }
 .pricing {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100vw;
+  min-width: 0;
   padding: 26px 14px;
   font-size: 13px;
 }
 .creditAllocation {
-  padding: 16px 14px;
+  padding: 26px 14px;
+}
+.creditAllocationTable {
+  width: 100%;
+  min-width: 800px;
+  table-layout: fixed;
+}
+.creditAllocationTable th:first-child,
+.creditAllocationTable td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+.creditAllocationTable thead th:first-child {
+  z-index: 3;
+}
+.creditAllocationTable th:nth-child(1) {
+  width: 13%;
+}
+.creditAllocationTable th:nth-child(2) {
+  width: 11%;
+}
+.creditAllocationTable th:nth-child(3) {
+  width: 14%;
+}
+.creditAllocationTable th:nth-child(4) {
+  width: 34%;
+}
+.creditAllocationTable th:nth-child(5),
+.creditAllocationTable th:nth-child(6) {
+  width: 12%;
+}
+.creditAllocationTable :global(.gn-table-actions) {
+  width: 4%;
+  text-align: center;
+}
+.creditAllocationSort {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.creditAllocationSortLabel {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+.creditAllocationSortIcons {
+  display: inline-flex;
+  flex: none;
+  flex-direction: column;
+  line-height: 7px;
+}
+.creditAllocationSortIcons :global(.gn-icon) {
+  height: 8px;
+}
+.creditAllocationInput {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  padding: 3px 5px;
+  border: 1px solid var(--gn-border-input);
+  border-radius: 2px;
+  background: var(--gn-surface);
+  color: var(--gn-text);
+  font: inherit;
 }
 .linkedApplications {
   padding: 16px 14px;
 }
+.linkedEthicsCreate {
+  margin: 22px 0 0 10px;
+}
+.linkedEthicsEmpty {
+  margin: 58px 0 0 12px;
+  font-family: Georgia, serif;
+  font-size: 18px;
+}
+.proposalContracts { padding: 16px 14px; }
+.linkedContractCreate { margin: 22px 0 0 10px; }
+.linkedContractEmpty { margin: 16px 0 0 10px; padding: 18px 8px; border: 1px solid var(--gn-divider); }
 .linkedApplication {
   margin-bottom: 16px;
   padding: 12px;
@@ -1373,8 +1477,10 @@
 .pricingGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(5, minmax(0, auto));
+  grid-auto-flow: column;
   column-gap: 28px;
-  row-gap: 14px;
+  row-gap: 16px;
 }
 .pricingGrid > div {
   display: grid;
@@ -1385,19 +1491,256 @@
 .pricingGrid strong {
   text-align: right;
 }
+.pricingActions {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin: 22px 0 10px;
+}
+.pricingActions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 225px;
+}
+.pricingError {
+  color: #a93420;
+  text-align: center;
+}
+.pricingGlobalInput {
+  width: 100%;
+  min-width: 85px;
+  max-width: 145px;
+  box-sizing: border-box;
+  padding: 5px 7px;
+  border: 1px solid #a7a7a7;
+  border-radius: 3px;
+  font: inherit;
+}
+.pricingGlobalDialog h2 {
+  color: transparent;
+}
+.pricingGlobalDialog .pricingDialogTable {
+  border-top: 0;
+}
 .pricingCurrency {
   display: grid;
-  gap: 2px;
-  width: 296px;
+  gap: 0;
+  box-sizing: border-box;
+  width: 145px;
   max-width: 100%;
-  margin: 52px 0 0 auto;
-  padding: 8px 12px;
+  margin: 10px 0 0 auto;
+  padding: 4px 10px;
   border: 1px solid var(--border);
   background: var(--surface);
+}
+.pricingCurrency:focus-within {
+  border-color: var(--gn-brand);
+}
+.pricingCurrency :global([data-part="field"]) {
+  min-height: 18px;
+  border: 0;
+  box-shadow: none;
+}
+.pricingCurrency :global([role="combobox"]) {
+  padding-left: 0;
+  padding-right: 15px;
+  font-size: 11px;
+}
+.pricingCurrency :global([data-part="field"]) :global(svg) {
+  right: 0;
 }
 .pricingCurrency strong {
   font-size: 12px;
   font-weight: 400;
+}
+.pricingDetails {
+  margin-top: 12px;
+}
+.pricingGroupHeading {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+.pricingGroupHeading button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.pricingDialogFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px 20px;
+}
+.pricingLineDialog {
+  box-sizing: border-box;
+  padding: 24px 25px 48px;
+  position: fixed;
+  top: 30vh;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+}
+.pricingLineDialog .pricingDialogTable {
+  margin-top: -5px;
+}
+.pricingLineDialog .pricingDialogTable th {
+  height: 70px;
+}
+.pricingLineDialog .pricingDialogTable table {
+  width: 620px;
+  min-width: 620px;
+  table-layout: fixed;
+}
+.pricingLineDialog .pricingDialogTable th:nth-child(1) {
+  width: 90px;
+}
+.pricingLineDialog .pricingDialogTable th:nth-child(2) {
+  width: 80px;
+}
+.pricingLineDialog .pricingDialogTable th:nth-child(3) {
+  width: 80px;
+}
+.pricingLineDialog .pricingDialogTable th:nth-child(4) {
+  width: 95px;
+}
+.pricingLineDialog .pricingDialogTable th:nth-child(5) {
+  width: 95px;
+}
+.pricingLineDialog .pricingDialogTable th:nth-child(6) {
+  width: 110px;
+}
+.pricingLineDialog .pricingDialogTable th:last-child {
+  width: 70px;
+}
+.pricingLineDialog .pricingDialogTable tbody tr {
+  height: 96px;
+}
+@media (max-height: 750px) {
+  .pricingLineDialog {
+    top: 5vh;
+    bottom: auto;
+    margin-block: 0;
+    max-height: 90vh;
+    transform: none;
+  }
+}
+.pricingDialogFields label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+.pricingDialogFields input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 33px;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 400;
+}
+.pricingDialogTable {
+  overflow-x: auto;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+.pricingDialogTable table {
+  min-width: 620px;
+  font-size: 11px;
+}
+.pricingDialogEditor {
+  display: grid;
+  gap: 8px;
+}
+.pricingDetails :global(.gn-table-scroll) {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  border: 1px solid var(--border);
+}
+.pricingTable {
+  width: calc(var(--pricing-columns) * 120px + 36px);
+  table-layout: fixed;
+  font-size: 12px;
+}
+.pricingTable th:not(:global(.gn-table-actions)),
+.pricingTable td:not(:global(.gn-table-actions)) {
+  box-sizing: border-box;
+  width: 120px;
+  min-width: 120px;
+  max-width: 120px;
+  overflow-wrap: anywhere;
+}
+.pricingTable tbody tr[data-depth="0"] th,
+.pricingTable tbody tr[data-depth="1"] th {
+  color: #895114;
+  font-weight: 700;
+}
+.pricingTable thead th:first-child,
+.pricingTable tbody th:first-child,
+.pricingTable tfoot td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+}
+.pricingTable thead th:nth-child(2),
+.pricingTable tbody td:nth-child(2),
+.pricingTable tfoot td:nth-child(2) {
+  position: sticky;
+  left: 120px;
+  z-index: 3;
+}
+.pricingTable thead th:first-child,
+.pricingTable thead th:nth-child(2) {
+  z-index: 4;
+  background: var(--gn-brand);
+}
+.pricingTable tbody th:first-child,
+.pricingTable tbody td:nth-child(2) {
+  background: var(--gn-table-row);
+}
+.pricingTable tfoot td:first-child,
+.pricingTable tfoot td:nth-child(2) {
+  background: var(--gn-bg);
+}
+.pricingTable :global(.gn-table-actions) {
+  box-sizing: border-box;
+  width: 36px;
+  min-width: 36px;
+  max-width: 36px;
+  padding: 0 4px;
+  background: var(--gn-table-row);
+}
+.pricingTable thead :global(.gn-table-actions) {
+  background: var(--gn-brand);
+}
+.pricingTable td:not(:first-child):not(:nth-child(2)) {
+  text-align: right;
+}
+.pricingDetails h2 {
+  margin: 12px 0;
+  font-size: 16px;
+}
+.pricingViews {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+.pricingViews :global([role="tablist"]) {
+  gap: 24px;
+  padding: 0;
 }
 .contractCard h2 {
   margin: 5px 0;
@@ -1429,5 +1772,13 @@
   }
   .pricingGrid {
     grid-template-columns: 1fr;
+    grid-template-rows: none;
+    grid-auto-flow: row;
+  }
+  .pricingDialogFields {
+    grid-template-columns: 1fr;
+  }
+  .pricingActions {
+    flex-wrap: wrap;
   }
 }

@@ -39,6 +39,8 @@ const row = z.object({
   deadline_date: z.string().nullish(),
   expiry_date: z.string().nullish(),
   ethics_type: z.string().nullish(),
+  ethics_type_code: z.string().nullish(),
+  response_status_lkp_code: z.string().nullish(),
   ethics_form_type: z.string().nullish(),
   org_unit_name: z.string().nullish(),
   reviewer_name: z.string().nullish(),
@@ -69,11 +71,14 @@ const mapRow = (r: z.infer<typeof row>) => ({
   deadline: value(r.deadline_date),
   expiry: value(r.expiry_date),
   ethicsType: value(r.ethics_type),
+  ethicsTypeCode: value(r.ethics_type_code),
+  responseStatusCode: value(r.response_status_lkp_code),
   formType: value(r.ethics_form_type),
   org: value(r.org_unit_name),
   reviewer: value(r.reviewer_name),
   currentApprover: r.my_approval === "Y",
 });
+
 
 const filterKeys = {
   number: "list-ethics-number",

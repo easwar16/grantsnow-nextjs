@@ -4,6 +4,7 @@ import { AppError } from "@/lib/errors";
 import { proposals } from "@/server/oracle/api";
 import type { RecordIdentity } from "@/features/modules/proposals/record";
 import { proposalPage } from "./record";
+import { ethicsCreateAllowed } from "@/server/modules/ethics/actions";
 
 export type ApplicationKind = "ETHICS" | "DUE_DILIGENCE";
 
@@ -12,10 +13,12 @@ const applicationResponse = z.object({
     z.object({
       setup_flow_id: z.coerce.number().int().positive(),
       obj_ref_id: z.coerce.number().int().positive().nullish(),
+      obj_ref_type: z.string().nullish(),
       application_number: z.string(),
       setup_description: z.string().nullish(),
       status: z.string().nullish(),
       status_lkp_code: z.string().nullish(),
+      access_type: z.enum(["EA_ACCESS", "RESPONDENT_ACCESS", "APPROVER_ACCESS"]).nullish(),
       created_by: z.string().nullish(),
       reviewer_name: z.string().nullish(),
       last_updated_by: z.string().nullish(),
@@ -28,7 +31,7 @@ const applicationResponse = z.object({
   ),
 });
 
-export function mapLinkedApplications(raw: unknown, proposalId: string) {
+export function mapLinkedApplications(raw: unknown, proposalId: string, kind: ApplicationKind = "ETHICS") {
   const parsed = applicationResponse.safeParse(raw);
   if (!parsed.success)
     throw new AppError(
@@ -37,7 +40,9 @@ export function mapLinkedApplications(raw: unknown, proposalId: string) {
     );
   if (
     parsed.data.items.some(
-      (row) => row.obj_ref_id != null && String(row.obj_ref_id) !== proposalId,
+      (row) => kind === "DUE_DILIGENCE"
+        ? String(row.obj_ref_id ?? "") !== proposalId || row.obj_ref_type !== "PROPOSAL"
+        : row.obj_ref_id != null && String(row.obj_ref_id) !== proposalId,
     )
   )
     throw new AppError(
@@ -51,6 +56,7 @@ export function mapLinkedApplications(raw: unknown, proposalId: string) {
     title: row.setup_description || "",
     status: row.status || "",
     statusCode: row.status_lkp_code || "",
+    accessType: row.access_type || "",
     createdBy: row.created_by || "",
     reviewer: row.reviewer_name || "",
     updatedBy: row.last_updated_by || "",
@@ -70,9 +76,16 @@ export async function proposalLinkedApplications(
   const page =
     kind === "ETHICS" ? "proposals-ethics" : "proposals-due-diligence";
   const context = await proposalPage(type, id, page);
-  const raw = await proposals.linkedApplications({ kind, proposalId: id });
+  const [raw, ethicsAllowed] = await Promise.all([
+    proposals.linkedApplications({ kind, proposalId: id }),
+    kind === "ETHICS" ? ethicsCreateAllowed() : Promise.resolve(false),
+  ]);
   return {
-    rows: mapLinkedApplications(raw, id),
+    rows: mapLinkedApplications(raw, id, kind),
     bundle: context.bundle,
+    canCreate: context.rights.edit === true &&
+      (kind === "DUE_DILIGENCE" || ethicsAllowed),
+    canLink: kind === "DUE_DILIGENCE" &&
+      context.access.get("proposals-link-due-diligence")?.edit === true,
   };
 }

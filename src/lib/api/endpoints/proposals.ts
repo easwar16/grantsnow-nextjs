@@ -8,7 +8,7 @@ import type {
   ChoiceGroup,
   ChoiceGroupResult,
 } from "@/features/modules/proposals/lookups";
-import { download, get, post, put } from "../http";
+import { del, download, get, post, put } from "../http";
 import { endpoint } from "../hooks";
 import { constants } from "@/lib/constants";
 
@@ -169,6 +169,152 @@ export const setSummaryFinalized = (
   post<{ finalized: boolean }>(`/proposals/${type}/${id}/finalize`, {
     finalize,
   });
+export const saveCreditAllocation = (
+  type: string,
+  id: string,
+  versionId: number,
+  rows: { id: number; effort: number | null; credit: number }[],
+) =>
+  put<{ saved: boolean }>(`/proposals/${type}/${id}/allocation-for-credit`, {
+    versionId,
+    rows,
+  });
+export const saveInKindTotals = (
+  type: string,
+  id: string,
+  sponsors: { id: number; amount: number }[],
+) =>
+  put<{ saved: boolean }>(`/proposals/${type}/${id}/in-kind-contribution`, {
+    action: "totals",
+    data: { sponsors },
+  });
+export const saveInKindLine = (
+  type: string,
+  id: string,
+  line: { id: number; amount: number },
+) =>
+  put<{ saved: boolean }>(`/proposals/${type}/${id}/in-kind-contribution`, {
+    action: "line",
+    data: line,
+  });
+export const addInKindLine = (
+  type: string,
+  id: string,
+  line: {
+    sponsorId: number;
+    costItemCode: string;
+    type: string;
+    description: string;
+    amount: number;
+  },
+) =>
+  put<{ saved: boolean }>(`/proposals/${type}/${id}/in-kind-contribution`, {
+    action: "add",
+    data: line,
+  });
+export const removeInKindLine = (type: string, id: string, lineId: number) =>
+  del<{ deleted: boolean }>(
+    `/proposals/${type}/${id}/in-kind-contribution`,
+    undefined,
+    { id: lineId },
+  );
+export const saveResearchPartnerCost = (
+  type: string,
+  id: string,
+  line: {
+    id: number;
+    startDate: string;
+    endDate: string;
+    description: string;
+    cost: number;
+  },
+) =>
+  put<{ saved: boolean }>(
+    `/proposals/${type}/${id}/budget-research-partner`,
+    line,
+  );
+export const savePricingFunder = (
+  type: string,
+  id: string,
+  data: {
+    lineId: number;
+    scope?:
+      | "line"
+      | "category"
+      | "section"
+      | "combined-category"
+      | "combined-section";
+    funderId: number;
+    contribution: number;
+    ruleApplied: "INDEXED" | "UNINDEXED";
+  },
+) => put<{ saved: boolean }>(`/proposals/${type}/${id}/pricing`, data);
+export const previewPricingReset = (type: string, id: string) =>
+  get<{
+    totals: {
+      institution: string | number;
+      institutionPercent: string | number;
+      funder: string | number;
+      funderPercent: string | number;
+      unindexedFunderPercent: string | number;
+      indexed: string | number;
+      unindexed: string | number;
+      eligible: string | number;
+    };
+    lines: import("@/server/modules/proposals/pricing").PricingLine[];
+  }>(`/proposals/${type}/${id}/pricing/reset`);
+export const savePricingReset = (type: string, id: string) =>
+  post<{ saved: boolean }>(`/proposals/${type}/${id}/pricing/reset`);
+export const saveGlobalPricingFunder = (
+  type: string,
+  id: string,
+  data: {
+    funderId: number;
+    contribution: number;
+    ruleApplied: "" | "UNINDEXED";
+  },
+) =>
+  put<{
+    saved: boolean;
+    funders: ReturnType<
+      typeof import("@/server/modules/proposals/pricing").mapGlobalFunders
+    >;
+  }>(`/proposals/${type}/${id}/pricing/global`, data);
+export const addResearchPartnerCost = (
+  type: string,
+  id: string,
+  data: {
+    relationId: number;
+    category: string;
+    itemCode: string;
+    description: string;
+    cost: number;
+    startDate: string;
+    endDate: string;
+  },
+) =>
+  put<{ saved: boolean }>(`/proposals/${type}/${id}/budget-research-partner`, {
+    action: "add",
+    data,
+  });
+export const researchPartnerCostItems = (
+  type: string,
+  id: string,
+  category: string,
+) =>
+  get<{ value: string; label: string }[]>(
+    `/proposals/${type}/${id}/budget-research-partner?category=${encodeURIComponent(category)}`,
+  );
+export const removeResearchPartnerCost = (
+  type: string,
+  id: string,
+  lineId: number,
+) =>
+  del<{ deleted: boolean }>(
+    `/proposals/${type}/${id}/budget-research-partner`,
+    undefined,
+    { lineId },
+  );
 export const saveSummaryEdit = (
   type: string,
   id: string,

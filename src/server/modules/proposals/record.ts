@@ -595,18 +595,16 @@ export const proposalContext = cache(
     const summaryPage = roles.find(
       (role) => role.page_name === "proposals-summary",
     );
-    const finalizable = summaryPage?.page_id
+    const finalizablePages = summaryPage?.page_id
       ? await proposals.finalizablePages({ type, id }).then(
           (raw) =>
             z
               .object({ items: z.array(z.object({ page_name: z.string() })) })
               .parse(raw)
-              .items.some(
-                (page) => page.page_name.toLowerCase() === "proposals-summary",
-              ),
-          () => false,
+              .items.map((page) => page.page_name.toLowerCase()),
+          () => [] as string[],
         )
-      : false;
+      : [];
     const lock =
       summaryPage?.page_id &&
       summary.lockedPageIds.includes(summaryPage.page_id)
@@ -635,7 +633,10 @@ export const proposalContext = cache(
       bundle: proposalBundle(rb, type),
       finalize: {
         pageId: summaryPage?.page_id ?? null,
-        visible: finalizable && summary.statusCode === "DRFT",
+        visible:
+          finalizablePages.includes("proposals-summary") &&
+          summary.statusCode === "DRFT",
+        visiblePages: finalizablePages,
         checked: summaryPage?.page_id
           ? summary.lockedPageIds.includes(summaryPage.page_id)
           : false,
@@ -663,4 +664,18 @@ export async function proposalPage(
   if (rights?.read !== true)
     throw new AppError("FORBIDDEN", "Read access has not been granted.", 403);
   return { ...context, rights };
+}
+
+export function proposalDynamicFormEditable(
+  context: Awaited<ReturnType<typeof proposalPage>>,
+  page: string,
+) {
+  const pageId = context.pageIds.get(page);
+  return (
+    context.rights.edit === true &&
+    context.summary.statusCode === "DRFT" &&
+    pageId !== undefined &&
+    pageId !== null &&
+    !context.summary.lockedPageIds.includes(pageId)
+  );
 }

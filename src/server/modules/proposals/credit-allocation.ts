@@ -1,8 +1,11 @@
 import "server-only";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
-import { proposals } from "@/server/oracle/api";
-import type { RecordIdentity } from "@/features/modules/proposals/record";
+import { awards, proposals } from "@/server/oracle/api";
+import {
+  recordIdentity,
+  type RecordIdentity,
+} from "@/features/modules/proposals/record";
 import { budgetVersions } from "./budget";
 import { proposalPage } from "./record";
 
@@ -55,11 +58,97 @@ export async function proposalCreditAllocation(
   }
   const versionId = previewVersionId ?? context.summary.budgetVersionId;
   if (versionId === null)
-    return { rows: [], bundle: context.bundle, versionId: null };
+    return {
+      rows: [],
+      bundle: context.bundle,
+      versionId: null,
+      canEdit: false,
+    };
   const raw = await proposals.creditAllocation({ versionId });
+  const pageId = context.pageIds.get("proposals-allocation-for-credit");
   return {
     rows: mapCreditAllocation(raw),
     bundle: context.bundle,
     versionId,
+    canEdit:
+      previewVersionId === undefined &&
+      context.rights.edit &&
+      context.summary.statusCode === "DRFT" &&
+      pageId != null &&
+      !context.summary.lockedPageIds.includes(pageId),
   };
+}
+
+const saveInput = z
+  .object({
+    versionId: z.number().int().positive(),
+    rows: z
+      .array(
+        z
+          .object({
+            id: z.number().int().positive(),
+            effort: z.number().min(0).max(1).nullable(),
+            credit: z.number().min(0).max(1),
+          })
+          .strict(),
+      )
+      .min(1),
+  })
+  .strict();
+
+export async function saveProposalCreditAllocation(
+  type: string,
+  id: string,
+  input: unknown,
+) {
+  const body = saveInput.parse(input);
+  const identity = recordIdentity.parse({ type, id });
+  const context = await proposalPage(
+    identity.type,
+    identity.id,
+    "proposals-allocation-for-credit",
+  );
+  const pageId = context.pageIds.get("proposals-allocation-for-credit");
+  if (
+    !context.rights.edit ||
+    context.summary.statusCode !== "DRFT" ||
+    pageId == null ||
+    context.summary.lockedPageIds.includes(pageId)
+  )
+    throw new AppError("FORBIDDEN", "Credit Allocation cannot be edited.", 403);
+  if (context.summary.budgetVersionId !== body.versionId)
+    throw new AppError(
+      "BAD_REQUEST",
+      "The active Budget version changed. Reload this page.",
+      400,
+    );
+  const fresh = mapCreditAllocation(
+    await proposals.creditAllocation({ versionId: body.versionId }),
+  );
+  if (
+    fresh.length !== body.rows.length ||
+    new Set(body.rows.map((row) => row.id)).size !== body.rows.length ||
+    fresh.some((row) => !body.rows.some((inputRow) => inputRow.id === row.id))
+  )
+    throw new AppError(
+      "BAD_REQUEST",
+      "Credit Allocation rows changed. Reload this page.",
+      400,
+    );
+  const total = body.rows.reduce((sum, row) => sum + row.credit, 0);
+  if (Math.abs(total - 1) > 0.000001)
+    throw new AppError(
+      "BAD_REQUEST",
+      "Credit Allocation should total to 100%.",
+      400,
+    );
+  await awards.saveCredit({
+    periodVersionId: body.versionId,
+    body: body.rows.map((row) => ({
+      credit_alloc_id: row.id,
+      credit_pct: row.credit,
+      prj_effort: row.effort,
+    })),
+  });
+  return { saved: true };
 }

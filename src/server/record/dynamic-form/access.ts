@@ -16,7 +16,15 @@ import { summaryEditable } from "@/server/modules/claims/units/record/sign-off";
 import { statusConfig } from "@/server/modules/claims/units/record/status";
 import { loadContract } from "@/server/modules/contracts/service";
 import { serverFunctions } from "@/server/functions";
-import { proposalPage } from "@/server/modules/proposals/record";
+import {
+  proposalDynamicFormEditable,
+  proposalPage,
+} from "@/server/modules/proposals/record";
+import { dueDiligenceRecord } from "@/server/modules/due-diligence/record";
+import { dueDiligenceCreateForm } from "@/server/modules/due-diligence/actions";
+import { ethicsRecord, ethicsStakeholder } from "@/server/modules/ethics/record";
+import { ethicsCreateForm } from "@/server/modules/ethics/actions";
+import { ethicsEditableStatus } from "@/server/modules/ethics/status";
 import { proposalEditContext } from "@/server/modules/proposals/edit";
 import { proposalCreateAccess } from "@/server/modules/proposals/create";
 import { recordIdentity } from "@/features/modules/proposals/record";
@@ -30,6 +38,8 @@ export const formTarget = z
     slot: z.string().regex(/^[A-Z0-9_-]{1,80}$/),
     parentId: recordId.optional(),
     objectId: recordId.optional(),
+    formType: z.string().regex(/^[A-Z0-9_]{1,40}$/).optional(),
+    version: z.coerce.number().int().positive().optional(),
   })
   .strict();
 export type FormTarget = z.infer<typeof formTarget>;
@@ -44,6 +54,8 @@ export function targetFromQuery(q: URLSearchParams): FormTarget {
     slot: value("slot"),
     parentId: value("parentId"),
     objectId: value("objectId"),
+    formType: value("formType"),
+    version: value("version"),
   });
   if (!parsed.success)
     throw new AppError("BAD_REQUEST", "Invalid form request.", 400);
@@ -78,6 +90,10 @@ export function pageOf(t: Pick<FormTarget, "objectType" | "slot">) {
   )
     return t.slot.toLowerCase();
   // The Claims Unit Summary's Assurance sign-off tab (legacy moduleName SUMMARY-ASSURANCE on the requirement).
+  if (t.objectType === "DUE_DILIGENCE" && t.slot === "DUE_DILIGENCE")
+    return "duediligence-responses";
+  if (t.objectType === "ETHICS" && t.slot === "ETHICS")
+    return "ethics-responses";
   if (t.objectType === "CLAIMS" && t.slot === "SUMMARY-ASSURANCE")
     return "claims-unit-summary";
   return null;
@@ -176,6 +192,10 @@ async function pageLocked(
   }
 }
 export async function authorizeForm(t: FormTarget, mode: "read" | "edit") {
+  if (t.version !== undefined && t.objectType !== "ETHICS" && t.objectType !== "DUE_DILIGENCE")
+    throw new AppError("BAD_REQUEST", "Versions are unavailable for this form.", 400);
+  if (t.version !== undefined && mode === "edit")
+    throw denied("Historical responses are read-only.");
   const { user } = await authenticate();
   const page = pageOf(t);
   if (page === null)
@@ -189,19 +209,27 @@ export async function authorizeForm(t: FormTarget, mode: "read" | "edit") {
         t.parentId ||
         (t.objectType !== "PROPOSAL" && t.objectType !== "OUTLINE_PROPOSAL")
       )
-        throw new AppError("BAD_REQUEST", "Invalid Proposal form request.", 400);
+        throw new AppError(
+          "BAD_REQUEST",
+          "Invalid Proposal form request.",
+          400,
+        );
       const user = await proposalCreateAccess(t.objectType);
       return { user, page, record: null };
     }
     if (t.parentId && t.parentId !== t.objectId)
       throw new AppError("BAD_REQUEST", "Invalid Proposal form request.", 400);
     const context =
-      mode === "edit"
-        ? page === "proposals-summary"
-          ? await proposalEditContext(proposalType.data, t.objectId)
-          : null
+      mode === "edit" && page === "proposals-summary"
+        ? await proposalEditContext(proposalType.data, t.objectId)
         : await proposalPage(proposalType.data, t.objectId, page);
-    if (!context) throw denied("Proposal form editing is unavailable.");
+    if (
+      !context ||
+      (mode === "edit" &&
+        page !== "proposals-summary" &&
+        !proposalDynamicFormEditable(context, page))
+    )
+      throw denied("Proposal form editing is unavailable.");
     return {
       user: context.user,
       page,
@@ -216,6 +244,17 @@ export async function authorizeForm(t: FormTarget, mode: "read" | "edit") {
     const contract = await loadContract(t.objectId);
     return { user, page, record: { id: contract.id, number: contract.number } };
   }
+  if (t.objectType === "DUE_DILIGENCE") {
+    if (!t.objectId) {
+      if (mode === "edit" || t.parentId || !t.formType)
+        throw new AppError("BAD_REQUEST", "Invalid Due Diligence form target.", 400);
+      await dueDiligenceCreateForm(t.formType);
+      return { user, page, record: null, formType: t.formType };
+    }
+    return authorizeDueDiligenceForm(t, mode, user);
+  }
+  if (t.objectType === "ETHICS")
+    return authorizeEthicsForm(t, mode, user);
   if (t.objectType === "AWARD") return authorizeAwardForm(t, mode, user, page);
   if (t.objectType === "CLAIMS") return authorizeAssuranceForm(t, mode, page);
   serverFunctions.permissions.requireModule(user, "opportunities-group");
@@ -345,4 +384,99 @@ async function authorizeAssuranceForm(
     throw denied("This assurance can no longer be changed.");
   const record: FormRecord = { id: t.objectId, number: t.parentId };
   return { user: context.user, page, record };
+}
+
+/** Respondent answers are scoped by the setup and the exact stakeholder row, never by a browser person id. */
+async function authorizeDueDiligenceForm(
+  t: FormTarget,
+  mode: "read" | "edit",
+  user: Awaited<ReturnType<typeof authenticate>>["user"],
+) {
+  if (!t.parentId || !t.objectId)
+    throw new AppError(
+      "BAD_REQUEST",
+      "Invalid Due Diligence form target.",
+      400,
+    );
+  const application = await dueDiligenceRecord(
+    t.parentId, mode === "edit" ? "RESPONDENT_ACCESS" : undefined,
+  );
+  const page = "duediligence-responses";
+  if (!application.tabs.includes(page)) throw denied();
+  const respondent = application.respondents.find(
+    (row) => row.id === t.objectId,
+  );
+  if (!respondent || !respondent.personId) throw denied();
+  if (
+    application.access === "RESPONDENT_ACCESS" &&
+    respondent.personId !== String(user.personId)
+  )
+    throw denied();
+  if (mode === "edit") {
+    if (
+      !application.rights[page]?.edit ||
+      application.access !== "RESPONDENT_ACCESS" ||
+      respondent.personId !== String(user.personId) ||
+      respondent.statusCode !== "DRFT"
+    )
+      throw denied("This response can no longer be changed.");
+    const roles = rolesSchema.parse(
+      await recordRoles.record({
+        objectType: "DUE_DILIGENCE",
+        objectId: t.parentId,
+      }),
+    ).items;
+    if (await pageLocked(respondent.id, roles, page, "DUE_DILIGENCE"))
+      throw denied("This page is finalized; unlock it to make changes.");
+  }
+  return {
+    user,
+    page,
+    record: { id: respondent.id, number: respondent.id },
+    formType: application.formType,
+    setupId: application.id,
+    personId: respondent.personId,
+  };
+}
+
+/** The setup and selected stakeholder are re-read for every Ethics form and file request. */
+async function authorizeEthicsForm(
+  t: FormTarget,
+  mode: "read" | "edit",
+  user: Awaited<ReturnType<typeof authenticate>>["user"],
+) {
+  if (!t.parentId && !t.objectId && mode === "read" && t.formType) {
+    await ethicsCreateForm(t.formType);
+    return { user, page: "ethics-responses", record: null, formType: t.formType,
+      setupId: null, personId: String(user.personId) };
+  }
+  if (!t.parentId || !t.objectId)
+    throw new AppError("BAD_REQUEST", "Invalid Ethics form target.", 400);
+  const application = await ethicsRecord(
+    t.parentId,
+    mode === "edit" ? "RESPONDENT_ACCESS" : undefined,
+  );
+  const page = "ethics-responses";
+  if (!application.tabs.includes(page)) throw denied();
+  const respondent = ethicsStakeholder(application, user.personId, t.objectId);
+  if (!respondent?.personId) throw denied();
+  if (mode === "edit") {
+    if (!application.rights[page]?.edit ||
+        application.access !== "RESPONDENT_ACCESS" ||
+        respondent.personId !== String(user.personId) ||
+        !(await ethicsEditableStatus(respondent.statusCode).catch(() => false)))
+      throw denied("This response can no longer be changed.");
+    const roles = rolesSchema.parse(await recordRoles.record({
+      objectType: "ETHICS", objectId: t.parentId,
+    })).items;
+    if (await pageLocked(respondent.id, roles, page, "ETHICS"))
+      throw denied("This page is finalized; unlock it to make changes.");
+  }
+  return {
+    user, page,
+    record: { id: respondent.id, number: respondent.id },
+    formType: application.formType,
+    setupId: application.id,
+    personId: respondent.personId,
+  };
 }

@@ -7,16 +7,18 @@ import { functions } from "@/lib/functions";
 export async function AttachmentsTab({
   host,
   record,
+  participant,
   id,
 }: {
   /** A key of the server's host table (`eoi`). */
   host: string;
   record: string;
+  participant?: string;
   /** The page-unique id prefix, e.g. `eoi-attachments`. */
   id: string;
 }) {
   const result = await attachmentsView(
-    new URLSearchParams({ host, record }),
+    new URLSearchParams({ host, record, ...(participant ? { participant } : {}) }),
     id,
   ).then(
     (view) => ({ view }),
