@@ -1213,65 +1213,97 @@ test("Proposal Credit Allocation headers do not overlap at a narrow viewport", a
   }
 });
 
-test("Proposal Ethics shows New Ethics and scopes the creation link", async ({ page }) => {
+test("Proposal Ethics shows New Ethics and scopes the creation link", async ({
+  page,
+}) => {
   await login(page);
   await page.goto("/proposals/OUTLINE_PROPOSAL/1000/ethics");
   const create = page.locator("#proposal-1000-ethics-create");
   await expect(create).toBeVisible();
-  await expect(page.locator("#proposal-1000-ethics")).toContainText("No data to display.");
+  await expect(page.locator("#proposal-1000-ethics")).toContainText(
+    "No data to display.",
+  );
   await create.click();
-  await expect(page).toHaveURL(/\/ethics\/new\?parentType=PROPOSAL&parentId=1000&proposalType=OUTLINE_PROPOSAL/);
+  await expect(page).toHaveURL(
+    /\/ethics\/new\?parentType=PROPOSAL&parentId=1000&proposalType=OUTLINE_PROPOSAL/,
+  );
   await expect(page.locator("#ethics-new-form")).toBeVisible();
   await expect(page.locator("#ethics-new-back")).toHaveAttribute(
-    "href", "/proposals/OUTLINE_PROPOSAL/1000/ethics",
+    "href",
+    "/proposals/OUTLINE_PROPOSAL/1000/ethics",
   );
   await expect(page.locator("#ethics-new-cancel")).toHaveAttribute(
-    "href", "/proposals/OUTLINE_PROPOSAL/1000/ethics",
+    "href",
+    "/proposals/OUTLINE_PROPOSAL/1000/ethics",
   );
   await expect(page.getByText("Invalid ethics action.")).toHaveCount(0);
   const draft = {
-    title: "Linked fixture Ethics", org: "203", formType: "STANDARD",
-    ethicsType: "INDIVIDUAL", parent: {
-      type: "PROPOSAL", id: "1000", proposalType: "OUTLINE_PROPOSAL",
+    title: "Linked fixture Ethics",
+    org: "203",
+    formType: "STANDARD",
+    ethicsType: "INDIVIDUAL",
+    parent: {
+      type: "PROPOSAL",
+      id: "1000",
+      proposalType: "OUTLINE_PROPOSAL",
     },
   };
   const origin = new URL(page.url()).origin;
   const created = await page.request.post("/api/ethics/actions/create", {
-    data: draft, headers: { Origin: origin },
+    data: draft,
+    headers: { Origin: origin },
   });
   expect(created.status(), await created.text()).toBe(200);
   expect(await created.json()).toMatchObject({ id: "941" });
   const invalid = await page.request.post("/api/ethics/actions/create", {
     headers: { Origin: origin },
     data: {
-      ...draft, parent: { ...draft.parent, id: "1001" },
+      ...draft,
+      parent: { ...draft.parent, id: "1001" },
     },
   });
   expect(invalid.status()).toBe(403);
 });
 
-test("Proposal linked tabs show VBCS actions and shared panels", async ({ page }) => {
+test("Proposal linked tabs show VBCS actions and shared panels", async ({
+  page,
+}) => {
   await login(page);
   await page.goto("/proposals/OUTLINE_PROPOSAL/1000/due-diligence");
-  await expect(page.locator("#parent-due-diligence-create")).toHaveText(/New Duediligence Application/);
-  await expect(page.locator("#proposal-1000-due-diligence")).toContainText("No data to display.");
+  await expect(page.locator("#parent-due-diligence-create")).toHaveText(
+    /New Duediligence Application/,
+  );
+  await expect(page.locator("#proposal-1000-due-diligence")).toContainText(
+    "No data to display.",
+  );
   await page.goto("/proposals/OUTLINE_PROPOSAL/1000/contracts");
   const contract = page.locator("#proposal-1000-new-contract");
   await expect(contract).toBeVisible();
-  await expect(page.locator("#proposal-1000-contracts")).toContainText("No data to display.");
+  await expect(page.locator("#proposal-1000-contracts")).toContainText(
+    "No data to display.",
+  );
   await contract.click();
-  await expect(page).toHaveURL(/\/contracts\/new\?parentType=OUTLINE_PROPOSAL&parentId=1000/);
-  await expect(page.locator("#contract-new-back")).toHaveAttribute("href", "/proposals/OUTLINE_PROPOSAL/1000/contracts");
+  await expect(page).toHaveURL(
+    /\/contracts\/new\?parentType=OUTLINE_PROPOSAL&parentId=1000/,
+  );
+  await expect(page.locator("#contract-new-back")).toHaveAttribute(
+    "href",
+    "/proposals/OUTLINE_PROPOSAL/1000/contracts",
+  );
   await page.goto("/proposals/OUTLINE_PROPOSAL/1000/attachments");
   await expect(page.locator("#proposal-1000-attachments-panel")).toBeVisible();
   await page.goto("/proposals/OUTLINE_PROPOSAL/1000/delegation");
-  await expect(page.locator("#proposal-1000-delegation-panel-add")).toBeVisible();
+  await expect(
+    page.locator("#proposal-1000-delegation-panel-add"),
+  ).toBeVisible();
   await page.goto("/proposals/PROPOSAL/1001/contracts");
   await expect(page.locator("#proposal-1001-contracts")).toBeVisible();
   await expect(page.locator("#proposal-1001-new-contract")).toHaveCount(0);
   await page.goto("/proposals/PROPOSAL/1001/delegation");
   await expect(page.locator("#proposal-1001-delegation-panel")).toBeVisible();
-  await expect(page.locator("#proposal-1001-delegation-panel-add")).toHaveCount(0);
+  await expect(page.locator("#proposal-1001-delegation-panel-add")).toHaveCount(
+    0,
+  );
 });
 
 test("Proposal In-kind Contribution reads sponsors and saves a line after failure", async ({
@@ -1746,6 +1778,12 @@ test("Proposal Budget keeps funding and category rows aligned as an expandable t
 }) => {
   await login(page);
   await page.goto("/proposals/PROPOSAL/1001/budget");
+  await expect(
+    page.getByRole("button", { name: "Viability Checks" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("switch", { name: "Show Year Split" }),
+  ).toBeVisible();
   const table = page.locator("#proposal-1001-budget-tree-1001-primary");
   const partner = page.locator("#proposal-1001-budget-tree-1001-42");
   await expect(partner).toContainText("Travel");
@@ -1757,6 +1795,10 @@ test("Proposal Budget keeps funding and category rows aligned as an expandable t
   ).toBeVisible();
   await expect(
     table.getByRole("columnheader", { name: "2026/27 (Indexed)" }),
+  ).toHaveCount(0);
+  await page.getByRole("switch", { name: "Show Year Split" }).uncheck();
+  await expect(
+    partner.getByRole("columnheader", { name: "2026/27 (Indexed)" }),
   ).toHaveCount(0);
   await expect(table).toContainText("Directly Allocated");
   await expect(table).toContainText("Alex Morgan");

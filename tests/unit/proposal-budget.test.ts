@@ -92,6 +92,37 @@ it("separates primary and research partner totals using the VBCS collaborator ke
   ]);
 });
 
+it("includes only attached Sub-Proposal budget rows", () => {
+  const child = row({
+    proposal_id: 124,
+    proposal_number: "SP_851",
+    costing_header_id: 12,
+  });
+  const budget = mapBudget({ items: [row(), child] }, "123", ["SP_851"]);
+  expect(budget.projects.map((project) => project.reference)).toEqual([
+    "P_123",
+    "SP_851",
+  ]);
+  expect(() => mapBudget({ items: [child] }, "123")).toThrow();
+  expect(() =>
+    mapBudget(
+      { items: [row({ proposal_id: 125, proposal_number: "P_OTHER" })] },
+      "123",
+      ["SP_851"],
+    ),
+  ).toThrow();
+});
+
+it("keeps distinct row identities when Oracle repeats a cost header id", () => {
+  const budget = mapBudget(
+    { items: [row({ costing_header_id: 0 }), row({ costing_header_id: 0 })] },
+    "123",
+  );
+  expect(budget.groups[0].categories[0].rows.map((line) => line.key)).toEqual([
+    0, 1,
+  ]);
+});
+
 it("fails closed for malformed or cross-proposal cost results", () => {
   expect(() =>
     mapBudget({ items: [row({ proposal_id: 124 })] }, "123"),

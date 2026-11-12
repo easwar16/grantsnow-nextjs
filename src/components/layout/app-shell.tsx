@@ -116,7 +116,7 @@ export function AppShell({
                   )}
                 </Link>
                 <div className="header-end">
-                  {guide}
+                  {path === "/ethics" ? null : guide}
                   <Link
                     id="shell-help"
                     className="header-icon"
@@ -171,7 +171,8 @@ export function AppShell({
                   path.startsWith("/opportunities") ||
                   path.startsWith("/contracts") ||
                   path.startsWith("/awards") ||
-                  path.startsWith("/claims")
+                  path.startsWith("/claims") ||
+                  path.startsWith("/ethics")
                     ? "proposal-workspace"
                     : "home-workspace"
                 }

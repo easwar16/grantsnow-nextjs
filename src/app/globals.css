@@ -2885,3 +2885,14 @@ html.accContrastTheme-100 {
 :root[data-input="pointer"] :focus-visible {
   outline: none;
 }
+#ethics-record-tabs a {
+  background: #f3f3f3;
+  border-top: 2px solid #9a9a9a;
+  border-bottom: 3px solid transparent;
+}
+
+#ethics-record-tabs a[aria-current="page"] {
+  background: var(--gn-surface);
+  border-top-color: transparent;
+  border-bottom-color: var(--gn-brand);
+}

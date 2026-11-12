@@ -34,7 +34,9 @@ export function ProposalBudgetActions({
   } | null>(null);
   const [reportError, setReportError] = useState("");
   const [loading, setLoading] = useState(false);
-  if (segment !== "budget") return null;
+  const isBudget = segment === "budget";
+  const isPricing = segment === "pricing";
+  if (!isBudget && !isPricing && segment !== "approvals") return null;
   const openViability = async () => {
     if (loading) return;
     setViabilityOpen(true);
@@ -48,7 +50,7 @@ export function ProposalBudgetActions({
   };
   return (
     <>
-      {quickCostLabel && (
+      {isBudget && quickCostLabel && (
         <CostingEditor
           id={id}
           type={type}
@@ -57,7 +59,7 @@ export function ProposalBudgetActions({
           icon
         />
       )}
-      {fxLabel && versionId !== null && (
+      {(isBudget || isPricing) && fxLabel && versionId !== null && (
         <button
           id={`proposal-${id}-budget-fx-rates`}
           type="button"
@@ -78,7 +80,7 @@ export function ProposalBudgetActions({
           <Icon name="viability-checks" /> {viabilityLabel}
         </button>
       )}
-      {open && fxLabel && versionId !== null && (
+      {open && (isBudget || isPricing) && fxLabel && versionId !== null && (
         <ActionDialog
           id={`proposal-${id}-budget-fx-rates-dialog`}
           title={fxLabel}
@@ -89,7 +91,7 @@ export function ProposalBudgetActions({
             type={type}
             proposalId={id}
             versionId={String(versionId)}
-            mode="PURCHASE"
+            mode={isBudget ? "PURCHASE" : "INCOME"}
           />
         </ActionDialog>
       )}

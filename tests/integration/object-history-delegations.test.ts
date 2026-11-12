@@ -214,6 +214,18 @@ const post = (
     }),
   );
 describe("object history", () => {
+  it("accepts only explicitly verified record-owned status identifiers", async () => {
+    const id = next();
+    const host = { ...(await eoiHistoryHost(id)), allowedObjectIds: ["2001"] };
+    state.calls.mockImplementation(reads({ getSharedObjectStatus: {
+      items: [{ object_id: 2001, object_status: "Draft", comments: "Owned" }],
+    } }));
+    expect((await historyView(host)).rows).toEqual([expect.objectContaining({ comments: "Owned" })]);
+    state.calls.mockImplementation(reads({ getSharedObjectStatus: {
+      items: [{ object_id: 2002, object_status: "Draft", comments: "Foreign" }],
+    } }));
+    await expect(historyView(host)).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
   it("rejects another record's status and approval rows from the shared provider", async () => {
     const id = next();
     const host = await eoiHistoryHost(id);

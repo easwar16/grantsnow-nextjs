@@ -20,7 +20,7 @@ export function ethicsShell(r: EthicsRecord, rows: Resources) {
       .filter(([, rb]) => shown(rb))
       .map(([key, rb, fallback, value]) => ({
         key,
-        label: t("labels", rb, fallback),
+        label: key === "spacer" ? "" : t("labels", rb, fallback),
         value,
         date: ["deadline", "expiry"].includes(key),
       }));
@@ -29,6 +29,7 @@ export function ethicsShell(r: EthicsRecord, rows: Resources) {
     selectedParticipant: null as string | null,
     access: r.access,
     statusCode: r.statusCode,
+    riskCode: r.riskCode,
     tabs: r.tabs.map((key) => ({
       key,
       name: t(
@@ -46,13 +47,20 @@ export function ethicsShell(r: EthicsRecord, rows: Resources) {
       ),
     })),
     panel: cells([
+      ["title", "ethics-detail-ethics-title", "Title", r.title],
       ["number", "ethics-detail-ethics-number", "Application Number", r.number],
       ["status", "ethics-detail-ethics-status", "Status", r.status],
-      ["risk", "ethics-detail-ethics-risk", "Risk", r.risk],
-      ["title", "ethics-detail-ethics-title", "Title", r.title],
-      ["type", "ethics-detail-ethics-type", "Ethics Type", r.ethicsType],
       ["org", "ethics-detail-org-unit", "Org Unit", r.org],
+      ["risk", "ethics-detail-ethics-risk", "Risk", r.risk],
+      ["spacer", "ethics-detail-ethics-risk", "", ""],
       ["deadline", "ethics-detail-deadline-date", "Deadline Date", r.deadline],
+      ["type", "ethics-detail-ethics-type", "Ethics Type", r.ethicsType],
+      [
+        "creator",
+        "ethics-detail-created-by",
+        "Created by",
+        r.creatorPersonId ?? "",
+      ],
     ]),
     fields: cells([
       ["title", "setup-project-title", "Title", r.title],
@@ -66,22 +74,45 @@ export function ethicsShell(r: EthicsRecord, rows: Resources) {
       list: t("button-labels", "list", "List"),
       overview: t("page-name", "ethics-general-overview", "General Overview"),
       participants: t("labels", "participants", "Participants"),
-      responseParticipants: t("labels", "responses-participants", "Participants"),
-      historyParticipants: t("header-labels", "history-participants", "Participants"),
+      responseParticipants: t(
+        "labels",
+        "responses-participants",
+        "Participants",
+      ),
+      historyParticipants: t(
+        "header-labels",
+        "history-participants",
+        "Participants",
+      ),
       supervisor: t("labels", "supervisor", "Supervisor"),
       references: t("labels", "setup-referenced-by", "Referenced by"),
       noData: t("helper-texts", "no-data", "No data to display."),
-      responseNoData: t("helper-texts", "responses-no-data", "No responses available."),
+      responseNoData: t(
+        "helper-texts",
+        "responses-no-data",
+        "No responses available.",
+      ),
       responseSave: t("button-labels", "responses-save", "Save"),
+      editSetup: t("labels", "ethics-detail-edit-setup", "Edit Setup"),
+      edit: t("button-labels", "ethics-detail-edit", "Edit"),
+      cancel: t("button-labels", "ethics-detail-cancel", "Cancel"),
+      version: t("labels", "ethics-detail-ethics-version", "Ethics Version"),
       comments: t("button-labels", "comments", "Comments"),
-      audit: serverFunctions.resources.resourceVisible(rows, BUNDLE, "button-labels", "openAuditTrail")
-        ? t("button-labels", "openAuditTrail", "Audit Trail") : null,
+      audit: serverFunctions.resources.resourceVisible(
+        rows,
+        BUNDLE,
+        "button-labels",
+        "openAuditTrail",
+      )
+        ? t("button-labels", "openAuditTrail", "Audit Trail")
+        : null,
       auditTitle: t("dialog-titles", "audit-trail", "Audit Trail"),
       close: t("button-labels", "close", "Close"),
       tabs: "Ethics pages",
     },
     showReferences: shown("setup-referenced-by"),
     showVersion: shown("ethics-detail-ethics-version"),
+    formType: r.formType,
   };
 }
 export type EthicsShellModel = ReturnType<typeof ethicsShell>;

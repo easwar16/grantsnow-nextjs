@@ -51,6 +51,9 @@ const row = z.object({
 const body = z.object({
   items: z.array(row),
   hasMore: z.union([z.boolean(), z.string()]).optional(),
+  total_count: z.coerce.number().int().nonnegative().optional(),
+  totalcount: z.coerce.number().int().nonnegative().optional(),
+  totalResults: z.coerce.number().int().nonnegative().optional(),
 });
 export type EthicsRow = ReturnType<typeof mapRow>;
 const value = (s: string | null | undefined) => s ?? "";
@@ -78,7 +81,6 @@ const mapRow = (r: z.infer<typeof row>) => ({
   reviewer: value(r.reviewer_name),
   currentApprover: r.my_approval === "Y",
 });
-
 
 const filterKeys = {
   number: "list-ethics-number",
@@ -181,6 +183,10 @@ export async function ethicsListView() {
         roles,
         "ethics-recycle-bin",
       ).read,
+      restore: serverFunctions.permissions.pageAccess(
+        roles,
+        "ethics-recycle-restore",
+      ).read,
       view: visible(bundle, "button-labels", "list-view-record"),
       link: visible(bundle, "button-labels", "list-link"),
       clone:
@@ -201,8 +207,11 @@ export async function ethicsListView() {
         "New Ethics Application",
       ),
       recycle: label(bundle, "button-labels", "recycle-bin", "Recycle bin"),
+      restore: label(bundle, "button-labels", "restore", "Restore"),
+      noData: label(bundle, "helper-texts", "no-data", "No data to display."),
       clear: label(bundle, "button-labels", "clear", "Clear"),
       total: label(bundle, "labels", "total-count", "Total"),
+      filters: label(bundle, "section-header-labels", "filters", "Filters"),
     },
   };
 }
@@ -290,6 +299,10 @@ export async function listEthics(f: EthicsFilters, signal?: AbortSignal) {
   return {
     rows: result.data.items.map(mapRow),
     hasMore: result.data.hasMore === true || result.data.hasMore === "true",
+    total:
+      result.data.total_count ??
+      result.data.totalcount ??
+      result.data.totalResults,
   };
 }
 

@@ -29,6 +29,14 @@ const icons = {
   },
   "fx-rates": { ux: "transfer-money", material: "currency_exchange" },
   "viability-checks": { ux: "library-books", material: "fact_check" },
+  "proposal-ai-summary": {
+    ux: "artificial-intelligence2",
+    material: "auto_awesome",
+  },
+  "proposal-compare": {
+    ux: "viewpoint-compare",
+    material: "compare_arrows",
+  },
   "proposal-summary": { ux: "summary", material: "summarize" },
   "proposal-budget": { ux: "money", material: "payments" },
   "proposal-pricing": { ux: "customer-refund", material: "request_quote" },

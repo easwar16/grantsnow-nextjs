@@ -77,7 +77,11 @@ export function sumCost(values: (string | number | null | undefined)[]) {
   return total;
 }
 
-export function mapBudget(raw: unknown, proposalId: string) {
+export function mapBudget(
+  raw: unknown,
+  proposalId: string,
+  relatedNumbers: readonly string[] = [],
+) {
   const parsed = response.safeParse(raw);
   if (!parsed.success)
     throw new AppError(
@@ -85,7 +89,14 @@ export function mapBudget(raw: unknown, proposalId: string) {
       "Oracle returned an invalid Proposal Budget.",
     );
   const rows = parsed.data.items;
-  if (rows.some((row) => String(row.proposal_id) !== proposalId))
+  const related = new Set(relatedNumbers.filter(Boolean));
+  if (
+    rows.some(
+      (row) =>
+        String(row.proposal_id) !== proposalId &&
+        !related.has(row.proposal_number),
+    )
+  )
     throw new AppError(
       "FORBIDDEN",
       "A Budget line is outside this Proposal scope.",
@@ -159,6 +170,7 @@ function mapLines(rows: CostRow[]) {
           code: category.code,
           name: category.name,
           rows: category.rows.map((row, index) => ({
+            key: index,
             id: String(row.costing_header_id ?? `${category.id}-${index}`),
             name: row.staff_name || "Cost item",
             role: row.project_role || "",
@@ -257,7 +269,11 @@ export async function proposalBudget(
     };
   const raw = await proposals.costSummary({ proposalId: id, versionId });
   return {
-    ...mapBudget(raw, id),
+    ...mapBudget(
+      raw,
+      id,
+      context.summary.subproposals.map((row) => row.proposalNumber),
+    ),
     bundle: context.bundle,
     reference: context.summary.reference,
     canReadStaff: context.access.get("proposals-budget-staff")?.read === true,

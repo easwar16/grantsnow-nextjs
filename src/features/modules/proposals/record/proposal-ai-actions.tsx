@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { ActionDialog } from "@/components/dialog/action-dialog";
 import { proposals } from "@/lib/api";
+import { Icon } from "@/components/ui/icon";
 import styles from "./proposal-record.module.css";
 
 type Kind = "summary" | "comparison";
@@ -43,7 +44,7 @@ export function ProposalAiActions({
           disabled={pending}
           onClick={() => void open("summary")}
         >
-          ◉ &nbsp; {summaryLabel}
+          <Icon name="proposal-ai-summary" /> {summaryLabel}
         </button>
       )}
       {comparisonLabel && (
@@ -54,7 +55,7 @@ export function ProposalAiActions({
           disabled={!canCompare || pending}
           onClick={() => void open("comparison")}
         >
-          ▧ &nbsp; {comparisonLabel}
+          <Icon name="proposal-compare" /> {comparisonLabel}
         </button>
       )}
       {kind && (

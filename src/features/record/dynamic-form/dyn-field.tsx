@@ -22,6 +22,7 @@ import type {
 } from "./models";
 import styles from "./dynamic-form.module.css";
 import { functions } from "@/lib/functions";
+import { useFormat } from "@/components/layout/shell-context";
 /**
  * A number box that keeps what is typed ("1.") while the model holds a number or nothing; an empty number stays
  * empty (D42). Shown rounded to DECIMAL_PLACES_COUNT when the field is left; the value keeps what was typed (decimals
@@ -79,6 +80,7 @@ export function DynFieldView({
   id,
   data,
   busy,
+  legacyReadOnly = false,
   onPick,
   onDownload,
 }: {
@@ -89,10 +91,12 @@ export function DynFieldView({
   id: string;
   data: DynamicFormData;
   busy: boolean;
+  legacyReadOnly?: boolean;
   onPick: (file: File) => void;
   onDownload: () => void;
 }) {
   const sectionId = section.sectionId,
+    format = useFormat(),
     fieldId = field.fieldId,
     value = model.value(formId, sectionId, fieldId),
     live = model.live(formId, sectionId, fieldId),
@@ -171,6 +175,14 @@ export function DynFieldView({
           />
         );
       case "DATE":
+        if (legacyReadOnly && !live)
+          return (
+            <span id={id} className={styles.readOnly}>
+              {typeof value === "string" && value
+                ? functions.format.dateDisplay(value, format)
+                : ""}
+            </span>
+          );
         return (
           <DateInput
             id={id}
@@ -184,6 +196,7 @@ export function DynFieldView({
           />
         );
       case "RADIO":
+        if (legacyReadOnly && !live && isBlank(value)) return <span id={id} />;
         return (
           <div
             id={id}
@@ -306,6 +319,38 @@ export function DynFieldView({
   const fileControl = () => {
     const name = fileNameOf(value);
     const storageOff = !settings.storage;
+    if (legacyReadOnly && !live)
+      return (
+        <div className={styles.legacyFile}>
+          <div id={id} className={styles.readOnlyDrop} aria-disabled="true">
+            <strong>{name || texts.dragAndDrop}</strong>
+            <span>{field.description}</span>
+          </div>
+          <div className={styles.legacyFileActions}>
+            <button
+              id={`${id}-download`}
+              type="button"
+              className="gn-btn gn-btn--borderless gn-btn--icon"
+              title={texts.download}
+              aria-label={`${texts.download} ${name || field.description}`}
+              disabled={!name || storageOff}
+              onClick={onDownload}
+            >
+              <Icon name="download" size={14} />
+            </button>
+            <button
+              id={`${id}-delete`}
+              type="button"
+              className="gn-btn gn-btn--borderless gn-btn--icon"
+              title={texts.delete}
+              aria-label={`${texts.delete} ${name || field.description}`}
+              disabled
+            >
+              <Icon name="trash" size={14} />
+            </button>
+          </div>
+        </div>
+      );
     const accept = (picked: File | undefined) => {
       if (picked && live && !storageOff) onPick(picked);
     };

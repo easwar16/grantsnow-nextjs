@@ -80,6 +80,8 @@ export interface DynamicFormProps {
   hideEmpty?: boolean;
   /** Proposal Detail renders GRID sections across the full form row in VBCS. */
   fullWidthGrid?: boolean;
+  /** VBCS Ethics read view: compact text/date values and file drop zones. */
+  legacyReadOnly?: boolean;
   /** Called whenever the dirty state changes, for the host's unsaved-changes guard. */
   onDirtyChange?: (dirty: boolean) => void;
   /** Called when the form becomes ready or stops being ready, so the host can hold its save until then. */
@@ -148,6 +150,7 @@ export function DynamicForm({
   editable,
   hideEmpty,
   fullWidthGrid = false,
+  legacyReadOnly = false,
   onDirtyChange,
   onReadyChange,
   onContentChange,
@@ -404,7 +407,7 @@ export function DynamicForm({
     <div
       ref={host}
       id={`${prefix}-form`}
-      className={`${styles.form} ${slot === "PROPOSALS-SUMMARY" ? styles.proposalSummary : ""}`}
+      className={`${styles.form} ${slot === "PROPOSALS-SUMMARY" ? styles.proposalSummary : ""} ${legacyReadOnly && !editable ? styles.legacyReadOnly : ""}`}
     >
       <fieldset
         id={`${prefix}-sections`}
@@ -495,6 +498,7 @@ export function DynamicForm({
                               id={`${prefix}-field-${field.fieldId}`}
                               data={data}
                               busy={saving}
+                              legacyReadOnly={legacyReadOnly && !editable}
                               onPick={(file) =>
                                 pick(form, section, field, file)
                               }

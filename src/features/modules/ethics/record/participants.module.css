@@ -1,24 +1,67 @@
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 220px;
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) 148px;
+  gap: 8px;
   align-items: start;
 }
-.content { min-width: 0; }
+.content {
+  min-width: 0;
+}
 .participants {
   display: flex;
   flex-direction: column;
   gap: 6px;
   border: 1px solid var(--border);
   border-radius: 4px;
-  background: var(--surface);
-  padding: 14px;
+  background: var(--record-panel-bg, #f1efed);
+  padding: 14px 12px;
 }
-.participants h2 { font-size: 16px; margin: 0 0 6px; }
-.participants a { color: inherit; padding: 7px 8px; text-decoration: none; border-radius: 4px; }
-.participants a:hover, .participants a[aria-current="page"] { background: var(--surface-hover); }
-.participants small { display: block; opacity: .7; }
+.participants h2 {
+  font-size: 16px;
+  margin: 0 0 6px;
+}
+.participants a {
+  color: inherit;
+  padding: 7px 8px;
+  text-decoration: none;
+  border-radius: 4px;
+}
+.participants a:hover {
+  background: var(--surface-hover);
+}
+.participants a[aria-current="page"] {
+  background: #e4f2f7;
+  border-top: 1px solid #4b9cba;
+  border-bottom: 1px solid #4b9cba;
+}
+.participants small {
+  display: block;
+  opacity: 0.7;
+}
+.person {
+  padding: 7px 8px;
+}
+.participants .org,
+.participants .status {
+  width: fit-content;
+  margin-top: 3px;
+  padding: 2px 7px;
+  border-radius: 9px;
+  opacity: 1;
+}
+.participants .org {
+  color: white;
+  background: #817e7c;
+}
+.participants .status {
+  color: white;
+  background: #006d8a;
+}
 @media (max-width: 750px) {
-  .layout { grid-template-columns: 1fr; }
-  .participants { grid-row: 1; }
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .participants {
+    grid-row: 1;
+  }
 }

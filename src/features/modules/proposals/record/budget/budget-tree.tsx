@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { ActionMenu } from "@/components/ui/action-menu";
 import { DataTable, type TableColumn } from "@/components/ui/data-table";
@@ -13,7 +14,12 @@ type Category = Groups[number]["categories"][number];
 type Node =
   | { kind: "group"; group: Groups[number] }
   | { kind: "category"; groupId: string; category: Category }
-  | { kind: "line"; category: string; row: Category["rows"][number] };
+  | {
+      kind: "line";
+      groupId: string;
+      category: string;
+      row: Category["rows"][number];
+    };
 type ColumnKey =
   | "name"
   | "role"
@@ -105,6 +111,21 @@ export function BudgetTree({
         : []),
     ];
   });
+  const tableWidth =
+    columns.reduce(
+      (width, column) =>
+        width +
+        (column.key === "name"
+          ? 300
+          : column.key === "role"
+            ? 90
+            : column.key === "unindexed-cost" || column.key === "total-cost"
+              ? 160
+              : 70),
+      0,
+    ) +
+    splitColumns.length * 160 +
+    (canReadStaff ? 36 : 0);
   const cell = (key: ColumnKey, node: Values) =>
     key === "unindexed-cost" || key === "total-cost"
       ? amount(node[key] ?? "")
@@ -149,80 +170,90 @@ export function BudgetTree({
   const nodes: Node[] = groups.map((group) => ({ kind: "group", group }));
 
   return (
-    <DataTable
-      id={`proposal-${id}-budget-tree-${treeId}`}
-      rowIds={`proposal-${id}-budget`}
-      className={styles.budgetTable}
-      columns={tableColumns}
-      rows={nodes}
-      rowKey={(node) =>
-        node.kind === "group"
-          ? `funding-${treeId}-${node.group.id}`
-          : node.kind === "category"
-            ? `category-${treeId}-${node.groupId}-${node.category.id}`
-            : `line-${treeId}-${node.row.id}`
+    <div
+      className={styles.budgetTableScroll}
+      style={
+        {
+          "--budget-table-width": `${tableWidth}px`,
+        } as CSSProperties
       }
-      childrenOf={(node) =>
-        node.kind === "group"
-          ? node.group.categories.map((category) => ({
-              kind: "category",
-              groupId: node.group.id,
-              category,
-            }))
-          : node.kind === "category"
-            ? node.category.rows.map((row) => ({
-                kind: "line",
-                category: node.category.code,
-                row,
+    >
+      <DataTable
+        id={`proposal-${id}-budget-tree-${treeId}`}
+        rowIds={`proposal-${id}-budget`}
+        className={styles.budgetTable}
+        columns={tableColumns}
+        rows={nodes}
+        rowKey={(node) =>
+          node.kind === "group"
+            ? `funding-${treeId}-${node.group.id}`
+            : node.kind === "category"
+              ? `category-${treeId}-${node.groupId}-${node.category.id}`
+              : `line-${treeId}-${node.groupId}-${node.category}-${node.row.key}`
+        }
+        childrenOf={(node) =>
+          node.kind === "group"
+            ? node.group.categories.map((category) => ({
+                kind: "category",
+                groupId: node.group.id,
+                category,
               }))
+            : node.kind === "category"
+              ? node.category.rows.map((row) => ({
+                  kind: "line",
+                  groupId: node.groupId,
+                  category: node.category.code,
+                  row,
+                }))
+              : undefined
+        }
+        rowLabel={nameOf}
+        rowClassName={(node) =>
+          node.kind === "group"
+            ? styles.budgetGroupRow
+            : node.kind === "category"
+              ? styles.budgetCategoryRow
+              : styles.budgetLineRow
+        }
+        actionCell={
+          canReadStaff
+            ? (node) =>
+                node.kind === "line" &&
+                node.category === "STAFF" &&
+                /^\d+$/.test(node.row.id) && (
+                  <ActionMenu
+                    id={`proposal-${id}-budget-cost-${node.row.id}`}
+                    label={`Actions for ${node.row.name}`}
+                    icon="menu"
+                    className={styles.budgetRowMenu}
+                    items={[
+                      {
+                        key: "edit",
+                        label: "Edit",
+                        run: () =>
+                          router.push(
+                            `/proposals/${type}/${id}/budget/staff/${node.row.id}${versionId ? `?version=${versionId}` : ""}`,
+                          ),
+                      },
+                      {
+                        key: "delete",
+                        label: "Delete",
+                        disabled: true,
+                        run: () => {},
+                      },
+                      {
+                        key: "clone",
+                        label: "Clone",
+                        disabled: true,
+                        run: () => {},
+                      },
+                    ]}
+                  />
+                )
             : undefined
-      }
-      rowLabel={nameOf}
-      rowClassName={(node) =>
-        node.kind === "group"
-          ? styles.budgetGroupRow
-          : node.kind === "category"
-            ? styles.budgetCategoryRow
-            : styles.budgetLineRow
-      }
-      actionCell={
-        canReadStaff
-          ? (node) =>
-              node.kind === "line" &&
-              node.category === "STAFF" &&
-              /^\d+$/.test(node.row.id) && (
-                <ActionMenu
-                  id={`proposal-${id}-budget-cost-${node.row.id}`}
-                  label={`Actions for ${node.row.name}`}
-                  icon="menu"
-                  className={styles.budgetRowMenu}
-                  items={[
-                    {
-                      key: "edit",
-                      label: "Edit",
-                      run: () =>
-                        router.push(
-                          `/proposals/${type}/${id}/budget/staff/${node.row.id}${versionId ? `?version=${versionId}` : ""}`,
-                        ),
-                    },
-                    {
-                      key: "delete",
-                      label: "Delete",
-                      disabled: true,
-                      run: () => {},
-                    },
-                    {
-                      key: "clone",
-                      label: "Clone",
-                      disabled: true,
-                      run: () => {},
-                    },
-                  ]}
-                />
-              )
-          : undefined
-      }
-    />
+        }
+      />
+    </div>
   );
 }
 

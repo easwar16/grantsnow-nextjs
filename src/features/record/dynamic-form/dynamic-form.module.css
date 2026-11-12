@@ -152,6 +152,27 @@
 .readOnlyDrop span {
   font-size: 12px;
 }
+.legacyReadOnly .fields {
+  row-gap: 10px;
+}
+.legacyReadOnly .readOnly {
+  min-height: 16px;
+}
+.legacyFile {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+.legacyFile .readOnlyDrop {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.legacyFileActions {
+  display: flex;
+  flex: none;
+  gap: 2px;
+}
 .pick {
   display: inline-flex;
   flex-direction: row;

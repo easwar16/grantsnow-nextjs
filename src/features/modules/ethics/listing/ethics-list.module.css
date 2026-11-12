@@ -2,8 +2,10 @@
   min-width: 0;
   min-height: 0;
   height: 100%;
-  overflow: auto;
-  padding: 12px 14px 28px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 12px 11px 24px;
   background: var(--bg);
 }
 .toolbar {
@@ -11,8 +13,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 52px;
+  flex: none;
+  min-height: 43px;
   margin-bottom: 4px;
+  padding: 0 9px;
 }
 .toolbarStart {
   display: flex;
@@ -47,17 +51,34 @@
 }
 .filters {
   display: grid;
-  gap: 11px;
-  padding: 11px 9px 16px;
+  gap: 12px;
+  padding: 8px 5px 16px 6px;
+}
+.filterHeading {
+  margin: 0 -6px;
+  padding: 19px 12px 0;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  line-height: 18px;
 }
 .filters :global(.gn-control) {
   width: 100%;
+}
+.filters :global([data-part="field"]) {
+  min-height: 39px;
+}
+.filters :global([role="combobox"]) {
+  padding-left: 12px;
+}
+.filters :global([role="combobox"])::placeholder {
+  color: var(--gn-text-secondary);
+  font-weight: 600;
 }
 .radios {
   display: grid;
   gap: 7px;
   margin: 0;
-  padding: 0;
+  padding: 0 0 7px;
   border: 0;
 }
 .radios legend {
@@ -69,11 +90,14 @@
   display: flex;
   align-items: center;
   gap: 7px;
+  min-height: 20px;
+}
+.radios input {
+  accent-color: var(--gn-text);
 }
 .sort {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 26px;
-  gap: 3px;
+  grid-template-columns: minmax(0, 1fr) 20px;
   align-items: center;
 }
 .sort button {
@@ -85,11 +109,35 @@
   cursor: pointer;
 }
 .date {
-  display: grid;
-  gap: 3px;
+  position: relative;
+  height: 39px;
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;
+}
+.date label {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 12px;
+  line-height: 15px;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+.date:focus-within label,
+.date:has(> span > input:first-child:not(:placeholder-shown)) label {
+  top: 4px;
+  transform: none;
+}
+.date > span,
+.date > span > input:first-child {
+  height: 39px;
+}
+.date > span > input:first-child {
+  padding: 12px 30px 0 12px;
+}
+.date:not(:focus-within) > span > input:first-child::placeholder {
+  color: transparent;
 }
 .filterActions {
   display: flex;
@@ -99,28 +147,58 @@
 .filterActions button {
   font-size: 12px;
 }
+.content :global(#ethics) {
+  flex: none;
+  justify-content: stretch;
+  gap: 0;
+  height: 36px;
+  padding: 0;
+  margin-bottom: 22px;
+}
+.content :global(#ethics > button) {
+  flex: 1 1 0;
+  height: 36px;
+  background: #f3f3f3;
+  border-top: 2px solid #929292;
+  border-bottom: 3px solid transparent;
+  color: var(--gn-text-secondary);
+}
+.content :global(#ethics > button[aria-selected="true"]) {
+  border-top-color: transparent;
+  border-bottom-color: var(--gn-brand);
+  background: var(--surface);
+  color: var(--gn-text);
+}
+.listScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 .cards {
   display: grid;
-  gap: 14px;
+  gap: 19px;
 }
 .card {
+  position: relative;
   border: 1px solid var(--border);
   border-radius: 4px;
   background: var(--surface);
-  padding: 8px 8px 10px;
+  padding: 8px 7px 14px;
 }
 .cardHead {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 3px 6px;
   flex-wrap: wrap;
+  padding-right: 92px;
 }
 .cardHead a {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 3px;
   color: var(--text);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   text-decoration: none;
 }
@@ -132,43 +210,181 @@
   border-radius: 99px;
   background: #008b8b;
   color: #fff;
-  padding: 2px 10px;
+  padding: 1px 9px;
   line-height: 18px;
   font-size: 12px;
 }
 .card h2 {
-  font-size: 17px;
-  margin: 7px 0 18px;
+  font-size: 16px;
+  line-height: 20px;
+  margin: 8px 72px 20px 0;
+}
+.cardActions {
+  position: absolute;
+  top: 68px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cardActions button {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 26px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
 }
 .card :global(.record-metadata) {
-  font-size: 13px;
-  line-height: 1.16;
+  display: grid;
+  grid-template-columns: repeat(5, max-content);
+  gap: 0;
+  font-size: 12px;
+  line-height: 1.15;
+}
+.card :global(.record-metadata > div) {
+  margin: 0;
+  padding: 0 9px;
+  border-right: 1px solid var(--border);
+}
+.card :global(.record-metadata > div:first-child),
+.card :global(.record-metadata > div:nth-child(6)) {
+  padding-left: 0;
 }
 .more {
   margin-top: 12px;
 }
 .count {
-  margin-top: 12px;
-  font-size: 13px;
+  flex: none;
+  min-height: 20px;
+  padding: 3px 4px 0;
+  font-size: 14px;
+  text-decoration: underline;
+}
+@media (max-width: 800px) {
+  .card :global(.record-metadata) {
+    display: flex;
+    flex-wrap: wrap;
+  }
+}
+@media (min-width: 1200px) {
+  .card :global(.record-metadata) {
+    display: flex;
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 600px) {
+  .content {
+    min-height: 540px;
+    padding: 12px 10px 16px;
+  }
+  .content :global(#ethics) {
+    margin-bottom: 12px;
+  }
+  .cardHead {
+    padding-right: 0;
+  }
+  .cardActions {
+    position: static;
+    margin: 4px 0;
+  }
+}
+.recycleDialog[open] {
+  height: min(897px, calc(100dvh - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  gap: 0;
+  border: 1px solid rgba(22, 21, 19, 0.1);
+  border-radius: 4.5px;
+  background: var(--bg);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.28);
+}
+.recycleDialog > div:first-child {
+  position: relative;
+  flex: none;
+  height: 64px;
+  padding: 33px 24px 9px;
+}
+.recycleDialog > div:first-child h2 {
+  line-height: 21px;
+}
+.recycleDialog > div:first-child > button {
+  position: absolute;
+  top: 15px;
+  right: 14px;
+  width: 28px;
+  height: 28px;
+  justify-content: center;
+  align-items: center;
+}
+.recycleBody {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0 24px 12px;
+  overflow-y: auto;
+  outline: 2px dashed var(--text);
+  outline-offset: -2px;
+}
+.recycleEmpty {
+  margin: 0;
+  padding: 36px 12px;
+  font-family: Georgia, Times, serif;
+  font-size: 15px;
+  line-height: 21px;
 }
 .deleted {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 12px;
 }
 .deleted li {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.deletedInfo {
+  min-width: 0;
+}
+.deletedHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.deleted h3 {
+  margin: 7px 0 10px;
+  font-size: 16px;
+}
+.deleted :global(.record-metadata) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 0;
+  font-size: 12px;
+}
+.deleted :global(.record-metadata > div) {
+  padding: 0 9px;
+  border-right: 1px solid var(--border);
+}
+.deleted :global(.record-metadata > div:first-child) {
+  padding-left: 0;
 }
 .deleted button {
-  min-height: 32px;
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  background: var(--surface);
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: var(--text);
   cursor: pointer;
 }

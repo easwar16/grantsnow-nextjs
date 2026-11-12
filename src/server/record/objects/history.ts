@@ -26,6 +26,8 @@ export interface HistoryHost {
   user: UserContext;
   objectType: string;
   objectId: string;
+  /** Additional record-owned identifiers that this host has verified for a legacy history response. */
+  allowedObjectIds?: string[];
   /** The approval-history transaction number; none skips that read. */
   objectNumber: string | null;
   approvalType: string;
@@ -201,10 +203,11 @@ export async function historyView(host: HistoryHost): Promise<HistoryView> {
     settled(people.all()),
     approvalsRead,
   ]);
+  const permittedIds = new Set([host.objectId, ...(host.allowedObjectIds ?? [])]);
   if (
     history.some(
       (item) =>
-        item.object_id != null && String(item.object_id) !== host.objectId,
+        item.object_id != null && !permittedIds.has(String(item.object_id)),
     )
   )
     throw new AppError(

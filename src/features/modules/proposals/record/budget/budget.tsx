@@ -87,6 +87,7 @@ export function ProposalBudget({
         total: shows("total-cost") ? category.total : "",
         yearSplits: visibleSplits(category.yearSplits),
         rows: category.rows.map((row) => ({
+          key: row.key,
           id: row.id,
           name: shows("name") ? row.name : "",
           role: shows("role") ? row.role : "",

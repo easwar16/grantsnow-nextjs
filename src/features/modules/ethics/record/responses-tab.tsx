@@ -1,35 +1,30 @@
 "use client";
-import { useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { DynamicForm, type DynamicFormHandle } from "@/features/record/dynamic-form/dynamic-form";
+import { useCallback, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import {
+  DynamicForm,
+  type DynamicFormHandle,
+} from "@/features/record/dynamic-form/dynamic-form";
 import { useToast } from "@/components/feedback/toast";
-import styles from "@/features/record/shell/record-tab.module.css";
+import { useResponseEdit } from "./response-edit-context";
 
 /** The shared dynamic form reads and writes the selected stakeholder through the protected form host. */
 export function ResponsesTab({
   setupId,
   stakeholderId,
   editable,
-  saveLabel,
-  versions,
-  selectedVersion,
   historicalVersion,
 }: {
   setupId: string;
   stakeholderId: string;
   editable: boolean;
-  saveLabel: string;
-  versions: { value: number; label: string }[];
-  selectedVersion?: number;
   historicalVersion?: number;
 }) {
   const form = useRef<DynamicFormHandle>(null);
   const router = useRouter();
-  const query = useSearchParams();
   const toast = useToast();
-  const [saving, setSaving] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const save = async () => {
+  const { editing, saving, setEditing, setSaving, register } = useResponseEdit();
+  const save = useCallback(async () => {
     if (saving) return;
     setSaving(true);
     try {
@@ -41,20 +36,20 @@ export function ResponsesTab({
     } finally {
       setSaving(false);
     }
-  };
+  }, [saving, setSaving, setEditing, router, toast]);
+  const cancel = useCallback(() => {
+    void form.current?.reload();
+    setEditing(false);
+  }, [setEditing]);
+  useEffect(() => {
+    register({ save: () => void save(), cancel });
+    return () => register(null);
+  }, [register, save, cancel]);
   return (
-    <section id="ethics-responses" className={styles.tab} aria-label="Responses">
-      {versions.length > 0 && <label htmlFor="ethics-response-version">Version
-        <select id="ethics-response-version" className="gn-control"
-          value={selectedVersion ?? versions[0].value}
-          onChange={(event) => {
-            const next = new URLSearchParams(query.toString());
-            next.set("version", event.target.value);
-            router.replace(`?${next.toString()}`, { scroll: false });
-          }}>
-          {versions.map((row) => <option key={row.value} value={row.value}>{row.label}</option>)}
-        </select>
-      </label>}
+    <section
+      id="ethics-responses"
+      aria-label="Responses"
+    >
       <DynamicForm
         key={`${stakeholderId}:${historicalVersion ?? "latest"}`}
         ref={form}
@@ -65,17 +60,8 @@ export function ResponsesTab({
         objectNumber={stakeholderId}
         editable={editable && editing}
         version={historicalVersion}
+        legacyReadOnly
       />
-      {editable && !editing && <div className={styles.formActions}>
-        <button type="button" className="gn-btn gn-btn--outlined" id="ethics-response-edit"
-          onClick={() => setEditing(true)}>Edit</button>
-      </div>}
-      {editable && editing && <div className={styles.formActions}>
-        <button type="button" className="gn-btn gn-btn--outlined" id="ethics-response-cancel"
-          disabled={saving} onClick={() => { void form.current?.reload(); setEditing(false); }}>Cancel</button>
-        <button type="button" className="gn-btn gn-btn--primary" id="ethics-response-save"
-          disabled={saving} onClick={() => void save()}>{saveLabel}</button>
-      </div>}
     </section>
   );
 }

@@ -90,6 +90,7 @@ export function BudgetView({
           <input
             id={`proposal-${id}-budget-year-split`}
             type="checkbox"
+            role="switch"
             checked={showYearSplit}
             onChange={(event) => setShowYearSplit(event.target.checked)}
           />

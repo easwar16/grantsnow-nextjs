@@ -2741,6 +2741,7 @@ export async function mockOracle(
     return {
       items: rows.slice(offset, offset + limit),
       hasMore: offset + limit < rows.length,
+      total_count: rows.length,
     };
   }
   if (op === "getProposalGetApplicationList") return { items: [] };
@@ -2927,6 +2928,24 @@ export async function mockOracle(
                 application_number: "ETH_807",
                 setup_description: "Previous ethics application",
                 status: "Draft",
+                risk_code: "NONE",
+                risk_desc: "No Risk",
+                created_by: "Alex Morgan",
+                last_updated_by: "Sam Taylor",
+                last_update_date: "2026-10-20",
+                deadline_date: "2026-11-15",
+                expiry_date: "2026-12-15",
+                ethics_type: "Individual",
+                ethics_form_type: "Standard Ethics Form",
+                org_unit_id: 203,
+                org_unit_name: "Faculty of Science",
+              },
+              {
+                setup_flow_id: 942,
+                application_number: "ETH_806",
+                setup_description: "Linked ethics application",
+                status: "Draft",
+                parent_proposal_id: 9756,
                 org_unit_id: 203,
                 org_unit_name: "Faculty of Science",
               },

@@ -34,6 +34,19 @@
 .actions > .actionGroup > div:has(> button[id$="-comments"]) {
   display: contents;
 }
+@media (max-width: 1100px) {
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+  .actions > a {
+    align-self: flex-start;
+  }
+  .actions > .actionGroup {
+    justify-content: flex-start;
+  }
+}
 .actionButton {
   min-height: 32px;
   padding: 4px 10px;
@@ -218,6 +231,14 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
+}
+/* Budget places End Date after Start Date, then Duration at the top of column three. */
+.record:has([id$="-budget-add-actions"]) .infoGrid {
+  grid-auto-flow: column;
+  grid-template-rows: repeat(5, auto);
+}
+.record:has([id$="-budget-add-actions"]) .infoColumn {
+  display: contents;
 }
 .infoColumn {
   display: grid;
@@ -1208,8 +1229,41 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
+}
+.budgetYearSplit input[role="switch"] {
+  appearance: none;
+  position: relative;
+  width: 27px;
+  height: 15px;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: 4.5px;
+  background: #8b8580;
+  cursor: pointer;
+}
+.budgetYearSplit input[role="switch"]::after {
+  content: "";
+  position: absolute;
+  top: 0.5px;
+  left: 0.75px;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: #fff;
+  transform: none;
+}
+.budgetYearSplit input[role="switch"]:checked {
+  border-color: #315357;
+  background: #8fbc8f;
+}
+.budgetYearSplit input[role="switch"]:checked::after {
+  left: 12.25px;
+}
+.budgetYearSplit input[role="switch"]:focus-visible {
+  outline: 2px solid var(--accent-fg);
+  outline-offset: 2px;
 }
 .budgetViews button {
   border: 0;
@@ -1225,9 +1279,34 @@
   border-bottom-color: var(--accent-fg);
 }
 .budgetTable {
-  width: 100%;
+  width: var(--budget-table-width);
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 12px;
+}
+.budgetTableScroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.budgetTable th:first-child,
+.budgetTable td:first-child {
+  width: 300px;
+}
+.budgetTable th:nth-child(2),
+.budgetTable td:nth-child(2) {
+  width: 90px;
+}
+.budgetTable th:nth-child(n + 3):nth-child(-n + 6),
+.budgetTable td:nth-child(n + 3):nth-child(-n + 6) {
+  width: 70px;
+}
+.budgetTable th:nth-child(n + 7),
+.budgetTable td:nth-child(n + 7) {
+  width: 160px;
+}
+.budgetTable th:global(.gn-table-actions),
+.budgetTable td:global(.gn-table-actions) {
+  width: 36px;
 }
 .budgetTable th,
 .budgetTable td {
@@ -1444,9 +1523,17 @@
   font-family: Georgia, serif;
   font-size: 18px;
 }
-.proposalContracts { padding: 16px 14px; }
-.linkedContractCreate { margin: 22px 0 0 10px; }
-.linkedContractEmpty { margin: 16px 0 0 10px; padding: 18px 8px; border: 1px solid var(--gn-divider); }
+.proposalContracts {
+  padding: 16px 14px;
+}
+.linkedContractCreate {
+  margin: 22px 0 0 10px;
+}
+.linkedContractEmpty {
+  margin: 16px 0 0 10px;
+  padding: 18px 8px;
+  border: 1px solid var(--gn-divider);
+}
 .linkedApplication {
   margin-bottom: 16px;
   padding: 12px;

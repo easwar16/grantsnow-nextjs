@@ -158,6 +158,10 @@ Due Diligence 2026-11-10 update (fixture only): scoped listing, clone/delete/rec
 
 Ethics 2026-11-10 update (fixture only): participant-scoped tabs and deep links, setup create/submit/draft and guarded force edit, configured attributes, admin answer on creation, dynamic Responses with Edit/Cancel and historical read-only preview, Documents, Approvals and automatic submission gate, History, comments/audit, clone/delete, linked records, reference link/unlink, print and finalize paths are implemented. 958 unit/integration tests, typecheck, lint, isolated build and 17 Ethics fixture browser journeys pass. Keep the module 🟡 pending live DEV contract reads and role/record-type visual acceptance. See `docs/changes/2026-11-10-ethics-module.md` and `docs/ethics-source-inventory.md`.
 
+Ethics 2026-11-11 listing visual check: the Administrator listing at 899×987 CSS pixels was compared with the supplied VBCS screen and signed-in DEV reads. Drawer, tabs, card geometry, compact metadata, action placement, Filters heading and backend total count now align; live Next.js showed `10 of 1298`. Typecheck, lint, 984 unit/integration tests, isolated build and 18 focused Ethics browser journeys pass. Other roles and mobile widths await VBCS side-by-side acceptance. See `docs/changes/2026-11-11-easwar-ethics-listing-layout.md`.
+
+Ethics sidebar follow-up, 2026-11-11: dropdown, radio and date control dimensions were measured against the live VBCS preview and corrected within the Ethics listing stylesheet; the date labels now sit inside their 39px boxes. Geometry browser coverage includes these positions. The remaining role/mobile visual acceptance noted above still applies.
+
 ## Contracts (Easwar's module)
 
 | Item                                                    | Status | Evidence / note                             |

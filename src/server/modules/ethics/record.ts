@@ -38,6 +38,7 @@ const setup = z.object({
   ethics_type_lkp_code: z.string().nullish(),
   ethics_form_type: z.string().nullish(),
   risk_desc: z.string().nullish(),
+  risk_code: z.string().nullish(),
   deadline_date: z.string().nullish(),
   expiry_date: z.string().nullish(),
   created_by: z.coerce.number().nullish(),
@@ -144,6 +145,7 @@ export async function ethicsRecord(id: string, requestedAccess?: string) {
     ethicsTypeCode: data.ethics_type_lkp_code ?? "",
     formType: data.ethics_form_type ?? "",
     risk: data.risk_desc ?? "",
+    riskCode: data.risk_code ?? "",
     deadline: data.deadline_date ?? "",
     expiry: data.expiry_date ?? "",
     sections: data.sections.map((section) => ({
@@ -241,6 +243,7 @@ export async function ethicsHistoryHost(id: string, participant?: string): Promi
     user,
     objectType: "ETHICS",
     objectId: first.id,
+    allowedObjectIds: [record.id, ...record.respondents.map((person) => person.id)],
     objectNumber: stakeholder.id,
     approvalType: "ETHICS",
     bundle: "ethics",

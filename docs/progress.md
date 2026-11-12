@@ -8,6 +8,18 @@ One file for where the rebuild stands. It merges four earlier documents verbatim
 
 ## 1. Progress
 
+### P_6455 Budget read, toolbar and year split, 2026-11-11
+
+Follow-up: the first Show Year Split switch styling still differed in its off state. The signed-in VBCS `oj-switch` was measured directly in both states; the local Budget switch now matches its 27×15 px track, 12×12 px rounded thumb, off/on colors and label metrics. This is a visual correction only; the earlier period-value comparison remains the behavior evidence.
+
+The Next.js P_6455 Budget denial came from rejecting cost rows for its attached Sub-Proposal. The Budget mapper now accepts only child Proposal numbers present in the freshly authorized Summary and still rejects unrelated rows. A signed-in local DEV direct refresh displayed the parent and child cost trees and live amounts. The toolbar now wraps like VBCS at half width; the Budget header field order, horizontally scrolling table, Show Year Split switch, and AI Summary/Compare Proposal glyphs were aligned against signed-in VBCS. Toggling Year Split in each preview showed the same indexed and unindexed period values. Repeated Oracle cost header IDs also caused duplicate React keys; the table now uses stable group/category positions and the local warning cleared on refresh. Focused unit tests (7), typecheck, focused lint, Prettier, diff check and the isolated build passed. A focused fixture Chromium run timed out amid repeated fixture-server stream errors; it is not a passing browser test. No live Oracle write was made. See `docs/changes/2026-11-11-easwar-proposal-budget-p6455.md` for scope and remaining Budget gaps.
+
+### Ethics listing screenshot alignment, 2026-11-11
+
+The owner's VBCS/Next.js comparison showed a 36px horizontal and 17px vertical dashboard inset around the Ethics listing, which shifted the drawer, tabs and cards. The listing now uses the existing full-bleed shell class only at `/ethics`, and its scoped CSS matches the measured 899px VBCS geometry: 240px drawer, tabs at (251,115), first card at (251,173), two metadata rows and a fixed bottom count. The exact-route shell change is a justified shared-framework override for this source-verified screen; other Ethics routes and modules retain their shell class. Live DEV displayed `10 of 1298` from the backend total count. See `docs/changes/2026-11-11-easwar-ethics-listing-layout.md`.
+
+A second close-up exposed short dropdowns and radio/date groups in the Ethics sidebar. Scoped listing styles now align its control heights and vertical positions with the signed-in VBCS preview through Expiry Date; the shared controls and other modules remain unchanged. The change record above includes the measured coordinates.
+
 ### Supervisor lookup sentinel in Ethics and Due Diligence, 2026-11-11
 
 The fixture supervisor response includes a `Not Applicable` row with `person_id=-1` and no Org Unit. Due Diligence choices and create/edit validation, plus Ethics setup edit validation, now filter that sentinel consistently. The initial full fixture browser suite passed 79 journeys, skipped 2 and failed 4 in these paths; all 4 failed journeys passed after the correction. TypeScript passed after the fix; the pre-fix lint, 983 unit/integration tests and isolated build passed. Live Oracle acceptance is unchanged. See `docs/changes/2026-11-11-easwar-supervisor-sentinel.md`.

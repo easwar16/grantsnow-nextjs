@@ -100,9 +100,20 @@ export function EthicsList({
   };
   const list = usePagedApi(ethics.list, active);
   const deleted = useApi(ethics.deleted, recycleOpen ? undefined : null);
-  const cloneOptions = useApi(ethics.cloneOptions, cloneId ? { id: cloneId, access } : null);
-  const linked = useApi(ethics.links, linkedId ? { id: linkedId, access } : null);
-  const selectedObjects = cloneSelected ?? cloneOptions.data?.filter((option) => option.selected).map((option) => option.value) ?? [];
+  const cloneOptions = useApi(
+    ethics.cloneOptions,
+    cloneId ? { id: cloneId, access } : null,
+  );
+  const linked = useApi(
+    ethics.links,
+    linkedId ? { id: linkedId, access } : null,
+  );
+  const selectedObjects =
+    cloneSelected ??
+    cloneOptions.data
+      ?.filter((option) => option.selected)
+      .map((option) => option.value) ??
+    [];
   async function clone() {
     if (!cloneId || cloneBusy) return;
     setCloneBusy(true);
@@ -115,12 +126,16 @@ export function EthicsList({
     list.reload();
   }
   async function remove(id: string, number: string) {
-    if (deleteBusy || !(await deleteConfirm.ask({
-      title: "Delete Ethics application",
-      message: `Delete ${number}?`,
-      confirm: "Delete",
-      cancel: "Cancel",
-    }))) return;
+    if (
+      deleteBusy ||
+      !(await deleteConfirm.ask({
+        title: "Delete Ethics application",
+        message: `Delete ${number}?`,
+        confirm: "Delete",
+        cancel: "Cancel",
+      }))
+    )
+      return;
     setDeleteBusy(id);
     setActionError("");
     const result = await ethics.remove(id, access);
@@ -144,6 +159,7 @@ export function EthicsList({
     if (result.ok) {
       deleted.retry();
       list.reload();
+      setRecycleOpen(false);
     } else setRestoreError(result.error.message);
     setRestoring(null);
   }
@@ -180,6 +196,9 @@ export function EthicsList({
             value={active.status}
             onChange={(status) => navigate({ ...active, status })}
           />
+          <h2 id="ethics-filter-heading" className={styles.filterHeading}>
+            {view.labels.filters}
+          </h2>
           <form
             id="ethics-filter-form"
             className={styles.filters}
@@ -375,7 +394,10 @@ export function EthicsList({
             <button
               id="ethics-recycle"
               type="button"
-              onClick={() => setRecycleOpen(true)}
+              onClick={() => {
+                setRestoreError("");
+                setRecycleOpen(true);
+              }}
             >
               <Icon name="trash" size={17} /> {view.labels.recycle}
             </button>
@@ -399,139 +421,266 @@ export function EthicsList({
             })
           }
         />
-        {list.error && !list.rows.length ? (
-          <State
-            title="Ethics unavailable"
-            message={list.error.message}
-            code={list.error.code}
-            retry={list.retry}
-          />
-        ) : null}
-        {list.loading && !list.rows.length ? <ListSkeleton /> : null}
-        {!list.loading && !list.error && !list.rows.length ? (
-          <State
-            title="No ethics applications"
-            message="No applications match these filters."
-            code="EMPTY"
-          />
-        ) : null}
-        <div
-          id="ethics-applications"
-          className={styles.cards}
-          aria-busy={list.stale || list.loading}
-        >
-          {list.rows.map((row) => (
-            <EthicsCard
-              key={row.id}
-              row={row}
-              view={view}
-              access={access}
-              format={format}
-              onClone={() => { setCloneId(row.id); setCloneSelected(null); setActionError(""); }}
-              onLinks={() => setLinkedId(row.id)}
-              onDelete={() => remove(row.id, row.number)}
-              busy={deleteBusy === row.id}
+        <div id="ethics-list-scroll" className={styles.listScroll}>
+          {list.error && !list.rows.length ? (
+            <State
+              title="Ethics unavailable"
+              message={list.error.message}
+              code={list.error.code}
+              retry={list.retry}
             />
-          ))}
-        </div>
-        {list.hasMore && (
-          <button
-            id="ethics-load-more"
-            className={styles.more}
-            disabled={list.loadingMore}
-            onClick={list.loadMore}
+          ) : null}
+          {list.loading && !list.rows.length ? <ListSkeleton /> : null}
+          {!list.loading && !list.error && !list.rows.length ? (
+            <State
+              title="No ethics applications"
+              message="No applications match these filters."
+              code="EMPTY"
+            />
+          ) : null}
+          <div
+            id="ethics-applications"
+            className={styles.cards}
+            aria-busy={list.stale || list.loading}
           >
-            {list.loadingMore ? "Loading…" : "Load more"}
-          </button>
-        )}
+            {list.rows.map((row) => (
+              <EthicsCard
+                key={row.id}
+                row={row}
+                view={view}
+                access={access}
+                format={format}
+                onClone={() => {
+                  setCloneId(row.id);
+                  setCloneSelected(null);
+                  setActionError("");
+                }}
+                onLinks={() => setLinkedId(row.id)}
+                onDelete={() => remove(row.id, row.number)}
+                busy={deleteBusy === row.id}
+              />
+            ))}
+          </div>
+          {list.hasMore && (
+            <button
+              id="ethics-load-more"
+              className={styles.more}
+              disabled={list.loadingMore}
+              onClick={list.loadMore}
+            >
+              {list.loadingMore ? "Loading…" : "Load more"}
+            </button>
+          )}
+        </div>
         {!!list.rows.length && (
           <div id="ethics-loaded-count" className={styles.count}>
-            {list.rows.length} applications loaded
+            {list.total === undefined
+              ? `${list.rows.length} applications loaded`
+              : `${list.rows.length} of ${list.total}`}
           </div>
         )}
       </div>
-      {actionError && !cloneId && <p id="ethics-action-error" role="alert">{actionError}</p>}
+      {actionError && !cloneId && (
+        <p id="ethics-action-error" role="alert">
+          {actionError}
+        </p>
+      )}
       {cloneId && (
         <ActionDialog
           id="ethics-clone-dialog"
           title="Clone Ethics application"
           busy={cloneBusy}
-          onClose={() => { setCloneId(null); setCloneSelected(null); }}
+          onClose={() => {
+            setCloneId(null);
+            setCloneSelected(null);
+          }}
         >
           {cloneOptions.loading && <ListSkeleton />}
-          {cloneOptions.error && <State title="Clone options unavailable" message={cloneOptions.error.message} code={cloneOptions.error.code} retry={cloneOptions.retry} />}
+          {cloneOptions.error && (
+            <State
+              title="Clone options unavailable"
+              message={cloneOptions.error.message}
+              code={cloneOptions.error.code}
+              retry={cloneOptions.retry}
+            />
+          )}
           {cloneOptions.data?.map((option) => (
-            <label key={option.value} htmlFor={`ethics-clone-option-${option.value}`}>
+            <label
+              key={option.value}
+              htmlFor={`ethics-clone-option-${option.value}`}
+            >
               <input
                 id={`ethics-clone-option-${option.value}`}
                 type="checkbox"
                 checked={selectedObjects.includes(option.value)}
                 disabled={cloneBusy}
-                onChange={(event) => setCloneSelected(event.target.checked
-                  ? [...selectedObjects, option.value]
-                  : selectedObjects.filter((value) => value !== option.value))}
+                onChange={(event) =>
+                  setCloneSelected(
+                    event.target.checked
+                      ? [...selectedObjects, option.value]
+                      : selectedObjects.filter(
+                          (value) => value !== option.value,
+                        ),
+                  )
+                }
               />
               {option.label}
             </label>
           ))}
-          {actionError && <p id="ethics-clone-error" role="alert">{actionError}</p>}
-          {cloneOptions.data && <button id="ethics-clone-submit" type="button" disabled={cloneBusy} onClick={clone}>Clone</button>}
+          {actionError && (
+            <p id="ethics-clone-error" role="alert">
+              {actionError}
+            </p>
+          )}
+          {cloneOptions.data && (
+            <button
+              id="ethics-clone-submit"
+              type="button"
+              disabled={cloneBusy}
+              onClick={clone}
+            >
+              Clone
+            </button>
+          )}
         </ActionDialog>
       )}
-      {linkedId && (linked.data ? (
-        <LinkedObjectsDialog id="ethics-linked-dialog" linked={linked.data} onClose={() => setLinkedId(null)}>
-          {!linked.data.groups.length && <p>{linked.data.texts.none}</p>}
-        </LinkedObjectsDialog>
-      ) : (
-        <ActionDialog id="ethics-linked-dialog" title="Linked Objects" onClose={() => setLinkedId(null)}>
-          {linked.error ? <State title="Linked records unavailable" message={linked.error.message} code={linked.error.code} retry={linked.retry} /> : <ListSkeleton />}
-        </ActionDialog>
-      ))}
+      {linkedId &&
+        (linked.data ? (
+          <LinkedObjectsDialog
+            id="ethics-linked-dialog"
+            linked={linked.data}
+            onClose={() => setLinkedId(null)}
+          >
+            {!linked.data.groups.length && <p>{linked.data.texts.none}</p>}
+          </LinkedObjectsDialog>
+        ) : (
+          <ActionDialog
+            id="ethics-linked-dialog"
+            title="Linked Objects"
+            onClose={() => setLinkedId(null)}
+          >
+            {linked.error ? (
+              <State
+                title="Linked records unavailable"
+                message={linked.error.message}
+                code={linked.error.code}
+                retry={linked.retry}
+              />
+            ) : (
+              <ListSkeleton />
+            )}
+          </ActionDialog>
+        ))}
       {recycleOpen && (
         <ActionDialog
           id="ethics-recycle-dialog"
           title={view.labels.recycle}
+          width="600px"
+          className={styles.recycleDialog}
           busy={restoring !== null}
           onClose={() => setRecycleOpen(false)}
         >
-          {deleted.loading && <ListSkeleton />}
-          {deleted.error && (
-            <State
-              title="Recycle bin unavailable"
-              message={deleted.error.message}
-              code={deleted.error.code}
-              retry={deleted.retry}
-            />
-          )}
-          {restoreError && (
-            <p id="ethics-restore-error" role="alert">
-              {restoreError}
-            </p>
-          )}
-          {deleted.data?.length === 0 && (
-            <p id="ethics-recycle-empty">No deleted Ethics applications.</p>
-          )}
-          <ul id="ethics-deleted-applications" className={styles.deleted}>
-            {deleted.data?.map((row) => (
-              <li key={row.id} id={`ethics-deleted-${row.id}`}>
-                <span>
-                  <strong>{row.number}</strong>
-                  <br />
-                  {row.title}
-                </span>
-                {row.canRestore && (
-                  <button
-                    id={`ethics-restore-${row.id}`}
-                    type="button"
-                    disabled={restoring !== null}
-                    onClick={() => restore(row.id, row.number)}
-                  >
-                    Restore
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
+          <div id="ethics-recycle-body" className={styles.recycleBody}>
+            {deleted.loading && !deleted.data && <ListSkeleton />}
+            {deleted.error && (
+              <State
+                title="Recycle bin unavailable"
+                message={deleted.error.message}
+                code={deleted.error.code}
+                retry={deleted.retry}
+              />
+            )}
+            {restoreError && (
+              <p id="ethics-restore-error" role="alert">
+                {restoreError}
+              </p>
+            )}
+            {deleted.data?.length === 0 && (
+              <p id="ethics-recycle-empty" className={styles.recycleEmpty}>
+                {view.labels.noData}
+              </p>
+            )}
+            {!!deleted.data?.length && (
+              <ul id="ethics-deleted-applications" className={styles.deleted}>
+                {deleted.data.map((row) => (
+                  <li key={row.id} id={`ethics-deleted-${row.id}`}>
+                    <div className={styles.deletedInfo}>
+                      <div className={styles.deletedHead}>
+                        <Icon name="data-document" size={18} />
+                        <strong>{row.number}</strong>
+                        {row.risk && (
+                          <StatusBadge
+                            tone={
+                              row.riskCode === "HIGH" ||
+                              row.riskCode === "CRITICAL"
+                                ? "danger"
+                                : row.riskCode === "MEDIUM"
+                                  ? "warning"
+                                  : row.riskCode === "LOW"
+                                    ? "success"
+                                    : "info"
+                            }
+                          >
+                            {row.risk}
+                          </StatusBadge>
+                        )}
+                      </div>
+                      <h3>{row.title}</h3>
+                      <RecordMetadata
+                        id={`ethics-deleted-metadata-${row.id}`}
+                        fields={[
+                          { label: view.texts.createdBy, value: row.createdBy },
+                          { label: view.texts.updatedBy, value: row.updatedBy },
+                          {
+                            label: view.texts.updated,
+                            value: row.updated
+                              ? functions.format.dateDisplay(
+                                  row.updated,
+                                  format,
+                                )
+                              : "",
+                          },
+                          {
+                            label: view.texts.deadline,
+                            value: row.deadline
+                              ? functions.format.dateDisplay(
+                                  row.deadline,
+                                  format,
+                                )
+                              : "",
+                          },
+                          {
+                            label: view.texts.expiry,
+                            value: row.expiry
+                              ? functions.format.dateDisplay(row.expiry, format)
+                              : "",
+                          },
+                          {
+                            label: view.texts.ethicsType,
+                            value: row.ethicsType,
+                          },
+                          { label: view.texts.formType, value: row.formType },
+                          { label: view.texts.org, value: row.org },
+                        ]}
+                      />
+                    </div>
+                    {row.canRestore && (
+                      <button
+                        id={`ethics-restore-${row.id}`}
+                        type="button"
+                        aria-label={`${view.labels.restore} ${row.number}`}
+                        title={view.labels.restore}
+                        disabled={restoring !== null}
+                        onClick={() => restore(row.id, row.number)}
+                      >
+                        <Icon name="undo" size={18} />
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </ActionDialog>
       )}
       {confirm.element}
@@ -637,32 +786,57 @@ function EthicsCard({
         >
           <Icon name="certification" size={18} /> {row.number}
         </Link>
-        {view.actions.link && (
-          <button id={`ethics-links-${row.id}`} type="button" aria-label={`Linked records for ${row.number}`} onClick={onLinks}>
-            <Icon name="link" size={16} />
-          </button>
-        )}
-        {view.actions.clone && ["EA_ACCESS", "RESPONDENT_ACCESS"].includes(access) && (
-          <button id={`ethics-clone-${row.id}`} type="button" aria-label={`Clone ${row.number}`} onClick={onClone}>
-            <Icon name="copy" size={16} />
-          </button>
-        )}
-        {view.actions.delete && canDeleteEthicsRow(access, row.ethicsTypeCode, row.statusCode, row.responseStatusCode) && (
-          <button id={`ethics-delete-${row.id}`} type="button" aria-label={`Delete ${row.number}`} disabled={busy} onClick={onDelete}>
-            <Icon name="trash" size={16} />
-          </button>
-        )}
         {row.status && (
           <StatusBadge tone={statusTone}>{row.status}</StatusBadge>
         )}
         {row.risk && <StatusBadge tone={riskTone}>{row.risk}</StatusBadge>}
         {access === "EA_ACCESS" && row.responseStatus && (
           <span className={styles.response}>
-            {view.texts.responseStatus} : {row.responseStatus}
+            {view.texts.responseStatus.trim()} : {row.responseStatus}
           </span>
         )}
       </div>
       <h2>{row.title || row.number}</h2>
+      <div id={`ethics-actions-${row.id}`} className={styles.cardActions}>
+        {view.actions.link && (
+          <button
+            id={`ethics-links-${row.id}`}
+            type="button"
+            aria-label={`Linked records for ${row.number}`}
+            onClick={onLinks}
+          >
+            <Icon name="link" size={16} />
+          </button>
+        )}
+        {view.actions.clone &&
+          ["EA_ACCESS", "RESPONDENT_ACCESS"].includes(access) && (
+            <button
+              id={`ethics-clone-${row.id}`}
+              type="button"
+              aria-label={`Clone ${row.number}`}
+              onClick={onClone}
+            >
+              <Icon name="copy" size={16} />
+            </button>
+          )}
+        {view.actions.delete &&
+          canDeleteEthicsRow(
+            access,
+            row.ethicsTypeCode,
+            row.statusCode,
+            row.responseStatusCode,
+          ) && (
+            <button
+              id={`ethics-delete-${row.id}`}
+              type="button"
+              aria-label={`Delete ${row.number}`}
+              disabled={busy}
+              onClick={onDelete}
+            >
+              <Icon name="trash" size={16} />
+            </button>
+          )}
+      </div>
       <RecordMetadata id={`ethics-metadata-${row.id}`} fields={fields} />
     </article>
   );
