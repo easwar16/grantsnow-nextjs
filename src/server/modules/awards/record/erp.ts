@@ -5,7 +5,6 @@ import { getIcApiIntegrationV1FlowsRestUNIT4_MAIN_FLOW1_0Unit4integration as erp
 import { oracleContext } from "@/server/oracle/context";
 import { forgetOperation } from "@/server/oracle/cache";
 import { AppError } from "@/lib/errors";
-import { pageOf } from "@/shared/awards/award-record";
 import { awardRecordRead } from "../record";
 
 const details = z.object({
@@ -17,23 +16,20 @@ const ENDPOINT =
   /^\/([A-Za-z0-9_]{1,100})\/(\d{1,3}\.\d{1,3})\/([A-Za-z0-9_-]{1,100})$/;
 const reply = z.object({ Status: z.string().nullish() }).passthrough();
 
-/** Whether the award offers Send to ERP: internally approved, and the user may edit the award's header page. */
-export const canSendToErp = (
-  status: string,
-  access: { roles: ReadonlyMap<string, { edit?: boolean }> },
-) => status === "IA" && access.roles.get(pageOf("header"))?.edit === true;
+/** Whether the award offers Send to ERP: legacy btnSendToERP shows it on an internally approved award to its readers. */
+export const canSendToErp = (status: string) => status === "IA";
 
 /**
- * WRITES: legacy sendToERPButtonActionChain. Reads the tenant's ERP target and posts `{AwardId, Token}` to its OIC
- * flow, server to server. Legacy defects fixed: the button had no access gate (now the header page's edit right),
- * an unknown `erp_type` did nothing silently, and the flow address was used unchecked.
+ * WRITES: legacy sendToERPButtonActionChain, as legacy (owner, 2026-11-11): an internally approved award the user can
+ * read; the tenant's ERP target (custErpDetails, AWARD) and `{AwardId, Token}` posted to its OIC flow, server to
+ * server. Kept from the rebuild: an unknown `erp_type` says so (legacy did nothing), and the flow address is checked.
  */
 export async function sendToErp(id: string) {
   const context = await awardRecordRead(id, "header");
-  if (!canSendToErp(context.award.award_status ?? "", context.access))
+  if (!canSendToErp(context.award.award_status ?? ""))
     throw new AppError(
       "FORBIDDEN",
-      "Only an internally approved award can be sent to ERP, by someone who can edit it.",
+      "Only an internally approved award can be sent to ERP.",
       403,
     );
   const target = details.parse(await awards.erpDetails());

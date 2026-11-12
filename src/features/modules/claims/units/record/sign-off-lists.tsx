@@ -23,7 +23,7 @@ import {
   DynamicForm,
   type DynamicFormHandle,
 } from "@/features/record/dynamic-form/dynamic-form";
-import type { UnitSignOffList } from "../types";
+import type { UnitSignOffList } from "../listing/types";
 import { useRecordAudit } from "@/features/record/shell/record-frame";
 import styles from "./summary.module.css";
 
@@ -139,6 +139,8 @@ function AssurancePanel({ appId }: { appId: string }) {
     { run, isActive } = useInFlight(),
     form = useRef<DynamicFormHandle>(null),
     openAudit = useRecordAudit();
+  // Submit waits for the form: check() refuses one still loading, with no message.
+  const [formReady, setFormReady] = useState(false);
   if (read.error)
     return (
       <State
@@ -169,6 +171,7 @@ function AssurancePanel({ appId }: { appId: string }) {
         parentId={appId}
         objectId={view.requirementId ?? undefined}
         editable={view.editable}
+        onReadyChange={setFormReady}
       />
       {view.audit && view.requirementId && (
         <div className={styles.signOffBar}>
@@ -191,7 +194,7 @@ function AssurancePanel({ appId }: { appId: string }) {
             type="button"
             id="claims-unit-assurance-submit"
             className="gn-btn gn-btn--primary"
-            disabled={isActive("submit")}
+            disabled={isActive("submit") || !formReady}
             onClick={submit}
           >
             {view.texts.submit}

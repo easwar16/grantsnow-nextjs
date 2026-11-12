@@ -216,7 +216,11 @@ export function GuideLauncher({ access }: { access: string[] }) {
       return start(chosen);
     }
     if (!auto || chosen || isDone(auto)) return;
-    const t = setTimeout(() => start(auto), 800);
+    // Recorded when it starts: a tour left by navigating, reloading or signing out must not return at every login.
+    const t = setTimeout(() => {
+      markDone(auto);
+      start(auto);
+    }, 800);
     return () => clearTimeout(t);
   }, [auto, path, start]);
   useEffect(() => () => active.current?.destroy(), [path]);

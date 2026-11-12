@@ -13,7 +13,7 @@ import {
   storeFile,
   type FileScope,
 } from "@/server/record/attachments/service";
-import type { UnitSignOffList } from "@/features/modules/claims/units/types";
+import type { UnitSignOffList } from "@/features/modules/claims/units/listing/types";
 import {
   signOffViews,
   UNIT_MODULE,

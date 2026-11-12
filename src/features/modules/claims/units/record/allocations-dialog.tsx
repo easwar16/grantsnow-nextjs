@@ -15,7 +15,9 @@ import { claims, useApi } from "@/lib/api";
 import type { FormatSettings } from "@/lib/format";
 import { functions } from "@/lib/functions";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
-import type { UnitAllocationRow, UnitAllocationsView } from "../types";
+import type { UnitAllocationRow, UnitAllocationsView } from "../listing/types";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { claimStatusTone } from "@/shared/claims/status";
 import styles from "./summary.module.css";
 
 type Format = FormatSettings & { currency?: string };
@@ -306,7 +308,17 @@ function Allocations({
             {
               id: "status",
               header: header("status"),
-              cell: (r) => name(view.statuses, r.status),
+              cell: (r) => {
+                const text = name(view.statuses, r.status);
+                const tone = claimStatusTone(text);
+                return tone ? (
+                  <StatusBadge dot tone={tone}>
+                    {text}
+                  </StatusBadge>
+                ) : (
+                  text
+                );
+              },
             },
             {
               id: "date",

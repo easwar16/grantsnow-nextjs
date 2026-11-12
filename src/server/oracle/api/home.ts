@@ -99,4 +99,6 @@ export const gauge = read<{ headers: Record<string, string | undefined> }>({
 export const saveChartDimensions = write<{ body: unknown }>({
   op: "postSharedSaveDynamicCharts",
   body: (p) => p.body,
+  // The chart read carries the saved colspan/rowspan; a cached copy would undo the save on reload.
+  invalidates: ["getSharedGetDynamicCharts"],
 });

@@ -102,7 +102,7 @@ async function references(
   const { data } = await costingScope(type, id, action, versionId);
   const [sectionsRaw, rolesRaw, itemsRaw, categoriesRaw, peopleRaw] =
     await Promise.all([
-      proposals.fundingSections({ costModel: String(data.cost_model) }),
+      lookups.fundingSections({ costModel: String(data.cost_model) }),
       proposals.projectRoles({
         costType:
           action === "student"

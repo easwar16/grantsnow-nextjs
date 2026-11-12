@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { DueDiligenceParentActions } from "@/features/modules/due-diligence/parent-actions";
+import { ParentDueDiligence } from "@/features/record/linked/parent-due-diligence";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Icon } from "@/components/ui/icon";
 import { RecordMetadata } from "@/components/ui/record-metadata";
@@ -19,42 +19,67 @@ export function DueDiligenceTab({
 }) {
   return (
     <div id="award-record-due-diligence" className={styles.tab}>
-      <DueDiligenceParentActions parent={{ type: "AWARD", id: view.parentId }}
-        canCreate={view.canCreate} canLink={view.canLink} />
+      <ParentDueDiligence
+        id="award-record"
+        parent={{ type: "AWARD", id: view.parentId }}
+        canCreate={view.canCreate}
+        canLink={view.canLink}
+        texts={view.parentTexts}
+      />
       {view.records.length === 0 ? (
         <p id="award-dd-empty" className={styles.empty}>
           {view.texts.empty}
         </p>
       ) : (
         <ul id="award-dd-list" className={styles.cards}>
-          {view.records.map((r) => (
-            <li
-              key={r.id}
-              id={`award-dd-${functions.ids.idPart(r.id)}`}
-              className={listing.row}
-            >
-              <div className={listing.body}>
-                <div className={listing.overline}>
-                  <Icon name="due-diligence" size={14} />
-                  <Link href={`/due-diligence/${r.id}`} className={listing.number}>{r.number}</Link>
-                  {r.status && (
-                    <StatusBadge className={listing.status} tone={r.tone}>
-                      {r.status}
-                    </StatusBadge>
+          {view.records.map((r) => {
+            const rid = `award-dd-${functions.ids.idPart(r.id)}`;
+            return (
+              <li key={r.id} id={rid} className={listing.row}>
+                <div className={listing.body}>
+                  <div className={listing.overline}>
+                    <Icon name="certification" size={14} />
+                    <span className={listing.number}>{r.number}</span>
+                    {r.status && (
+                      <StatusBadge className={listing.status} tone={r.tone}>
+                        {r.status}
+                      </StatusBadge>
+                    )}
+                  </div>
+                  {r.href ? (
+                    <Link
+                      id={`${rid}-title`}
+                      href={r.href}
+                      className={listing.title}
+                    >
+                      {r.title}
+                    </Link>
+                  ) : (
+                    <span className={listing.title}>{r.title}</span>
                   )}
+                  <RecordMetadata
+                    fields={r.fields.map((f) => ({
+                      label: f.label,
+                      value: f.date
+                        ? functions.format.dateDisplay(f.value, format)
+                        : f.value,
+                    }))}
+                  />
                 </div>
-                <span className={listing.title}>{r.title}</span>
-                <RecordMetadata
-                  fields={r.fields.map((f) => ({
-                    label: f.label,
-                    value: f.date
-                      ? functions.format.dateDisplay(f.value, format)
-                      : f.value,
-                  }))}
-                />
-              </div>
-            </li>
-          ))}
+                {r.href && view.texts.view !== null && (
+                  <Link
+                    id={`${rid}-view`}
+                    href={r.href}
+                    className="gn-btn gn-btn--borderless gn-btn--icon"
+                    aria-label={`${view.texts.view} ${r.number}`}
+                    title={view.texts.view}
+                  >
+                    <Icon name="view" size={16} />
+                  </Link>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

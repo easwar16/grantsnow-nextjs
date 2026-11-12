@@ -2,17 +2,13 @@ import "server-only";
 import { read, write, writeFile } from "../client";
 
 /** VBCS Print menu for one Proposal. */
-export const forObject = read<{ id: string }>({
+/** The reports an object offers (getObjectRef); a proposal unless `objectType` says otherwise. */
+export const forObject = read<{ id: string; objectType?: string }>({
   op: "getReportsGetObjectRef",
-  headers: (p) => ({ p_object_id: p.id, p_object_type: "PROPOSAL" }),
-});
-export const forDueDiligence = read<{ id: string }>({
-  op: "getReportsGetObjectRef",
-  headers: (p) => ({ p_object_id: p.id, p_object_type: "DUE_DILIGENCE" }),
-});
-export const forEthics = read<{ id: string }>({
-  op: "getReportsGetObjectRef",
-  headers: (p) => ({ p_object_id: p.id, p_object_type: "ETHICS" }),
+  headers: (p) => ({
+    p_object_id: p.id,
+    p_object_type: p.objectType ?? "PROPOSAL",
+  }),
 });
 export const share = write<{
   id: string;

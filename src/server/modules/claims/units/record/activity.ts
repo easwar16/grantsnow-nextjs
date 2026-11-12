@@ -11,7 +11,7 @@ import type {
   UnitActivityView,
   UnitClaimableView,
   UnitCostItem,
-} from "@/features/modules/claims/units/types";
+} from "@/features/modules/claims/units/listing/types";
 import { BUNDLE, label, numberish, optionalText } from "../listing";
 import { unitRecordRead, type UnitRecordContext } from "../record";
 import { appFundsOf, fundOf, header, items, type AppFund } from "./goals";
@@ -94,6 +94,9 @@ export const activityRow = z.object({
   total_purchase_service_amount: numberish,
   itemization_text: optionalText,
   justification: optionalText,
+  reviewer_comments: optionalText,
+  paid_to_person_id: numberish,
+  created_from_amendment: optionalText,
 });
 export type ActivityRow = z.infer<typeof activityRow>;
 const versionRow = z.object({
@@ -239,10 +242,12 @@ function subTabs(a: UnitActivity) {
     "claimable-amount-details": positioned && a.id !== "",
     "amendment-history-details": a.id !== "",
     "claim-details": a.id !== "",
+    // Legacy li#activity-approvals: a saved version in approval or approved.
+    "activity-approvals": a.id !== "" && ["IA", "AIA"].includes(a.statusCode),
   } as const;
 }
 
-const LABELS: [string, string][] = [
+export const LABELS: [string, string][] = [
   ["activity-number", "Activity Number"],
   ["amendment-number", "Amendment Number"],
   ["fund-type", "Fund Type"],
@@ -278,7 +283,7 @@ const LABELS: [string, string][] = [
   ["service-percentage", "Service Percentage"],
   ["total", "Total"],
 ];
-const HEADERS: [string, string][] = [
+export const HEADERS: [string, string][] = [
   ["goal-number", "Goal Number"],
   ["goal-description", "Goal Description"],
   ["benefit-category", "Category"],
@@ -296,6 +301,7 @@ const SUB_TABS: [keyof ReturnType<typeof subTabs>, string][] = [
   ["claimable-amount-details", "Claimable Amount"],
   ["amendment-history-details", "Amendment History"],
   ["claim-details", "Claim Details"],
+  ["activity-approvals", "Approvals"],
 ];
 
 /**
@@ -331,6 +337,12 @@ export async function activityView(
       !activity.activeVersion &&
       available(config, ["CLAIM_ACTIVITY"], activity.statusCode),
     homeless: preferenceOn(fund, "HOMELESS_FIELD_FLAG"),
+    // Legacy Edit: activity-details edit and an activity status that allows a user edit.
+    edit:
+      context.access.roles.get("activity-details")?.edit === true &&
+      available(config, ["CLAIM_ACTIVITY"], activity.statusCode)
+        ? label(rows, "button-labels", "edit", "Edit")
+        : null,
     tabs: SUB_TABS.filter(([key]) => open[key]).map(([key, fallback]) => ({
       id: key,
       label: label(rows, "page-name", key, fallback),

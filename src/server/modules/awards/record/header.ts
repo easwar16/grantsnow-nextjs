@@ -20,6 +20,10 @@ import {
   type AwardRecordContext,
 } from "../record";
 import { serverFunctions } from "@/server/functions";
+import {
+  attributeInput,
+  recordAttributeValues,
+} from "@/server/record/attributes/values";
 
 const BUNDLE = "award";
 const numeric = z.coerce.number().int().positive();
@@ -135,14 +139,6 @@ function headerValues(context: AwardRecordContext): HeaderView["values"] {
     assignedTo: str(raw.assigned_to),
   };
 }
-const attributeValues = (raw: Record<string, unknown>) =>
-  Object.fromEntries(
-    Object.entries(raw).flatMap(([k, v]) =>
-      /^attribute_\d{1,2}$/.test(k) && v !== null && v !== undefined && v !== ""
-        ? [[k, String(v)]]
-        : [],
-    ),
-  );
 
 export async function headerView(id: string): Promise<HeaderView> {
   const context = await awardRecordRead(id, "header");
@@ -176,7 +172,7 @@ export async function headerView(id: string): Promise<HeaderView> {
     fields: headerFields(rows, context),
     values: headerValues(context),
     choices,
-    attributes: attributeValues(context.raw),
+    attributes: recordAttributeValues(context.raw),
     showAttributes: serverFunctions.resources.resourceVisible(
       rows,
       BUNDLE,
@@ -262,12 +258,7 @@ const headerInput = z
         ) as Record<HeaderField, z.ZodOptional<typeof fieldValue>>,
       )
       .strict(),
-    attributes: z
-      .record(
-        z.string().regex(/^attribute_\d{1,2}$/),
-        z.union([z.string().max(4000), z.number(), z.null()]),
-      )
-      .default({}),
+    attributes: attributeInput,
   })
   .strict();
 

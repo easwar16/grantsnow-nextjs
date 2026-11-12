@@ -8,7 +8,7 @@ import {
   pageOf,
   type UnitTab,
 } from "@/shared/claims/unit-record";
-import type { UnitShellModel } from "../types";
+import type { UnitShellModel } from "../listing/types";
 
 const asTab = (segment: string | null): UnitTab =>
   (unitTabs as readonly string[]).includes(segment ?? "")

@@ -12,7 +12,7 @@ import Link from "next/link";
 import styles from "@/features/modules/ethics/record/participants.module.css";
 import { ResponsesTab } from "@/features/modules/ethics/record/responses-tab";
 import { ApprovalWorkflow } from "@/features/record/approvals/approval-workflow";
-import { ethicsApprovalHost } from "@/server/modules/ethics/approval";
+import { ethicsApprovalHost } from "@/server/modules/ethics/record/approval";
 import { workflowView } from "@/server/record/approvals/workflow";
 import { historyView } from "@/server/record/objects/history";
 import { ObjectHistory } from "@/features/record/objects/object-history";
@@ -24,12 +24,12 @@ import { EthicsRecordShell } from "@/features/modules/ethics/record/record-shell
 import { OverviewTab } from "@/features/modules/ethics/record/overview-tab";
 import { functions } from "@/lib/functions";
 import { AppError } from "@/lib/errors";
-import { ethicsFinalizeState } from "@/server/modules/ethics/finalize";
-import { ethicsPrintOptions } from "@/server/modules/ethics/print";
-import { ethicsEditableStatus } from "@/server/modules/ethics/status";
-import { ethicsVersions } from "@/server/modules/ethics/versions";
+import { ethicsFinalizeState } from "@/server/modules/ethics/record/finalize";
+import { ethicsPrintOptions } from "@/server/modules/ethics/record/print";
+import { ethicsEditableStatus } from "@/server/modules/ethics/record/status";
+import { ethicsVersions } from "@/server/modules/ethics/record/versions";
 import { canEditEthicsSetup } from "@/server/modules/ethics/actions";
-import { ethicsAutoSubmitAvailable } from "@/server/modules/ethics/auto-submit";
+import { ethicsAutoSubmitAvailable } from "@/server/modules/ethics/record/auto-submit";
 import { serverFunctions } from "@/server/functions";
 
 export const metadata = { title: "Ethics application" };
@@ -179,8 +179,7 @@ export default async function EthicsRecord({
       ? chosenVersion
       : undefined;
   const responseEditable =
-    current === "ethics-responses" &&
-    selected
+    current === "ethics-responses" && selected
       ? await ethicsResponseEditable(
           record,
           selected,
@@ -188,8 +187,7 @@ export default async function EthicsRecord({
         )
       : false;
   const canEditSetup =
-    historicalVersion === undefined &&
-    (await canEditEthicsSetup(record));
+    historicalVersion === undefined && (await canEditEthicsSetup(record));
   const finalize =
     selected && record.statusCode !== "DRFT" && record.pageIds[current]
       ? await ethicsFinalizeState(record, selected.id, current).catch(
@@ -274,13 +272,16 @@ export default async function EthicsRecord({
               <ResponsesTab
                 setupId={id}
                 stakeholderId={selected.id}
-                editable={Boolean(responseEditable) && historicalVersion === undefined}
+                editable={
+                  Boolean(responseEditable) && historicalVersion === undefined
+                }
+                texts={model.labels}
                 historicalVersion={historicalVersion}
               />
             ) : (
               <State
                 title={model.labels.responseNoData}
-                message="Please select a participant to view the submitted responses."
+                message={model.labels.responseSelect}
                 code="EMPTY"
               />
             )
@@ -368,6 +369,7 @@ export default async function EthicsRecord({
                 ) : (
                   <Link
                     key={person.id}
+                    id={`ethics-participant-${person.id}`}
                     href={`/ethics/${id}?${new URLSearchParams({ ...(access ? { access } : {}), tab: current, participant: person.id })}`}
                     aria-current={
                       selected?.id === person.id ? "page" : undefined

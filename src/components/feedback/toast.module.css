@@ -48,8 +48,10 @@
 .error .summary {
   color: var(--gn-danger);
 }
+/* A backend message keeps its own line breaks (FPX001 lists the unanswered questions one per line). */
 .detail {
   color: var(--gn-text-secondary);
+  white-space: pre-line;
 }
 .close {
   display: flex;

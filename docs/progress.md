@@ -8,6 +8,10 @@ One file for where the rebuild stands. It merges four earlier documents verbatim
 
 ## 1. Progress
 
+### Azure main merge of Ethics and Budget work, 2026-11-12
+
+The local `0d61c3e` Ethics and P_6455 Budget commit was merged with Azure `main` `88dc6b0`. Incoming shared components, API consolidation and RB gates were preserved while the local Ethics toolbar, record/listing measurements, response presentation and Budget scope/visual fixes were carried forward. TypeScript, lint (one existing TanStack warning), 1,044 unit/integration tests and isolated build passed. The full fixture Chromium run passed 87, skipped 2 and failed 2; both failing Ethics journeys passed on a focused rerun after correcting the 899px inset and the selector assertion. No second full green browser run or live Oracle write is claimed. See `docs/changes/2026-11-12-easwar-azure-main-ethics-budget-sync.md`.
+
 ### P_6455 Budget read, toolbar and year split, 2026-11-11
 
 Follow-up: the first Show Year Split switch styling still differed in its off state. The signed-in VBCS `oj-switch` was measured directly in both states; the local Budget switch now matches its 27×15 px track, 12×12 px rounded thumb, off/on colors and label metrics. This is a visual correction only; the earlier period-value comparison remains the behavior evidence.
@@ -19,6 +23,168 @@ The Next.js P_6455 Budget denial came from rejecting cost rows for its attached 
 The owner's VBCS/Next.js comparison showed a 36px horizontal and 17px vertical dashboard inset around the Ethics listing, which shifted the drawer, tabs and cards. The listing now uses the existing full-bleed shell class only at `/ethics`, and its scoped CSS matches the measured 899px VBCS geometry: 240px drawer, tabs at (251,115), first card at (251,173), two metadata rows and a fixed bottom count. The exact-route shell change is a justified shared-framework override for this source-verified screen; other Ethics routes and modules retain their shell class. Live DEV displayed `10 of 1298` from the backend total count. See `docs/changes/2026-11-11-easwar-ethics-listing-layout.md`.
 
 A second close-up exposed short dropdowns and radio/date groups in the Ethics sidebar. Scoped listing styles now align its control heights and vertical positions with the signed-in VBCS preview through Expiry Date; the shared controls and other modules remain unchanged. The change record above includes the measured coordinates.
+
+### Rebase onto e9c1550 (Easwar), brought onto the framework — 2026-11-11
+
+- Rebased onto `e9c1550` and kept both sides: Easwar's Proposal pricing / in-kind / research partner / credit and the
+  Ethics and Due Diligence finalize, print, auto-submit, versions, references and parent Create/Link, on top of the
+  2026-11-11 work below.
+- Brought onto the framework (details and Codex instructions in guide §13; record
+  `docs/changes/2026-11-11-titiksh-rebase-e9c1550.md`): 15 flat server files to `record/`; duplicate Oracle functions
+  folded into `applications.*`, `locks.*`, `people.contact`, `contracts.list`, `dynamicForm.forms`, `costItems`,
+  `savePricingLines`; Ethics/DD panel and attachment hosts in their `record.ts`; shared `ParentDueDiligence`,
+  `RecordPrint`, `ReferenceLink`; endpoints instead of raw `post`/`download`; `Select`, `useConfirm`, `useLeaveGuard`
+  on Responses; RB labels with fallbacks; pricing `Intl` → `numberDisplay(…, fixed)`; Reset/Global hidden without
+  rights; DD New parent check in `actions.ts`; ids.
+- Replaced (owner to confirm): my award DD Link dialog and route → Easwar's parent Link, now shared with Proposals.
+- Checks: `tsc` clean; lint 0 errors (1 known warning); unit 1039 passed; isolated build passed; e2e 80 passed,
+  4 failed in the full run → 3 were stale selectors after the move to shared `Select` / clone dialog (fixed, re-run:
+  3 passed), 1 (Claims Unit record activity save, 15 s wait under load) passed alone. Fixtures only; no live run of
+  the rebased modules yet.
+- Follow-up (legacy check and live re-run): the parent Due Diligence Link dialog and award cards now follow legacy
+  (`awards-due-diligence-start-page.html`: commit filters, rows with status and org unit, Link per row, Cancel, load
+  more on scroll; cards open per access view, View gated on `dd-list-view-record`; Create at the row start, measured on
+  621). Live on DEV: Create from award 1190 saved DD_403, linked and listed; Link and View hidden as on 621. Fixed live:
+  DD/Ethics setups without a supervisor (non-numeric reviewer id) failed the whole record page. Checks: unit 1041,
+  isolated build passed, e2e 84 passed.
+- Open: guide §13 "Still to bring onto the framework" (Pricing and staff-entry labels; Ethics/DD record pages
+  holding per-tab reads in the route) and the five live findings for Easwar (admin answer on create refused with 403;
+  post-create destination; `READONLY_ACCESS` view; proposal card open/View; parse optional fields leniently). Owner to
+  decide: Create Due Diligence shown only with `awards-due-diligence` edit (legacy shows it to every tab reader).
+
+### Leftovers, Send to ERP, sanity pass — 2026-11-11
+
+- Send to ERP brought to legacy's gate (any reader of an internally approved award); left for the owner's manual test.
+- Ethics listing Link / Clone / Delete as legacy, on new shared `CloneApplicationDialog` and `LinkedObjectsLoader`
+  (Due Diligence moved onto them); listing Link authorises on the listing row (the full record scope cost ~20 s of role
+  reads before the backend's own 15–75 s linked-objects call).
+- Award Due Diligence tab: View, Create (DD New with the award reference), Link dialog.
+- Live verdicts: Reject (EOI 4094), Rework (4095); Approve earlier (4076).
+- **Sanity pass (live DEV):** every listing and every record tab of Home, Opportunities, EOI, Awards (1190, 1183),
+  Claims (units 384, 1164; fund 641), Ethics and DD answered 200 with no error state and no server or console errors.
+  Slow on the backend only: record roles up to 20 s (Claims unit Summary 22–27 s), award header 24 s, KPI statistics
+  53 s, linked objects 15–75 s, award pending approval 95 s.
+- Record: `docs/changes/2026-11-11-titiksh-leftovers-erp-ethics-dd.md`.
+
+### EOI 9284, Submit live, finalize roles, shared locks — 2026-11-11
+
+- 9284 carried (insertRequest POST upsert with attributes); Approval Submit live end to end on EOI 4076; Workflow
+  now shows at once after Finalize (the lock write drops the held roles, as legacy refreshPages re-reads them); the
+  lock operations live once in `src/server/oracle/api/locks.ts`. Records: `docs/changes/2026-11-11-titiksh-*.md`.
+- **Operations defined more than once (18):** merged, one function each (owner, 2026-11-11); a catalogue test now
+  fails on any duplicate. Approval writes, Add Status and Finalize drop the held record state (roles, EOI request,
+  award), so no record's tabs or gates lag after a status change. Records:
+  `docs/changes/2026-11-11-titiksh-one-function-per-operation.md`, `…-ethics-dd-listing-layout.md`.
+- **Backend:** a second `dynFormResponse` save on an EOI leaves no answers (VBCS 621 too).
+
+### Claims tab, slices 1 to 3 — 2026-11-10
+
+- The unit record's Claims tab: the shared fund bar (moved out of Activities into `FundBar` / `fundBarOf`), Claims
+  Summary, Claims List (Export, Audits, Clone, Delete), the claim panel (lines, Claimable Amounts, line and claim
+  approvals) and the editor (New Claim, the line dialog's cascade, rejected lines, Save Claim with an explicit pick).
+  Live on app 384: claim 2 created and edited.
+- **For the owner:** `ActionDialog` now acts only on its own `close` / `cancel` events. React passed a nested
+  dialog's close to the outer one, so closing a dialog inside the claim panel also closed the panel (reproduced on
+  app 384).
+- **For the owner:** `PanelAudit` (`features/record/shell/record-frame.tsx`, new, backwards compatible): Audits
+  opened inside a modal side panel open in a dialog above it. The frame's audit drawer sits behind the modal, so
+  the claim panel's line and adjustment Audits were unusable and Escape closed the panel (e2e trace). Legacy opens
+  the audit drawer over the record drawer.
+- **Checked 2026-11-11:** e2e fixes after the first full run: unit tab count 4 → 5 (Claims tab); requirement and
+  assurance Submit wait for their dynamic form (`onReadyChange`; `check()` refused a loading form silently); the survey
+  step fills the sample form's required fields; fixture status config gained `CLAIM_HEADER` / `CLAIM_LINE` /
+  adjustment rows; fixture lookups gained `FPCG_ADJ_LINE_TYPE` (the line Type list was empty); `PanelAudit` wraps the
+  claim panel, and the adjustments sit inside it (no separate modal). `npm run test:e2e -- -g Claims`: 3 passed.
+- Slice 3: Adjustments, in the claim panel for an approved or paid claim (list, Add Claim Line / Add All, a line's
+  type, refund or new codes, Save with legacy's messages, the adjustment route). Live: adjustment 604 created and
+  updated on claim 442.
+- Records: `docs/changes/2026-11-10-titiksh-claims-tab-slice-1.md`, `…-slice-2.md`, `…-slice-3.md`.
+
+### Claims Activities 4: approvals — 2026-11-10
+
+- The shared `ApprovalWorkflow` on a Claims host for the fund, an amendment, an activity version and a roster member.
+  The shared host gained two optional fields (`submitGenerates`: legacy Claims' generate-and-submit with a Withdrawn
+  rollback; `keys`: a host's own Submit / Withdraw keys), and the component gained `onChanged`. Live on app 1164: Submit
+  ran end to end to the backend's FPCG014 refusal and rolled back as legacy does.
+- Record: `docs/changes/2026-11-10-titiksh-claims-approvals.md`.
+
+### Claims Activities 3b: Fund Summary requirements — 2026-11-10
+
+- One collapsed survey per configured requirement below the Fund Summary: person responsible, the shared dynamic form,
+  Audit Trail, Submit (requirement, then answers). Claims' form check moved from the shared `access.ts` into the module.
+- **For the owner:** the shared `toPayload` now sends the first form with no sections when the forms have no sections at all;
+  an empty list made DEV ORDS reply with broken JSON (reproduced on app 1164; legacy always names the form).
+- Record: `docs/changes/2026-11-10-titiksh-claims-requirements.md`.
+
+### Claims Activities 3b: Roster and Furniture & Equipment — 2026-11-10
+
+- Two collapsed panels above the Fund Summary table, each read on first open. Roster: Add, Edit / Delete by right
+  and CLAIM_ROSTER status, fund and job title dialog, delete with confirm. Equipment: Add / Edit / Delete, a total,
+  and the required fields as in legacy. Live on app 384: a member added and deleted; item 181 saved. Credential upload
+  waits for OIC.
+- Record: `docs/changes/2026-11-10-titiksh-claims-fund-panels.md`.
+
+### Claims Activities 3a: Amendments — 2026-11-10
+
+- The Amendments sub-tab: list, New Amendment, reason, Include Activity, Add Activity in amendment mode (justification
+  required), Save, deletes; every write re-checked on the server. Live on app 384: amendment 1 minted, saved, a line
+  added and removed. Submit / Withdraw come with the Claims approvals.
+- Record: `docs/changes/2026-11-10-titiksh-claims-amendments.md`.
+
+### Claims Activities 2b: Add and Edit Activity — 2026-11-10
+
+- Add / Edit in the side panel: codes from the fund's hierarchy, goals, position details with live totals, benefit
+  and purchase-service lines; the server re-checks the right, status, codes and goals and computes the amounts.
+- Live on app 1065: create, edit and delete a Non Position activity; a Position with a 6.2% benefit saved as £5,310.
+- Record: `docs/changes/2026-11-10-titiksh-claims-add-edit-activity.md`.
+
+### Approval Submit live, and four fixes — 2026-11-10
+
+- Award 1190: pages finalized, route generated, Submit sent; the backend refused it (FPA032, the award's data), and a
+  project to fix the data cannot be created on 1190 in either app (HTTP 500, backend).
+- Fixed: escaped markup in backend messages (FPX001), Add Project blocked by the hidden Project Number, the Summary's
+  RB-gated grant columns, EOI API onto `actions/[action]` and `choices`.
+- Record: `docs/changes/2026-11-10-titiksh-approval-submit-and-fixes.md`.
+
+### Claims redesign, Guided Learning once, live pass — 2026-11-10
+
+- Claims as legacy MR 15893: unit cards (fund dots, claim counts, Activities link), the 7-column Summary with Key
+  Dates and Terms collapsed, the Activities fund bar on `Figures`, the activity in a side panel. From the prototype:
+  the activity as one page with jump links (`SectionNav`). New shared pieces: `StatusBadge dot`, `Figures`,
+  `ActionDialog side`, `SectionNav`; `DeniedRedirect` into the record shell. Claims files moved to §4 `listing/` and
+  `actions/[action]`.
+- Guided Learning's page tour is recorded when it starts (it came back at every login).
+- Live: Dimension save (DEV does not persist dimensions, 621 the same), deadline warning, Claims pages. Not run:
+  approval Submit (no routable record for this user), Activities Delete (needs Add Activity).
+- Record: `docs/changes/2026-11-10-titiksh-claims-redesign-live-pass.md`.
+
+### Rebase onto origin/main `4542021`; Easwar's Proposal, Ethics and DD sync onto the framework — 2026-11-10
+
+- Fast-forward from `10e996d`; no rule file changed. Stash re-applied, `progress.md` conflict resolved keeping both.
+- Brought onto §4/§5: the approved-AOI API into `actions/[action]`, `staff-entry.ts` into `record/`, the create
+  route into `(list)/new`, the Ethics attachment and panel hosts into `ethics/record.ts` (host `confidential` flag),
+  the Budget Add Cost RB gate and hide-not-disable, unbuilt Delete/Clone removed, 19 ids. Codex steering: guide §4,
+  §5, §9 fix, §12; `AGENTS.md`.
+- Open for the owner: the staff entry page's RB labels, `ReadonlyField`, `Select` search and invented First
+  Increment range (a near-rewrite of Easwar's in-progress page).
+- Record: `docs/changes/2026-11-10-titiksh-rebase-proposal-ethics-sync.md`.
+
+### Partly-done items and a live pass — 2026-11-05
+
+- Built: 9555 legend and title, 8483 attachment toasts from the RB, the Preferences drawer and Manage profile
+  (Preference, Manage) matched to 621 by measurement, Dynamic Charts module selectors as legacy, `MultiSelect`
+  `allowCustom` and `TabBar` `stretch`.
+- Live-verified: 9548, 9319, Help, notifications, chatbot, Opportunities Bookmarked/Shared.
+- Open: OIC on the local server (attachments), two DEV RB rows, Dimension save and deadline warning not run live.
+- Record: `docs/changes/2026-11-05-titiksh-partly-done-live-pass.md`.
+
+### Legacy catch-up to `2f4d89f39`: 9549 and 9548 — 2026-11-05
+
+- 33 new `origin/development` commits read from source (the KB has not caught up yet). Built: the attachments size
+  note shows the configured limit and the oversize warning names the file (9549); the two year-grouped Insights
+  charts keep only the selected years (9548). Already so: chart refresh on a period change, 9554. 9558 and the
+  pricing fix do not apply. 9559, 9545 and 9146 are carried to Proposals (Easwar).
+- Record: `docs/changes/2026-11-05-titiksh-legacy-catchup-9549-9548.md`. Checks are in the record. No live DEV check.
 
 ### Supervisor lookup sentinel in Ethics and Due Diligence, 2026-11-11
 

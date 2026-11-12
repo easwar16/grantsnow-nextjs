@@ -2,7 +2,14 @@ import "server-only";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { authenticate } from "@/server/identity/session/service";
-import { attributes, eoi, ethics, lookups, people } from "@/server/oracle/api";
+import {
+  applications,
+  attributes,
+  dynamicForm,
+  locks as lockApi,
+  lookups,
+  people,
+} from "@/server/oracle/api";
 import {
   dashboardRoles,
   organizations,
@@ -10,10 +17,10 @@ import {
 import { serverFunctions } from "@/server/functions";
 import { resources } from "@/server/platform/configuration/resources";
 import { ethicsListView } from "./listing";
-import { canDeleteEthicsRow } from "@/features/modules/ethics/listing/delete-rules";
+import { canDeleteEthics } from "@/shared/ethics/listing";
 import { ethicsRecord } from "./record";
 import { globalVariables } from "@/server/platform/configuration/formatting";
-import { ethicsEditableStatus } from "./status";
+import { ethicsEditableStatus } from "./record/status";
 import type { AttributeValues } from "@/features/record/attributes/model";
 import { recordIdentity } from "@/features/modules/proposals/record";
 import { proposalPage } from "@/server/modules/proposals/record";
@@ -65,7 +72,8 @@ async function requireAction(
   await ethicsRecord(target.id, target.access);
   if (action === "delete") {
     const body = deleteRow.parse(
-      await ethics.applications({
+      await applications.list({
+        objectType: "ETHICS",
         accessType: target.access,
         query: {
           p_where_clause: `("setup_flow_id"=${target.id})`,
@@ -79,7 +87,7 @@ async function requireAction(
     );
     if (
       !row ||
-      !canDeleteEthicsRow(
+      !canDeleteEthics(
         target.access,
         row.ethics_type_code ?? "",
         row.status_lkp_code ?? "",
@@ -96,20 +104,25 @@ async function requireAction(
 export async function ethicsCloneOptions(id: string, access: string) {
   const target = actionTarget.parse({ id, access });
   await requireAction(target, "clone");
-  return copyRows.parse(await ethics.copyOptions()).items.map((row) => ({
-    value: row.r,
-    label: row.d || row.r,
-    selected: row.default_value === true,
-  }));
+  return copyRows
+    .parse(await applications.copyOptions({ objectType: "ETHICS" }))
+    .items.map((row) => ({
+      value: row.r,
+      label: row.d || row.r,
+      selected: row.default_value === true,
+    }));
 }
 export async function cloneEthics(raw: unknown) {
   const target = cloneInput.parse(raw);
   await requireAction(target, "clone");
-  const choices = copyRows.parse(await ethics.copyOptions()).items;
+  const choices = copyRows.parse(
+    await applications.copyOptions({ objectType: "ETHICS" }),
+  ).items;
   const known = new Set(choices.map((row) => row.r));
   if (target.objects.some((name) => !known.has(name)))
     throw new AppError("BAD_REQUEST", "Invalid Ethics clone selection.", 400);
-  await ethics.copy({
+  await applications.copy({
+    objectType: "ETHICS",
     id: target.id,
     access: target.access,
     objects: [...new Set(target.objects)].map((object_name) => ({
@@ -122,7 +135,7 @@ export async function cloneEthics(raw: unknown) {
 export async function deleteEthics(raw: unknown) {
   const target = actionTarget.parse(raw);
   await requireAction(target, "delete");
-  await ethics.remove({ id: target.id });
+  await applications.remove({ id: target.id });
   return { deleted: true };
 }
 
@@ -365,8 +378,11 @@ export async function canEditEthicsSetup(
   const participant = record.respondents[0];
   try {
     const [rawPages, rawLocked] = await Promise.all([
-      eoi.finalizablePages({ objectType: "ETHICS", objectId: participant.id }),
-      eoi.lockedModules({ recordId: participant.id, module: "ETHICS" }),
+      lockApi.finalizablePages({
+        objectType: "ETHICS",
+        objectId: participant.id,
+      }),
+      lockApi.lockedModules({ recordId: participant.id, module: "ETHICS" }),
     ]);
     const pages = z
       .object({ items: z.array(z.object({ page_name: z.string() })) })
@@ -392,13 +408,13 @@ export async function ethicsEditSetup(id: string, access?: string) {
   const record = await requireEdit(id, access);
   const [setup, raw] = await Promise.all([
     ethicsCreateSetup(id, access),
-    ethics.setup({ id }).then((value) => existingSetup.parse(value)),
+    applications.setup({ id }).then((value) => existingSetup.parse(value)),
   ]);
   if (String(raw.setup_flow_id) !== id)
     throw new AppError("CONTRACT", "Oracle returned another Ethics setup.");
   const [peopleData, supervisorData] = await Promise.all([
     people.inOrg({ orgId: String(raw.org_unit_id) }),
-    ethics.reviewers(),
+    applications.approvers(),
   ]);
   const peopleRows = personRows.parse(peopleData).items;
   const supervisor = reviewerPeople(supervisorData).find(
@@ -422,9 +438,13 @@ export async function ethicsEditSetup(id: string, access?: string) {
       ),
       deadline: dateOnly(raw.deadline_date),
       expiry: dateOnly(raw.expiry_date),
-      participants: [...new Set(peopleRows
-        .filter((row) => chosenIds.has(row.person_id))
-        .map(personKey))],
+      participants: [
+        ...new Set(
+          peopleRows
+            .filter((row) => chosenIds.has(row.person_id))
+            .map(personKey),
+        ),
+      ],
       supervisor: supervisor ? personKey(supervisor) : "",
       attributes: attributeValues(raw),
     },
@@ -458,7 +478,9 @@ export async function updateEthics(raw: unknown) {
       "Submit needs a participant and supervisor.",
       400,
     );
-  const previous = existingSetup.parse(await ethics.setup({ id: value.id }));
+  const previous = existingSetup.parse(
+    await applications.setup({ id: value.id }),
+  );
   if (String(previous.setup_flow_id) !== value.id)
     throw new AppError("CONTRACT", "Oracle returned another Ethics setup.");
   if (
@@ -478,7 +500,7 @@ export async function updateEthics(raw: unknown) {
   const form = await ethicsCreateForm(value.formType, value.id, value.access);
   const [peopleData, supervisorData] = await Promise.all([
     people.inOrg({ orgId: value.org }),
-    ethics.reviewers(),
+    applications.approvers(),
   ]);
   const chosenPeople = new Map(
     personRows.parse(peopleData).items.map((row) => [personKey(row), row]),
@@ -517,7 +539,7 @@ export async function updateEthics(raw: unknown) {
     ? chosenSupervisors.get(value.supervisor)!
     : null;
   const response = saved.parse(
-    await ethics.save({
+    await applications.save({
       body: {
         ...(await checkedAttributes(value.id, value.attributes)),
         setup_description: value.title,
@@ -662,7 +684,7 @@ export async function ethicsCreatePeople(
 export async function ethicsCreateSupervisors(id?: string, access?: string) {
   if (id) await requireEdit(id, access);
   else await requireCreate();
-  return reviewerPeople(await ethics.reviewers()).map((person) => ({
+  return reviewerPeople(await applications.approvers()).map((person) => ({
     value: personKey(person),
     label: person.full_name ?? String(person.person_id),
   }));
@@ -675,7 +697,14 @@ export async function ethicsCreateForm(
   const setup = await ethicsCreateSetup(id, access);
   if (!setup.formTypes.some((option) => option.value === formType))
     throw new AppError("BAD_REQUEST", "Unknown Ethics form type.", 400);
-  const forms = definition.safeParse(await ethics.form({ formType }));
+  const forms = definition.safeParse(
+    await dynamicForm.forms({
+      objectId: "",
+      objectType: "ETHICS",
+      slot: "ETHICS",
+      tag: { type: "ETHICS_TYPE", value: formType },
+    }),
+  );
   if (!forms.success || !forms.data.length || !forms.data[0].sections.length)
     throw new AppError("CONTRACT", "Ethics form metadata is unavailable.");
   return {
@@ -735,7 +764,7 @@ export async function createEthics(raw: unknown) {
     );
   const [availablePeople, availableSupervisors] = await Promise.all([
     personRows.parse(await people.inOrg({ orgId: org })).items,
-    reviewerPeople(await ethics.reviewers()),
+    reviewerPeople(await applications.approvers()),
   ]);
   const byPerson = new Map(
     availablePeople.map((person) => [personKey(person), person]),
@@ -767,7 +796,7 @@ export async function createEthics(raw: unknown) {
       400,
     );
   const result = saved.safeParse(
-    await ethics.save({
+    await applications.save({
       body: {
         ...(await checkedAttributes("", value.data.attributes)),
         setup_description: title,
@@ -867,7 +896,10 @@ async function access() {
 }
 export async function deletedEthics() {
   const view = await access();
-  const [body, orgs] = await Promise.all([ethics.deleted(), organizations()]);
+  const [body, orgs] = await Promise.all([
+    applications.deleted({}),
+    organizations(),
+  ]);
   const allowed = new Set(orgs.map((org) => String(org.id)));
   return rows
     .parse(body)
@@ -902,6 +934,6 @@ export async function restoreEthics(raw: unknown) {
       "Ethics application not found or access denied.",
       403,
     );
-  await ethics.restore({ id: String(recordId) });
+  await applications.restore({ id: String(recordId) });
   return { restored: true };
 }

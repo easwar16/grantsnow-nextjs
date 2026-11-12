@@ -947,7 +947,11 @@ export function Listing({
             <div id="proposals-approved-aoi-error" role="alert">
               {aoiError}
               {!aoiPage && (
-                <button type="button" onClick={() => void loadApprovedAois()}>
+                <button
+                  id="proposals-approved-aoi-retry"
+                  type="button"
+                  onClick={() => void loadApprovedAois()}
+                >
                   Retry
                 </button>
               )}

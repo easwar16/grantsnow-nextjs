@@ -27,7 +27,8 @@ vi.mock("@/server/modules/proposals/record", () => ({
   }),
 }));
 vi.mock("@/server/oracle/api", () => ({
-  proposals: { lockStatus: mock.lockStatus, setLock: mock.setLock },
+  proposals: {},
+  locks: { lockStatus: mock.lockStatus, setLock: mock.setLock },
 }));
 vi.mock("@/server/platform/configuration/resources", () => ({
   resources: async () => [

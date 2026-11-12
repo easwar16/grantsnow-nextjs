@@ -3,7 +3,7 @@ import { unitRecordContext } from "@/server/modules/claims/units/record";
 import { unitShell } from "@/server/modules/claims/units/record/shell";
 import { resources } from "@/server/platform/configuration/resources";
 import { State } from "@/components/feedback/state";
-import { DeniedRedirect } from "@/features/modules/opportunities/eoi/denied-redirect";
+import { DeniedRedirect } from "@/features/record/shell/denied-redirect";
 import { UnitRecordShell } from "@/features/modules/claims/units/record/record-shell";
 import { functions } from "@/lib/functions";
 

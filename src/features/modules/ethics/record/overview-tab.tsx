@@ -39,10 +39,10 @@ export function OverviewTab({
   async function unlink(relationId: string, number: string) {
     if (
       !(await confirm.ask({
-        title: "Remove reference link",
-        message: `Remove the link to ${number}?`,
-        confirm: "Remove",
-        cancel: "Cancel",
+        title: model.labels.unlinkTitle,
+        message: number,
+        confirm: model.labels.unlink,
+        cancel: model.referenceLink.cancel,
       }))
     )
       return;
@@ -141,7 +141,8 @@ export function OverviewTab({
                       <button
                         type="button"
                         disabled={busy !== null}
-                        aria-label={`Unlink ${reference.number || reference.id}`}
+                        id={`ethics-overview-unlink-${reference.relationId}`}
+                        aria-label={`${model.labels.unlink} ${reference.number || reference.id}`}
                         onClick={() =>
                           void unlink(
                             reference.relationId!,
@@ -149,7 +150,7 @@ export function OverviewTab({
                           )
                         }
                       >
-                        Unlink
+                        {model.labels.unlink}
                       </button>
                     )}
                   </li>

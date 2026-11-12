@@ -57,6 +57,7 @@ export const add = write<{ page: string; objectId: string; comments: string }>({
   - **Home's figures:** KPIs, queues, Insights, Dynamic Charts and the gauge use `ttl: TTL.figures, stale: TTL.figuresStale`. They are fresh for 3 minutes, then served for up to 10 more while one background read refreshes them.
   - **Browser holds:** dialog setups are held for 30 s, and shared reference lists for 5 min.
   - **Writes always read fresh.** Inside a `route(..., { write: true })` request, every read goes to Oracle and refreshes the held copy (`server/oracle/scope.ts`). A held copy never decides whether a write may go ahead.
+  - **A save that merges over stored data reads with `{ fresh: true }`.** That read goes to Oracle and replaces the held copy (dashboard preferences, person status, a Notifications page). There is no second "stored" function for the same operation: one function per backend operation, enforced by `tests/unit/oracle-catalogue.test.ts`.
 - **`invalidates`** lists every read a write changes. It replaces each `forgetRead` / `forget` that followed the old write. They are dropped whether the write succeeds or fails, because a timed-out write may still have committed.
 - **Paging:**
   - `pages: "all"` is for a reference list the backend pages (25 rows, `hasMore: "true"` as a string, `p_offset` / `p_limit`). It is read whole, within a fixed bound.

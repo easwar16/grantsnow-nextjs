@@ -652,18 +652,14 @@
     "path": "/notifications/getGroupsAndRoles",
     "headers": ["token", "p_share_to"]
   },
-  "getDynamicFormsInsertRequest": {
+  "postDynamicFormsInsertRequest": {
     "service": "apps",
     "path": "/dynamicForms/insertRequest/",
-    "headers": [
-      "token",
-      "P_REF_OBJECT_ID",
-      "P_REF_OBJECT_TYPE",
-      "P_REQUEST_TYPE"
-    ],
-    "method": "GET",
+    "headers": ["token"],
+    "method": "POST",
     "write": true
   },
+
   "postNotificationsNotifications": {
     "service": "apps",
     "path": "/notifications/notifications/",
@@ -1390,6 +1386,100 @@
     "method": "DELETE",
     "write": true
   },
+  "getClaimAdjustments": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{claim_id}/adjustments",
+    "headers": ["token", "org-id"]
+  },
+  "postClaimAdjustments": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{claim_id}/adjustments",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "getClaimAdjustment": {
+    "service": "apps",
+    "path": "/claims/adjustments/{adjustment_id}",
+    "headers": ["token"]
+  },
+  "putClaimAdjustment": {
+    "service": "apps",
+    "path": "/claims/adjustments/{adjustment_id}",
+    "headers": ["token"],
+    "method": "PUT",
+    "write": true
+  },
+  "deleteClaimAdjustment": {
+    "service": "apps",
+    "path": "/claims/adjustments/{adjustment_id}",
+    "headers": ["token"],
+    "method": "DELETE",
+    "write": true
+  },
+  "getClaimAdjustmentLines": {
+    "service": "apps",
+    "path": "/claims/adjustments/{adjustment_id}/adjustment-lines",
+    "headers": ["token"]
+  },
+  "getActivityCodesHierarchy": {
+    "service": "apps",
+    "path": "/claims/activities/{app_fund_id}/codes-hierarchy",
+    "headers": ["token"]
+  },
+  "getRejectedLines": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_fund_id}/rejected-lines",
+    "headers": ["token"]
+  },
+  "postFundClaims": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_fund_id}/fund-claims",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "putClaim": {
+    "service": "apps",
+    "path": "/claims/fund-claims/{claim_id}",
+    "headers": ["token"],
+    "method": "PUT",
+    "write": true
+  },
+  "getFundClaim": {
+    "service": "apps",
+    "path": "/claims/fund-claims/{claim_id}",
+    "headers": ["token"]
+  },
+  "getClaimLines": {
+    "service": "apps",
+    "path": "/claims/fund-claims/{claim_id}/claim-lines",
+    "headers": ["token"]
+  },
+  "getFundClaims": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_fund_id}/fund-claims",
+    "headers": ["token", "org-id"]
+  },
+  "getClaimsSummary": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_fund_id}/claim-summary",
+    "headers": ["token"]
+  },
+  "postClaimsClone": {
+    "service": "apps",
+    "path": "/claims/fund-claims/{claim_id}/clone",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "deleteFundClaims": {
+    "service": "apps",
+    "path": "/claims/fund-claims/{claim_id}",
+    "headers": ["token"],
+    "method": "DELETE",
+    "write": true
+  },
   "getRequirements": {
     "service": "apps",
     "path": "/claims/unit-inquiry/{app_id}/requirements",
@@ -1422,7 +1512,7 @@
   "getActivities": {
     "service": "apps",
     "path": "/claims/unit-inquiry/{app_fund_id}/activities",
-    "headers": ["token", "org-id"]
+    "headers": ["token", "org-id", "amendment-id"]
   },
   "deleteClaimsActivity": {
     "service": "apps",
@@ -1440,6 +1530,68 @@
     "service": "apps",
     "path": "/claims/activities/{act_id}/amend-versions",
     "headers": ["token"]
+  },
+  "postActivities": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_fund_id}/activities",
+    "headers": ["token", "amendment-id"],
+    "method": "POST",
+    "write": true
+  },
+  "putClaimsActivity": {
+    "service": "apps",
+    "path": "/claims/activities/{activity_id}/vrsn/{amend_version_id}",
+    "headers": ["token"],
+    "method": "PUT",
+    "write": true
+  },
+  "getFundActivityTypeCodes": {
+    "service": "apps",
+    "path": "/claims/fund-activity-type-codes",
+    "headers": ["token"]
+  },
+  "getCategoryConfigs": {
+    "service": "apps",
+    "path": "/claims/activity-category-configs",
+    "headers": ["token"]
+  },
+  "getActivityAmendments": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_fund_id}/amendments",
+    "headers": ["token", "org-id"]
+  },
+  "getAmendmentLines": {
+    "service": "apps",
+    "path": "/claims/amendments/{amendment_id}/amend-lines",
+    "headers": ["token"]
+  },
+  "putAmendment": {
+    "service": "apps",
+    "path": "/claims/amendments/{amendment_id}",
+    "headers": ["token"],
+    "method": "PUT",
+    "write": true
+  },
+  "deleteAmendment": {
+    "service": "apps",
+    "path": "/claims/amendments/{amendment_id}",
+    "headers": ["token"],
+    "method": "DELETE",
+    "write": true
+  },
+  "deleteAmendmentLine": {
+    "service": "apps",
+    "path": "/claims/amendments/{amendment_id}/amend-lines/{amend_version_id}",
+    "headers": ["token"],
+    "method": "DELETE",
+    "write": true
+  },
+  "postIncludeAmendActivity": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_fund_id}/include-amend-activity",
+    "headers": ["amendment-id", "token"],
+    "method": "POST",
+    "write": true
   },
   "postActivitiesAmendVersions": {
     "service": "apps",
@@ -1462,5 +1614,62 @@
     "service": "apps",
     "path": "/claims/activities/{act_id}/claim-details",
     "headers": ["token"]
+  },
+  "getRoster": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_id}/roster",
+    "headers": ["token", "org-id"]
+  },
+  "getRosterJobTitles": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_id}/roster/job-titles",
+    "headers": ["token"]
+  },
+  "postRoster": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_id}/roster",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "putRoster": {
+    "service": "apps",
+    "path": "/claims/roster/{roster_id}",
+    "headers": ["token"],
+    "method": "PUT",
+    "write": true
+  },
+  "deleteRoster": {
+    "service": "apps",
+    "path": "/claims/roster/{roster_id}",
+    "headers": ["token"],
+    "method": "DELETE",
+    "write": true
+  },
+  "getEquipments": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_id}/equipments",
+    "headers": ["token", "org-id"]
+  },
+  "postEquipment": {
+    "service": "apps",
+    "path": "/claims/unit-inquiry/{app_id}/equipments",
+    "headers": ["token"],
+    "method": "POST",
+    "write": true
+  },
+  "putEquipment": {
+    "service": "apps",
+    "path": "/claims/equipments/{equipment_id}",
+    "headers": ["token"],
+    "method": "PUT",
+    "write": true
+  },
+  "deleteEquipment": {
+    "service": "apps",
+    "path": "/claims/equipments/{equipment_id}",
+    "headers": ["token"],
+    "method": "DELETE",
+    "write": true
   }
 }

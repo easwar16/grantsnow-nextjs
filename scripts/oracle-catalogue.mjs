@@ -33,7 +33,6 @@ const SERVICES = {
 const METHODS = ["get", "post", "put", "delete"];
 // GETs that change data. Listed by hand from their legacy chains; anything else that is a GET is a read.
 const GET_WRITES = new Set([
-  "getDynamicFormsInsertRequest",
   "getApproval_setupGenerate_stages",
   "getApproval_setupGenerate_stages_dynForm",
   "getContractsConvertContract",

@@ -140,6 +140,23 @@ const WRITE_REPLIES = new Set<Operation>([
   "deleteGoals",
   "deleteClaimsActivity",
   "postActivitiesAmendVersions",
+  "postActivities",
+  "postIncludeAmendActivity",
+  "putAmendment",
+  "postClaimsClone",
+  "postFundClaims",
+  "postClaimAdjustments",
+  "putClaimAdjustment",
+  "putClaim",
+  "deleteFundClaims",
+  "postRequirement",
+  "putRequirement",
+  "postRoster",
+  "putRoster",
+  "deleteRoster",
+  "postEquipment",
+  "putEquipment",
+  "deleteEquipment",
 ]);
 /** A simulated write in fixture mode (the connection's writes gate never opens there). */
 export async function mockOracleWrite(
@@ -1549,6 +1566,12 @@ export async function mockOracle(
         { page_name: "due-diligence-link", read_access: "Y" },
         { page_name: "due-diligence-print-button", read_access: "Y" },
         { page_name: "dd-clone", read_access: "Y" },
+        { page_name: "ethics-clone", read_access: "Y" },
+        {
+          page_name: "ethics-listing-delete",
+          read_access: "Y",
+          delete_access: "Y",
+        },
         { page_name: "proposal-clone", read_access: "Y" },
         {
           page_name: "proposal-listing-delete",
@@ -2522,7 +2545,7 @@ export async function mockOracle(
           "list-expiry-date",
           "list-last-updated-by",
           "list-last-updated-date",
-          "list-supervisor-name",
+          "list-reviewer",
         ].map((label_name) => ({
           module_name: "DUE_DILIGENCE",
           label_type: "labels",
@@ -3183,7 +3206,7 @@ export async function mockOracle(
     };
   if (
     op === "getProposalCopyApplicationObjList" &&
-    headers.obj_type === "DUE_DILIGENCE"
+    (headers.obj_type === "DUE_DILIGENCE" || headers.obj_type === "ETHICS")
   )
     return {
       items: [
@@ -3207,7 +3230,8 @@ export async function mockOracle(
       objects?: { object_name: string; object_val: boolean }[];
     };
     if (
-      !["DUE_DILIGENCE", "ETHICS"].includes(payload?.object_type ?? "") ||
+      (payload?.object_type !== "DUE_DILIGENCE" &&
+        payload?.object_type !== "ETHICS") ||
       !Array.isArray(payload.objects)
     )
       throw new Error("Invalid dynamic form clone fixture payload.");

@@ -35,6 +35,15 @@ const LOOKUPS: Record<string, [string, string][]> = {
     ["DRFT", "Draft"],
     ["IA", "Approved"],
   ],
+  FPCG_AMENDMENT_STATUS: [
+    ["ADJ_DRFT", "Pending"],
+    ["ADJ_AIA", "Under Review"],
+  ],
+  FPCG_AMENDMENT_REASON: [["SCHOOL_ADJUSTMENT", "School Budget Adjustment"]],
+  FPCG_ADJ_LINE_TYPE: [
+    ["REJECT", "Reject"],
+    ["RECLASS", "Reclassification"],
+  ],
   FPCG_FUND_STATUS: [
     ["DRFT", "Original Pending"],
     ["IA", "Original Final Approved"],
@@ -162,6 +171,121 @@ type FixtureActivity = {
   [key: string]: unknown;
 };
 /** Unit 6000's activities (labelled fixture): one draft, one approved, on TITLE I. */
+type FixtureAmendment = {
+  amendment_id: number;
+  amendment_number: number;
+  amend_date: string;
+  status_code: string;
+  status_code_descr: string;
+  reason: string;
+  reason_descr: string;
+  lines: Record<string, unknown>[];
+};
+const amendmentStore = () =>
+  ((
+    globalThis as { __gnFixtureAmendments?: FixtureAmendment[] }
+  ).__gnFixtureAmendments ??= []);
+// Roster and Furniture & Equipment (the application's, edited in the Fund Summary panels).
+const rosterStore = () =>
+  ((
+    globalThis as { __gnFixtureRoster?: Record<string, unknown>[] }
+  ).__gnFixtureRoster ??= [
+    {
+      roster_id: 8100,
+      first_name: "Ada",
+      last_name: "Lovelace",
+      certified_teacher_flag: "Y",
+      certified_parapro_flag: "N",
+      local_fund_flag: "N",
+      pri_app_fund_id: 7000,
+      pri_fund_job_title: "TEACHER",
+      roster_status: "APPROVED",
+      roster_status_descr: "Approved",
+    },
+  ]);
+// The fund's claims (the Claims tab): a draft and a paid one.
+const claimStore = () =>
+  ((
+    globalThis as { __gnFixtureClaims?: Record<string, unknown>[] }
+  ).__gnFixtureClaims ??= [
+    {
+      claim_id: 8400,
+      claim_number: "1",
+      claim_date: "2026-10-01",
+      claim_status_code: "DRFT",
+      claim_status_descr: "Pending",
+      claim_period_month_name: "October",
+      claim_amount: 1200,
+      approved_amount: 0,
+      claim_line_count: 2,
+      rejected_line_count: 0,
+      adjustment_count: 0,
+    },
+    {
+      claim_id: 8401,
+      claim_number: "2",
+      claim_date: "2026-09-01",
+      claim_status_code: "PAID",
+      claim_status_descr: "Paid",
+      claim_period_month_name: "September",
+      claim_amount: 900,
+      approved_amount: 900,
+      paid_amount: 900,
+      claim_line_count: 1,
+      rejected_line_count: 0,
+      adjustment_count: 0,
+    },
+  ]);
+const claimLineStore = () =>
+  ((
+    globalThis as { __gnFixtureClaimLines?: Record<string, unknown>[] }
+  ).__gnFixtureClaimLines ??= [
+    {
+      claim_id: 8401,
+      claim_line_id: 9501,
+      line_no: 1,
+      position_type_code: "NON_POSITION",
+      position_type_descr: "Non Position",
+      function_code: "1000",
+      function_code_descr: "1000 - Instruction",
+      object_code: "300",
+      object_code_descr: "300 - Purchased Services",
+      expenditure_descr: "Classroom supplies",
+      paid_to_company: "Supplies Co",
+      expenditure_amount: 900,
+      line_status_code: "IA",
+      line_status_descr: "Final Approved",
+      transaction_no: "TX-1",
+      transaction_date: "2029-09-10",
+    },
+  ]);
+const adjustmentStore = () =>
+  ((
+    globalThis as {
+      __gnFixtureAdjustments?: (Record<string, unknown> & {
+        lines: Record<string, unknown>[];
+      })[];
+    }
+  ).__gnFixtureAdjustments ??= []);
+const requirementStore = () =>
+  ((
+    globalThis as { __gnFixtureRequirements?: Record<string, unknown>[] }
+  ).__gnFixtureRequirements ??= []);
+const equipmentStore = () =>
+  ((
+    globalThis as { __gnFixtureEquipment?: Record<string, unknown>[] }
+  ).__gnFixtureEquipment ??= [
+    {
+      equipment_id: 8200,
+      item_description: "Classroom projector",
+      purchase_date: "2026-09-01T00:00:00Z",
+      purchase_price: 1001,
+      serial_number: "PRJ-1",
+      location: "Room 4",
+      condition: "New",
+      funding_sources: [{ app_fund_id: 7000, fund_name: "TITLE I" }],
+    },
+  ]);
 const activityStore = () =>
   ((
     globalThis as { __gnFixtureActivities?: FixtureActivity[] }
@@ -200,6 +324,24 @@ const activityStore = () =>
       status: "Approved",
       status_code: "IA",
       homeless: "Y",
+      amended: "N",
+      function_descr: "Instruction",
+      object_descr: "Supplies",
+    },
+    {
+      activity_id: 5102,
+      amend_version_id: 3,
+      app_fund_id: 7001,
+      activity_number: 1,
+      function_code: "1000",
+      object_code: "400",
+      activity_type: "Non Position",
+      ref_goals: "1",
+      total_amount: 4000,
+      itemization_text: "Approved tablets",
+      status: "Approved",
+      status_code: "IA",
+      homeless: "N",
       amended: "N",
       function_descr: "Instruction",
       object_descr: "Supplies",
@@ -254,7 +396,7 @@ export function claimsFixture(
       ),
     };
   if (op === "getClaimsOrgUnits") return { items: UNITS };
-  // Original Pending (DRFT) allows a user edit; Original Final Approved (IA) does not.
+  // A draft (DRFT, ADJ_DRFT) allows a user edit; an approved or paid status (IA, APPROVED, PAID) does not.
   if (op === "getClaimsStatusConfigs")
     return {
       items: [
@@ -263,6 +405,15 @@ export function claimsFixture(
         ["CLAIM_ACTIVITY", "DRFT", "Y"],
         ["CLAIM_ACTIVITY", "IA", "N"],
         ["CLAIM_FUNDS_AMENDMENT", "ADJ_DRFT", "Y"],
+        ["CLAIM_FUNDS_AMENDMENT", "ADJ_AIA", "N"],
+        ["CLAIM_ROSTER", "DRFT", "Y"],
+        ["CLAIM_ROSTER", "APPROVED", "N"],
+        ["CLAIM_HEADER", "DRFT", "Y"],
+        ["CLAIM_HEADER", "PAID", "N"],
+        ["CLAIM_LINE", "DRFT", "Y"],
+        ["CLAIM_LINE", "IA", "N"],
+        ["CLAIM_ADJUSTMENT_HEADER", "DRFT", "Y"],
+        ["CLAIM_ADJUSTMENT_LINE", "DRFT", "Y"],
       ].map(([transaction_type, status_lookup_code, allow_user_edit]) => ({
         transaction_type,
         status_lookup_code,
@@ -296,6 +447,18 @@ export function claimsFixture(
           unapplied_balance:
             50000 - activityStore().reduce((s, a) => s + a.total_amount, 0),
           approved_amount: 0,
+          // The draft fund's survey (legacy activitySummary.requirements).
+          requirements:
+            path?.app_fund_id === "7000"
+              ? [
+                  {
+                    req_id: 5,
+                    form_id: 103,
+                    req_type_code: "PARENT_POLICY",
+                    reference_module: "COMPLIANCE-SURVEY",
+                  },
+                ]
+              : [],
           categories: [
             {
               category: "Activities",
@@ -414,6 +577,393 @@ export function claimsFixture(
     };
   if (op === "getClaimsAmendmentHistory") return { items: [] };
   if (op === "getClaimDetails") return { items: [] };
+  // Amendments (fund 7001, approved): the first include mints one; lines are the included activities.
+  if (op === "getActivityAmendments")
+    return {
+      items: amendmentStore().map((a) => ({
+        ...a,
+        no_of_lines: a.lines.length,
+        cost_difference: 0,
+      })),
+    };
+  if (op === "getAmendmentLines")
+    return {
+      items:
+        amendmentStore().find(
+          (a) => String(a.amendment_id) === path?.amendment_id,
+        )?.lines ?? [],
+    };
+  if (op === "postIncludeAmendActivity") {
+    const b = body as {
+      reason?: string;
+      includeActivities?: { activity_id: number; amend_version_id: number }[];
+    };
+    const store = amendmentStore();
+    let a = store.find(
+      (x) => String(x.amendment_id) === headers["amendment-id"],
+    );
+    if (!a) {
+      a = {
+        amendment_id: 6100 + store.length,
+        amendment_number: store.length + 1,
+        amend_date: "2026-11-10",
+        status_code: "ADJ_DRFT",
+        status_code_descr: "Pending",
+        reason: b.reason ?? "",
+        reason_descr: "School Budget Adjustment",
+        lines: [],
+      };
+      store.push(a);
+    }
+    for (const inc of b.includeActivities ?? []) {
+      const act = activityStore().find(
+        (x) => x.activity_id === inc.activity_id,
+      );
+      a.lines.push({
+        amendment_id: a.amendment_id,
+        activity_id: inc.activity_id,
+        amend_version_id: 7000 + a.lines.length,
+        activity_number: act?.activity_number ?? 0,
+        activity_type: act?.activity_type ?? "",
+        current_amount: act?.total_amount ?? 0,
+        amend_amount: act?.total_amount ?? 0,
+        itemization_text: act?.itemization_text ?? "",
+        justification: "Fixture justification",
+      });
+    }
+    return { items: [{ amendment_id: a.amendment_id }] };
+  }
+  if (op === "putAmendment") return { status: "SUCCESS" };
+  if (op === "getFundClaims")
+    return {
+      items: claimStore().filter(
+        (c) =>
+          !query?.get("status") || c.claim_status_code === query.get("status"),
+      ),
+    };
+  if (op === "getFundClaim")
+    return {
+      items: claimStore()
+        .filter((c) => String(c.claim_id) === path?.claim_id)
+        .map((c) => ({
+          ...c,
+          full_fund_display: "TITLE I (84.010A)",
+          claim_period_code: 10,
+        })),
+    };
+  if (op === "getClaimLines")
+    return {
+      items: claimLineStore().filter(
+        (l) => String(l.claim_id) === path?.claim_id,
+      ),
+    };
+  if (op === "getActivityCodesHierarchy")
+    return {
+      items: [
+        {
+          activity_type_code: "NON_POSITION",
+          activity_type_descr: "Non Position",
+          function_codes: [
+            {
+              function_code: "1000",
+              function_code_descr: "1000 - Instruction",
+              object_codes: [
+                {
+                  object_code: "300",
+                  object_code_descr: "300 - Purchased Services",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+  if (op === "getRejectedLines") return { items: [] };
+  if (op === "postFundClaims" || op === "putClaim") {
+    const b = body as {
+      claim_period_code?: number;
+      claim_lines?: Record<string, unknown>[];
+    };
+    const store = claimStore();
+    let claim = store.find((c) => String(c.claim_id) === path?.claim_id);
+    if (!claim) {
+      claim = {
+        claim_id: 8500 + store.length,
+        claim_number: String(store.length + 1),
+        claim_date: "2026-11-10",
+        claim_status_code: "DRFT",
+        claim_status_descr: "Pending Submission",
+        claim_period_month_name: "October",
+        approved_amount: 0,
+        rejected_line_count: 0,
+        adjustment_count: 0,
+      };
+      store.push(claim);
+    }
+    const lines = (b.claim_lines ?? []).map(
+      (l, i): Record<string, unknown> => ({
+        ...l,
+        claim_id: claim.claim_id,
+        claim_line_id: l.claim_line_id ?? 9500 + claimLineStore().length + i,
+        line_no: l.line_no ?? i + 1,
+        line_status_code: "DRFT",
+        line_status_descr: "Pending",
+      }),
+    );
+    const others = claimLineStore().filter(
+      (l) => l.claim_id !== claim.claim_id,
+    );
+    claimLineStore().splice(0, claimLineStore().length, ...others, ...lines);
+    claim.claim_line_count = lines.length;
+    claim.claim_amount = lines.reduce(
+      (t, l) => t + Number(l.expenditure_amount ?? 0),
+      0,
+    );
+    return { items: [{ claim_id: claim.claim_id }] };
+  }
+  if (op === "getClaimAdjustments")
+    return {
+      items: adjustmentStore()
+        .filter((a) => String(a.claim_id) === path?.claim_id)
+        .map(({ lines, ...a }) => ({ ...a, no_of_lines: lines.length })),
+    };
+  if (op === "getClaimAdjustment")
+    return {
+      items: adjustmentStore()
+        .filter((a) => String(a.claim_adj_id) === path?.adjustment_id)
+        .map((a) => ({ ...a, lines: undefined })),
+    };
+  if (op === "getClaimAdjustmentLines")
+    return {
+      items:
+        adjustmentStore().find(
+          (a) => String(a.claim_adj_id) === path?.adjustment_id,
+        )?.lines ?? [],
+    };
+  if (op === "postClaimAdjustments" || op === "putClaimAdjustment") {
+    const b = body as {
+      refund_check_ach_no?: string;
+      cps_comment?: string;
+      adjustment_lines?: Record<string, unknown>[];
+    };
+    const store = adjustmentStore();
+    let a = store.find((x) => String(x.claim_adj_id) === path?.adjustment_id);
+    if (!a) {
+      a = {
+        claim_adj_id: 8600 + store.length,
+        claim_id: Number(path?.claim_id),
+        adj_status_code: "DRFT",
+        adj_status_descr: "Pending",
+        adjustment_date: "2026-11-10",
+        lines: [],
+      };
+      store.push(a);
+    }
+    a.refund_check_ach_no = b.refund_check_ach_no;
+    a.cps_comment = b.cps_comment;
+    a.lines = (b.adjustment_lines ?? []).map((l, i) => ({
+      ...claimLineStore().find((c) => c.claim_line_id === l.claim_line_id),
+      ...l,
+      claim_adj_line_id: l.claim_adj_line_id ?? 8700 + i,
+      line_status_code: "DRFT",
+      line_status_descr: "Pending",
+    }));
+    return { items: [{ claim_adj_id: a.claim_adj_id }] };
+  }
+  if (op === "getClaimsSummary")
+    return {
+      items: [
+        {
+          function_code: "1000",
+          function_description: "Instruction",
+          obj_100_claimed: 1200,
+          obj_100_balance: 8800,
+          function_total_claimed: 1200,
+        },
+      ],
+    };
+  if (op === "postClaimsClone") {
+    const from = claimStore().find(
+      (c) => String(c.claim_id) === path?.claim_id,
+    );
+    claimStore().push({
+      ...from,
+      claim_id: 8400 + claimStore().length,
+      claim_number: String(claimStore().length + 1),
+      claim_status_code: "DRFT",
+      claim_status_descr: "Pending",
+    });
+    return { status: "SUCCESS" };
+  }
+  if (op === "deleteFundClaims") {
+    const store = claimStore();
+    store.splice(
+      store.findIndex((c) => String(c.claim_id) === path?.claim_id),
+      1,
+    );
+    return { status: "SUCCESS" };
+  }
+  if (op === "getRequirements")
+    return {
+      items: requirementStore().filter(
+        (r) =>
+          !query?.get("app-fund-id") ||
+          String(r.app_fund_id) === query.get("app-fund-id"),
+      ),
+    };
+  if (op === "postRequirement") {
+    const b = body as Record<string, unknown>;
+    const row = {
+      ...b,
+      app_requirement_id: 8300 + requirementStore().length,
+      app_id: Number(path?.app_id),
+      form_id: 103,
+      reference_module: "COMPLIANCE-SURVEY",
+    };
+    requirementStore().push(row);
+    return { items: [row] };
+  }
+  if (op === "putRequirement") {
+    const store = requirementStore();
+    const at = store.findIndex(
+      (r) => String(r.app_requirement_id) === path?.app_requirement_id,
+    );
+    if (at >= 0) store[at] = { ...store[at], ...(body as object) };
+    return { items: [store[at]] };
+  }
+  if (op === "getRoster") return { items: rosterStore() };
+  if (op === "getRosterJobTitles")
+    return {
+      items: [
+        { job_title: "TEACHER", job_title_descr: "Teacher" },
+        { job_title: "ADMIN", job_title_descr: "Admin" },
+      ],
+    };
+  if (op === "postRoster" || op === "putRoster") {
+    const b = body as Record<string, unknown>;
+    const store = rosterStore();
+    const at = store.findIndex((r) => String(r.roster_id) === path?.roster_id);
+    const row = {
+      ...b,
+      roster_id: at < 0 ? 8100 + store.length : store[at].roster_id,
+      roster_status: "DRFT",
+      roster_status_descr: "Pending",
+    };
+    if (at < 0) store.push(row);
+    else store[at] = row;
+    return { status: "SUCCESS" };
+  }
+  if (op === "deleteRoster") {
+    const store = rosterStore();
+    store.splice(
+      store.findIndex((r) => String(r.roster_id) === path?.roster_id),
+      1,
+    );
+    return { status: "SUCCESS" };
+  }
+  if (op === "getEquipments") return { items: equipmentStore() };
+  if (op === "postEquipment" || op === "putEquipment") {
+    const b = body as Record<string, unknown> & { funding_sources?: number[] };
+    const store = equipmentStore();
+    const at = store.findIndex(
+      (r) => String(r.equipment_id) === path?.equipment_id,
+    );
+    const row = {
+      ...b,
+      equipment_id: at < 0 ? 8200 + store.length : store[at].equipment_id,
+      funding_sources: (b.funding_sources ?? []).map((app_fund_id) => ({
+        app_fund_id,
+        fund_name: app_fund_id === 7000 ? "TITLE I" : "TITLE III",
+      })),
+    };
+    if (at < 0) store.push(row);
+    else store[at] = row;
+    return { status: "SUCCESS" };
+  }
+  if (op === "deleteEquipment") {
+    const store = equipmentStore();
+    store.splice(
+      store.findIndex((r) => String(r.equipment_id) === path?.equipment_id),
+      1,
+    );
+    return { status: "SUCCESS" };
+  }
+  if (op === "getFundActivityTypeCodes")
+    return {
+      items: [
+        {
+          activity_types: [
+            {
+              activity_type_code: "NON_POSITION",
+              activity_type_descr: "Non Position",
+              function_codes: [
+                {
+                  function_code: "1000",
+                  function_code_descr: "1000 - Instruction",
+                  object_codes: [
+                    {
+                      object_code: "400",
+                      object_code_descr: "400 - Supplies",
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+  if (op === "getCategoryConfigs")
+    return {
+      items: [
+        {
+          active_flag: "Y",
+          category_code: "SOCIAL_SECURITY",
+          category_name: "Social Security",
+          category_type_code: "BENEFIT",
+          calc_method_code: "SALARY_PERCENT",
+          calc_method_editable_flag: "N",
+          rate: 6.2,
+        },
+      ],
+    };
+  // A created activity joins the fund's list as a draft (legacy postActivities).
+  if (op === "postActivities") {
+    const store = activityStore();
+    const b = body as {
+      itemization_text?: string;
+      function_code?: string;
+      object_code?: string;
+      activity_gen_type?: { amount?: number };
+    };
+    const created = {
+      activity_id: 5200 + store.length,
+      amend_version_id: 50 + store.length,
+      app_fund_id: Number(path?.app_fund_id),
+      activity_number: store.length + 1,
+      function_code: b.function_code ?? "",
+      object_code: b.object_code ?? "",
+      activity_type: "Non Position",
+      ref_goals: "1",
+      total_amount: b.activity_gen_type?.amount ?? 0,
+      itemization_text: b.itemization_text ?? "",
+      status: "Draft",
+      status_code: "DRFT",
+      homeless: "N",
+      amended: "N",
+      function_descr: "Instruction",
+      object_descr: "Supplies",
+    };
+    store.push(created);
+    return {
+      items: [
+        {
+          activity_id: created.activity_id,
+          amend_version_id: created.amend_version_id,
+        },
+      ],
+    };
+  }
   if (op === "deleteClaimsActivity") {
     const store = activityStore();
     const i = store.findIndex(
@@ -607,6 +1157,13 @@ export function claimsFixture(
         ["unit-add-goal", "Y"],
         ["claims-unit-activities", "Y"],
         ["activity-details", "Y", "Y"],
+        ["activity-amendment", "Y", "Y"],
+        ["activity-roster", "Y"],
+        ["activity-equipment", "Y"],
+        ["claims-unit-claims", "Y"],
+        ["unit-add-claim", "Y", "Y"],
+        ["unit-claim-adjustment", "Y", "Y"],
+        ["claims-export", "Y"],
       ].map(([page_name, read, remove = "N"], i) => ({
         page_id: 90 + i,
         page_name,

@@ -5454,6 +5454,14 @@
   {
     "module_name": "AWARD",
     "label_type": "warning-messages",
+    "label_name": "finalize-mandatory-fields",
+    "label_value": "Complete the mandatory fields and submit before finalizing.",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "AWARD",
+    "label_type": "warning-messages",
     "label_name": "installment-delete",
     "label_value": "Deleting this installment releases its amount back to the balance. Are you sure?",
     "is_visible": "Y",
@@ -6511,6 +6519,14 @@
   {
     "module_name": "CLAIMS",
     "label_type": "button-labels",
+    "label_name": "download",
+    "label_value": "Download",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "CLAIMS",
+    "label_type": "button-labels",
     "label_name": "dynForms-add",
     "label_value": "Add",
     "is_visible": "Y",
@@ -6738,6 +6754,14 @@
     "label_name": "indirects-back",
     "label_value": "Back",
     "is_visible": "Y",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "CLAIMS",
+    "label_type": "button-labels",
+    "label_name": "insert-row",
+    "label_value": "Insert Row",
+    "is_visible": "N",
     "is_mandatory": "Y"
   },
   {
@@ -8018,6 +8042,14 @@
   {
     "module_name": "CLAIMS",
     "label_type": "error-msg",
+    "label_name": "grant-required",
+    "label_value": "Select the Grant and Payment Account Code for this fund.",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "CLAIMS",
+    "label_type": "error-msg",
     "label_name": "mandatory-fields-not-filled",
     "label_value": "All mandatory fields must be filled before submission",
     "is_visible": "Y",
@@ -8514,6 +8546,22 @@
   {
     "module_name": "CLAIMS",
     "label_type": "helper-texts",
+    "label_name": "adjustments-tab-disabled",
+    "label_value": "Open an approved or paid claim in Claims Details to adjust it.",
+    "is_visible": "N",
+    "is_mandatory": "N"
+  },
+  {
+    "module_name": "CLAIMS",
+    "label_type": "helper-texts",
+    "label_name": "amendments-tab-disabled",
+    "label_value": "Amendments open once the fund plan is approved, or while it is in rework.",
+    "is_visible": "N",
+    "is_mandatory": "N"
+  },
+  {
+    "module_name": "CLAIMS",
+    "label_type": "helper-texts",
     "label_name": "approval-no-data",
     "label_value": "No data to display.",
     "is_visible": "Y",
@@ -8638,6 +8686,14 @@
     "label_value": "<p>Sub-claim <a href='https://grantsnow-lrmcnt71nt9l-ld.integration.ocp.oraclecloud.com/ic/builder/rt/GrantsNow/vbshare_621/webApps/app/?mode=view&amp;claim_id=4015&amp;claim_type=SUB_claim&amp;page=shell&amp;shell=claims&amp;claims=claims-info-start'>SP_44</a> has been created.</p>",
     "is_visible": "Y",
     "is_mandatory": "Y"
+  },
+  {
+    "module_name": "CLAIMS",
+    "label_type": "helper-texts",
+    "label_name": "submit-needs-zero-unapplied",
+    "label_value": "Submit for Approval appears once the Unapplied Balance is 0, that is, once every allocated amount is planned into activities.",
+    "is_visible": "N",
+    "is_mandatory": "N"
   },
   {
     "module_name": "CLAIMS",
@@ -10064,6 +10120,14 @@
   {
     "module_name": "CLAIMS",
     "label_type": "labels",
+    "label_name": "claims-approved-claims",
+    "label_value": "Approved Claims",
+    "is_visible": "Y",
+    "is_mandatory": "N"
+  },
+  {
+    "module_name": "CLAIMS",
+    "label_type": "labels",
     "label_name": "claims-attribute-1",
     "label_value": "Attribute 1 Val",
     "is_visible": "Y",
@@ -10084,6 +10148,38 @@
     "label_value": "SQL Attribute 3",
     "is_visible": "Y",
     "is_mandatory": "Y"
+  },
+  {
+    "module_name": "CLAIMS",
+    "label_type": "labels",
+    "label_name": "claims-claimed-amount",
+    "label_value": "Claimed",
+    "is_visible": "Y",
+    "is_mandatory": "N"
+  },
+  {
+    "module_name": "CLAIMS",
+    "label_type": "labels",
+    "label_name": "claims-paid-amount",
+    "label_value": "Paid",
+    "is_visible": "Y",
+    "is_mandatory": "N"
+  },
+  {
+    "module_name": "CLAIMS",
+    "label_type": "labels",
+    "label_name": "claims-refunds-approved",
+    "label_value": "Refunds Approved",
+    "is_visible": "Y",
+    "is_mandatory": "N"
+  },
+  {
+    "module_name": "CLAIMS",
+    "label_type": "labels",
+    "label_name": "claims-remaining-to-claim",
+    "label_value": "Remaining to Claim",
+    "is_visible": "Y",
+    "is_mandatory": "N"
   },
   {
     "module_name": "CLAIMS",
@@ -11143,6 +11239,14 @@
   {
     "module_name": "CLAIMS",
     "label_type": "labels",
+    "label_name": "file-large",
+    "label_value": "File size too large",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "CLAIMS",
+    "label_type": "labels",
     "label_name": "file-name",
     "label_value": "File Name",
     "is_visible": "Y",
@@ -11407,6 +11511,14 @@
   {
     "module_name": "CLAIMS",
     "label_type": "labels",
+    "label_name": "grant-category-name",
+    "label_value": "Grant Category",
+    "is_visible": "N",
+    "is_mandatory": "N"
+  },
+  {
+    "module_name": "CLAIMS",
+    "label_type": "labels",
     "label_name": "grant-period",
     "label_value": "Grant Period",
     "is_visible": "Y",
@@ -11431,6 +11543,14 @@
   {
     "module_name": "CLAIMS",
     "label_type": "labels",
+    "label_name": "grant-value-id",
+    "label_value": "Grant",
+    "is_visible": "N",
+    "is_mandatory": "N"
+  },
+  {
+    "module_name": "CLAIMS",
+    "label_type": "labels",
     "label_name": "graph-view",
     "label_value": "Graph View",
     "is_visible": "Y",
@@ -11443,6 +11563,14 @@
     "label_value": "More Info",
     "is_visible": "Y",
     "is_mandatory": "Y"
+  },
+  {
+    "module_name": "CLAIMS",
+    "label_type": "labels",
+    "label_name": "holding-account-code",
+    "label_value": "Holding Account Code",
+    "is_visible": "N",
+    "is_mandatory": "N"
   },
   {
     "module_name": "CLAIMS",
@@ -12291,6 +12419,14 @@
     "label_value": "Pay Frequency",
     "is_visible": "Y",
     "is_mandatory": "Y"
+  },
+  {
+    "module_name": "CLAIMS",
+    "label_type": "labels",
+    "label_name": "payment-account-code",
+    "label_value": "Payment Account Code",
+    "is_visible": "N",
+    "is_mandatory": "N"
   },
   {
     "module_name": "CLAIMS",
@@ -15303,6 +15439,14 @@
   {
     "module_name": "CLAIMS",
     "label_type": "table-headers",
+    "label_name": "grant-category-name",
+    "label_value": "Grant Category",
+    "is_visible": "N",
+    "is_mandatory": "N"
+  },
+  {
+    "module_name": "CLAIMS",
+    "label_type": "table-headers",
     "label_name": "grant-period-end",
     "label_value": "Grant Period End",
     "is_visible": "Y",
@@ -15315,6 +15459,22 @@
     "label_value": "Grant Period Start",
     "is_visible": "Y",
     "is_mandatory": "Y"
+  },
+  {
+    "module_name": "CLAIMS",
+    "label_type": "table-headers",
+    "label_name": "grant-value-id",
+    "label_value": "Grant",
+    "is_visible": "N",
+    "is_mandatory": "N"
+  },
+  {
+    "module_name": "CLAIMS",
+    "label_type": "table-headers",
+    "label_name": "holding-account-code",
+    "label_value": "Holding Account Code",
+    "is_visible": "N",
+    "is_mandatory": "N"
   },
   {
     "module_name": "CLAIMS",
@@ -15499,6 +15659,14 @@
     "label_value": "Object Description",
     "is_visible": "Y",
     "is_mandatory": "Y"
+  },
+  {
+    "module_name": "CLAIMS",
+    "label_type": "table-headers",
+    "label_name": "payment-account-code",
+    "label_value": "Payment Account Code",
+    "is_visible": "N",
+    "is_mandatory": "N"
   },
   {
     "module_name": "CLAIMS",
@@ -15991,6 +16159,14 @@
   {
     "module_name": "CLAIMS",
     "label_type": "table-headers",
+    "label_name": "summary-key-dates",
+    "label_value": "Key Dates",
+    "is_visible": "N",
+    "is_mandatory": "N"
+  },
+  {
+    "module_name": "CLAIMS",
+    "label_type": "table-headers",
     "label_name": "summary-original-allocations",
     "label_value": "Original Allocations",
     "is_visible": "Y",
@@ -16219,6 +16395,14 @@
     "label_name": "file-upload-successfull",
     "label_value": "File uploaded successfully!",
     "is_visible": "Y",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "CLAIMS",
+    "label_type": "warning-messages",
+    "label_name": "finalize-mandatory-fields",
+    "label_value": "Complete the mandatory fields and submit before finalizing.",
+    "is_visible": "N",
     "is_mandatory": "Y"
   },
   {
@@ -19596,6 +19780,14 @@
   {
     "module_name": "CONTRACT",
     "label_type": "warning-messages",
+    "label_name": "finalize-mandatory-fields",
+    "label_value": "Complete the mandatory fields and submit before finalizing.",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "CONTRACT",
+    "label_type": "warning-messages",
     "label_name": "less-than-2500",
     "label_value": "Enter less than 2500 characters",
     "is_visible": "Y",
@@ -20148,7 +20340,7 @@
     "module_name": "DASHBOARD",
     "label_type": "header-labels",
     "label_name": "proposals-by-year",
-    "label_value": "Proposals by Year",
+    "label_value": "Submitted vs Awarded Proposals by Year",
     "is_visible": "Y",
     "is_mandatory": "Y"
   },
@@ -21035,6 +21227,22 @@
   {
     "module_name": "DASHBOARD",
     "label_type": "labels",
+    "label_name": "proposals-by-year-awarded",
+    "label_value": "Awarded",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "DASHBOARD",
+    "label_type": "labels",
+    "label_name": "proposals-by-year-submitted",
+    "label_value": "Submitted",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "DASHBOARD",
+    "label_type": "labels",
     "label_name": "publication-date",
     "label_value": "Publication Date",
     "is_visible": "Y",
@@ -21449,6 +21657,14 @@
     "is_visible": "Y",
     "is_mandatory": "Y",
     "label_description": "&lt;p&gt;{num} would be replaced dynamically with the configured number&lt;&#x2F;p&gt;"
+  },
+  {
+    "module_name": "DASHBOARD",
+    "label_type": "warning-messages",
+    "label_name": "finalize-mandatory-fields",
+    "label_value": "Complete the mandatory fields and submit before finalizing.",
+    "is_visible": "N",
+    "is_mandatory": "Y"
   },
   {
     "module_name": "DASHBOARD",
@@ -24935,6 +25151,14 @@
     "is_visible": "Y",
     "is_mandatory": "Y",
     "label_description": "&lt;p&gt;{num} would be replaced dynamically with the configured number&lt;&#x2F;p&gt;"
+  },
+  {
+    "module_name": "DUE_DILIGENCE",
+    "label_type": "warning-messages",
+    "label_name": "finalize-mandatory-fields",
+    "label_value": "Complete the mandatory fields and submit before finalizing.",
+    "is_visible": "N",
+    "is_mandatory": "Y"
   },
   {
     "module_name": "DUE_DILIGENCE",
@@ -28502,6 +28726,14 @@
     "is_visible": "Y",
     "is_mandatory": "Y",
     "label_description": "&lt;p&gt;{num} would be replaced dynamically with the configured number&lt;&#x2F;p&gt;"
+  },
+  {
+    "module_name": "ETHICS",
+    "label_type": "warning-messages",
+    "label_name": "finalize-mandatory-fields",
+    "label_value": "Complete the mandatory fields and submit before finalizing.",
+    "is_visible": "N",
+    "is_mandatory": "Y"
   },
   {
     "module_name": "ETHICS",
@@ -32750,6 +32982,14 @@
   {
     "module_name": "EXTENSION_PROPOSAL",
     "label_type": "labels",
+    "label_name": "eligible-cost",
+    "label_value": "Eligible Cost",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "EXTENSION_PROPOSAL",
+    "label_type": "labels",
     "label_name": "email",
     "label_value": "Email",
     "is_visible": "Y",
@@ -33193,6 +33433,14 @@
     "label_name": "grand-total",
     "label_value": "Grand Total (Indexed)",
     "is_visible": "Y",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "EXTENSION_PROPOSAL",
+    "label_type": "labels",
+    "label_name": "grand-total-eligible",
+    "label_value": "Grand Total (Eligible)",
+    "is_visible": "N",
     "is_mandatory": "Y"
   },
   {
@@ -35802,6 +36050,38 @@
   {
     "module_name": "EXTENSION_PROPOSAL",
     "label_type": "table-headers",
+    "label_name": "eligible-cost",
+    "label_value": "Eligible Cost",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "EXTENSION_PROPOSAL",
+    "label_type": "table-headers",
+    "label_name": "eligible-funder-cost",
+    "label_value": "Eligible Funder Cost",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "EXTENSION_PROPOSAL",
+    "label_type": "table-headers",
+    "label_name": "eligible-funder-percentage",
+    "label_value": "Eligible Funder %",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "EXTENSION_PROPOSAL",
+    "label_type": "table-headers",
+    "label_name": "eligible-percentage",
+    "label_value": "Eligible %",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "EXTENSION_PROPOSAL",
+    "label_type": "table-headers",
     "label_name": "end-date",
     "label_value": "End Date",
     "is_visible": "Y",
@@ -36488,6 +36768,14 @@
     "label_name": "file-upload-successfull",
     "label_value": "File uploaded successfully!",
     "is_visible": "Y",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "EXTENSION_PROPOSAL",
+    "label_type": "warning-messages",
+    "label_name": "finalize-mandatory-fields",
+    "label_value": "Complete the mandatory fields and submit before finalizing.",
+    "is_visible": "N",
     "is_mandatory": "Y"
   },
   {
@@ -40311,6 +40599,14 @@
     "is_visible": "Y",
     "is_mandatory": "Y",
     "label_description": "&lt;p&gt;{num} would be replaced dynamically with the configured number&lt;&#x2F;p&gt;"
+  },
+  {
+    "module_name": "OPPORTUNITIES-EOI",
+    "label_type": "warning-messages",
+    "label_name": "finalize-mandatory-fields",
+    "label_value": "Complete the mandatory fields and submit before finalizing.",
+    "is_visible": "N",
+    "is_mandatory": "Y"
   },
   {
     "module_name": "OPPORTUNITIES-EOI",
@@ -44583,6 +44879,14 @@
   {
     "module_name": "OUTLINE_PROPOSAL",
     "label_type": "labels",
+    "label_name": "eligible-cost",
+    "label_value": "Eligible Cost",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "OUTLINE_PROPOSAL",
+    "label_type": "labels",
     "label_name": "email",
     "label_value": "Email",
     "is_visible": "Y",
@@ -45026,6 +45330,14 @@
     "label_name": "grand-total",
     "label_value": "Grand Total (Indexed)",
     "is_visible": "Y",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "OUTLINE_PROPOSAL",
+    "label_type": "labels",
+    "label_name": "grand-total-eligible",
+    "label_value": "Grand Total (Eligible)",
+    "is_visible": "N",
     "is_mandatory": "Y"
   },
   {
@@ -47637,6 +47949,38 @@
   {
     "module_name": "OUTLINE_PROPOSAL",
     "label_type": "table-headers",
+    "label_name": "eligible-cost",
+    "label_value": "Eligible Cost",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "OUTLINE_PROPOSAL",
+    "label_type": "table-headers",
+    "label_name": "eligible-funder-cost",
+    "label_value": "Eligible Funder Cost",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "OUTLINE_PROPOSAL",
+    "label_type": "table-headers",
+    "label_name": "eligible-funder-percentage",
+    "label_value": "Eligible Funder %",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "OUTLINE_PROPOSAL",
+    "label_type": "table-headers",
+    "label_name": "eligible-percentage",
+    "label_value": "Eligible %",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "OUTLINE_PROPOSAL",
+    "label_type": "table-headers",
     "label_name": "end-date",
     "label_value": "End Date",
     "is_visible": "Y",
@@ -48323,6 +48667,14 @@
     "label_name": "file-upload-successfull",
     "label_value": "File uploaded successfully!",
     "is_visible": "Y",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "OUTLINE_PROPOSAL",
+    "label_type": "warning-messages",
+    "label_name": "finalize-mandatory-fields",
+    "label_value": "Complete the mandatory fields and submit before finalizing.",
+    "is_visible": "N",
     "is_mandatory": "Y"
   },
   {
@@ -52789,6 +53141,14 @@
   {
     "module_name": "PROPOSAL",
     "label_type": "labels",
+    "label_name": "eligible-cost",
+    "label_value": "Eligible Cost",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "PROPOSAL",
+    "label_type": "labels",
     "label_name": "email",
     "label_value": "Email",
     "is_visible": "Y",
@@ -53234,6 +53594,14 @@
     "label_name": "grand-total",
     "label_value": "Grand Total (Indexed)",
     "is_visible": "Y",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "PROPOSAL",
+    "label_type": "labels",
+    "label_name": "grand-total-eligible",
+    "label_value": "Grand Total (Eligible)",
+    "is_visible": "N",
     "is_mandatory": "Y"
   },
   {
@@ -56015,6 +56383,38 @@
   {
     "module_name": "PROPOSAL",
     "label_type": "table-headers",
+    "label_name": "eligible-cost",
+    "label_value": "Eligible Cost",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "PROPOSAL",
+    "label_type": "table-headers",
+    "label_name": "eligible-funder-cost",
+    "label_value": "Eligible Funder Cost",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "PROPOSAL",
+    "label_type": "table-headers",
+    "label_name": "eligible-funder-percentage",
+    "label_value": "Eligible Funder %",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "PROPOSAL",
+    "label_type": "table-headers",
+    "label_name": "eligible-percentage",
+    "label_value": "Eligible %",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "PROPOSAL",
+    "label_type": "table-headers",
     "label_name": "end-date",
     "label_value": "End Date",
     "is_visible": "Y",
@@ -56707,6 +57107,14 @@
     "label_name": "file-upload-successfull",
     "label_value": "File uploaded successfully!",
     "is_visible": "Y",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "PROPOSAL",
+    "label_type": "warning-messages",
+    "label_name": "finalize-mandatory-fields",
+    "label_value": "Complete the mandatory fields and submit before finalizing.",
+    "is_visible": "N",
     "is_mandatory": "Y"
   },
   {
@@ -61094,6 +61502,14 @@
   {
     "module_name": "SUB_PROPOSAL",
     "label_type": "labels",
+    "label_name": "eligible-cost",
+    "label_value": "Eligible Cost",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "SUB_PROPOSAL",
+    "label_type": "labels",
     "label_name": "email",
     "label_value": "Email",
     "is_visible": "Y",
@@ -61537,6 +61953,14 @@
     "label_name": "grand-total",
     "label_value": "Grand Total (Indexed)",
     "is_visible": "Y",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "SUB_PROPOSAL",
+    "label_type": "labels",
+    "label_name": "grand-total-eligible",
+    "label_value": "Grand Total (Eligible)",
+    "is_visible": "N",
     "is_mandatory": "Y"
   },
   {
@@ -64147,6 +64571,38 @@
   {
     "module_name": "SUB_PROPOSAL",
     "label_type": "table-headers",
+    "label_name": "eligible-cost",
+    "label_value": "Eligible Cost",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "SUB_PROPOSAL",
+    "label_type": "table-headers",
+    "label_name": "eligible-funder-cost",
+    "label_value": "Eligible Funder Cost",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "SUB_PROPOSAL",
+    "label_type": "table-headers",
+    "label_name": "eligible-funder-percentage",
+    "label_value": "Eligible Funder %",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "SUB_PROPOSAL",
+    "label_type": "table-headers",
+    "label_name": "eligible-percentage",
+    "label_value": "Eligible %",
+    "is_visible": "N",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "SUB_PROPOSAL",
+    "label_type": "table-headers",
     "label_name": "end-date",
     "label_value": "End Date",
     "is_visible": "Y",
@@ -64833,6 +65289,14 @@
     "label_name": "file-upload-successfull",
     "label_value": "File uploaded successfully!",
     "is_visible": "Y",
+    "is_mandatory": "Y"
+  },
+  {
+    "module_name": "SUB_PROPOSAL",
+    "label_type": "warning-messages",
+    "label_name": "finalize-mandatory-fields",
+    "label_value": "Complete the mandatory fields and submit before finalizing.",
+    "is_visible": "N",
     "is_mandatory": "Y"
   },
   {

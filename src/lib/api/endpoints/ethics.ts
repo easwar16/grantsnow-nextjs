@@ -1,6 +1,6 @@
 "use client";
 import { endpoint, pagedEndpoint } from "../hooks";
-import { del, post } from "../http";
+import { del, download, post } from "../http";
 import {
   serializeEthicsFilters,
   type EthicsFilters,
@@ -155,3 +155,24 @@ export const unlinkReference = (
     relationId,
     page,
   });
+
+/** WRITES: finalizes or unlocks the participant's page. */
+export const finalize = (
+  id: string,
+  body: {
+    access: string;
+    participant: string;
+    page: string;
+    finalize: boolean;
+  },
+) => post<{ finalized: boolean }>(`/ethics/${id}/finalize`, body);
+/** WRITES: submits the participant's response for approval (legacy auto submit). */
+export const autoSubmit = (
+  id: string,
+  body: { access: string; participant: string },
+) => post<{ submitted: true }>(`/ethics/${id}/auto-submit`, body);
+/** WRITES (generate-report): a Print report file, as the server names it. */
+export const print = (
+  id: string,
+  body: { access: string; participant: string; code: string },
+) => download(`/ethics/${id}/print`, undefined, body);

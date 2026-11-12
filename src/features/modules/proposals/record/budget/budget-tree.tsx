@@ -235,18 +235,6 @@ export function BudgetTree({
                             `/proposals/${type}/${id}/budget/staff/${node.row.id}${versionId ? `?version=${versionId}` : ""}`,
                           ),
                       },
-                      {
-                        key: "delete",
-                        label: "Delete",
-                        disabled: true,
-                        run: () => {},
-                      },
-                      {
-                        key: "clone",
-                        label: "Clone",
-                        disabled: true,
-                        run: () => {},
-                      },
                     ]}
                   />
                 )

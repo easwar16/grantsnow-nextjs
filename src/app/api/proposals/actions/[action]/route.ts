@@ -3,7 +3,11 @@ import { readText } from "@/server/http/body";
 import { route, searchOf } from "@/server/http/route";
 import { AppError } from "@/lib/errors";
 import { advancedSetup } from "@/server/modules/proposals/advanced";
-import { createProposal } from "@/server/modules/proposals/create";
+import {
+  approvedAoiSource,
+  approvedAois,
+  createProposal,
+} from "@/server/modules/proposals/create";
 import {
   proposalCopyOptions,
   proposalDeleted,
@@ -25,13 +29,15 @@ const reads: Record<string, (q: URLSearchParams) => Promise<unknown>> = {
     proposalCopyOptions(q.get("type") ?? "", q.get("id") ?? ""),
   "share-options": (q) =>
     proposalShareOptions(q.get("type") ?? "", q.get("id") ?? ""),
+  "approved-aois": (q) => approvedAois(Number(q.get("offset") ?? 0)),
+  "approved-aoi-source": (q) => approvedAoiSource(q.get("id") ?? ""),
 };
 const writes: Record<string, (body: unknown) => Promise<unknown>> = {
   create: createProposal,
   ...proposalListWrites,
 };
 type Context = { params: Promise<{ action: string }> };
-/** The listing's dialog setups: Advanced Query, the recycle bin, links, copy and share options (?type, ?id). */
+/** The listing's dialog setups: Advanced Query, the recycle bin, links, copy and share options (?type, ?id), approved AOIs. */
 export const GET = route<Context>(
   async (request, { params }) => {
     const { action } = await params;

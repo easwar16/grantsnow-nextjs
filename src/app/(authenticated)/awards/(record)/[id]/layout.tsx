@@ -4,7 +4,7 @@ import { awardShell } from "@/server/modules/awards/record/shell";
 import { resources } from "@/server/platform/configuration/resources";
 import { displayFormat } from "@/server/platform/configuration/formatting";
 import { State } from "@/components/feedback/state";
-import { DeniedRedirect } from "@/features/modules/opportunities/eoi/denied-redirect";
+import { DeniedRedirect } from "@/features/record/shell/denied-redirect";
 import { AwardRecordShell } from "@/features/modules/awards/record/record-shell";
 import { functions } from "@/lib/functions";
 

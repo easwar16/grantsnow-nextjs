@@ -7,7 +7,7 @@ import {
   removeInKindLine,
   saveInKindLine,
   saveInKindTotals,
-} from "@/server/modules/proposals/in-kind";
+} from "@/server/modules/proposals/record/in-kind";
 
 type Context = { params: Promise<{ type: string; id: string }> };
 const error = (cause: unknown) =>

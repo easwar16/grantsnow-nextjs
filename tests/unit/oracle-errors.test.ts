@@ -22,6 +22,20 @@ describe("business envelopes", () => {
   ])("treats %j as a business failure, never data", (body) =>
     expect(caught(() => assertBusiness(body)).code).toBe("BUSINESS"),
   );
+  it("shows escaped markup in preventive_action as its words, one line per break (FPX001, live 2026-11-10)", () => {
+    const error = caught(() =>
+      assertBusiness({
+        response_msg: "ERROR",
+        error_code: "FPX001",
+        error_description: "Mandatory Question(s) not answered",
+        preventive_action:
+          "&lt;p&gt;Kindly answer all mandatory questions for the form&#x2F;Attribute: &lt;br&gt;Text test&lt;br&gt;Checkbox Test &lt;&#x2F;p&gt;",
+      }),
+    );
+    expect(error.action).toBe(
+      "Kindly answer all mandatory questions for the form/Attribute:\nText test\nCheckbox Test",
+    );
+  });
   it("passes only error_code : error_description and preventive_action through", () => {
     const error = caught(() =>
       assertBusiness({

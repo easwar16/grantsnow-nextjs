@@ -167,6 +167,17 @@
 .fileLink:hover {
   text-decoration: underline;
 }
+/* MR 15893: small secondary lines under a cell's value (oj-typography-body-xs oj-text-color-secondary). */
+.cellLines {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 15px;
+  color: var(--gn-text-secondary);
+}
+.cellLines > span {
+  display: block;
+}
 .cellActions {
   display: inline-flex;
   gap: 2px;
@@ -214,4 +225,114 @@
   .triple {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* MR 15893 fund bar (legacy .claims-fund-bar-top): fund and period (oj-md-5) beside the counts (oj-md-4), wrapping
+   on narrow screens; a rule, then the figures. */
+.fundBarTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 0;
+}
+.fundBarTop > * {
+  padding-inline-end: 12px;
+}
+.fundBarTop > .fields {
+  flex: 0 1 41.667%;
+}
+.fundBarCounts {
+  flex: 0 1 33.333%;
+  min-width: 0;
+}
+.fundBarRule {
+  margin: 12px 0;
+  border: 0;
+  border-top: 1px solid var(--gn-divider);
+}
+@media (max-width: 767px) {
+  .fundBarTop > .fields,
+  .fundBarCounts {
+    flex-basis: 100%;
+  }
+}
+
+/* One section of a record panel's page (the prototype's jump-link layout). */
+.panelSection {
+  padding-top: 12px;
+  scroll-margin-top: 54px;
+}
+
+/* The fund bar's actions (legacy claims-fund-bar-actions, oj-md-3): at the row's end. */
+.fundBarActions {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px 8px;
+}
+/* The activity form in the side panel. */
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.editorGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16vw), 1fr));
+  gap: 9px 12px;
+  align-items: start;
+}
+.editorWide {
+  margin-top: 9px;
+}
+.editorRadios {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.editorRadios legend {
+  float: left;
+  margin-right: 6px;
+  font-size: 12px;
+  color: var(--gn-text-secondary);
+}
+.editorBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  margin: 9px 0 6px;
+}
+.editorCheck {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 45px;
+}
+.editorFoot {
+  position: sticky;
+  bottom: -20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 0;
+  background: var(--gn-surface);
+}
+
+/* The Amendments tab's status filter and reason: a field's width beside its buttons (legacy oj-sm-3). */
+.amendmentField {
+  flex: 0 1 25vw;
+  min-width: 0;
+}
+
+/* Legacy's quiet line saying why Submit for Approval is missing (oj-typography-body-sm, secondary). */
+.hint {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--gn-text-secondary);
 }

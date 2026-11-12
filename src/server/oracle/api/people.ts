@@ -37,12 +37,16 @@ export const inOrg = read<{ orgId?: string }>({
   pages: "all",
   ttl: serverConstants.ttl.config,
 });
-/** One person's contact card (legacy getContactDetails, record type PI): read fresh on each open, as legacy did. */
-export const contact = read<{ personId: number; orgId: number }>({
+/** One person's contact card (legacy getContactDetails; record type PI unless given): read fresh on each open. */
+export const contact = read<{
+  personId: number | string;
+  orgId: number | string;
+  recordType?: string;
+}>({
   op: "getProposalContactDtls",
   tokenHeader: "p_token",
   headers: (p) => ({
-    p_record_type: "PI",
+    p_record_type: p.recordType ?? "PI",
     p_person_id: String(p.personId),
     p_dept_id: String(p.orgId),
   }),

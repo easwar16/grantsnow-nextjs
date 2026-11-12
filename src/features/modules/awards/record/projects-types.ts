@@ -101,6 +101,8 @@ export interface ProjectsView {
   projects: ProjectRow[];
   team: TeamMember[];
   costs: ProjectCosts[];
+  /** The cost trees' starting depth (`AWARD_PROJECT_COSTS_EXPAND_LEVEL`, 9305); undefined opens everything. */
+  costsOpenDepth?: number;
   gates: Record<
     | "edit"
     | "remove"

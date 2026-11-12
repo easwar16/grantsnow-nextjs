@@ -14,7 +14,7 @@ const oracle = vi.hoisted(() => ({
 }));
 vi.mock("@/server/oracle/api", () => ({
   proposals: oracle,
-  lookups: { codes: oracle.codes },
+  lookups: { codes: oracle.codes, fundingSections: oracle.fundingSections },
   people: { inOrg: oracle.inOrg },
 }));
 vi.mock("@/server/modules/proposals/record", () => ({

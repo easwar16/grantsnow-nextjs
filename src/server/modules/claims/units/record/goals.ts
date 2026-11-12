@@ -11,7 +11,7 @@ import { serverFunctions } from "@/server/functions";
 import type {
   UnitGoalDialog,
   UnitGoalsView,
-} from "@/features/modules/claims/units/types";
+} from "@/features/modules/claims/units/listing/types";
 import { BUNDLE, label, numberish, optionalText } from "../listing";
 import { unitRecordRead, type UnitRecordContext } from "../record";
 import { appSummaryOf } from "./shell";
@@ -24,6 +24,7 @@ const appFundRow = z.object({
   fund_name: optionalText,
   fund_status_code: optionalText,
   fund_type_id: numberish,
+  grant_category_id: numberish,
   fund_preferences: z.unknown(),
 });
 export type AppFund = z.infer<typeof appFundRow>;

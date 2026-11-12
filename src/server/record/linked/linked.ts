@@ -7,6 +7,8 @@ import type {
   LinkedGroup,
   LinkedObjects,
   LinkedTextKey,
+  ParentDueDiligenceTextKey,
+  ParentDueDiligenceTexts,
 } from "@/features/record/linked/model";
 import { serverFunctions } from "@/server/functions";
 
@@ -126,4 +128,46 @@ export async function linkedObjects(
       ),
     },
   };
+}
+
+const PARENT_DD_TEXTS: Record<
+  ParentDueDiligenceTextKey,
+  [string, string, string]
+> = {
+  create: ["button-labels", "create-duediligence", "Create Due Diligence"],
+  link: ["button-labels", "link-duediligence", "Link Due Diligence"],
+  linkTitle: [
+    "dialog-titles",
+    "link-duediligence",
+    "Link Existing Due Diligence",
+  ],
+  number: ["labels", "dd-number", "Due Diligence Number"],
+  description: ["labels", "dd-description", "Description"],
+  linkRow: ["button-labels", "link", "Link"],
+  cancel: ["button-labels", "cancel", "Cancel"],
+  noData: ["helper-texts", "no-data", "No data to display."],
+  linked: [
+    "messages",
+    "dd-linked",
+    "Due Diligence record linked successfully.",
+  ],
+  alreadyLinked: [
+    "warning-messages",
+    "dd-already-linked",
+    "This Due Diligence record is already linked.",
+  ],
+};
+/** The parent's Create / Link Due Diligence texts, from the parent's bundle with literal fallbacks. */
+export function parentDueDiligenceTexts(
+  rows: Awaited<ReturnType<typeof resources>>,
+  bundle: string,
+  overrides: Partial<ParentDueDiligenceTexts> = {},
+): ParentDueDiligenceTexts {
+  const texts = Object.fromEntries(
+    Object.entries(PARENT_DD_TEXTS).map(([key, [group, name, fallback]]) => [
+      key,
+      serverFunctions.resources.label(rows, bundle, group, name, fallback),
+    ]),
+  ) as ParentDueDiligenceTexts;
+  return { ...texts, ...overrides };
 }

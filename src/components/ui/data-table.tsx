@@ -57,6 +57,7 @@ export function DataTable<Row>({
   rowClassName,
   rowLabel,
   indent,
+  openDepth,
   className,
 }: {
   id: string;
@@ -89,11 +90,14 @@ export function DataTable<Row>({
   rowLabel?: (row: Row) => string;
   /** A tree's measured indent before the expander (or a leaf's gap); 19px per level by default. */
   indent?: (depth: number, leaf: boolean) => string;
+  /** A tree's rows above this depth start open, the rest closed (legacy 9305 `*_EXPAND_LEVEL`); omitted, all open. */
+  openDepth?: number;
   className?: string;
 }) {
-  const [closed, setClosed] = useState<ReadonlySet<string>>(new Set());
+  // Rows the user has turned from their starting state.
+  const [toggled, setToggled] = useState<ReadonlySet<string>>(new Set());
   const toggle = (key: string) =>
-    setClosed((c) => {
+    setToggled((c) => {
       const next = new Set(c);
       if (!next.delete(key)) next.add(key);
       return next;
@@ -109,7 +113,8 @@ export function DataTable<Row>({
     const key = rowKey(r),
       rid = `${rowIds}-${functions.ids.idPart(key)}`,
       kids = childrenOf?.(r) ?? [],
-      open = !closed.has(key);
+      open =
+        (openDepth === undefined || depth < openDepth) !== toggled.has(key);
     const custom = renderRow?.(r, depth);
     if (custom != null) return <Fragment key={key}>{custom}</Fragment>;
     // The column index up to which earlier cells' spans already cover the row.

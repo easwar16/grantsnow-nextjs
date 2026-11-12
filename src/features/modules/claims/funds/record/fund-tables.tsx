@@ -7,8 +7,8 @@ import type {
   FundClaimLineRow,
   FundSummary,
   FundTableView,
-} from "../types";
-import { FundSummaryTable } from "../fund-summary-table";
+} from "../listing/types";
+import { FundSummaryTable } from "../listing/fund-summary-table";
 import styles from "./record.module.css";
 
 type Format = FormatSettings & { currency?: string };

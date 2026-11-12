@@ -19,9 +19,8 @@ import {
 } from "@/server/modules/contracts/service";
 import { proposalPage } from "@/server/modules/proposals/record";
 import { recordIdentity } from "@/features/modules/proposals/record";
-import { ethicsRecord, ethicsStakeholder } from "@/server/modules/ethics/record";
-import { dueDiligenceRecord } from "@/server/modules/due-diligence/record";
-import { authenticate } from "@/server/identity/session/service";
+import { ethicsPanelHost } from "@/server/modules/ethics/record";
+import { dueDiligencePanelHost } from "@/server/modules/due-diligence/record";
 
 /**
  * One host of the shared comments and audit panels (legacy `object-comments` and each detail page's audit drawer).
@@ -113,41 +112,8 @@ const HOSTS: Record<
     CONTRACT_PAGES,
     contractRecordContext,
   ),
-  DUE_DILIGENCE: async (id, page, mode, sec) => {
-    const pages = ["duediligence-general-overview", "duediligence-responses",
-      "duediligence-attachments", "duediligence-approvals", "duediligence-history"];
-    if (!pages.includes(page)) throw new AppError("BAD_REQUEST", "Invalid Due Diligence page.", 400);
-    const [record, { session, user }] = await Promise.all([dueDiligenceRecord(id), authenticate()]);
-    const right = record.rights[page];
-    if (!record.tabs.includes(page as (typeof record.tabs)[number]) || !right?.read ||
-        (mode === "write" && !right.edit))
-      throw new AppError("FORBIDDEN", "Due Diligence panel access has not been granted.", 403);
-    const respondent = sec
-      ? record.respondents.find((row) => row.id === sec)
-      : record.respondents.find((row) => record.access !== "RESPONDENT_ACCESS" ||
-          row.personId === String(user.personId));
-    if (page !== "duediligence-general-overview" &&
-        (!respondent || (record.access === "RESPONDENT_ACCESS" &&
-          respondent.personId !== String(user.personId))))
-      throw new AppError("FORBIDDEN", "Due Diligence participant access has not been granted.", 403);
-    return {
-      objectType: "DUE_DILIGENCE",
-      objectId: page === "duediligence-general-overview" ? id : respondent!.id,
-      page, bundle: "due_diligence", token: session.token, user,
-      canComment: right.edit,
-    };
-  },
-  ETHICS: async (id, page, mode, sec) => {
-    const pages = ["ethics-general-overview", "ethics-responses", "ethics-attachments", "ethics-approvals", "ethics-history"];
-    if (!pages.includes(page)) throw new AppError("BAD_REQUEST", "Invalid Ethics page.", 400);
-    const [record, { session, user }] = await Promise.all([ethicsRecord(id), authenticate()]);
-    const right = record.rights[page];
-    if (!record.tabs.includes(page as (typeof record.tabs)[number]) || !right?.read || (mode === "write" && !right.edit))
-      throw new AppError("FORBIDDEN", "Ethics panel access has not been granted.", 403);
-    const objectId = page === "ethics-general-overview" ? id : ethicsStakeholder(record, user.personId, sec)?.id;
-    if (!objectId) throw new AppError("CONTRACT", "Ethics stakeholder record is unavailable.");
-    return { objectType: "ETHICS", objectId, page, bundle: "ethics", token: session.token, user, canComment: right.edit };
-  },
+  DUE_DILIGENCE: dueDiligencePanelHost,
+  ETHICS: ethicsPanelHost,
 };
 const proposalPages = new Set([
   "proposals-summary",

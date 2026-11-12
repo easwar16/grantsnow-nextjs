@@ -3,7 +3,7 @@ import {
   awardRecordIdentity,
 } from "@/server/modules/awards/record";
 import { State } from "@/components/feedback/state";
-import { DeniedRedirect } from "@/features/modules/opportunities/eoi/denied-redirect";
+import { DeniedRedirect } from "@/features/record/shell/denied-redirect";
 import { AwardTabContent } from "@/features/modules/awards/record/tab-content";
 /** One tab of an award; a tab the record does not show toasts and goes to the Header (subFlowAccessGuard). */
 export default async function AwardTabPage({

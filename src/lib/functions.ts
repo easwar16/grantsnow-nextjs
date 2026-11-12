@@ -131,16 +131,33 @@ function currencySymbol(currency: string) {
   );
 }
 
+/** A currency display string cut to its whole part (legacy 9568); cutting, not rounding, keeps the value. */
+function wholeAmount(display: string) {
+  return display.replace(/^(\s*\p{Sc}\s*[+-]?[\d,]+)\.\d+(\s*)$/u, "$1$2");
+}
+
+/** A costing tree's `*_EXPAND_LEVEL` global (legacy costingExpand, 9305) as `DataTable`'s `openDepth`: 1 headers
+ * only, 2 headers open, 3 / unset / anything else everything open. */
+function expandDepth(level: unknown) {
+  const value = String(level ?? "").trim();
+  return value === "1" ? 0 : value === "2" ? 1 : undefined;
+}
+
 /** A time of day in the viewer's zone: legacy getCurrentTime's `h:mm A`, or a legacy formatDate pattern. */
 function clockDisplay(at: Date | string, pattern = "h:mm A") {
   const m = moment(at);
   return m.isValid() ? m.format(pattern) : "";
 }
 
-/** A plain number with at most DECIMAL_PLACES_COUNT || 2 digits (legacy's number converter). */
-function numberDisplay(n: number, settings?: FormatSettings) {
+/**
+ * A plain number with at most DECIMAL_PLACES_COUNT || 2 digits (legacy's number converter); `fixed` pads to that many
+ * digits (the Pricing dialog's amounts).
+ */
+function numberDisplay(n: number, settings?: FormatSettings, fixed = false) {
+  const digits = settings?.decimals || 2;
   return new Intl.NumberFormat("en-GB", {
-    maximumFractionDigits: settings?.decimals || 2,
+    minimumFractionDigits: fixed ? digits : undefined,
+    maximumFractionDigits: digits,
   }).format(n);
 }
 
@@ -711,11 +728,13 @@ export const functions = {
     stampDisplay,
     moneyDisplay,
     currencySymbol,
+    wholeAmount,
     numberDisplay,
     clockDisplay,
     percentDisplay,
   },
   ids: { idPart },
+  tables: { expandDepth },
   errors: { publicError, settle },
   security: { safeReturn, safeImageUrl, safeUrl, trustedUsername, sameOrigin },
   mentions: { mentionAttributes, mentionText, matchMentions, mentionQuery },

@@ -43,7 +43,11 @@ const HOSTS: Record<AttributeHost, Host> = {
       if (q.objectId) {
         const record = await ethicsRecord(q.objectId);
         if (!record.tabs.includes("ethics-general-overview"))
-          throw new AppError("FORBIDDEN", "Ethics Overview access has not been granted.", 403);
+          throw new AppError(
+            "FORBIDDEN",
+            "Ethics Overview access has not been granted.",
+            403,
+          );
       } else await ethicsCreateSetup();
     },
   },
@@ -57,9 +61,8 @@ const HOSTS: Record<AttributeHost, Host> = {
     },
   },
   "opportunities-eoi-application": {
-    // ponytail: legacy's misspelt type (opportunities-eoi-application-start-page.html:18), kept on the wire until the
-    // backend confirms which type EOI attributes are stored under (KB Framework-Patterns § 5).
-    objectType: "OPPORTUNIES-EOI",
+    // Legacy 9284 (`04a128310`) fixed the type from the typo OPPORTUNIES-EOI.
+    objectType: "OPPORTUNITIES-EOI",
     bundle: "opportunities-eoi",
     // The Application tab's own rule: its role page on the record, or the Apply rules for a new application.
     authorize: (q) =>

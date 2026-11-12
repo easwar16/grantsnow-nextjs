@@ -29,7 +29,7 @@ const visibility = z.record(
   z.string(),
   z.object({ isVisible: z.boolean().optional() }).passthrough(),
 );
-const preferences = z.object({
+export const preferences = z.object({
   theme: z.string().optional(),
   accessibility: z
     .record(
@@ -56,15 +56,13 @@ const preferences = z.object({
     .optional(),
 });
 export type DashboardPreferences = z.infer<typeof preferences>;
-/** The user's dashboard preferences as the shell, Home and its widgets read them, held per session. */
-export const dashboardPreferences = read<void, DashboardPreferences>({
+/**
+ * The user's dashboard preferences as Oracle stores them, held per session (the shell, Home and its widgets parse them
+ * with `preferences`); the panels that edit them read with `{ fresh: true }` and merge over the stored copy.
+ */
+export const dashboardPreferences = read<void, Record<string, unknown>>({
   op: "getSharedDashboardPreferences",
   ttl: serverConstants.ttl.config,
-  parse: (b) => preferences.parse(b),
-});
-/** The same preferences as Oracle stores them now, for the panels that edit them (never the held copy). */
-export const storedPreferences = read<void, Record<string, unknown>>({
-  op: "getSharedDashboardPreferences",
   parse: (b) => b as Record<string, unknown>,
 });
 
@@ -79,10 +77,6 @@ const roles = z.object({
   ),
 });
 export type DashboardRole = z.infer<typeof roles>["items"][number];
-/** The user's DASHBOARD page grants (legacy user_roles, `p_obj_type` DASHBOARD). */
-export const dashboardRoles = read<void, DashboardRole[]>({
-  op: "getSecurityUser_roles",
-  headers: () => ({ p_obj_type: "DASHBOARD" }),
-  ttl: serverConstants.ttl.access,
-  parse: (b) => roles.parse(b).items,
-});
+/** The user's DASHBOARD page grants (legacy user_roles, `p_obj_type` DASHBOARD), from `roles.record`. */
+export const dashboardRoleRows = (body: unknown): DashboardRole[] =>
+  roles.parse(body).items;

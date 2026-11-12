@@ -23,7 +23,7 @@ import {
   removeInKindLine,
   saveInKindLine,
   saveInKindTotals,
-} from "@/server/modules/proposals/in-kind";
+} from "@/server/modules/proposals/record/in-kind";
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -128,12 +128,24 @@ it("adds a contribution from fresh cost and type lookups within the sponsor tota
 });
 
 it("preserves a nullable cost line ID returned after an Add", async () => {
-  dependencies.inKindLines.mockResolvedValue({ items: [{
-    id: 7, proposal_period_version_id: 22, costing_line_id: null,
-    sponsor_party_id: 301, inkind_amt: 10,
-  }] });
-  await expect(saveInKindLine("PROPOSAL", "1000", { id: 7, amount: 20 })).resolves.toEqual({ saved: true });
-  expect(dependencies.saveInKindLines).toHaveBeenCalledWith({ proposalId: "1000", rows: [expect.objectContaining({ ID: 7, COSTING_LINE_ID: null })] });
+  dependencies.inKindLines.mockResolvedValue({
+    items: [
+      {
+        id: 7,
+        proposal_period_version_id: 22,
+        costing_line_id: null,
+        sponsor_party_id: 301,
+        inkind_amt: 10,
+      },
+    ],
+  });
+  await expect(
+    saveInKindLine("PROPOSAL", "1000", { id: 7, amount: 20 }),
+  ).resolves.toEqual({ saved: true });
+  expect(dependencies.saveInKindLines).toHaveBeenCalledWith({
+    proposalId: "1000",
+    rows: [expect.objectContaining({ ID: 7, COSTING_LINE_ID: null })],
+  });
 });
 
 it("sends the exact sponsor total envelope after checking existing lines", async () => {

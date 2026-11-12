@@ -149,7 +149,7 @@ test("Ethics clone reads server options and Delete requires the draft row", asyn
   await page.goto("/ethics");
   await page.locator("#ethics-clone-939").click();
   await expect(page.locator("#ethics-clone-dialog")).toContainText("Setup");
-  await page.locator("#ethics-clone-submit").click();
+  await page.locator("#ethics-clone-dialog-submit").click();
   await expect(page.locator("#ethics-clone-dialog")).toHaveCount(0);
   await page.locator("#ethics-delete-939").click();
   await expect(page.locator("#ethics-delete-confirm")).toContainText("ETH_808");
@@ -241,7 +241,9 @@ test("Existing Ethics draft opens setup edit and preserves the record after save
   page,
 }) => {
   await page.goto("/ethics/939?access=EA_ACCESS");
-  await expect(page.locator("#ethics-record-toolbar #ethics-edit-setup")).toBeVisible();
+  await expect(
+    page.locator("#ethics-record-toolbar #ethics-edit-setup"),
+  ).toBeVisible();
   await page.locator("#ethics-edit-setup").click();
   await expect(page).toHaveURL(/\/ethics\/939\/edit\?access=EA_ACCESS/);
   await expect(page.locator("#ethics-new-project-title")).toHaveValue(
@@ -270,7 +272,9 @@ test("Existing Ethics draft opens setup edit and preserves the record after save
 
 test("In-progress Ethics setup allows guarded force edit", async ({ page }) => {
   await page.goto("/ethics/940?access=EA_ACCESS&tab=ethics-responses");
-  await expect(page.locator("#ethics-record-toolbar #ethics-edit-setup")).toBeVisible();
+  await expect(
+    page.locator("#ethics-record-toolbar #ethics-edit-setup"),
+  ).toBeVisible();
   await page.locator("#ethics-edit-setup").click();
   await expect(page.locator("#ethics-new-org-trigger")).toBeDisabled();
   await expect(page.locator("#ethics-new-form-type-trigger")).toBeDisabled();
@@ -279,12 +283,20 @@ test("In-progress Ethics setup allows guarded force edit", async ({ page }) => {
   await expect(page).toHaveURL(/\/ethics\/940\?access=EA_ACCESS/);
 });
 
-test("Ethics stakeholder with change-setup access opens Edit Setup from Responses", async ({ page }) => {
-  await page.goto("/ethics/939?access=RESPONDENT_ACCESS&tab=ethics-responses&participant=1940");
-  await expect(page.locator("#ethics-record-toolbar #ethics-edit-setup")).toBeVisible();
+test("Ethics stakeholder with change-setup access opens Edit Setup from Responses", async ({
+  page,
+}) => {
+  await page.goto(
+    "/ethics/939?access=RESPONDENT_ACCESS&tab=ethics-responses&participant=1940",
+  );
+  await expect(
+    page.locator("#ethics-record-toolbar #ethics-edit-setup"),
+  ).toBeVisible();
   await page.locator("#ethics-edit-setup").click();
   await expect(page).toHaveURL(/\/ethics\/939\/edit\?access=RESPONDENT_ACCESS/);
-  await expect(page.locator("#ethics-new-project-title")).toHaveValue("Research ethics application");
+  await expect(page.locator("#ethics-new-project-title")).toHaveValue(
+    "Research ethics application",
+  );
 });
 
 test("Completed Ethics links and unlinks references through scoped routes", async ({
@@ -300,7 +312,10 @@ test("Completed Ethics links and unlinks references through scoped routes", asyn
   await page.locator("#ethics-link-objects-field").press("Escape");
   await page.locator("#ethics-link-submit").click();
   await expect(page.locator("#ethics-link-dialog")).toHaveCount(0);
-  await page.getByRole("button", { name: "Unlink P_6718" }).click();
+  await page
+    .locator("#ethics-overview-references")
+    .getByRole("button", { name: /P_6718$/ })
+    .click();
   await page.locator("#ethics-unlink-confirm-confirm").click();
   await expect(page.locator("#ethics-overview-references")).toBeVisible();
 });
@@ -311,7 +326,10 @@ test("In-progress Ethics response exposes finalize and server-scoped print", asy
   await page.goto(
     "/ethics/940?access=EA_ACCESS&tab=ethics-responses&participant=1940",
   );
-  await expect(page.locator("#ethics-print")).toContainText("Print");
+  await expect(page.locator("#ethics-print-button")).toHaveAttribute(
+    "aria-label",
+    "Print",
+  );
   await expect(page.locator("#ethics-record-finalize")).toBeVisible();
   const options = await page.request.get(
     "/api/ethics/940/print?access=EA_ACCESS&participant=1940",
@@ -339,6 +357,28 @@ test("Ethics Documents use the stakeholder-scoped attachment host", async ({
   await expect(page.locator("#ethics-attachments")).not.toContainText(
     "Attachments unavailable",
   );
+});
+
+test("Ethics card actions follow legacy: links, clone with its objects, delete asks first", async ({
+  page,
+}) => {
+  await page.goto("/ethics");
+  await page.locator("#ethics-links-939").click();
+  await expect(page.locator("#ethics-linked-dialog")).toBeVisible();
+  await page.locator("#ethics-linked-dialog-close").click();
+  await page.locator("#ethics-clone-939").click();
+  await expect(page.locator("#ethics-clone-dialog-part-setup")).toBeChecked();
+  await page.locator("#ethics-clone-dialog-entire").check();
+  await expect(
+    page.locator("#ethics-clone-dialog-part-responses"),
+  ).toBeChecked();
+  await page.locator("#ethics-clone-dialog-submit").click();
+  await expect(page.locator("#ethics-clone-dialog")).toHaveCount(0);
+  // An individual draft in the administrator view can be deleted (checkDeleteEthicsConditions).
+  await page.locator("#ethics-delete-939").click();
+  await expect(page.locator("#ethics-delete-confirm")).toContainText("ETH_808");
+  await page.locator("#ethics-delete-confirm-cancel").click();
+  await expect(page.locator("#ethics-open-939")).toBeVisible();
 });
 
 test("Ethics participant selection survives a direct refresh and changes the document scope", async ({
@@ -442,9 +482,13 @@ test("Ethics Responses load the selected stakeholder's dynamic answers", async (
       .getByRole("textbox", { name: "Research purpose" }),
   ).toHaveValue("Participant one response");
   await expect(page.locator("#ethics-response-edit")).toBeVisible();
-  await expect(page.locator("#ethics-record-toolbar #ethics-response-edit")).toBeVisible();
+  await expect(
+    page.locator("#ethics-record-toolbar #ethics-response-edit"),
+  ).toBeVisible();
   await page.locator("#ethics-response-edit").click();
-  await expect(page.locator("#ethics-record-toolbar #ethics-response-save")).toBeVisible();
+  await expect(
+    page.locator("#ethics-record-toolbar #ethics-response-save"),
+  ).toBeVisible();
   await page.locator("#ethics-response-cancel").click();
   await expect(page.locator("#ethics-response-save")).toHaveCount(0);
   await page.locator("#ethics-response-edit").click();
@@ -458,7 +502,9 @@ test("Ethics historical response is read-only and survives direct refresh", asyn
   await page.goto(
     "/ethics/939?access=RESPONDENT_ACCESS&tab=ethics-responses&participant=1940&version=1",
   );
-  await expect(page.locator("#ethics-response-version")).toHaveValue("1");
+  await expect(page.locator("#ethics-response-version-trigger")).toHaveValue(
+    /1/,
+  );
   await expect(page.locator("#ethics-record-panel-version")).toContainText(
     "Ethics Version",
   );
@@ -471,7 +517,9 @@ test("Ethics historical response is read-only and survives direct refresh", asyn
   await expect(page.locator("#ethics-response-edit")).toBeDisabled();
   await expect(page.locator("#ethics-edit-setup")).toHaveCount(0);
   await page.reload();
-  await expect(page.locator("#ethics-response-version")).toHaveValue("1");
+  await expect(page.locator("#ethics-response-version-trigger")).toHaveValue(
+    /1/,
+  );
   const forged = await page.request.post("/api/dynamic-form", {
     data: {
       target: {

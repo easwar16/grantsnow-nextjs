@@ -207,10 +207,7 @@ export function PricingTree({
   const dialogAmount = (value: string | number) => {
     const number = Number(value);
     return Number.isFinite(number)
-      ? new Intl.NumberFormat("en-GB", {
-          minimumFractionDigits: format?.decimals ?? 2,
-          maximumFractionDigits: format?.decimals ?? 2,
-        }).format(number * rate)
+      ? functions.format.numberDisplay(number * rate, format, true)
       : String(value);
   };
   const percent = (rows: Line[]) => {
@@ -393,6 +390,7 @@ export function PricingTree({
             >
               <h2 className={styles.pricingGroupHeading}>
                 <button
+                  id={`proposal-${id}-pricing-group-${group.key.replaceAll(":", "-")}`}
                   type="button"
                   aria-expanded={!closedGroups.includes(group.key)}
                   aria-controls={`proposal-${id}-pricing-table-${group.key.replaceAll(":", "-")}`}
@@ -635,6 +633,7 @@ export function PricingTree({
                       : "0.00";
                     return draft.editing && row.id === draft.funderId ? (
                       <input
+                        id={`proposal-${id}-pricing-funder-${row.id}-percent`}
                         aria-label="Funder Percentage Indexed"
                         type="number"
                         min="0"
@@ -672,6 +671,7 @@ export function PricingTree({
                       : "0.00";
                     return draft.editing && row.id === draft.funderId ? (
                       <input
+                        id={`proposal-${id}-pricing-funder-${row.id}-unindexed-percent`}
                         aria-label="Funder Percentage Un-Indexed"
                         type="number"
                         min="0"
@@ -715,6 +715,7 @@ export function PricingTree({
                     <button
                       type="button"
                       className="gn-btn gn-btn--borderless gn-btn--icon"
+                      id={`proposal-${id}-pricing-funder-${row.id}-cancel`}
                       aria-label={`Cancel ${row.name}`}
                       title="Cancel"
                       onClick={() => setDraft({ ...draft, editing: false })}
@@ -727,6 +728,7 @@ export function PricingTree({
                   <button
                     type="button"
                     className="gn-btn gn-btn--borderless gn-btn--icon"
+                    id={`proposal-${id}-pricing-funder-${row.id}-edit`}
                     aria-label={`Edit ${row.name}`}
                     title="Edit"
                     onClick={() =>

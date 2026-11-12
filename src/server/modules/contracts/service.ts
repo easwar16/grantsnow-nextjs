@@ -2,7 +2,12 @@ import "server-only";
 import { cache } from "react";
 import { z } from "zod";
 import { authenticate } from "@/server/identity/session/service";
-import { contracts, eoi, lookups, roles } from "@/server/oracle/api";
+import {
+  contracts,
+  locks as lockApi,
+  lookups,
+  roles,
+} from "@/server/oracle/api";
 import { orNull, recordRoleRows } from "@/server/record/shared";
 import { containsClause } from "@/server/oracle/where";
 import { AppError } from "@/lib/errors";
@@ -55,14 +60,14 @@ export const contractRecordContext = cache(async (id: string) => {
       .record({ objectType: CONTRACT_MODULE, objectId: validId })
       .then((raw) => recordRoleRows.parse(raw).items),
     orNull(
-      eoi
+      lockApi
         .finalizablePages({ objectType: CONTRACT_MODULE, objectId: validId })
         .then((raw) =>
           pageNames.parse(raw).items.map((p) => p.page_name.toLowerCase()),
         ),
     ),
     orNull(
-      eoi
+      lockApi
         .lockedModules({ module: CONTRACT_MODULE, recordId: validId })
         .then((raw) => lockRows.parse(raw).items),
     ),

@@ -9,6 +9,13 @@
 .start {
   justify-content: flex-start;
 }
+/* Equal tabs across the container, 24px apart: Manage profile (621) and a plain oj-tab-bar in an oj-flex-item (Ethics, DD access). */
+.stretch {
+  padding: 0;
+}
+.stretch > button {
+  flex: 1;
+}
 .bar > button {
   height: 36px;
   min-height: 0;

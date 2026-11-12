@@ -1,6 +1,6 @@
 import "server-only";
 import type { Resources } from "@/server/platform/configuration/resources";
-import type { FundShellModel } from "@/features/modules/claims/funds/types";
+import type { FundShellModel } from "@/features/modules/claims/funds/listing/types";
 import {
   CLAIMS_STATUS,
   FUND_TAB_DEFS,

@@ -45,13 +45,14 @@ export async function dashboardTabs() {
       "labels",
       key,
     );
-  const charts = Object.entries(config.dynamicCharts || {})
-    .filter(
-      ([, c]) =>
-        c.isVisible === true &&
-        !!c.ModuleName &&
-        user.modules[moduleAccess[c.ModuleName] || ""] === true,
-    )
+  const configured = Object.entries(config.dynamicCharts || {}).filter(
+    ([, c]) =>
+      !!c.ModuleName && user.modules[moduleAccess[c.ModuleName] || ""] === true,
+  );
+  // Legacy getDynamicTabs: a selector for every configured module; only its visible charts are drawn.
+  const chartModules = [...new Set(configured.map(([, c]) => c.ModuleName!))];
+  const charts = configured
+    .filter(([, c]) => c.isVisible === true)
     .map(([name, c]) => ({
       id: String(c.infolet_id),
       name,
@@ -68,6 +69,7 @@ export async function dashboardTabs() {
       visible("opportunities"),
     notifications: config.notifications === true && visible("notifications"),
     charts: visible("dynamic-charts") ? charts : [],
+    chartModules: visible("dynamic-charts") ? chartModules : [],
   };
 }
 const NOTIFICATION_PAGE = 25;
@@ -125,7 +127,7 @@ export async function notifications(offset: number, signal?: AbortSignal) {
   )
     throw new AppError("BAD_REQUEST", "Invalid notification page.", 400);
   const [raw, labels] = await Promise.all([
-    notes.page({ offset, limit: NOTIFICATION_PAGE }, { signal }),
+    notes.latest({ offset, limit: NOTIFICATION_PAGE }, { signal, fresh: true }),
     resources(),
   ]);
   return { ...notificationPage(raw, offset), empty: emptyText(labels) };

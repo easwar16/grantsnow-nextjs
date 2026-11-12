@@ -2,16 +2,18 @@
 import { useCallback, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { post } from "@/lib/api/http";
+import { ethics } from "@/lib/api";
+import { useActionFailure } from "@/components/dialog/action-failure";
 import { useFormat } from "@/components/layout/shell-context";
+import { Select } from "@/components/ui/select";
 import {
   RecordFrame,
   type FrameCell,
 } from "@/features/record/shell/record-frame";
 import { functions } from "@/lib/functions";
 import type { EthicsShellModel } from "@/server/modules/ethics/record/shell";
-import { EthicsPrint } from "./print";
-import { EthicsReferenceLink } from "./reference-link";
+import { RecordPrint } from "@/features/record/shell/record-print";
+import { ReferenceLink } from "@/features/record/linked/reference-link";
 import type { StatusTone } from "@/components/ui/status-badge";
 import { Icon } from "@/components/ui/icon";
 import { ResponseEditContext } from "./response-edit-context";
@@ -51,13 +53,19 @@ export function EthicsRecordShell({
   const search = useSearchParams();
   const [pending, setPending] = useState(false);
   const [saved, setSaved] = useState<boolean | null>(null);
-  const [error, setError] = useState("");
+  const fail = useActionFailure();
   const [responseEditing, setResponseEditing] = useState(false);
   const [responseSaving, setResponseSaving] = useState(false);
-  const responseHandlers = useRef<{ save: () => void; cancel: () => void } | null>(null);
-  const registerResponseHandlers = useCallback((handlers: { save: () => void; cancel: () => void } | null) => {
-    responseHandlers.current = handlers;
-  }, []);
+  const responseHandlers = useRef<{
+    save: () => void;
+    cancel: () => void;
+  } | null>(null);
+  const registerResponseHandlers = useCallback(
+    (handlers: { save: () => void; cancel: () => void } | null) => {
+      responseHandlers.current = handlers;
+    },
+    [],
+  );
   const query = model.access
     ? `?access=${encodeURIComponent(model.access)}`
     : "";
@@ -91,162 +99,204 @@ export function EthicsRecordShell({
       key: "version",
       label: model.labels.version,
       value: (
-        <select
+        <Select
           id="ethics-response-version"
-          className="gn-control"
-          aria-label={model.labels.version}
-          value={selectedVersion ?? versions[0].value}
-          onChange={(event) => {
+          label={model.labels.version}
+          clearable={false}
+          options={versions.map((row) => ({
+            value: String(row.value),
+            label: row.label,
+          }))}
+          value={String(selectedVersion ?? versions[0].value)}
+          onChange={(value) => {
             const next = new URLSearchParams(search.toString());
-            next.set("version", event.target.value);
+            next.set("version", value);
             router.replace(`?${next.toString()}`, { scroll: false });
           }}
-        >
-          {versions.map((row) => (
-            <option key={row.value} value={row.value}>
-              {row.label}
-            </option>
-          ))}
-        </select>
+        />
       ),
     });
   return (
-    <ResponseEditContext.Provider value={{ editing: responseEditing, saving: responseSaving, setEditing: setResponseEditing, setSaving: setResponseSaving, register: registerResponseHandlers }}>
-    <RecordFrame
-      prefix="ethics-record"
-      back={{ href: "/ethics", label: model.labels.list }}
-      toolbarStart={
-        <>
-          {canEditSetup && !responseEditing && (
-            <Link id="ethics-edit-setup" className="gn-btn gn-btn--primary" href={`/ethics/${model.id}/edit?access=${encodeURIComponent(model.access)}`}>
-              <Icon name="edit" size={14} /> {model.labels.editSetup}
-            </Link>
-          )}
-          {current === "ethics-responses" && canEditResponses && (
-            responseEditing ? (
-              <>
-                <button id="ethics-response-save" type="button" className="gn-btn gn-btn--primary" disabled={responseSaving} onClick={() => responseHandlers.current?.save()}>
-                  <Icon name="save" size={14} /> {model.labels.responseSave}
-                </button>
-                <button id="ethics-response-cancel" type="button" className="gn-btn gn-btn--outlined" disabled={responseSaving} onClick={() => responseHandlers.current?.cancel()}>
-                  {model.labels.cancel}
-                </button>
-              </>
-            ) : (
-              <button id="ethics-response-edit" type="button" className="gn-btn gn-btn--outlined" disabled={selectedVersion !== undefined && selectedVersion !== versions[0]?.value} onClick={() => setResponseEditing(true)}>
-                <Icon name="edit" size={14} /> {model.labels.edit}
-              </button>
-            )
-          )}
-          {canLink && ["ethics-general-overview", "ethics-responses"].includes(current) && (
-            <EthicsReferenceLink id={model.id} access={model.access} />
-          )}
-        </>
-      }
-      toolbarEnd={
-        <>
-          {autoSubmit && participant && (
-            <button
-              id="ethics-auto-submit"
-              type="button"
-              className="gn-btn gn-btn--primary"
-              disabled={pending}
-              onClick={() => {
-                setPending(true);
-                setError("");
-                void post<{ submitted: true }>(
-                  `/ethics/${model.id}/auto-submit`,
-                  {
-                    access: model.access,
-                    participant,
-                  },
-                ).then((result) => {
-                  if (result.ok) router.refresh();
-                  else setError(result.error.message);
-                  setPending(false);
-                });
-              }}
-            >
-              {autoSubmit.label}
-            </button>
-          )}
-          {printOptions?.length && participant ? (
-            <EthicsPrint
-              id={model.id}
-              access={model.access}
-              participant={participant}
-              options={printOptions}
-            />
-          ) : null}
-        </>
-      }
-      record
-      editing={responseEditing}
-      panelColumns={3}
-      tabs={model.tabs.map((tab) => ({
-        key: tab.key,
-        href: `/ethics/${model.id}${query}${query ? "&" : "?"}tab=${tab.key}${participant ? `&participant=${encodeURIComponent(participant)}` : ""}`,
-        name: tab.name,
-        icon:
-          tab.key === "ethics-history"
-            ? ("clock-history" as const)
-            : tab.key === "ethics-attachments"
-              ? ("attachment" as const)
-              : ("settings" as const),
-        finalized: finalizeState?.finalizedPages.includes(tab.key) ?? false,
-      }))}
-      current={current}
-      panel={panel}
-      finalize={
-        finalizeState?.visible && participant
-          ? {
-              on: saved ?? finalizeState.finalized,
-              busy: pending,
-              onChange: (finalize) => {
-                setPending(true);
-                setError("");
-                void post<{ finalized: boolean }>(
-                  `/ethics/${model.id}/finalize`,
-                  {
-                    access: model.access,
-                    participant,
-                    page: current,
-                    finalize,
-                  },
-                ).then((result) => {
-                  if (result.ok) {
-                    setSaved(result.data.finalized);
-                    router.refresh();
-                  } else setError(result.error.message);
-                  setPending(false);
-                });
-              },
-            }
-          : null
-      }
-      objectType="ETHICS"
-      objectId={
-        model.statusCode !== "DRFT"
-          ? current === "ethics-general-overview"
-            ? model.id
-            : (model.selectedParticipant ?? undefined)
-          : undefined
-      }
-      panelSec={model.selectedParticipant ?? undefined}
-      page={current}
-      labels={{
-        comments: model.labels.comments,
-        audit: model.labels.audit,
-        auditTitle: model.labels.auditTitle,
-        close: model.labels.close,
-        finalize: "Finalize",
-        finalized: "Finalized",
-        tabs: model.labels.tabs,
+    <ResponseEditContext.Provider
+      value={{
+        editing: responseEditing,
+        saving: responseSaving,
+        setEditing: setResponseEditing,
+        setSaving: setResponseSaving,
+        register: registerResponseHandlers,
       }}
     >
-      {children}
-      {error && <p role="alert">{error}</p>}
-    </RecordFrame>
+      <RecordFrame
+        prefix="ethics-record"
+        back={{ href: "/ethics", label: model.labels.list }}
+        toolbarStart={
+          <>
+            {canEditSetup && !responseEditing && (
+              <Link
+                id="ethics-edit-setup"
+                className="gn-btn gn-btn--primary"
+                href={`/ethics/${model.id}/edit?access=${encodeURIComponent(model.access)}`}
+              >
+                <Icon name="edit" size={14} /> {model.labels.editSetup}
+              </Link>
+            )}
+            {current === "ethics-responses" &&
+              canEditResponses &&
+              (responseEditing ? (
+                <>
+                  <button
+                    id="ethics-response-save"
+                    type="button"
+                    className="gn-btn gn-btn--primary"
+                    disabled={responseSaving}
+                    onClick={() => responseHandlers.current?.save()}
+                  >
+                    <Icon name="save" size={14} /> {model.labels.responseSave}
+                  </button>
+                  <button
+                    id="ethics-response-cancel"
+                    type="button"
+                    className="gn-btn gn-btn--outlined"
+                    disabled={responseSaving}
+                    onClick={() => responseHandlers.current?.cancel()}
+                  >
+                    {model.labels.cancel}
+                  </button>
+                </>
+              ) : (
+                <button
+                  id="ethics-response-edit"
+                  type="button"
+                  className="gn-btn gn-btn--outlined"
+                  disabled={
+                    selectedVersion !== undefined &&
+                    selectedVersion !== versions[0]?.value
+                  }
+                  onClick={() => setResponseEditing(true)}
+                >
+                  <Icon name="edit" size={14} /> {model.labels.edit}
+                </button>
+              ))}
+            {canLink &&
+              ["ethics-general-overview", "ethics-responses"].includes(
+                current,
+              ) && (
+                <ReferenceLink
+                  id="ethics"
+                  record={model.id}
+                  access={model.access}
+                  texts={model.referenceLink}
+                  api={{
+                    types: ethics.referenceTypes,
+                    items: ethics.referenceItems,
+                    link: ethics.linkReferences,
+                  }}
+                />
+              )}
+          </>
+        }
+        toolbarEnd={
+          <>
+            {autoSubmit && participant && (
+              <button
+                id="ethics-auto-submit"
+                type="button"
+                className="gn-btn gn-btn--primary"
+                disabled={pending}
+                onClick={() => {
+                  setPending(true);
+                  void ethics
+                    .autoSubmit(model.id, { access: model.access, participant })
+                    .then((result) => {
+                      if (result.ok) router.refresh();
+                      else fail(result.error);
+                      setPending(false);
+                    });
+                }}
+              >
+                {autoSubmit.label}
+              </button>
+            )}
+            {printOptions?.length && participant ? (
+              <RecordPrint
+                id="ethics-print"
+                label={model.labels.print}
+                options={printOptions}
+                generate={(code) =>
+                  ethics.print(model.id, {
+                    access: model.access,
+                    participant,
+                    code,
+                  })
+                }
+              />
+            ) : null}
+          </>
+        }
+        record
+        editing={responseEditing}
+        panelColumns={3}
+        tabs={model.tabs.map((tab) => ({
+          key: tab.key,
+          href: `/ethics/${model.id}${query}${query ? "&" : "?"}tab=${tab.key}${participant ? `&participant=${encodeURIComponent(participant)}` : ""}`,
+          name: tab.name,
+          icon:
+            tab.key === "ethics-history"
+              ? ("clock-history" as const)
+              : tab.key === "ethics-attachments"
+                ? ("attachment" as const)
+                : ("settings" as const),
+          finalized: finalizeState?.finalizedPages.includes(tab.key) ?? false,
+        }))}
+        current={current}
+        panel={panel}
+        finalize={
+          finalizeState?.visible && participant
+            ? {
+                on: saved ?? finalizeState.finalized,
+                busy: pending,
+                onChange: (finalize) => {
+                  setPending(true);
+                  void ethics
+                    .finalize(model.id, {
+                      access: model.access,
+                      participant,
+                      page: current,
+                      finalize,
+                    })
+                    .then((result) => {
+                      if (result.ok) {
+                        setSaved(result.data.finalized);
+                        router.refresh();
+                      } else fail(result.error);
+                      setPending(false);
+                    });
+                },
+              }
+            : null
+        }
+        objectType="ETHICS"
+        objectId={
+          model.statusCode !== "DRFT"
+            ? current === "ethics-general-overview"
+              ? model.id
+              : (model.selectedParticipant ?? undefined)
+            : undefined
+        }
+        panelSec={model.selectedParticipant ?? undefined}
+        page={current}
+        labels={{
+          comments: model.labels.comments,
+          audit: model.labels.audit,
+          auditTitle: model.labels.auditTitle,
+          close: model.labels.close,
+          finalize: model.labels.finalize,
+          finalized: model.labels.finalized,
+          tabs: model.labels.tabs,
+        }}
+      >
+        {children}
+      </RecordFrame>
     </ResponseEditContext.Provider>
   );
 }

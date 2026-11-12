@@ -15,8 +15,10 @@ import { claims, useApi } from "@/lib/api";
 import type { FormatSettings } from "@/lib/format";
 import { functions } from "@/lib/functions";
 import { useInFlight } from "@/lib/hooks/use-in-flight";
-import type { UnitGoalDialog, UnitGoalRow } from "../types";
+import type { UnitGoalDialog, UnitGoalRow } from "../listing/types";
 import { useRecordAudit } from "@/features/record/shell/record-frame";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { claimStatusTone } from "@/shared/claims/status";
 import styles from "./summary.module.css";
 
 type Format = FormatSettings & { currency?: string };
@@ -444,7 +446,17 @@ function GoalForm({
               `${id}-activity-status`,
               view.activities.headers.status,
             ),
-            cell: (r) => r.status,
+            cell: (r) => {
+              const text = r.status;
+              const tone = claimStatusTone(text);
+              return tone ? (
+                <StatusBadge dot tone={tone}>
+                  {text}
+                </StatusBadge>
+              ) : (
+                text
+              );
+            },
           },
           {
             id: "text",

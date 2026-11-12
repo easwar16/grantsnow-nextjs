@@ -14,29 +14,32 @@ export function ResponsesTab({
   stakeholderId,
   editable,
   historicalVersion,
+  texts,
 }: {
   setupId: string;
   stakeholderId: string;
   editable: boolean;
   historicalVersion?: number;
+  texts: { responseSaved: string };
 }) {
   const form = useRef<DynamicFormHandle>(null);
   const router = useRouter();
   const toast = useToast();
-  const { editing, saving, setEditing, setSaving, register } = useResponseEdit();
+  const { editing, saving, setEditing, setSaving, register } =
+    useResponseEdit();
   const save = useCallback(async () => {
     if (saving) return;
     setSaving(true);
     try {
       if (await form.current?.save()) {
-        toast.show("success", "Response saved.");
+        toast.show("success", texts.responseSaved);
         setEditing(false);
         router.refresh();
       }
     } finally {
       setSaving(false);
     }
-  }, [saving, setSaving, setEditing, router, toast]);
+  }, [saving, setSaving, setEditing, router, toast, texts.responseSaved]);
   const cancel = useCallback(() => {
     void form.current?.reload();
     setEditing(false);
@@ -46,10 +49,7 @@ export function ResponsesTab({
     return () => register(null);
   }, [register, save, cancel]);
   return (
-    <section
-      id="ethics-responses"
-      aria-label="Responses"
-    >
+    <section id="ethics-responses" aria-label="Responses">
       <DynamicForm
         key={`${stakeholderId}:${historicalVersion ?? "latest"}`}
         ref={form}

@@ -1,17 +1,28 @@
 import "server-only";
 import { z } from "zod";
 import { claims, lookups } from "@/server/oracle/api";
-import { resources } from "@/server/platform/configuration/resources";
+import {
+  resources,
+  type Resources,
+} from "@/server/platform/configuration/resources";
 import { AppError } from "@/lib/errors";
 import type {
+  UnitFundBar,
   UnitActivitiesView,
   UnitActivityList,
   UnitFundSummary,
-} from "@/features/modules/claims/units/types";
-import { label, lookupOptions, numberish, optionalText } from "../listing";
+} from "@/features/modules/claims/units/listing/types";
+import {
+  label,
+  lookupOptions,
+  numberish,
+  optionalText,
+  visible,
+} from "../listing";
 import { unitRecordRead, type UnitRecordContext } from "../record";
 import { appFundsOf, fundOf, header, items } from "./goals";
-import { available, statusConfig } from "./status";
+import { available, statusConfig, type StatusConfig } from "./status";
+import { AMENDMENT_FUND_STATUSES } from "./amendments";
 
 const LOOKUPS = "FPCG_ACTIVITY_PERIOD,FPCG_FUND_STATUS,FPCG_ACTIVITY_STATUS";
 const text = (v: unknown) => (v === null || v === undefined ? "" : String(v));
@@ -33,7 +44,23 @@ const summaryRow = z.object({
   activity_amount: numberish,
   unapplied_balance: numberish,
   approved_amount: numberish,
+  last_date_for_claim: optionalText,
+  last_date_for_amendment: optionalText,
+  grant_category_name: optionalText,
+  grant_value: optionalText,
+  payment_account_code: optionalText,
+  holding_account_code: optionalText,
   categories: z.array(categoryRow).nullish(),
+  requirements: z
+    .array(
+      z.object({
+        req_id: numberish,
+        form_id: numberish,
+        req_type_code: optionalText,
+        reference_module: optionalText,
+      }),
+    )
+    .nullish(),
 });
 const functionRow = z.object({
   function_code: optionalText,
@@ -66,7 +93,7 @@ const activityRow = z.object({
 });
 
 /** The fund's activity header (legacy loadActivitySummary: getFundsCategories, `items[0]`). */
-async function summaryOf(context: UnitRecordContext, appFundId: number) {
+export async function summaryOf(context: UnitRecordContext, appFundId: number) {
   return items(
     summaryRow,
     await claims.fundCategories({
@@ -78,6 +105,14 @@ async function summaryOf(context: UnitRecordContext, appFundId: number) {
 async function fundIn(context: UnitRecordContext, raw: unknown) {
   return fundOf(await appFundsOf(context), raw);
 }
+/** Legacy Add Activity: activity-details edit and a fund status that allows a user edit (CLAIM_FUNDS). */
+export const canAddActivity = (
+  context: UnitRecordContext,
+  config: StatusConfig,
+  fundStatus: string | null | undefined,
+) =>
+  context.access.roles.get("activity-details")?.edit === true &&
+  available(config, ["CLAIM_FUNDS"], fundStatus);
 const canDelete = (context: UnitRecordContext) =>
   context.access.roles.get("activity-details")?.delete === true;
 
@@ -90,20 +125,31 @@ export async function activitiesView(
   rawFund: string | null,
 ): Promise<UnitActivitiesView> {
   const context = await unitRecordRead(id, "activities");
-  const [rows, funds, codes] = await Promise.all([
+  const [rows, funds, codes, config] = await Promise.all([
     resources(),
     appFundsOf(context),
     lookups.codes({ types: LOOKUPS }),
+    statusConfig().catch(() => ({})),
   ]);
   const fund = rawFund ? fundOf(funds, rawFund) : funds[0];
-  const summary = fund
-    ? await summaryOf(context, Number(fund.app_fund_id))
-    : undefined;
+  const [summary, planned] = fund
+    ? await Promise.all([
+        summaryOf(context, Number(fund.app_fund_id)),
+        activitiesOf(context, Number(fund.app_fund_id), ""),
+      ])
+    : [undefined, []];
+  const fundStatus = text(summary?.fund_status_code);
   const all = { value: "", label: "All" };
   const t = (group: string, key: string, fallback: string) =>
     label(rows, group, key, fallback);
   return {
     fund: fund ? text(fund.app_fund_id) : "",
+    // Legacy shows Add Activity on the Activities List with the right and an editable fund status.
+    add: fund
+      ? canAddActivity(context, config, summary?.fund_status_code)
+        ? t("button-labels", "add-activity", "Add Activity")
+        : null
+      : null,
     funds: funds.map((f) => ({
       value: text(f.app_fund_id),
       label: f.full_fund_display ?? f.fund_name ?? "",
@@ -115,42 +161,18 @@ export async function activitiesView(
       period: t("labels", "period", "Period"),
       status: t("labels", "status", "Status"),
     },
-    status: {
-      label: t("labels", "fund-status", "Fund Status"),
-      value:
-        lookupOptions(codes, "FPCG_FUND_STATUS").find(
-          (o) => o.value === summary?.fund_status_code,
-        )?.label ?? text(summary?.fund_status_code),
-    },
-    amounts: (
+    ...fundBarOf(rows, codes, summary, [
+      ["total-allocation", "Total Allocation", summary?.total_budget],
+      ["activity-amount", "Activity Amount", summary?.activity_amount],
+      // Legacy colours a negative Unapplied Balance red.
       [
-        ["total-allocation", "Total Allocation", summary?.total_budget],
-        ["activity-amount", "Activity Amount", summary?.activity_amount],
-        ["unapplied-balance", "Unapplied Balance", summary?.unapplied_balance],
-        ["approved-amount", "Approved Amount", summary?.approved_amount],
-      ] as const
-    ).map(([key, fallback, v]) => ({
-      key,
-      label: t("labels", key, fallback),
-      value: amount(v),
-    })),
-    categories: {
-      headers: {
-        category: header(rows, "category", "Category"),
-        pending: header(rows, "pending", "Pending"),
-        review: header(rows, "review", "Review"),
-        approved: header(rows, "approved", "Approved"),
-        rejected: header(rows, "rejected", "Rejected"),
-      },
-      rows: (summary?.categories ?? []).map((c, i) => ({
-        key: c.category ?? String(i),
-        category: c.category ?? "",
-        pending: text(c.pending),
-        review: text(c.review),
-        approved: text(c.approved),
-        rejected: text(c.rejected),
-      })),
-    },
+        "unapplied-balance",
+        "Unapplied Balance",
+        summary?.unapplied_balance,
+        true,
+      ],
+      ["approved-amount", "Approved Amount", summary?.approved_amount],
+    ]),
     tabs: [
       {
         id: "fund-summary",
@@ -160,6 +182,15 @@ export async function activitiesView(
         id: "activities-list",
         label: t("page-name", "activity-activities-list", "Activities List"),
       },
+      // Legacy li#amendments: only for a fund whose status allows amendments (hidden otherwise, owner rule).
+      ...(AMENDMENT_FUND_STATUSES.includes(text(summary?.fund_status_code))
+        ? [
+            {
+              id: "amendments" as const,
+              label: t("page-name", "activity-amendments", "Amendments"),
+            },
+          ]
+        : []),
     ],
     empty: t("helper-texts", "no-data", "No data to display."),
     texts: {
@@ -167,7 +198,21 @@ export async function activitiesView(
       delete: t("button-labels", "delete", "Delete"),
       view: t("button-labels", "view", "View"),
       details: t("page-name", "activity-details", "Activity Details"),
+      roster: t("labels", "roster", "Roster"),
+      equipment: t("labels", "furniture-equipment", "Furniture & Equipment"),
     },
+    // Legacy says why Submit for Approval is missing: a planned draft or rework whose Unapplied Balance is not 0.
+    submitHint:
+      ["DRFT", "REWORK"].includes(fundStatus) &&
+      planned.length > 0 &&
+      Number(summary?.unapplied_balance) !== 0 &&
+      available(config, ["CLAIM_FUNDS", "CLAIM_FUNDS_AMENDMENT"], fundStatus)
+        ? t(
+            "helper-texts",
+            "submit-needs-zero-unapplied",
+            "Submit for Approval appears once the Unapplied Balance is 0, that is, once every allocated amount is planned into activities.",
+          )
+        : null,
   };
 }
 
@@ -230,7 +275,7 @@ export async function fundSummaryView(
 const statusOf = (raw: string | null) =>
   /^[A-Z0-9_]{1,30}$/.test(raw ?? "") ? raw! : "";
 /** The fund's activities (getActivities), refused for a fund not on the application. */
-async function activitiesOf(
+export async function activitiesOf(
   context: UnitRecordContext,
   appFundId: number,
   status: string,
@@ -368,26 +413,135 @@ export async function deleteActivity(id: string, raw: unknown) {
     resources(),
     summaryOf(context, appFundId),
   ]);
-  const prev = amount(before?.unapplied_balance),
-    next = amount(after?.unapplied_balance);
   return {
     deleted: true as const,
-    warning:
-      next !== null && next !== prev && next < 0
-        ? {
-            summary: label(
-              rows,
-              "warning-messages",
-              "unapplied-summary",
-              "The claim cannot be submitted while the Unapplied Balance is negative.",
-            ),
-            message: label(
-              rows,
-              "warning-messages",
-              "unapplied-message",
-              "Please adjust the activity amounts until the Unapplied Balance is 0 before submitting for approval.",
-            ),
-          }
-        : null,
+    warning: unappliedWarning(
+      rows,
+      before?.unapplied_balance,
+      after?.unapplied_balance,
+    ),
+  };
+}
+
+/** Legacy unappliedBalanceChanged: a warning when the balance changed and is now below 0 (it never blocks). */
+export function unappliedWarning(
+  rows: Resources,
+  beforeValue: unknown,
+  afterValue: unknown,
+) {
+  const prev = amount(beforeValue),
+    next = amount(afterValue);
+  return next !== null && next !== prev && next < 0
+    ? {
+        summary: label(
+          rows,
+          "warning-messages",
+          "unapplied-summary",
+          "The claim cannot be submitted while the Unapplied Balance is negative.",
+        ),
+        message: label(
+          rows,
+          "warning-messages",
+          "unapplied-message",
+          "Please adjust the activity amounts until the Unapplied Balance is 0 before submitting for approval.",
+        ),
+      }
+    : null;
+}
+
+/** A figure of the fund bar: RB key, fallback, raw amount, and whether a negative shows red. */
+export type FundAmount = [string, string, unknown, boolean?];
+/**
+ * The unit record's fund bar (MR 15893, Activities and Claims tabs): the fund status, the tab's figures, the dates
+ * the fund has, the grant fields whose RB row is visible, and the category counts.
+ */
+export function fundBarOf(
+  rows: Resources,
+  codes: unknown,
+  summary: z.infer<typeof summaryRow> | undefined,
+  amounts: FundAmount[],
+  dates: ("claim" | "amendment")[] = ["claim", "amendment"],
+): UnitFundBar {
+  const t = (group: string, key: string, fallback: string) =>
+    label(rows, group, key, fallback);
+  return {
+    status: {
+      label: t("labels", "fund-status", "Fund Status"),
+      value:
+        lookupOptions(codes, "FPCG_FUND_STATUS").find(
+          (o) => o.value === summary?.fund_status_code,
+        )?.label ?? text(summary?.fund_status_code),
+    },
+    amounts: amounts.map(([key, fallback, v, warnNegative]) => {
+      const value = amount(v);
+      return {
+        key,
+        label: t("labels", key, fallback),
+        value,
+        danger: warnNegative === true && value !== null && value < 0,
+      };
+    }),
+    // MR 15893 fund bar: the dates when the fund has them, the grant fields when their RB row is visible.
+    dates: (
+      [
+        [
+          "claim",
+          "summary-claim-date",
+          "Claim Date",
+          summary?.last_date_for_claim,
+        ],
+        [
+          "amendment",
+          "summary-amendment-date",
+          "Amendment Date",
+          summary?.last_date_for_amendment,
+        ],
+      ] as const
+    )
+      .filter(([key, , , v]) => dates.includes(key) && Boolean(v))
+      .map(([key, rbKey, fallback, v]) => ({
+        key,
+        label: t("table-headers", rbKey, fallback),
+        value: v!,
+      })),
+    grant: (
+      [
+        ["grant-category-name", "Grant Category", summary?.grant_category_name],
+        ["grant-value-id", "Grant", summary?.grant_value],
+        [
+          "payment-account-code",
+          "Payment Account",
+          summary?.payment_account_code,
+        ],
+        [
+          "holding-account-code",
+          "Holding Account",
+          summary?.holding_account_code,
+        ],
+      ] as const
+    )
+      .filter(([key]) => visible(rows, "labels", key))
+      .map(([key, fallback, v]) => ({
+        key,
+        label: t("labels", key, fallback),
+        value: v ?? "",
+      })),
+    categories: {
+      headers: {
+        category: header(rows, "category", "Category"),
+        pending: header(rows, "pending", "Pending"),
+        review: header(rows, "review", "Review"),
+        approved: header(rows, "approved", "Approved"),
+        rejected: header(rows, "rejected", "Rejected"),
+      },
+      rows: (summary?.categories ?? []).map((c, i) => ({
+        key: c.category ?? String(i),
+        category: c.category ?? "",
+        pending: text(c.pending),
+        review: text(c.review),
+        approved: text(c.approved),
+        rejected: text(c.rejected),
+      })),
+    },
   };
 }

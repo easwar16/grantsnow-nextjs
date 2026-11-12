@@ -1,4 +1,9 @@
-import { insightRows, fundingEfficiency } from "./insight-mapping";
+import {
+  insightRows,
+  fundingEfficiency,
+  type InsightRow,
+} from "./insight-mapping";
+import { resources } from "@/server/platform/configuration/resources";
 import { formattingConfiguration } from "@/server/platform/configuration/formatting";
 import "server-only";
 import { cookies } from "next/headers";
@@ -115,9 +120,14 @@ export function mapWidget(
     );
   const b = parsed.data;
   if (w.kind === "statistics") {
+    const years = (filters.year ?? "").split(",").filter(Boolean);
+    const items =
+      w.yearsOnly && years.length
+        ? b.items.filter((r) => years.includes(String(r.label)))
+        : b.items;
     return {
       attention: [],
-      statistics: insightRows(b.items, w.mapping),
+      statistics: insightRows(items, w.mapping),
       hasMore: false,
       offset: filters.offset,
     };
@@ -297,6 +307,20 @@ export async function loadWidget(
         ? await chartRows(page)
         : await page(filters.offset, QUEUE_PAGE);
   const mapped = mapWidget(raw, w, filters, await viewerToday());
+  // 9555: the year chart's legend names the status code; the drill still uses the code.
+  if (w.mapping === "year-status") {
+    const rb = await resources();
+    const name = (key: string, fallback: string) =>
+      serverFunctions.resources.label(rb, "dashboard", "labels", key, fallback);
+    const names: Record<string, string> = {
+      SUB: name("proposals-by-year-submitted", "Submitted"),
+      AWARD: name("proposals-by-year-awarded", "Awarded"),
+    };
+    mapped.statistics = (mapped.statistics as InsightRow[]).map((r) => ({
+      ...r,
+      series: (r.code && names[r.code]) || r.series,
+    }));
+  }
   const formatting = await format;
   if (w.renderType)
     mapped.presentation = {

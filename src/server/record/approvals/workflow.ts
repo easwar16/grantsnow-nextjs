@@ -59,6 +59,13 @@ export interface ApprovalHost {
   };
   /** The lookup listing the approval group types (legacy approvalGroupLookupCode). */
   groupLookup: string;
+  /**
+   * Submit generates the route itself and withdraws again if the post fails (legacy Claims submitApprovalAction);
+   * there is then no separate Generate, and Submit needs no route yet.
+   */
+  submitGenerates?: boolean;
+  /** The host's own `button-labels` keys for Submit and Withdraw (Withdraw's also gates it), e.g. Claims' legacy keys. */
+  keys?: { submit?: string; withdraw?: string };
 }
 
 const text = z.string().nullish();
@@ -198,11 +205,25 @@ const KEYS: Record<WorkflowTextKey, [string, string, string]> = {
     "Stage Added Succesfully",
   ],
 };
-export function workflowTexts(rows: Resources, bundle: string) {
+export function workflowTexts(
+  rows: Resources,
+  bundle: string,
+  keys: ApprovalHost["keys"] = {},
+) {
+  const own: Partial<Record<WorkflowTextKey, string>> = {
+    submit: keys.submit,
+    withdraw: keys.withdraw,
+  };
   return Object.fromEntries(
     Object.entries(KEYS).map(([k, [group, key, fallback]]) => [
       k,
-      serverFunctions.resources.label(rows, bundle, group, key, fallback),
+      serverFunctions.resources.label(
+        rows,
+        bundle,
+        group,
+        own[k as WorkflowTextKey] ?? key,
+        fallback,
+      ),
     ]),
   ) as Record<WorkflowTextKey, string>;
 }
@@ -254,9 +275,14 @@ export function routeGates(
     route = stages.length > 0,
     noRework = !stages.some((s) => s.status === "Rework");
   return {
-    generate: !route && state.editable && rights.route && actor,
+    generate:
+      !route &&
+      !host.submitGenerates &&
+      state.editable &&
+      rights.route &&
+      actor,
     submit:
-      route &&
+      (route || host.submitGenerates === true) &&
       noRework &&
       state.editable &&
       !state.hasParent &&
@@ -265,7 +291,7 @@ export function routeGates(
     withdraw:
       route &&
       state.withdraw &&
-      visible(rows, host, "button-labels", "withdraw") &&
+      visible(rows, host, "button-labels", host.keys?.withdraw ?? "withdraw") &&
       rights.route &&
       actor,
     addStage:
@@ -323,7 +349,7 @@ const viewsOf = (rows: Resources, host: ApprovalHost) => ({
 export async function workflowView(host: ApprovalHost): Promise<WorkflowView> {
   const [rows, stages] = await Promise.all([resources(), readStages(host)]);
   return {
-    texts: workflowTexts(rows, host.bundle),
+    texts: workflowTexts(rows, host.bundle, host.keys),
     stages: stages.map((s) => stageView(s, host)),
     views: viewsOf(rows, host),
     gates: routeGates(stages, host, rows),
@@ -570,17 +596,28 @@ async function act(host: ApprovalHost, input: z.infer<typeof actInput>) {
     comments === ""
   )
     throw invalid("Comments are required to reject or send back.");
-  return approvals.act({
-    body: {
-      action_by: by,
-      action_done: input.action,
-      ...(comments === "" ? {} : { comments }),
-      criteria_type: "Amount",
-      doc_num: host.docNum,
-      doc_type: host.docType,
-      ...(stageId === undefined ? {} : { stage_id: stageId }),
-    },
-  });
+  const post = (action: string) =>
+    approvals.act({
+      body: {
+        action_by: by,
+        action_done: action,
+        ...(comments === "" ? {} : { comments }),
+        criteria_type: "Amount",
+        doc_num: host.docNum,
+        doc_type: host.docType,
+        ...(stageId === undefined ? {} : { stage_id: stageId }),
+      },
+    });
+  if (input.action !== "Submitted" || !host.submitGenerates)
+    return post(input.action);
+  await approvals.generate({ ...doc(host), actionBy: by });
+  try {
+    return await post("Submitted");
+  } catch (e) {
+    // Legacy rolls a refused submit back, so the generated route does not leave the document half-submitted.
+    await post("Withdrawn").catch(() => undefined);
+    throw e;
+  }
 }
 async function generate(host: ApprovalHost) {
   const by = actor(host);

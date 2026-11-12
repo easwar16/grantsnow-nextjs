@@ -22,7 +22,7 @@ import {
   type FundRecordFilters,
   type FundTab,
 } from "@/shared/claims/fund-record";
-import type { FundShellModel } from "../types";
+import type { FundShellModel } from "../listing/types";
 import styles from "./record.module.css";
 
 const asTab = (segment: string | null): FundTab =>

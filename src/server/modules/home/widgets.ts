@@ -17,6 +17,8 @@ export interface WidgetDefinition {
   mapping?: string;
   columns?: number;
   currency?: boolean;
+  /** 9548: a year-grouped chart keeps only the selected years (the backend returns others). */
+  yearsOnly?: true;
   tokenHeader?: "p_token";
   kind: "proposal" | "contract" | "ethics" | "award" | "eoi" | "statistics";
   /** Queue column shown as the row date (legacy list binding). */
@@ -174,13 +176,14 @@ export const widgets: WidgetDefinition[] = [
     {
       id: "pByYearChart",
       labelKey: "header-labels.proposals-by-year",
-      title: "Proposals by Year",
+      title: "Submitted vs Awarded Proposals by Year",
       module: "PROPOSALS",
       operation: "getProposalGetProposalStatistics",
       chartType: "YEAR_STATUS",
       renderType: "bar",
       mapping: "year-status",
       drill: "proposalYear",
+      yearsOnly: true,
     },
     {
       id: "totalPAValueByYearChart",
@@ -190,6 +193,7 @@ export const widgets: WidgetDefinition[] = [
       operation: "getPost_awardsAwardVsCostStatistics",
       renderType: "line",
       currency: true,
+      yearsOnly: true,
     },
     {
       id: "opportunityStatusChart",

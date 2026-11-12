@@ -145,42 +145,39 @@ export function ProposalBudget({
         className={styles.budgetAddActions}
       >
         {actions
-          .filter((action) => action.read)
-          .map((action) => {
-            const label = serverFunctions.resources.label(
-              rb,
-              budget.bundle,
-              "button-labels",
-              action.key,
-              action.fallback,
-            );
-            const disabled =
-              budget.versionId === null ||
-              !budget.actions.editable ||
-              !action.edit ||
-              (version !== undefined && Number(version) !== budget.versionId);
-            return disabled ? (
-              <button
-                key={action.kind}
-                id={`proposal-${id}-budget-${action.kind}-add`}
-                type="button"
-                className={styles.actionButton}
-                disabled
-              >
-                {label}
-              </button>
-            ) : (
-              <Link
-                key={action.kind}
-                id={`proposal-${id}-budget-${action.kind}-add`}
-                className={styles.actionButton}
-                href={`/proposals/${type}/${id}/budget/new/${action.kind}`}
-                prefetch={false}
-              >
-                {label}
-              </Link>
-            );
-          })}
+          // RB fails closed and an unusable action is hidden (owner rules), not disabled.
+          .filter(
+            (action) =>
+              action.read &&
+              action.edit &&
+              budget.versionId !== null &&
+              budget.actions.editable &&
+              (version === undefined || Number(version) === budget.versionId) &&
+              (action.kind === "research-partner" ||
+                serverFunctions.resources.resourceVisible(
+                  rb,
+                  budget.bundle,
+                  "button-labels",
+                  action.key,
+                )),
+          )
+          .map((action) => (
+            <Link
+              key={action.kind}
+              id={`proposal-${id}-budget-${action.kind}-add`}
+              className={styles.actionButton}
+              href={`/proposals/${type}/${id}/budget/new/${action.kind}`}
+              prefetch={false}
+            >
+              {serverFunctions.resources.label(
+                rb,
+                budget.bundle,
+                "button-labels",
+                action.key,
+                action.fallback,
+              )}
+            </Link>
+          ))}
       </div>
       {budget.projects.length === 0 ? (
         <p>No data to display.</p>

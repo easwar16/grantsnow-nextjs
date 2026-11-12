@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { dynamicForm, ethics } from "@/server/oracle/api";
+import { applications, dynamicForm } from "@/server/oracle/api";
 import { resources } from "@/server/platform/configuration/resources";
 import { oicConnected } from "@/server/oic/connection";
 import { AppError } from "@/lib/errors";
@@ -14,20 +14,19 @@ import { formGlobals } from "./globals";
 import { serverFunctions } from "@/server/functions";
 import { recordIdentity } from "@/features/modules/proposals/record";
 import { proposalBundle } from "@/server/modules/proposals/record";
-import { dueDiligence } from "@/server/oracle/api";
 /** The fragment's translationsModule defaults to its host object's bundle. */
 const bundleOf = (t: FormTarget) =>
   t.objectType === "ETHICS"
     ? "ethics"
     : t.objectType === "DUE_DILIGENCE"
-    ? "due_diligence"
-    : t.objectType === "AWARD"
-    ? "award"
-    : t.objectType === "CONTRACT"
-      ? "contract"
-      : recordIdentity.shape.type.safeParse(t.objectType).success
-        ? t.objectType.toLowerCase()
-        : "opportunities-eoi";
+      ? "due_diligence"
+      : t.objectType === "AWARD"
+        ? "award"
+        : t.objectType === "CONTRACT"
+          ? "contract"
+          : recordIdentity.shape.type.safeParse(t.objectType).success
+            ? t.objectType.toLowerCase()
+            : "opportunities-eoi";
 const TEXTS: Record<DynamicFormText, [string, string, string]> = {
   noData: ["helper-texts", "no-data", "No data to display."],
   dragAndDrop: ["labels", "drag-and-drop", "Drag and drop, or select a file"],
@@ -77,7 +76,17 @@ async function definitions(t: FormTarget, objectId: string, formType?: string) {
       objectId,
       objectType: t.objectType,
       slot: t.slot,
-      ...(formType ? { tagType: t.objectType === "ETHICS" ? "ETHICS_TYPE" : "DUE_DILIGENCE_TYPE", tagValue: formType } : {}),
+      ...(formType
+        ? {
+            tag: {
+              type:
+                t.objectType === "ETHICS"
+                  ? "ETHICS_TYPE"
+                  : "DUE_DILIGENCE_TYPE",
+              value: formType,
+            },
+          }
+        : {}),
     }),
   );
 }
@@ -90,38 +99,75 @@ export async function loadForm(t: FormTarget): Promise<DynamicFormData> {
     labels = serverFunctions.async.early(formTexts(t));
   const access = await authorizeForm(t, "read");
   let historicalSections: Set<number> | undefined;
-  if ((t.objectType === "ETHICS" || t.objectType === "DUE_DILIGENCE") && t.version !== undefined) {
+  if (
+    (t.objectType === "ETHICS" || t.objectType === "DUE_DILIGENCE") &&
+    t.version !== undefined
+  ) {
     const [versionsRaw, setupRaw] = await Promise.all([
-      t.objectType === "ETHICS" ? ethics.versions({ id: t.parentId! }) : dueDiligence.versions({ id: t.parentId! }),
-      t.objectType === "ETHICS" ? ethics.setupVersion({ id: t.parentId!, version: t.version })
-        : dueDiligence.setupVersion({ id: t.parentId!, version: t.version }),
+      applications.versions({ id: t.parentId! }),
+      applications.setupVersion({ id: t.parentId!, version: t.version }),
     ]);
-    const versions = z.object({ items: z.array(z.object({ version: z.coerce.number().int().positive() })) }).parse(versionsRaw);
+    const versions = z
+      .object({
+        items: z.array(
+          z.object({ version: z.coerce.number().int().positive() }),
+        ),
+      })
+      .parse(versionsRaw);
     if (!versions.items.some((row) => row.version === t.version))
       throw new AppError("FORBIDDEN", "Response version is unavailable.", 403);
-    const setup = z.array(z.object({
-      setup_flow_id: z.coerce.number().int().positive(),
-      sections: z.array(z.object({ section_id: z.coerce.number().int().positive() })),
-    })).parse(setupRaw).find((row) => String(row.setup_flow_id) === t.parentId);
-    if (!setup) throw new AppError("CONTRACT", "Oracle returned another response version.");
+    const setup = z
+      .array(
+        z.object({
+          setup_flow_id: z.coerce.number().int().positive(),
+          sections: z.array(
+            z.object({ section_id: z.coerce.number().int().positive() }),
+          ),
+        }),
+      )
+      .parse(setupRaw)
+      .find((row) => String(row.setup_flow_id) === t.parentId);
+    if (!setup)
+      throw new AppError(
+        "CONTRACT",
+        "Oracle returned another response version.",
+      );
     historicalSections = new Set(setup.sections.map((row) => row.section_id));
   }
-  const respondent = t.objectType === "DUE_DILIGENCE" || t.objectType === "ETHICS";
+  const respondent =
+    t.objectType === "DUE_DILIGENCE" || t.objectType === "ETHICS";
   const objectId = respondent ? (t.parentId ?? "") : (t.objectId ?? "");
   const [forms, rawAnswers, globals, texts] = await Promise.all([
-    definitions(t, objectId, respondent && "formType" in access ? access.formType : undefined),
+    definitions(
+      t,
+      objectId,
+      respondent && "formType" in access ? access.formType : undefined,
+    ),
     t.objectId === undefined
       ? Promise.resolve([])
       : respondent && t.version !== undefined
-        ? dynamicForm.answerVersion({ objectId: t.objectId, version: t.version,
-            slot: t.objectType as "ETHICS" | "DUE_DILIGENCE" })
-        : dynamicForm.answers({ objectId: t.objectId, slot: t.slot,
-          ...(respondent && "personId" in access ? { personId: access.personId } : {}) }),
+        ? dynamicForm.answerVersion({
+            objectId: t.objectId,
+            version: t.version,
+            slot: t.objectType as "ETHICS" | "DUE_DILIGENCE",
+          })
+        : dynamicForm.answers({
+            objectId: t.objectId,
+            slot: t.slot,
+            ...(respondent && "personId" in access
+              ? { personId: access.personId }
+              : {}),
+          }),
     settings,
     labels,
   ]);
   const shownForms = historicalSections
-    ? forms.map((form) => ({ ...form, sections: form.sections.filter((section) => historicalSections.has(section.sectionId)) }))
+    ? forms.map((form) => ({
+        ...form,
+        sections: form.sections.filter((section) =>
+          historicalSections.has(section.sectionId),
+        ),
+      }))
     : forms;
   return {
     forms: shownForms,
@@ -130,7 +176,8 @@ export async function loadForm(t: FormTarget): Promise<DynamicFormData> {
       decimals: globals.decimals,
       maxMb: globals.maxMb,
       accept: globals.accept,
-      storage: t.version === undefined && oicConnected() && globals.instance !== null,
+      storage:
+        t.version === undefined && oicConnected() && globals.instance !== null,
     },
     texts,
   };
@@ -152,9 +199,13 @@ export async function saveForm(raw: unknown) {
   const { record } = access;
   if (record === null)
     throw new AppError("BAD_REQUEST", "Save the application first.", 400);
-  const respondent = t.objectType === "DUE_DILIGENCE" || t.objectType === "ETHICS";
-  let forms = await definitions(t, respondent ? t.parentId! : record.id,
-    "formType" in access ? access.formType : undefined);
+  const respondent =
+    t.objectType === "DUE_DILIGENCE" || t.objectType === "ETHICS";
+  let forms = await definitions(
+    t,
+    respondent ? t.parentId! : record.id,
+    "formType" in access ? access.formType : undefined,
+  );
   if (!hasSections(forms) && !respondent) forms = await definitions(t, "");
   if (forms.length === 0)
     throw new AppError("BAD_REQUEST", "There is no form to save.", 400);

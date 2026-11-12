@@ -15,6 +15,7 @@ export function ActionDialog({
   help,
   subtitle,
   width,
+  side = false,
   className,
   busy = false,
   dismissible = true,
@@ -30,6 +31,11 @@ export function ActionDialog({
   subtitle?: string;
   /** A vw length from the legacy width class; omitted, Redwood's default 600px dialog, at most 70vh tall (owner, 2026-10-27). */
   width?: string;
+  /**
+   * A record beside the list it came from (legacy oj-drawer-popup#recordDrawer, MR 15893): full height at the end
+   * edge, sliding in; the list behind keeps its place. `width` defaults to legacy's min(1200px, 92vw) at 1920px.
+   */
+  side?: boolean;
   className?: string;
   busy?: boolean;
   dismissible?: boolean;
@@ -46,14 +52,24 @@ export function ActionDialog({
     <dialog
       ref={ref}
       id={id}
-      className={`${styles.dialog}${width ? "" : ` ${styles.standard}`}${className ? ` ${className}` : ""}`}
-      style={{ width: `min(${width ?? "34.384vw"}, calc(100vw - 32px))` }}
+      className={`${styles.dialog}${side ? ` ${styles.side}` : width ? "" : ` ${styles.standard}`}${className ? ` ${className}` : ""}`}
+      style={{
+        width: side
+          ? `min(${width ?? "62.5vw"}, 100vw)`
+          : `min(${width ?? "34.384vw"}, calc(100vw - 32px))`,
+      }}
       aria-labelledby={`${id}-title`}
+      // React passes a nested dialog's cancel and close up to this one; only this dialog's own events count.
       onCancel={(e) => {
+        if (e.target !== e.currentTarget) return;
         if (busy || !dismissible || pickerOpen(ref.current)) e.preventDefault();
       }}
       // A repeated Escape can still close a modal in some browsers; a non-dismissible one stays up.
-      onClose={() => (dismissible ? onClose() : ref.current?.showModal())}
+      onClose={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (dismissible) onClose();
+        else ref.current?.showModal();
+      }}
     >
       <div className={styles.head}>
         <h2 id={`${id}-title`}>

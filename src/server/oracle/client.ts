@@ -23,7 +23,12 @@ import { serverConstants } from "@/server/constants";
  */
 type Value = string | number | boolean | null | undefined;
 type Fields = Record<string, Value>;
-type Options = { signal?: AbortSignal; token?: string };
+type Options = {
+  signal?: AbortSignal;
+  token?: string;
+  /** Read Oracle now and replace the held copy (a save that merges over what is stored). */
+  fresh?: boolean;
+};
 interface Shape<P> {
   op: Operation;
   /** Identity headers taken from the session (the token is always sent). */
@@ -161,7 +166,7 @@ export function read<P = void, R = unknown>(def: ReadDef<P, R>) {
     // A held read is fetched without the caller's signal (other callers share it); the caller only stops waiting.
     const held = def.ttl
       ? abortable(
-          inWrite()
+          inWrite() || options.fresh
             ? refresh(key, def.ttl, () => read(), def.stale)
             : memo(key, def.ttl, () => read(), { staleMs: def.stale }),
           options.signal,
